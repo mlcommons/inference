@@ -134,6 +134,16 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     offline_expected_qps: float = 100
     """The expected QPS for the offline scenario."""
 
+    sample_concatenate_permutation: bool = True
+    """Affects the order in which the samples of the dataset are chosen.
+    If `False`, it concatenates a single permutation of the dataset (or part
+    of it depending on `performance_sample_count_override`) several times up to the
+    number of samples requested.
+    If `True`, it concatenates a multiple permutation of the dataset (or a
+    part of it depending on `performance_sample_count_override`) several times
+    up to the number of samples requested.
+    """
+
     server_expected_qps: float = 1
     """The expected QPS for the server scenario. Loadgen will try to send as many
     request as necessary to achieve this value.
@@ -156,12 +166,12 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     use_token_latencies is enabled).
     """
 
-    min_duration: timedelta = timedelta(seconds=5)
+    min_duration: timedelta = timedelta(minutes=10)
     """The minimum testing duration (in seconds or ISO 8601 format like `PT5S`). The
     benchmark runs until this value has been met.
     """
 
-    min_query_count: int = 100
+    min_query_count: int = 48289
     """The minimum testing query count. The benchmark runs until this value has been
     met. If min_query_count is less than the total number of samples in the dataset,
     only the first min_query_count samples will be used during testing.
@@ -181,7 +191,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
             f"{MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES} samples (at most), and then"
             " use this estimation as the value P.",
         ),
-    ] = 0
+    ] = 48289
 
     use_token_latencies: bool = False
     """By default, the Server scenario will use `server_target_latency` as the
@@ -197,8 +207,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -220,16 +229,14 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.scenario = self.scenario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
+        settings.sample_concatenate_permutation = self.sample_concatenate_permutation
         settings.server_target_qps = self.server_expected_qps
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -370,7 +377,7 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     this OpenAI API endpoint.
     """
 
-    use_guided_decoding: bool = True
+    use_guided_decoding: bool = False
     """If True, the benchmark will enable guided decoding for the requests. This
     requires the endpoint (and the inference engine behind it) to support guided
     decoding. If False, the response from the endpoint might not be directly parsable
@@ -428,8 +435,7 @@ class PositionalVllmCliFlagError(ValueError):
 class BlacklistedVllmCliFlagError(ValueError):
     """The exception raised when a blacklisted vllm CLI flag is encountered."""
 
-    BLACKLIST: ClassVar[list[str]] = [
-        "--model", "--host", "--port", "--api-key"]
+    BLACKLIST: ClassVar[list[str]] = ["--model", "--host", "--port", "--api-key"]
 
     def __init__(self, flag: str) -> None:
         """Initialize the exception."""
@@ -482,6 +488,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

@@ -108,11 +108,17 @@ class Task(ABC):
         return event_loop, event_loop_thread
 
     @abstractmethod
-    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
+    @staticmethod
+    def formulate_loaded_sample(
+        sample: dict[str, Any],
+        *,
+        use_guided_decoding: bool = False,
+    ) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
             sample: The sample from the dataset to be formulated into a loaded sample.
+            use_guided_decoding: Whether to use guided decoding for the sample.
 
         Returns:
             The loaded sample to be used for issuing queries to the inference endpoint.
@@ -146,12 +152,14 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(
-                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
-                self.total_num_samples),
+            k=min(MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
         )
         estimation_samples = [
-            self.formulate_loaded_sample(self.dataset[i]) for i in estimation_indices
+            self.formulate_loaded_sample(
+                self.dataset[i],
+                use_guided_decoding=self.endpoint.use_guided_decoding,
+            )
+            for i in estimation_indices
         ]
         avg_messages_footprint = sum(
             asizeof.asizeof(m) for m in estimation_samples
@@ -188,6 +196,7 @@ class Task(ABC):
             for index in query_sample_indices:
                 self.loaded_samples[index] = self.formulate_loaded_sample(
                     self.dataset[index],
+                    use_guided_decoding=self.endpoint.use_guided_decoding,
                 )
 
         def _unload_samples_from_ram(query_sample_indices: list[int]) -> None:
@@ -208,8 +217,7 @@ class Task(ABC):
             _unload_samples_from_ram,
         )
 
-    async def _query_endpoint_async_batch(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_batch(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         try:
             sample = self.loaded_samples[query_sample.index]
@@ -286,8 +294,7 @@ class Task(ABC):
                 ],
             )
 
-    async def _query_endpoint_async_stream(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_stream(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         ttft_set = False
         try:
@@ -419,7 +426,10 @@ class Task(ABC):
                 asyncio.run_coroutine_threadsafe(
                     (
                         self._query_endpoint_async_stream(query_sample)
-                        if self.settings.scenario is TestScenario.SERVER
+                        if (
+                            self.settings.scenario is TestScenario.SERVER
+                            and self.settings.use_token_latencies
+                        )
                         else self._query_endpoint_async_batch(query_sample)
                     ),
                     self.event_loop,
@@ -478,11 +488,17 @@ class ShopifyGlobalCatalogue(Task):
             random_seed=random_seed,
         )
 
-    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
+    @staticmethod
+    def formulate_loaded_sample(
+        sample: dict[str, Any],
+        *,
+        use_guided_decoding: bool = False,
+    ) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
             sample: The sample from the dataset to be formulated into a loaded sample.
+            use_guided_decoding: Whether to use guided decoding for the sample.
 
         Returns:
             The loaded sample to be used for issuing queries to the inference endpoint.
@@ -505,7 +521,14 @@ and provide the following fields in a valid JSON object:
 You must choose only one, which is the most appropriate, correct, and specifc
 category out of the list of possible product categories.
 
-Your response should only contain a valid JSON object and nothing more.
+The description of the product sometimes contains various types of source code
+(e.g., JavaScript, CSS, HTML, etc.), where useful product information is embedded
+somewhere inside the source code. For this task, you should extract the useful
+product information from the source code and leverage it, and discard the
+programmatic parts of the source code.
+
+Your response should only contain a valid JSON object and nothing more, e.g.,
+you should not fence the JSON object inside a ```json code block.
 The JSON object should match the followng JSON schema:
 ```json
 {json.dumps(ProductMetadata.model_json_schema(), indent=2)}
@@ -555,7 +578,7 @@ The following are the possible product categories:
                         "strict": True,
                     },
                 }
-                if self.endpoint.use_guided_decoding
+                if use_guided_decoding
                 else None
             ),
         )

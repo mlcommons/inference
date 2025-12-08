@@ -27,6 +27,11 @@ app.add_typer(
 
 @app.command()
 def evaluate(
+    *,
+    random_seed: Annotated[
+        int,
+        Option(help="The seed for the random number generator used by the benchmark."),
+    ] = 12345,
     filename: Annotated[
         FilePath,
         Option(
@@ -37,7 +42,7 @@ def evaluate(
 ) -> None:
     """Evaluate the accuracy of the VLM responses."""
     logger.info("Evaluating the accuracy file")
-    run_evaluation(filename=filename, dataset=dataset)
+    run_evaluation(random_seed=random_seed, filename=filename, dataset=dataset)
 
 
 @benchmark_app.command(name="endpoint")
@@ -78,9 +83,7 @@ def _run_benchmark(
     """Run the VL2L benchmark."""
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

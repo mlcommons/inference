@@ -2,7 +2,29 @@
 
 ## Quick Start
 
-### Get the source code 
+This guide demonstrates how you can run the benchmark on your local machine.
+
+### Create a Conda environment
+
+Follow [this link](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
+on how to install Miniconda on your host machine. Then, you can create a new conda 
+environment via:
+
+```bash
+conda create -n mlperf-inf-mm-vl2l python=3.12
+```
+
+### Install the VL2L benchmarking CLI
+
+#### For users
+
+Install `mlperf-inf-mm-vl2l` with:
+
+```bash
+pip install git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/vl2l/
+```
+
+#### For developers
 
 Clone the MLPerf Inference repo via:
 
@@ -16,53 +38,7 @@ Then enter the repo:
 cd mlperf-inference/
 ```
 
-### Create a Conda environment
-
-Follow [this link](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
-on how to install Miniconda on your host machine. Then, you can create a new conda 
-environment via:
-
-```bash
-conda create -n mlperf-inf-mm-vl2l python=3.12
-```
-
-### Install LoadGen
-
-Update `libstdc++` in the conda environment:
-
-```bash
-conda install -c conda-forge libstdcxx-ng
-```
-
-Install `absl-py` and `numpy`:
-
-```bash
-conda install absl-py numpy
-```
-
-Build and install LoadGen from source:
-
-```bash
-cd loadgen/
-CFLAGS="-std=c++14 -O3" python -m pip install .
-cd ../
-```
-
-Run a quick test to validate that LoadGen was installed correctly:
-
-```bash
-python loadgen/demos/token_metrics/py_demo_server.py
-```
-
-### Install the VL2L benchmarking CLI
-
-For users, install `mlperf-inf-mm-vl2l` with:
-
-```bash
-pip install multimodal/vl2l/
-```
-
-For developers, install `mlperf-inf-mm-vl2l` and the development tools with:
+Install `mlperf-inf-mm-vl2l` and the development tools with:
 
 - On Bash
 ```bash
@@ -72,6 +48,8 @@ pip install multimodal/vl2l/[dev]
 ```zsh
 pip install multimodal/vl2l/"[dev]"
 ```
+
+### Post VL2L benchmarking CLI installation 
 
 After installation, you can check the CLI flags that `mlperf-inf-mm-vl2l` can take with:
 
@@ -107,22 +85,60 @@ docker run --gpus all \                                 # Use all the GPUs on th
 Performance only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.senario offline --settings.mode performance_only
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario offline --settings.test.mode performance_only
 ```
 
 Accuracy only mode:
 
-TBD
+```bash
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario offline --settings.test.mode accuracy_only
+```
 
 ### Run the benchmark for the Server scenario
 
 Performance only mode:
 
-TBD
+```bash
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario server --settings.test.mode performance_only
+```
 
 Accuracy only mode:
 
-TBD
+```bash
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario server --settings.test.mode accuracy_only
+```
+
+## Docker
+
+[docker/](docker/) provides examples of Dockerfiles that install the VL2L benchmarking
+CLI into the container images of the inference engine. This is useful when you have to
+run both the inference engine and the VL2L benchmarking CLI inside the same container,
+for example, in a situation where you must use a GPU cluster managed by 
+[Slurm](https://slurm.schedmd.com/) with [enroot](https://github.com/nvidia/enroot) and
+[pyxis](https://github.com/NVIDIA/pyxis).
+
+### Benchmark against vLLM inside the container
+
+If you are running `mlperf-inf-mm-vl2l` inside a local environment that has access to
+vLLM (such as inside a container that was created using the 
+[docker/vllm-cuda.Dockerfile](docker/vllm-cuda.Dockerfile)), you can use a single
+`mlperf-inf-mm-vl2l benchmark vllm` command to achieve:
+
+1. Deploy an endpoint using vLLM.
+2. Wait for the endpoint to be healthy.
+3. Run the benchmark against that endpoint.
+
+For example, inside the container, you can run the Offline scenario Performance only
+mode with:
+
+```bash
+mlperf-inf-mm-vl2l benchmark vllm \
+    --vllm.model.repo_id Qwen/Qwen3-VL-235B-A22B-Instruct \
+    --vllm.arg=--tensor-parallel-size=8 \
+    --vllm.arg=--limit-mm-per-prompt.video=0 \
+    --settings.test.scenario offline \
+    --settings.test.mode performance_only
+```
 
 ## Developer Guide
 

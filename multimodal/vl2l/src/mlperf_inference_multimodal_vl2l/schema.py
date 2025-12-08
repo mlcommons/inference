@@ -230,7 +230,6 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.scenario = self.scenario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
-        # settings.sample_concatenate_permutation = self.sample_concatenate_permutation
         settings.server_target_qps = self.server_expected_qps
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,

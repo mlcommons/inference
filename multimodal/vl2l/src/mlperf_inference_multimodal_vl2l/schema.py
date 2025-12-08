@@ -144,7 +144,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     up to the number of samples requested.
     """
 
-    server_expected_qps: float = 1
+    server_expected_qps: float = 10
     """The expected QPS for the server scenario. Loadgen will try to send as many
     request as necessary to achieve this value.
     """

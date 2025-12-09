@@ -77,12 +77,42 @@ class Task(ABC):
     def __del__(self) -> None:
         """Clean up the resources used by the task."""
         logger.trace("Cleaning up the resources used by the task...")
-        asyncio.run_coroutine_threadsafe(
-            self.openai_api_client.close(),
-            self.event_loop,
-        ).result()
+
+        # Cancel all pending tasks in the event loop
+        async def _cancel_all_tasks() -> None:
+            """Cancel all pending tasks in the event loop."""
+            tasks = [
+                task
+                for task in asyncio.all_tasks(self.event_loop)
+                if not task.done()
+            ]
+            for task in tasks:
+                task.cancel()
+            # Wait briefly for tasks to cancel
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        try:
+            # Cancel any pending tasks first
+            asyncio.run_coroutine_threadsafe(
+                _cancel_all_tasks(),
+                self.event_loop,
+            ).result(timeout=5.0)
+        except Exception as e:
+            logger.trace("Error cancelling tasks during cleanup: {}", e)
+
+        # Try to close the OpenAI client gracefully
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.openai_api_client.close(),
+                self.event_loop,
+            ).result(timeout=5.0)
+        except Exception as e:
+            logger.trace("Error closing OpenAI client during cleanup: {}", e)
+
+        # Stop the event loop and join the thread
         self.event_loop.call_soon_threadsafe(self.event_loop.stop)
-        self.event_loop_thread.join()
+        self.event_loop_thread.join(timeout=5.0)
 
     @staticmethod
     def _create_event_loop_in_separate_thread() -> (

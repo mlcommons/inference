@@ -120,6 +120,13 @@ class BaseModelWithAttributeDescriptionsFromDocstrings(BaseModel):
     """
 
 
+_DEFAULT_DATASET_SIZE = 48289
+_DEFAULT_MIN_DURATION = timedelta(minutes=10)
+_DEFAULT_OFFLINE_EXPECTED_QPS = (
+    _DEFAULT_DATASET_SIZE / _DEFAULT_MIN_DURATION.total_seconds()
+)
+
+
 class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The test settings for the MLPerf inference LoadGen."""
 
@@ -131,18 +138,18 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     evaluation.
     """
 
-    offline_expected_qps: float = 100
+    offline_expected_qps: float = _DEFAULT_OFFLINE_EXPECTED_QPS
     """The expected QPS for the offline scenario."""
 
-    sample_concatenate_permutation: bool = True
-    """Affects the order in which the samples of the dataset are chosen.
-    If `False`, it concatenates a single permutation of the dataset (or part
-    of it depending on `performance_sample_count_override`) several times up to the
-    number of samples requested.
-    If `True`, it concatenates a multiple permutation of the dataset (or a
-    part of it depending on `performance_sample_count_override`) several times
-    up to the number of samples requested.
-    """
+    # sample_concatenate_permutation: bool = True  # noqa: ERA001
+    # """Affects the order in which the samples of the dataset are chosen.
+    # If `False`, it concatenates a single permutation of the dataset (or part
+    # of it depending on `performance_sample_count_override`) several times up to the
+    # number of samples requested.
+    # If `True`, it concatenates a multiple permutation of the dataset (or a
+    # part of it depending on `performance_sample_count_override`) several times
+    # up to the number of samples requested.
+    # """
 
     server_expected_qps: float = 10
     """The expected QPS for the server scenario. Loadgen will try to send as many
@@ -166,12 +173,12 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     use_token_latencies is enabled).
     """
 
-    min_duration: timedelta = timedelta(minutes=10)
+    min_duration: timedelta = _DEFAULT_MIN_DURATION
     """The minimum testing duration (in seconds or ISO 8601 format like `PT5S`). The
     benchmark runs until this value has been met.
     """
 
-    min_query_count: int = 48289
+    min_query_count: int = _DEFAULT_DATASET_SIZE
     """The minimum testing query count. The benchmark runs until this value has been
     met. If min_query_count is less than the total number of samples in the dataset,
     only the first min_query_count samples will be used during testing.
@@ -191,7 +198,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
             f"{MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES} samples (at most), and then"
             " use this estimation as the value P.",
         ),
-    ] = 48289
+    ] = _DEFAULT_DATASET_SIZE
 
     use_token_latencies: bool = False
     """By default, the Server scenario will use `server_target_latency` as the
@@ -207,8 +214,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -234,12 +240,9 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -343,7 +346,9 @@ class Dataset(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The token to access the HuggingFace repository of the dataset."""
 
     revision: str | None = None
-    """The revision of the dataset."""
+    """The revision of the dataset. If not provided, the default revision (i.e., usually
+    `main`) will be used.
+    """
 
     split: list[str] = ["train", "test"]
     """Dataset splits to use for the benchmark, e.g., "train" and "test". You can add
@@ -386,6 +391,13 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     decoding. If False, the response from the endpoint might not be directly parsable
     by the response JSON schema (e.g., the JSON object might be fenced in a
     ```json ... ``` code block).
+    """
+
+    request_timeout: timedelta = timedelta(hours=2)
+    """The timeout for the inference request to the endpoint. The default value for
+    OpenAI API client is 10 minutes
+    (https://github.com/openai/openai-python?tab=readme-ov-file#timeouts) which might
+    not be sufficient for the offline scenario.
     """
 
 
@@ -438,8 +450,7 @@ class PositionalVllmCliFlagError(ValueError):
 class BlacklistedVllmCliFlagError(ValueError):
     """The exception raised when a blacklisted vllm CLI flag is encountered."""
 
-    BLACKLIST: ClassVar[list[str]] = [
-        "--model", "--host", "--port", "--api-key"]
+    BLACKLIST: ClassVar[list[str]] = ["--model", "--host", "--port", "--api-key"]
 
     def __init__(self, flag: str) -> None:
         """Initialize the exception."""
@@ -492,6 +503,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

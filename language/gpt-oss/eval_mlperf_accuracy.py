@@ -652,9 +652,11 @@ def main():
           1 else "Evaluation mode: single-pass")
     print(f"Total unique samples: {total_samples}")
     if num_repeats > 1:
-        print(f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+        print(
+            f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
         total_score = total_averaged_correct_sum / num_repeats
-        print(f"Overall pass@1 with {num_repeats} repeats: {overall_averaged_accuracy:.2f}% ({total_score:.1f}/{total_averaged_samples})")
+        print(
+            f"Overall pass@1 with {num_repeats} repeats: {overall_averaged_accuracy:.2f}% ({total_score:.1f}/{total_averaged_samples})")
     else:
         print(
             f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
@@ -675,7 +677,8 @@ def main():
         for dataset_name in sorted(dataset_stats.keys()):
             stats = dataset_stats[dataset_name]["averaged"]
             if stats["total"] > 0:
-                accuracy = (stats["correct_sum"] / (stats["total"] * num_repeats) * 100)
+                accuracy = (stats["correct_sum"] /
+                            (stats["total"] * num_repeats) * 100)
                 total_score = stats["correct_sum"] / num_repeats
                 print(
                     f"{dataset_name:20s}: {accuracy:6.2f}% ({total_score:7.1f}/{stats['total']:4d})")
@@ -774,12 +777,12 @@ def main():
             "overall_accuracy": overall_accuracy,
             "per_dataset": per_dataset_stats
         }
-        
+
         # Add averaged metrics if num_repeats > 1
         if num_repeats > 1:
             summary["overall_averaged_score"] = total_averaged_correct_sum / num_repeats
             summary["overall_averaged_accuracy"] = overall_averaged_accuracy
-        
+
         output_data = {
             "summary": summary,
             "detailed_results": results if args.verbose else None

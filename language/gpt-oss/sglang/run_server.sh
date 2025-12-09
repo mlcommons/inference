@@ -6,6 +6,7 @@ dp=1
 model_path=openai/gpt-oss-120b
 eagle_path=""
 stream_interval=500
+extra_args=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -26,21 +27,21 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            echo "Unknown argument: $1"
-            exit 1
+            extra_args="$extra_args $1"
+            shift 1
             ;;
     esac
 done
 
 args=" --model-path $model_path \
     --host 0.0.0.0 \
-    --port 30000 \
     --tp-size=1 \
     --data-parallel-size=$dp \
     --max-running-requests $((dp * 512)) \
     --mem-fraction-static 0.85 \
     --chunked-prefill-size 16384 \
     --ep-size=1 \
+    --enable-metrics \
     --stream-interval $stream_interval "
 
 if [ -n "$eagle_path" ]; then
@@ -54,4 +55,4 @@ fi
 
 
 set -x;
-python3 -m sglang.launch_server $args
+python3 -m sglang.launch_server $args $extra_args

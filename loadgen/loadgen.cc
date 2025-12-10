@@ -121,7 +121,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
 
       if (sample_data_copy) {
         log.LogAccuracy(sample->sequence_id, sample->sample_index,
-                        LogBinaryAsHexString{sample_data_copy}, n_tokens);
+                        LogBinaryAsHexString{sample_data_copy}, n_tokens,
+                        sample->repeat_index);
         delete sample_data_copy;
       }
 
@@ -263,6 +264,12 @@ std::vector<QueryMetadata> GenerateQueries(
   auto tracer =
       MakeScopedTracer([](AsyncTrace& trace) { trace("GenerateQueries"); });
 
+  // In PerformanceOnly mode, repeats_per_sample must be 1
+  if (mode != TestMode::AccuracyOnly) {
+    assert(settings.repeats_per_sample == 1 &&
+           "repeats_per_sample must be 1 in PerformanceOnly mode");
+  }
+
   auto& loaded_samples = loaded_sample_set.set;
 
   // Generate 2x more samples than we think we'll need given the expected
@@ -287,6 +294,11 @@ std::vector<QueryMetadata> GenerateQueries(
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.
     min_queries = loaded_samples.size() / samples_per_query;
+    
+    // For repeated sampling, multiply min_queries by repeats
+    if (mode == TestMode::AccuracyOnly) {
+      min_queries *= settings.repeats_per_sample;
+    }
   }
 
   std::vector<QueryMetadata> queries;
@@ -395,9 +407,15 @@ std::vector<QueryMetadata> GenerateQueries(
                                : sample_distribution(sample_rng)];
       }
     }
-    queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
-    prev_timestamp = timestamp;
-    timestamp += schedule_distribution(schedule_rng);
+    
+    // Handle repeated sampling: create repeats_per_sample queries for the same sample(s)
+    // In PerformanceOnly mode, this is always 1 (single query per sample)
+    for (uint64_t k = 0; k < settings.repeats_per_sample; k++) {
+      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen, k);
+      prev_timestamp = timestamp;
+      timestamp += schedule_distribution(schedule_rng);
+    }
+    
     // In equal_issue mode, the min_queries will be bumped up by a multiple of
     // the dataset size if the test time has not met the threshold.
     if (enable_equal_issue && (queries.size() >= min_queries) &&
@@ -417,7 +435,11 @@ std::vector<QueryMetadata> GenerateQueries(
       for (auto& s : samples) {
         s = loaded_samples[sample_distribution(sample_rng)];
       }
-      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+      
+      // Handle repeated sampling for remainder query as well
+      for (uint64_t k = 0; k < settings.repeats_per_sample; k++) {
+        queries.emplace_back(samples, timestamp, response_delegate, sequence_gen, k);
+      }
     }
   }
 

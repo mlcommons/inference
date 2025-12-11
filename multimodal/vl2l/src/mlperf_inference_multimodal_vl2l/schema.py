@@ -408,7 +408,7 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
 class EndpointToDeploy(Endpoint):
     """Specifies the endpoint to deploy for the VL2L benchmark."""
 
-    startup_timeout: timedelta = timedelta(minutes=20)
+    startup_timeout: timedelta = timedelta(hours=1)
     """The timeout for the endpoint to start up."""
 
     shutdown_timeout: timedelta = timedelta(minutes=1)

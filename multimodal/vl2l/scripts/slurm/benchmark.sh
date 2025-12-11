@@ -25,8 +25,6 @@ srun \
         --vllm.model.repo_id=${MODEL_REPO_ID} \
         --vllm.cli=--async-scheduling \
         --vllm.cli=--max-model-len=32768 \
-        --vllm.cli=--max-num-seqs=1024 \
-        --vllm.cli=--mm-encoder-tp-mode=data \
         --vllm.cli=--limit-mm-per-prompt.video=0 \
         --vllm.cli=--tensor-parallel-size=8 \
         --settings.logging.log_output.outdir=${OUTPUT_CONTAINER_DIR}/${SLURM_JOB_ID} 

@@ -197,7 +197,7 @@ benchmark_job_id=$(
 if [[ "${mode}" == "accuracy_only" ]]; then
     sbatch \
         --dependency=afterok:"${benchmark_job_id}" \
-        --export=CACHE_HOST_DIR="${cache_host_dir}",CACHE_CONTAINER_DIR="${cache_container_dir}",OUTPUT_HOST_DIR="${output_host_dir}",OUTPUT_CONTAINER_DIR="${output_container_dir}",CONTAINER_IMAGE="${container_image}",DATASET_TOKEN="${dataset_token}" \
+        --export=CACHE_HOST_DIR="${cache_host_dir}",CACHE_CONTAINER_DIR="${cache_container_dir}",OUTPUT_HOST_DIR="${output_host_dir}",OUTPUT_CONTAINER_DIR="${output_container_dir}",CONTAINER_IMAGE="${container_image}",DATASET_TOKEN="${dataset_token}",BENCHMARK_JOB_ID="${benchmark_job_id}" \
         --account="${slurm_account}" \
         --partition="${evaluate_slurm_partition}" \
         evaluate.sh

@@ -208,8 +208,8 @@ class Task(ABC):
         logger.debug(
             "Estimated number of performance samples that can be loaded into {} GB host"
             " memory before testing is {}.",
-            result,
             ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES / 1024 / 1024 / 1024,
+            result,
         )
         if self.settings.performance_sample_count_override > 0:
             logger.debug(

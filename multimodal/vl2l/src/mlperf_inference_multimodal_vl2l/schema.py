@@ -151,12 +151,12 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     # up to the number of samples requested.
     # """
 
-    server_expected_qps: float = 10
+    server_expected_qps: float = 5
     """The expected QPS for the server scenario. Loadgen will try to send as many
     request as necessary to achieve this value.
     """
 
-    server_target_latency: timedelta = timedelta(seconds=1)
+    server_target_latency: timedelta = timedelta(seconds=13)
     """Expected latency constraint for Server scenario. This is a constraint that we
     expect depending on the argument server_expected_qps. When server_expected_qps
     increases, we expect the latency to also increase. When server_expected_qps

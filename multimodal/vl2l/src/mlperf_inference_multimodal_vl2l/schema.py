@@ -151,12 +151,12 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     # up to the number of samples requested.
     # """
 
-    server_expected_qps: float = 10
+    server_expected_qps: float = 5
     """The expected QPS for the server scenario. Loadgen will try to send as many
     request as necessary to achieve this value.
     """
 
-    server_target_latency: timedelta = timedelta(seconds=1)
+    server_target_latency: timedelta = timedelta(seconds=12)
     """Expected latency constraint for Server scenario. This is a constraint that we
     expect depending on the argument server_expected_qps. When server_expected_qps
     increases, we expect the latency to also increase. When server_expected_qps
@@ -343,7 +343,7 @@ class Model(BaseModelWithAttributeDescriptionsFromDocstrings):
 class Dataset(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Specifies a dataset on HuggingFace."""
 
-    repo_id: str = "Shopify/the-catalogue-public-beta"
+    repo_id: str = "Shopify/product-catalogue"
     """The HuggingFace repository ID of the dataset."""
 
     token: str | None = None
@@ -408,7 +408,7 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
 class EndpointToDeploy(Endpoint):
     """Specifies the endpoint to deploy for the VL2L benchmark."""
 
-    startup_timeout: timedelta = timedelta(minutes=20)
+    startup_timeout: timedelta = timedelta(hours=1)
     """The timeout for the endpoint to start up."""
 
     shutdown_timeout: timedelta = timedelta(minutes=1)

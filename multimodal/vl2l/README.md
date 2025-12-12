@@ -182,6 +182,34 @@ mlperf-inf-mm-vl2l benchmark vllm \
     --vllm.cli=--tensor-parallel-size=8 
 ```
 
+## Slurm
+
+[scripts/slurm/](scripts/slurm/) provide example scripts of running both the benchmark 
+and the response quality evaluation in a GPU cluster managed by 
+[Slurm](https://slurm.schedmd.com/) with [enroot](https://github.com/nvidia/enroot) and
+[pyxis](https://github.com/NVIDIA/pyxis). Specifically,
+
+- [scripts/slurm/benchmark.sh](scripts/slurm/benchmark.sh) is a sbatch script that 
+  runs the benchmarking job.
+- [scripts/slurm/evaluate.sh](scripts/slurm/evaluate.sh) is a sbatch script that runs
+  the evaluation job.
+- [scripts/slurm/submit.sh](scripts/slurm/submit.sh) is a Bash script that submits both
+  jobs, where the evaluation job would only run if the benchmarking job has succeeded.
+
+You can check the CLI flags that [scripts/slurm/submit.sh](scripts/slurm/submit.sh) can
+take via:
+
+```bash
+bash submit.sh --help
+```
+
+> [!NOTE]
+> Slurm clusters are often highly customized per organization. If you are unfamiliar
+> with Slurm, you should check with the cluster administrator of your organization
+> first, get a good understanding of what those example scripts do, and adapt the 
+> example scripts to the specific settings for the Slurm cluster that you are going
+> to use, before you try to launch any jobs.
+
 ## Developer Guide
 
 ### Linting

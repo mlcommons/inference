@@ -516,7 +516,7 @@ def get_evaluator(dataset_name: str) -> Dict[str, Any]:
 def process_row(row: pd.Series) -> Dict[str, Any]:
     """Process a single row and return extracted answer and accuracy."""
     dataset_name = validate_dataset_name(row['dataset'])
-    raw_output = validate_text_input(row['model_output'])
+    raw_output = validate_text_input(row['model_output_0'])
     ground_truth = row['ground_truth']
 
     evaluator = get_evaluator(dataset_name)
@@ -555,15 +555,14 @@ def process_dataframe(df: pd.DataFrame,
 
     # Initialize columns for each pass
     for pass_num in range(pass_k):
-        suffix = f'_{pass_num}' if pass_k > 1 else ''
+        suffix = f'_{pass_num}'
         df_output[f'extracted_answer{suffix}'] = None
         df_output[f'prompt_accuracy{suffix}'] = 0.0
         df_output[f'evaluation_details{suffix}'] = None
 
-    # Add aggregated columns for pass@k
-    if pass_k > 1:
-        df_output['prompt_accuracy'] = 0.0  # Will be max of all passes
-        df_output['evaluation_details'] = None  # Will aggregate details
+    # Add aggregated columns (max across all passes)
+    df_output['prompt_accuracy'] = 0.0
+    df_output['evaluation_details'] = None
 
     # Check if we have LiveCodeBench datasets to evaluate
     has_livecodebench = any('livecodebench' in str(ds).lower()
@@ -610,7 +609,7 @@ def process_dataframe(df: pd.DataFrame,
                 logger.info(
                     f"Parsing {len(group_indices)} rows for dataset '{dataset_name}' across {pass_k} passes")
                 for pass_num in range(pass_k):
-                    suffix = f'_{pass_num}' if pass_k > 1 else ''
+                    suffix = f'_{pass_num}'
                     model_output_col = f'model_output{suffix}'
                     extracted_answer_col = f'extracted_answer{suffix}'
                     evaluation_details_col = f'evaluation_details{suffix}'
@@ -629,7 +628,7 @@ def process_dataframe(df: pd.DataFrame,
                 all_work_items = []
                 work_item_metadata = []  # (idx, pass_num)
                 for pass_num in range(pass_k):
-                    suffix = f'_{pass_num}' if pass_k > 1 else ''
+                    suffix = f'_{pass_num}'
                     extracted_answer_col = f'extracted_answer{suffix}'
                     for idx in group_indices:
                         row = df_output.loc[idx]
@@ -660,7 +659,7 @@ def process_dataframe(df: pd.DataFrame,
                                        total=len(future_to_metadata),
                                        desc=f"Evaluating LiveCodeBench (all passes)"):
                         idx, pass_num = future_to_metadata[future]
-                        suffix = f'_{pass_num}' if pass_k > 1 else ''
+                        suffix = f'_{pass_num}'
                         prompt_accuracy_col = f'prompt_accuracy{suffix}'
                         evaluation_details_col = f'evaluation_details{suffix}'
 
@@ -701,7 +700,7 @@ def process_dataframe(df: pd.DataFrame,
             else:
                 # Sequential pass processing for non-LCB datasets
                 for pass_num in range(pass_k):
-                    suffix = f'_{pass_num}' if pass_k > 1 else ''
+                    suffix = f'_{pass_num}'
                     model_output_col = f'model_output{suffix}'
                     extracted_answer_col = f'extracted_answer{suffix}'
                     prompt_accuracy_col = f'prompt_accuracy{suffix}'
@@ -749,24 +748,23 @@ def process_dataframe(df: pd.DataFrame,
                             f"{dataset_name} pass {pass_num} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
 
             # Aggregate results across all passes (take max)
-            if pass_k > 1:
-                logger.info(
-                    f"Aggregating results across {pass_k} passes for dataset '{dataset_name}'")
-                for idx in group_indices:
-                    # Get all accuracy values for this row
-                    accuracies = []
-                    for pass_num in range(pass_k):
-                        acc = df_output.at[idx, f'prompt_accuracy_{pass_num}']
-                        accuracies.append(acc if not pd.isna(acc) else 0.0)
+            logger.info(
+                f"Aggregating results across {pass_k} passes for dataset '{dataset_name}'")
+            for idx in group_indices:
+                # Get all accuracy values for this row
+                accuracies = []
+                for pass_num in range(pass_k):
+                    acc = df_output.at[idx, f'prompt_accuracy_{pass_num}']
+                    accuracies.append(acc if not pd.isna(acc) else 0.0)
 
-                    # Set aggregated accuracy as max
-                    max_accuracy = max(accuracies)
-                    df_output.at[idx, 'prompt_accuracy'] = max_accuracy
+                # Set aggregated accuracy as max
+                max_accuracy = max(accuracies)
+                df_output.at[idx, 'prompt_accuracy'] = max_accuracy
 
-                    # Find which pass achieved max accuracy
-                    max_pass = accuracies.index(max_accuracy)
-                    df_output.at[idx,
-                                 'evaluation_details'] = f"Best pass: {max_pass} (accuracy: {max_accuracy:.1f}%)"
+                # Find which pass achieved max accuracy
+                max_pass = accuracies.index(max_accuracy)
+                df_output.at[idx,
+                             'evaluation_details'] = f"Best pass: {max_pass} (accuracy: {max_accuracy:.1f}%)"
 
         return df_output
     finally:
@@ -798,32 +796,19 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     # Detect pass@k
     pass_k = detect_pass_k(df_evaluated)
 
-    # Calculate statistics
-    if pass_k > 1:
-        # For pass@k, use the aggregated prompt_accuracy (max across passes)
-        # Count from first pass
-        evaluated = df_evaluated['extracted_answer_0'].notna().sum()
-        correct = (df_evaluated['prompt_accuracy'] > 0).sum()
-        accuracy = df_evaluated['prompt_accuracy'].mean()
+    # Calculate statistics - always use aggregated prompt_accuracy (max across passes)
+    evaluated = df_evaluated['extracted_answer_0'].notna().sum()
+    correct = (df_evaluated['prompt_accuracy'] > 0).sum()
+    accuracy = df_evaluated['prompt_accuracy'].mean()
 
-        # Calculate average token length across all passes
-        all_output_lens = []
-        for i in range(pass_k):
-            all_output_lens.extend(
-                df_evaluated[f'tok_model_output_len_{i}'].tolist())
-        mean_output_len = float(
-            sum(all_output_lens) /
-            len(all_output_lens)) if all_output_lens else 0.0
-    else:
-        # Single pass format
-        suffix = '' if 'extracted_answer' in df_evaluated.columns else '_0'
-        evaluated = df_evaluated[f'extracted_answer{suffix}'].notna().sum()
-        correct = (df_evaluated[f'prompt_accuracy{suffix}'] > 0).sum()
-        accuracy = df_evaluated[f'prompt_accuracy{suffix}'].mean()
-
-        # tok_model_output_len is now a required column
-        tok_len_col = 'tok_model_output_len' if 'tok_model_output_len' in df_evaluated.columns else 'tok_model_output_len_0'
-        mean_output_len = float(df_evaluated[tok_len_col].mean())
+    # Calculate average token length across all passes
+    all_output_lens = []
+    for i in range(pass_k):
+        all_output_lens.extend(
+            df_evaluated[f'tok_model_output_len_{i}'].tolist())
+    mean_output_len = float(
+        sum(all_output_lens) /
+        len(all_output_lens)) if all_output_lens else 0.0
 
     # Use exact_match as the metric key
     metric_key = 'exact_match'
@@ -834,14 +819,13 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
         metric_key: float(accuracy),
         'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
+        'pass_k': pass_k,
     }
 
-    if pass_k > 1:
-        results['pass_k'] = pass_k
-        # Also report individual pass accuracies
-        for i in range(pass_k):
-            pass_acc = df_evaluated[f'prompt_accuracy_{i}'].mean()
-            results[f'{metric_key}_pass_{i}'] = float(pass_acc)
+    # Report individual pass accuracies
+    for i in range(pass_k):
+        pass_acc = df_evaluated[f'prompt_accuracy_{i}'].mean()
+        results[f'{metric_key}_pass_{i}'] = float(pass_acc)
 
     print("\nResults\n")
     print(results)

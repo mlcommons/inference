@@ -35,7 +35,6 @@ done
 
 args=" --model-path $model_path \
     --host 0.0.0.0 \
-    --tp-size=1 \
     --data-parallel-size=$dp \
     --max-running-requests $((dp * 512)) \
     --mem-fraction-static 0.85 \

@@ -122,19 +122,23 @@ def load_tokenized_dataset(
         df = df.head(max_samples)
         logger.info(f"Limited to {max_samples} samples")
 
-    # Extract tokenized prompts
-    if 'tok_input' not in df.columns:
+    # Extract tokenized prompts - support both column names
+    if 'tok_input' in df.columns: # pre-v4.0
+        token_col = 'tok_input'
+    elif 'input_tokens' in df.columns: # v4.0+
+        token_col = 'input_tokens'
+    else:
         raise ValueError(
-            "Dataset must have 'tok_input' column with tokenized prompts")
+            "Dataset must have 'tok_input' or 'input_tokens' column with tokenized prompts")
 
     # Verify tokenization
-    failed_mask = df['tok_input'].isna()
+    failed_mask = df[token_col].isna()
     if failed_mask.any():
         failed_count = failed_mask.sum()
         logger.error(f"Found {failed_count} samples with failed tokenization")
         raise ValueError(f"{failed_count} samples have invalid tokenization")
 
-    prompts = df['tok_input'].tolist()
+    prompts = df[token_col].tolist()
     logger.info(f"Loaded {len(prompts)} tokenized prompts")
 
     # Log statistics

@@ -34,6 +34,7 @@ class Loader:
         self.acc_json_path = os.path.join(self.root, ACCURACY_JSON_PATH.get(version, ACCURACY_JSON_PATH["default"]))
         self.system_log_path = os.path.join(self.root, SYSTEM_PATH.get(version, SYSTEM_PATH["default"]))
 
+
     def load_single_log(self, path, log_type: Literal["Performance", "Accuracy", "AccuracyResult", "AccuracyJSON", "Test", "System"]):
         log = None
         if os.path.exists(path):
@@ -89,6 +90,7 @@ class Loader:
                                 "scenario": scenario,
                                 "perf_path": perf_path,
                                 "acc_path": acc_path,
+                                "system_path": system_path,
                                 "model_mapping": model_mapping,
                             }
                             yield SubmissionLogs(perf_log, acc_log, acc_result, acc_json, system_json, loader_data)

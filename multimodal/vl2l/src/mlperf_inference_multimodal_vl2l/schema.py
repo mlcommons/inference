@@ -156,7 +156,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     request as necessary to achieve this value.
     """
 
-    server_target_latency: timedelta = timedelta(seconds=13)
+    server_target_latency: timedelta = timedelta(seconds=12)
     """Expected latency constraint for Server scenario. This is a constraint that we
     expect depending on the argument server_expected_qps. When server_expected_qps
     increases, we expect the latency to also increase. When server_expected_qps

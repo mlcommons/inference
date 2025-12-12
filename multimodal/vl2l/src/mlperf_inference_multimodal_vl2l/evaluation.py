@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 from datasets import load_dataset
-from hiclass.metrics import f1  # type: ignore[import-untyped]
 from loguru import logger
 from pydantic import ValidationError
 from rapidfuzz import fuzz  # type: ignore[import-untyped]
@@ -22,10 +23,12 @@ if TYPE_CHECKING:
 
 from .schema import ProductMetadata
 
-_TRUE_CATEGORY_PAD = "<|__TRUE_CATEGORY_PAD__|>"
 _PRED_CATEGORY_PAD = "<|__PRED_CATEGORY_PAD__|>"
 _PRED_BRAND_PAD = "<|__PRED_BRAND_PAD__|>"
 _CATEGORY_SEPARATOR = " > "
+
+_WORKER_CONTEXT = {}
+_MAX_JOBS = 4
 
 
 def get_hierarchical_components(
@@ -159,63 +162,42 @@ def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
     return f1_score(y_src, y_pred)
 
 
-def calculate_hiclass_f1(
-    data: list[tuple[str, str]],
-    separator: str = _CATEGORY_SEPARATOR,
-) -> float:
-    """Alt method to calculate hierarchical F1.
+def _process_chunk_rnd_brand(args: tuple[str, dict, dict]) -> tuple[str, str]:
+    """Function to process only chunks for random brand predictions.
 
     Args:
-        data: List of tuples of predicted and true values
-        separator: The separator used to split the paths into levels of the category.
-
-    Returs:
-        f1 score
+        args: Tuple containing
     """
-    y_pred_raw = []
-    y_true_raw = []
-
-    for pred, src in data:
-        path1 = pred.split(separator)
-        path2 = src.split(separator)
-
-        y_pred_raw.append(path1)
-        y_true_raw.append(path2)
-
-    # 2. Find the global maximum length across ALL samples
-    # We check the longest path in both true and pred lists
-    max_len = max(len(p) for p in y_true_raw + y_pred_raw)
-
-    # 3. Pad all lists to the global max_len
-    for i in range(len(y_true_raw)):
-        # Pad Truth
-        pad_len_true = max_len - len(y_true_raw[i])
-        y_true_raw[i] += [_TRUE_CATEGORY_PAD] * pad_len_true
-
-        # Pad Prediction
-        pad_len_pred = max_len - len(y_pred_raw[i])
-        y_pred_raw[i] += [_PRED_CATEGORY_PAD] * pad_len_pred
-
-    # 4. Convert to numpy arrays
-    y_true = np.array(y_true_raw)
-    y_pred = np.array(y_pred_raw)
-
-    # 5. Calculate Score
-    return f1(y_true, y_pred)
+    pred_brand, elem, data_source = args
+    # We pass the specific data row needed, or the whole structure if efficient
+    return (pred_brand, data_source[elem["qsl_idx"]]["ground_truth_brand"])
 
 
-def run_evaluation(random_seed: int, filename: FilePath,
-                   dataset: DatasetCLI) -> None:
-    """Main function to run the evaluation."""
-    rng = np.random.default_rng(seed=random_seed)
-    with Path.open(filename) as f:
-        model_output = json.load(f)
+def init_worker(dataset: dict) -> None:
+    """Initialize worker data to process each chunk.
 
-    original_data = load_dataset(
-        dataset.repo_id,
-        token=dataset.token,
-        split="+".join(dataset.split),
-    )
+    Args:
+        dataset: huggingface dataset
+    """
+    _WORKER_CONTEXT["dataset"] = dataset
+
+
+def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
+    """Retrieve relevant information from each chunk of data.
+
+    Args:
+        args: Tuple that contains chunk of data and seed
+
+    Returns:
+        Object with processed information
+    """
+    chunk_data, seed = args
+
+    # 1. Access the global dataset
+    dataset = _WORKER_CONTEXT["dataset"]
+
+    # 2. Create a local, reproducible RNG for this specific chunk
+    local_rng = np.random.default_rng(seed)
 
     num_unparsable_responses = 0
     category_dataset_pred_src = []
@@ -223,13 +205,13 @@ def run_evaluation(random_seed: int, filename: FilePath,
     is_secondhand_pred_src = []
     is_secondhand_rand_pred_src = []
     brand_pred_src = []
-
     all_possible_brands = set()
+    error_messages = []
 
-    for elem in model_output:
+    for elem in chunk_data:
         idx = elem["qsl_idx"]
         response = bytes.fromhex(elem["data"]).decode("utf-8")
-        ground_truth_item = original_data[idx]
+        ground_truth_item = dataset[idx]
         all_possible_brands.add(ground_truth_item["ground_truth_brand"])
         try:
             pred_item = ProductMetadata.model_validate_json(response)
@@ -245,14 +227,15 @@ def run_evaluation(random_seed: int, filename: FilePath,
                     ),
                 ),
                 brand=_PRED_BRAND_PAD,
-                is_secondhand=rng.choice([True, False], size=1).tolist()[0],
+                is_secondhand=local_rng.choice(
+                    [True, False], size=1).tolist()[0],
             )
-            logger.error(
-                "Response\n{}\n(for the sample at index {}) cannot be validated against"
-                " the expected schema. Overwriting this response into \n{}\n",
-                response,
-                idx,
-                pred_item,
+            error_messages.append(
+                (
+                    f"Response\n{response}\n(for the sample at index {idx})"
+                    f"cannot be validated against"
+                    f" the expected schema. Overwriting this response into \n{pred_item}\n",
+                ),
             )
         category_dataset_pred_src.append(
             (pred_item.category, ground_truth_item["ground_truth_category"]),
@@ -268,35 +251,118 @@ def run_evaluation(random_seed: int, filename: FilePath,
         )
         # random category selection
         # Uniform distribution is the default
-        rand_cat = rng.choice(
+        rand_cat = local_rng.choice(
             ground_truth_item["potential_product_categories"])
         category_rand_pred_src.append(
             (rand_cat, ground_truth_item["ground_truth_category"]),
         )
         # random is_secondhand selection
-        rand_is_secondhand = rng.choice([True, False])
+        rand_is_secondhand = local_rng.choice([True, False])
         is_secondhand_rand_pred_src.append(
             (rand_is_secondhand,
              ground_truth_item["ground_truth_is_secondhand"]),
         )
 
+    return {
+        "num_unparsable_responses": num_unparsable_responses,
+        "error_messages": error_messages,
+        "category_dataset_pred_src": category_dataset_pred_src,
+        "category_rand_pred_src": category_rand_pred_src,
+        "is_secondhand_pred_src": is_secondhand_pred_src,
+        "is_secondhand_rand_pred_src": is_secondhand_rand_pred_src,
+        "brand_pred_src": brand_pred_src,
+        "all_possible_brands": list(all_possible_brands),
+    }
+
+
+def run_evaluation(random_seed: int, filename: FilePath,
+                   dataset: DatasetCLI) -> None:
+    """Main function to run the evaluation."""
+    master_rng = np.random.default_rng(seed=random_seed)
+    with Path.open(filename) as f:
+        model_output = json.load(f)
+
+    original_data = load_dataset(
+        dataset.repo_id,
+        token=dataset.token,
+        split="+".join(dataset.split),
+    )
+
+    # get number of available CPU and get chunk size
+    cpu_count = min(os.cpu_count() or 1, _MAX_JOBS)
+    chunk_size = max(len(model_output) // cpu_count, 1)
+    # Create chunks
+    output_chunks = [
+        model_output[i: i + chunk_size]
+        for i in range(0, len(model_output), chunk_size)
+    ]
+
+    # Generate Seeds
+    # One seed per chunk to ensure reproducibility.
+    # The master_rng generates these,
+    # so the whole run is deterministic based on `random_seed`.
+    chunk_seeds = master_rng.integers(0, 2**32, size=len(output_chunks))
+
+    # Zip them: Each task is ([model_out_1, ...], 12345)
+    tasks = zip(output_chunks, chunk_seeds, strict=False)
+
+    num_unparsable_responses = 0
+    err_messages = []
+    category_dataset_pred_src = []
+    category_rand_pred_src = []
+    is_secondhand_pred_src = []
+    is_secondhand_rand_pred_src = []
+    brand_pred_src = []
+    all_possible_brands = []
+
+    with ProcessPoolExecutor(
+        max_workers=cpu_count,
+        initializer=init_worker,
+        initargs=(original_data,),
+    ) as executor:
+        # Execute
+        chunk_results = list(executor.map(_process_chunk, tasks))
+
+    for chunk in chunk_results:
+        num_unparsable_responses += chunk["num_unparsable_responses"]
+        err_messages.extend(chunk["error_messages"])
+        category_dataset_pred_src.extend(chunk["category_dataset_pred_src"])
+        category_rand_pred_src.extend(chunk["category_rand_pred_src"])
+        is_secondhand_pred_src.extend(chunk["is_secondhand_pred_src"])
+        is_secondhand_rand_pred_src.extend(
+            chunk["is_secondhand_rand_pred_src"])
+        brand_pred_src.extend(chunk["brand_pred_src"])
+        all_possible_brands.extend(chunk["all_possible_brands"])
+
+    for err in err_messages:
+        logger.error("{}", err)
+
     category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
-    hiclass_f1_score = calculate_hiclass_f1(category_dataset_pred_src)
     is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
     brand_score = calculate_brand_f1_score(brand_pred_src)
 
     rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
-    rand_hiclass_f1_score = calculate_hiclass_f1(category_rand_pred_src)
+
     rand_is_seconhand_f1_score = calculate_secondhand_f1(
         is_secondhand_rand_pred_src)
+
+    all_brands_list = list(set(all_possible_brands))
+    random_brand_predictions = master_rng.choice(
+        all_brands_list,
+        size=len(model_output))
+
+    args_list = (
+        (pred, elem, original_data)
+        for pred, elem in zip(random_brand_predictions, model_output, strict=False)
+    )
+
+    with ProcessPoolExecutor() as executor:
+        rand_brand_data = list(executor.map(_process_chunk_rnd_brand,
+                                            args_list,
+                                            chunksize=chunk_size))
+
     rand_brand_score = calculate_brand_f1_score(
-        [
-            (
-                rng.choice(list(all_possible_brands)),
-                original_data[elem["qsl_idx"]]["ground_truth_brand"],
-            )
-            for elem in model_output
-        ],
+        rand_brand_data,
     )
 
     logger.info(
@@ -307,14 +373,12 @@ def run_evaluation(random_seed: int, filename: FilePath,
                 [
                     "From accuracy file",
                     category_f1_score,
-                    hiclass_f1_score,
                     brand_score,
                     is_secondhand_f1_score,
                 ],
                 [
                     "Random selection",
                     rand_cat_f1_score,
-                    rand_hiclass_f1_score,
                     rand_brand_score,
                     rand_is_seconhand_f1_score,
                 ],
@@ -322,7 +386,6 @@ def run_evaluation(random_seed: int, filename: FilePath,
             headers=[
                 "Results",
                 "Category hierarchical F1 Score",
-                "Category HiClass F1 Score",
                 "Brand F1 Score",
                 "Is_secondhand F1 Score",
             ],

@@ -1025,10 +1025,10 @@ ACCURACY_JSON_PATH = {
 }
 
 MEASUREMENTS_PATH = {
-    "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{system}.json",
-    "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{system}.json",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/{system}.json",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/{system}.json",
+    "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}.json",
+    "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}.json",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
 }
 
 TEST01_PERF_PATH = {

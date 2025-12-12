@@ -199,6 +199,12 @@ class PerformanceCheck(BaseCheck):
         return True
     
     def network_check(self):
+        if self.system_json is None:
+            self.log.error(
+                "%s system json file not found",
+                self.path
+            )
+            return False
         is_network_mode_sys_spec_str = self.system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
         is_network_system = (
             is_network_mode_sys_spec_str.lower() == "true"

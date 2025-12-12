@@ -796,7 +796,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     # Detect pass@k
     pass_k = detect_pass_k(df_evaluated)
 
-    # Calculate statistics - always use aggregated prompt_accuracy (max across passes)
+    # Calculate statistics - always use aggregated prompt_accuracy (max across
+    # passes)
     evaluated = df_evaluated['extracted_answer_0'].notna().sum()
     correct = (df_evaluated['prompt_accuracy'] > 0).sum()
     accuracy = df_evaluated['prompt_accuracy'].mean()

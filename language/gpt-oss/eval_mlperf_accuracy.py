@@ -386,9 +386,11 @@ def main():
 
     # Validate required columns exist
     required_columns = ['dataset', 'ground_truth']
-    missing_columns = [col for col in required_columns if col not in reference_df.columns]
+    missing_columns = [
+        col for col in required_columns if col not in reference_df.columns]
     if missing_columns:
-        raise ValueError(f"Reference data missing required columns: {missing_columns}")
+        raise ValueError(
+            f"Reference data missing required columns: {missing_columns}")
     logger.info(
         f"Evaluation mode: pass@{num_repeats}" if num_repeats > 1 else "Evaluation mode: single-pass")
 

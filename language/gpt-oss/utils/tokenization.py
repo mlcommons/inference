@@ -123,9 +123,9 @@ def load_tokenized_dataset(
         logger.info(f"Limited to {max_samples} samples")
 
     # Extract tokenized prompts - support both column names
-    if 'tok_input' in df.columns: # pre-v4.0
+    if 'tok_input' in df.columns:  # pre-v4.0
         token_col = 'tok_input'
-    elif 'input_tokens' in df.columns: # v4.0+
+    elif 'input_tokens' in df.columns:  # v4.0+
         token_col = 'input_tokens'
     else:
         raise ValueError(

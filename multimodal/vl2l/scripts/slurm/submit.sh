@@ -6,9 +6,6 @@ set -o pipefail
 DEFAULT_CONTAINER_IMAGE=""
 container_image=${DEFAULT_CONTAINER_IMAGE}
 
-DEFAULT_DATASET_TOKEN=""
-dataset_token=${DEFAULT_DATASET_TOKEN}
-
 DEFAULT_MODEL_REPO_ID=Qwen/Qwen3-VL-235B-A22B-Instruct
 model_repo_id=${DEFAULT_MODEL_REPO_ID}
 
@@ -39,7 +36,6 @@ Submit a benchmarking (and optionally, an evaluation) job(s) for the VL2L benchm
 
 Usage: ${BASH_SOURCE[0]}
     [-ci  | --container-image]     Container image to run the benchmark (default: ${DEFAULT_CONTAINER_IMAGE}).
-    [-dt  | --dataset-token]       Access token for the Shopify Global Catalogue dataset (default: ${DEFAULT_DATASET_TOKEN}).
     [-mri | --model-repo-id]       HuggingFace repo ID of the model to benchmark (default: ${DEFAULT_MODEL_REPO_ID}).
     [-s | --scenario]              Benchmark scenario (default: ${DEFAULT_SCENARIO}).
     [-m | --mode]                  Benchmark mode (default: ${DEFAULT_MODE}).
@@ -65,15 +61,6 @@ while [[ $# -gt 0 ]]; do
         ;;
     -ci=* | --container-image=*)
         container_image=${1#*=}
-        shift
-        ;;
-    -dt | --dataset-token)
-        dataset_token=$2
-        shift
-        shift
-        ;;
-    -dt=* | --dataset-token=*)
-        dataset_token=${1#*=}
         shift
         ;;
     -mri | --model-repo-id)
@@ -161,10 +148,6 @@ if [[ -z "${container_image}" ]]; then
     _exit_with_help_msg "[ERROR] -ci or --container-image is required." 1
 fi
 
-if [[ -z "${dataset_token}" ]]; then
-    _exit_with_help_msg "[ERROR] -dt or --dataset-token is required." 1
-fi
-
 if [[ -z "${cache_host_dir}" ]]; then
     _exit_with_help_msg "[ERROR] -chd or --cache-host-dir is required." 1
 fi
@@ -187,17 +170,30 @@ output_container_dir=/outputs
 mkdir -p "${output_host_dir}"
 
 benchmark_job_id=$(
+    CACHE_HOST_DIR="${cache_host_dir}" \
+    CACHE_CONTAINER_DIR="${cache_container_dir}" \
+    OUTPUT_HOST_DIR="${output_host_dir}" \
+    OUTPUT_CONTAINER_DIR="${output_container_dir}" \
+    CONTAINER_IMAGE="${container_image}" \
+    SCENARIO="${scenario}" \
+    MODE="${mode}" \
+    MODEL_REPO_ID="${model_repo_id}" \
     sbatch --parsable \
-        --export=CACHE_HOST_DIR="${cache_host_dir}",CACHE_CONTAINER_DIR="${cache_container_dir}",OUTPUT_HOST_DIR="${output_host_dir}",OUTPUT_CONTAINER_DIR="${output_container_dir}",CONTAINER_IMAGE="${container_image}",SCENARIO="${scenario}",MODE="${mode}",DATASET_TOKEN="${dataset_token}",MODEL_REPO_ID="${model_repo_id}" \
         --account="${slurm_account}" \
         --partition="${benchmark_slurm_partition}" \
         benchmark.sh
 )
 
 if [[ "${mode}" == "accuracy_only" ]]; then
+    CACHE_HOST_DIR="${cache_host_dir}" \
+    CACHE_CONTAINER_DIR="${cache_container_dir}" \
+    OUTPUT_HOST_DIR="${output_host_dir}" \
+    OUTPUT_CONTAINER_DIR="${output_container_dir}" \
+    CONTAINER_IMAGE="${container_image}" \
+    BENCHMARK_JOB_ID="${benchmark_job_id}" \
+    NVIDIA_VISIBLE_DEVICES=void \
     sbatch \
         --dependency=afterok:"${benchmark_job_id}" \
-        --export=CACHE_HOST_DIR="${cache_host_dir}",CACHE_CONTAINER_DIR="${cache_container_dir}",OUTPUT_HOST_DIR="${output_host_dir}",OUTPUT_CONTAINER_DIR="${output_container_dir}",CONTAINER_IMAGE="${container_image}",DATASET_TOKEN="${dataset_token}",BENCHMARK_JOB_ID="${benchmark_job_id}" \
         --account="${slurm_account}" \
         --partition="${evaluate_slurm_partition}" \
         evaluate.sh

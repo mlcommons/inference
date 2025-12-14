@@ -9,7 +9,8 @@
 #SBATCH --output=evaluate-slurm-output-%j.txt
 #SBATCH --error=evaluate-slurm-error-%j.txt
 
-export NVIDIA_VISIBLE_DEVICES=void
+set -eux
+set -p pipefail
 
 srun \
     --container-image=${CONTAINER_IMAGE} \
@@ -17,5 +18,4 @@ srun \
     --no-container-mount-home \
     --container-env=NVIDIA_VISIBLE_DEVICES \
     mlperf-inf-mm-vl2l evaluate \
-        --dataset.token=${DATASET_TOKEN} \
         --filename=${OUTPUT_CONTAINER_DIR}/${BENCHMARK_JOB_ID}/mlperf_log_accuracy.json

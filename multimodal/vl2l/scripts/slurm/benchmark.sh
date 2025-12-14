@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --time=2:00:00
-#SBATCH --partition=batch_short
+#SBATCH --time=4:00:00
+#SBATCH --partition=batch
 #SBATCH --gres=gpu:8
 #SBATCH --tasks=1
 #SBATCH --nodes=1
@@ -21,7 +21,6 @@ srun \
     mlperf-inf-mm-vl2l benchmark vllm \
         --settings.test.scenario=${SCENARIO} \
         --settings.test.mode=${MODE} \
-        --dataset.token=${DATASET_TOKEN} \
         --vllm.model.repo_id=${MODEL_REPO_ID} \
         --vllm.cli=--async-scheduling \
         --vllm.cli=--max-model-len=32768 \

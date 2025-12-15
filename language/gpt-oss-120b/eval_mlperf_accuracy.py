@@ -569,7 +569,10 @@ def main():
 
     total_correct = sum(stats["correct"] for stats in dataset_stats.values())
     total_samples = sum(stats["total"] for stats in dataset_stats.values())
-    overall_accuracy = (total_correct / total_samples * 100) if total_samples > 0 else 0.0
+    overall_accuracy = (
+        total_correct /
+        total_samples *
+        100) if total_samples > 0 else 0.0
 
     # Calculate weighted final score
     final_score = 0.0
@@ -589,14 +592,18 @@ def main():
             "max_component_score": max_component_score
         }
 
-    final_score_percentage = (final_score / max_score * 100) if max_score > 0 else 0.0
+    final_score_percentage = (
+        final_score /
+        max_score *
+        100) if max_score > 0 else 0.0
 
     # Print results
     print("\n" + "=" * 80)
     print("MLPerf Accuracy Evaluation Results")
     print("=" * 80)
     print(f"Total samples evaluated: {total_samples}")
-    print(f"Overall raw accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+    print(
+        f"Overall raw accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
     print("=" * 80)
 
     print("\nPer-Dataset Breakdown:")
@@ -631,7 +638,8 @@ def main():
     print(f"         = {final_score:.2f}")
     print(f"Max:     = {' + '.join(max_parts)}")
     print(f"         = {max_score:.2f}")
-    print(f"\nFINAL SCORE: {final_score_percentage:.2f}% ({final_score:.2f}/{max_score:.2f})")
+    print(
+        f"\nFINAL SCORE: {final_score_percentage:.2f}% ({final_score:.2f}/{max_score:.2f})")
     print("=" * 80)
 
     # Save detokenized outputs to pickle if requested

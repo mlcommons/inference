@@ -83,7 +83,6 @@ struct SampleMetadata {
   uint64_t sequence_id;
   QuerySampleIndex sample_index;
   double accuracy_log_val;
-  uint64_t repeat_index;  // Index for repeated sampling (0 to k-1)
 };
 
 /// \brief Maintains data and timing info for a query and all its samples.
@@ -91,8 +90,7 @@ class QueryMetadata {
  public:
   QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indices,
                 std::chrono::nanoseconds scheduled_delta,
-                ResponseDelegate* response_delegate, SequenceGen* sequence_gen,
-                uint64_t repeat_index = 0);
+                ResponseDelegate* response_delegate, SequenceGen* sequence_gen);
   QueryMetadata(QueryMetadata&& src);
 
   void NotifyOneSampleCompleted(PerfClock::time_point timestamp);

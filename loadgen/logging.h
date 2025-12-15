@@ -213,8 +213,7 @@ class AsyncLog {
   void SetCurrentPidTid(uint64_t pid, uint64_t tid);
 
   void LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
-                   const LogBinaryAsHexString& response, int64_t n_tokens,
-                   uint64_t repeat_index = 0);
+                   const LogBinaryAsHexString& response, int64_t n_tokens);
   void CacheToken(uint64_t seq_id, const LogBinaryAsHexString& response);
 
   template <typename... Args>

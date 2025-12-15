@@ -30,8 +30,7 @@ namespace loadgen {
 QueryMetadata::QueryMetadata(
     const std::vector<QuerySampleIndex>& query_sample_indices,
     std::chrono::nanoseconds scheduled_delta,
-    ResponseDelegate* response_delegate, SequenceGen* sequence_gen,
-    uint64_t repeat_index)
+    ResponseDelegate* response_delegate, SequenceGen* sequence_gen)
     : scheduled_delta(scheduled_delta),
       response_delegate(response_delegate),
       sequence_id(sequence_gen->NextQueryId()),
@@ -39,7 +38,7 @@ QueryMetadata::QueryMetadata(
   samples_.reserve(query_sample_indices.size());
   for (QuerySampleIndex qsi : query_sample_indices) {
     samples_.push_back({this, sequence_gen->NextSampleId(), qsi,
-                        sequence_gen->NextAccLogRng(), repeat_index});
+                        sequence_gen->NextAccLogRng()});
   }
   query_to_send.reserve(query_sample_indices.size());
   for (auto& s : samples_) {

@@ -20,38 +20,49 @@ from .base import BaseParser
 
 # pylint: disable=missing-docstring
 
+
 class LoadgenParser(BaseParser):
     def __init__(self, log_path, strict=True):
         """
         Helper class to parse the detail logs.
         log_path: path to the detail log.
-        strict: whether to ignore lines with :::MLLOG prefix but with invalid JSON format.
+        strict: whether to ignore lines with any of the marker prefix but with invalid JSON format.
         """
-        self.marker = ":::MLLOG"
+
+        self.markers = [":::MLLOG", ":::ENDPTS"]
         self.logger = logging.getLogger("LoadgenParser")
         self.messages = {}
         with open(log_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
-                if line.find(self.marker) == 0:
-                    try:
-                        log = json.loads(line[len(self.marker):])
-                        if log["key"] in self.messages:
-                            self.messages[log["key"]].append(log)
-                        else:
-                            self.messages[log["key"]] = [log]
-                    except BaseException:
-                        if strict:
-                            raise RuntimeError(
-                                "Encountered invalid line: {:}".format(line)
-                            )
-                        else:
-                            self.logger.warning(
-                                "Skipping invalid line: {:}".format(line)
-                            )
+                # check if the line starts with any of the configured markers
+                marker_found = None
+                for m in self.markers:
+                    if line.find(m) == 0:
+                        marker_found = m
+                        break
+                if marker_found is None:
+                    continue
+                try:
+                    log = json.loads(line[len(marker_found):])
+                    if log["key"] in self.messages:
+                        self.messages[log["key"]].append(log)
+                    else:
+                        self.messages[log["key"]] = [log]
+                except BaseException:
+                    if strict:
+                        raise RuntimeError(
+                            "Encountered invalid line: {:}".format(line)
+                        )
+                    else:
+                        self.logger.warning(
+                            "Skipping invalid line: {:}".format(line)
+                        )
         self.keys = set(self.messages.keys())
         self.logger.info(
-            "Sucessfully loaded MLPerf log from {:}.".format(log_path))
+            "Sucessfully loaded MLPerf log from {:}. Markers: {:}".format(
+                log_path, self.markers)
+        )
 
     def __getitem__(self, key):
         """
@@ -181,7 +192,8 @@ def main():
     Inspect a detailed log.
     """
     args = get_args()
-    mlperf_log = LoadgenParser(args.input, strict=not args.ignore_invalid_lines)
+    mlperf_log = LoadgenParser(args.input,
+                               strict=not args.ignore_invalid_lines)
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s",

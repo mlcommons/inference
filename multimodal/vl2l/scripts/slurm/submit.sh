@@ -15,6 +15,12 @@ scenario=${DEFAULT_SCENARIO}
 DEFAULT_MODE=accuracy_only
 mode=${DEFAULT_MODE}
 
+DEFAULT_SERVER_EXPECTED_QPS=5
+server_expected_qps=${DEFAULT_SERVER_EXPECTED_QPS}
+
+DEFAULT_TENSOR_PARALLEL_SIZE=8
+tensor_parallel_size=${DEFAULT_TENSOR_PARALLEL_SIZE}
+
 DEFAULT_CACHE_HOST_DIR=""
 cache_host_dir=${DEFAULT_CACHE_HOST_DIR}
 
@@ -39,6 +45,8 @@ Usage: ${BASH_SOURCE[0]}
     [-mri | --model-repo-id]       HuggingFace repo ID of the model to benchmark (default: ${DEFAULT_MODEL_REPO_ID}).
     [-s | --scenario]              Benchmark scenario (default: ${DEFAULT_SCENARIO}).
     [-m | --mode]                  Benchmark mode (default: ${DEFAULT_MODE}).
+    [-seq | --server-expected-qps] The expected QPS for the server scenario (default: ${DEFAULT_SERVER_EXPECTED_QPS}).
+    [-tps | --tensor-parallel-size] Tensor parallelism size for the model deployment (default: ${DEFAULT_TENSOR_PARALLEL_SIZE}).
     [-chd | --cache-host-dir]      Host directory of the `.cache` directory to which HuggingFace will dump the dataset and the model checkpoint, and vLLM will dump compilation artifacts (default: ${DEFAULT_CACHE_HOST_DIR}).
     [-ohd | --output-host-dir]     Host directory to which the benchmark and evaluation results will be dumped (default: ${DEFAULT_OUTPUT_HOST_DIR}).
     [-sa | --slurm-account]        Slurm account for submitting the benchmark and evaluation jobs (default: ${DEFAULT_SLURM_ACCOUNT}).
@@ -88,6 +96,24 @@ while [[ $# -gt 0 ]]; do
         ;;
     -m=* | --mode=*)
         mode=${1#*=}
+        shift
+        ;;
+    -seq | --server-expected-qps)
+        server_expected_qps=$2
+        shift
+        shift
+        ;;
+    -seq=* | --server-expected-qps=*)
+        server_expected_qps=${1#*=}
+        shift
+        ;;
+    -tps | --tensor-parallel-size)
+        tensor_parallel_size=$2
+        shift
+        shift
+        ;;
+    -tps=* | --tensor-parallel-size=*)
+        tensor_parallel_size=${1#*=}
         shift
         ;;
     -chd | --cache-host-dir)
@@ -177,10 +203,13 @@ benchmark_job_id=$(
     CONTAINER_IMAGE="${container_image}" \
     SCENARIO="${scenario}" \
     MODE="${mode}" \
+    SERVER_EXPECTED_QPS="${server_expected_qps}" \
+    TENSOR_PARALLEL_SIZE="${tensor_parallel_size}" \
     MODEL_REPO_ID="${model_repo_id}" \
     sbatch --parsable \
         --account="${slurm_account}" \
         --partition="${benchmark_slurm_partition}" \
+        --gres=gpu:"${tensor_parallel_size}" \
         benchmark.sh
 )
 

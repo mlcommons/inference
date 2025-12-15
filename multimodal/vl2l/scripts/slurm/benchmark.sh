@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --time=4:00:00
 #SBATCH --partition=batch
-#SBATCH --gres=gpu:8
 #SBATCH --tasks=1
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -21,9 +20,10 @@ srun \
     mlperf-inf-mm-vl2l benchmark vllm \
         --settings.test.scenario=${SCENARIO} \
         --settings.test.mode=${MODE} \
+        --settings.test.server_expected_qps=${SERVER_EXPECTED_QPS} \
         --vllm.model.repo_id=${MODEL_REPO_ID} \
         --vllm.cli=--async-scheduling \
         --vllm.cli=--max-model-len=32768 \
         --vllm.cli=--limit-mm-per-prompt.video=0 \
-        --vllm.cli=--tensor-parallel-size=8 \
+        --vllm.cli=--tensor-parallel-size=${TENSOR_PARALLEL_SIZE} \
         --settings.logging.log_output.outdir=${OUTPUT_CONTAINER_DIR}/${SLURM_JOB_ID} 

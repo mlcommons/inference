@@ -43,35 +43,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Hardcoded repeats per dataset for final score calculation
+# Final score = sum(dataset_correct / dataset_repeats)
+DATASET_REPEATS = {
+    'aime25': 8,
+    'gpqa_diamond': 5,
+    'livecodebench_v6': 3,
+}
 
-def load_mlperf_log(log_path: str) -> Tuple[List[Dict[str, Any]], int]:
+
+def load_mlperf_log(log_path: str) -> List[Dict[str, Any]]:
     """Load MLPerf accuracy JSON log.
 
     Args:
         log_path: Path to mlperf_log_accuracy.json
 
     Returns:
-        Tuple of (log_data, num_repeats)
-        - log_data: List of log entries with seq_id, qsl_idx, repeat_idx, data (hex), token_count
-        - num_repeats: Number of repeats per sample (pass@k value)
+        List of log entries with seq_id, qsl_idx, data (hex), token_count
     """
     logger.info(f"Loading MLPerf log from {log_path}")
     with open(log_path, 'r') as f:
         log_data = json.load(f)
 
-    # Detect number of repeats from repeat_idx field
-    max_repeat_idx = 0
-    for entry in log_data:
-        repeat_idx = entry.get('repeat_idx', 0)
-        max_repeat_idx = max(max_repeat_idx, repeat_idx)
-
-    num_repeats = max_repeat_idx + 1
-
     logger.info(f"Loaded {len(log_data)} log entries")
-    logger.info(
-        f"Detected repeats_per_sample = {num_repeats} (pass@{num_repeats} format)")
 
-    return log_data, num_repeats
+    return log_data
 
 
 def decode_hex_to_tokens(hex_data: str) -> List[int]:
@@ -140,7 +136,6 @@ def process_livecodebench_batch(
     for entry in tqdm(entries, desc=f"Parsing {dataset_name}", unit="entry"):
         seq_id = entry['seq_id']
         qsl_idx = entry['qsl_idx']
-        repeat_idx = entry.get('repeat_idx', 0)
         hex_data = entry['data']
 
         ref_row = reference_df.iloc[qsl_idx]
@@ -156,7 +151,6 @@ def process_livecodebench_batch(
         entry_metadata.append({
             'entry': entry,
             'qsl_idx': qsl_idx,
-            'repeat_idx': repeat_idx,
             'ref_row': ref_row,
             'token_ids': token_ids,
             'model_output': model_output,
@@ -210,7 +204,6 @@ def process_livecodebench_batch(
     for idx, metadata in enumerate(entry_metadata):
         entry = metadata['entry']
         qsl_idx = metadata['qsl_idx']
-        repeat_idx = metadata['repeat_idx']
         token_ids = metadata['token_ids']
         model_output = metadata['model_output']
         extracted_code = metadata['extracted_code']
@@ -227,7 +220,6 @@ def process_livecodebench_batch(
         result = {
             'seq_id': entry['seq_id'],
             'qsl_idx': qsl_idx,
-            'repeat_idx': repeat_idx,
             'dataset': dataset_name,
             'is_correct': is_correct,
             'extracted_answer': str(extracted_code)[:200] if extracted_code is not None else None,
@@ -242,7 +234,6 @@ def process_livecodebench_batch(
         if args.save_outputs:
             output_record = {
                 'qsl_idx': qsl_idx,
-                'repeat_idx': repeat_idx,
                 'seq_id': entry['seq_id'],
                 'dataset': dataset_name,
                 'ground_truth': ground_truth,
@@ -352,7 +343,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Load MLPerf log
-    mlperf_log, num_repeats = load_mlperf_log(args.mlperf_log)
+    mlperf_log = load_mlperf_log(args.mlperf_log)
 
     # Load reference data
     logger.info(f"Loading reference data from {args.reference_data}")
@@ -391,8 +382,6 @@ def main():
     if missing_columns:
         raise ValueError(
             f"Reference data missing required columns: {missing_columns}")
-    logger.info(
-        f"Evaluation mode: pass@{num_repeats}" if num_repeats > 1 else "Evaluation mode: single-pass")
 
     # Log unique datasets in reference data
     if 'dataset' in reference_df.columns:
@@ -429,16 +418,12 @@ def main():
     logger.info(f"Loading tokenizer: {args.tokenizer}")
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
 
-    # Group MLPerf log entries by dataset and track repeats
+    # Group MLPerf log entries by dataset
     logger.info("Grouping MLPerf log entries by dataset...")
     dataset_entries = defaultdict(list)
 
-    # Track unique (qsl_idx, repeat_idx) pairs to verify coverage
-    qsl_repeat_pairs = set()
-
     for entry in mlperf_log:
         qsl_idx = entry['qsl_idx']
-        repeat_idx = entry.get('repeat_idx', 0)
 
         if qsl_idx >= len(reference_df):
             logger.warning(
@@ -448,16 +433,13 @@ def main():
         ref_row = reference_df.iloc[qsl_idx]
         dataset_name = validate_dataset_name(ref_row['dataset'])
         dataset_entries[dataset_name].append(entry)
-        qsl_repeat_pairs.add((qsl_idx, repeat_idx))
-
-    # Count unique qsl_idx values
-    unique_qsl_indices = set(pair[0] for pair in qsl_repeat_pairs)
 
     logger.info(f"Grouped entries by dataset:")
+    total_entries = 0
     for ds_name, entries in sorted(dataset_entries.items()):
         logger.info(f"  {ds_name}: {len(entries)} entries")
-    logger.info(f"Unique samples (qsl_idx): {len(unique_qsl_indices)}")
-    logger.info(f"Total entries (samples × repeats): {len(qsl_repeat_pairs)}")
+        total_entries += len(entries)
+    logger.info(f"Total entries: {total_entries}")
 
     # Pre-load LiveCodeBench benchmark if needed
     lcb_executor = None
@@ -484,16 +466,8 @@ def main():
     logger.info("\nProcessing MLPerf log entries by dataset...")
 
     results = []
-    # Track stats for each repeat and aggregated
-    dataset_stats = defaultdict(lambda: {
-        "per_repeat": {i: {"correct": 0, "total": 0} for i in range(num_repeats)},
-        # pass@k: at least one correct
-        "aggregated": {"correct": 0, "total": 0},
-        # pass@1 with k repeats: average correctness across repeats
-        "averaged": {"correct_sum": 0, "total": 0}
-    })
-    # Track results per (qsl_idx, repeat_idx) for aggregation
-    qsl_results = defaultdict(lambda: {i: None for i in range(num_repeats)})
+    # Track stats per dataset (simple correct/total)
+    dataset_stats = defaultdict(lambda: {"correct": 0, "total": 0})
     outputs_data = []  # For saving detokenized outputs
 
     try:
@@ -516,27 +490,17 @@ def main():
                 if args.save_outputs:
                     outputs_data.extend(outputs_batch)
 
-                # Update per-repeat stats and track for aggregation
+                # Update stats
                 for res in results_batch:
-                    repeat_idx = res['repeat_idx']
-                    qsl_idx = res['qsl_idx']
-                    is_correct = res['is_correct']
-
-                    # Track result for aggregation
-                    qsl_results[(dataset_name, qsl_idx)
-                                ][repeat_idx] = is_correct
-
-                    # Update per-repeat stats
-                    dataset_stats[dataset_name]["per_repeat"][repeat_idx]["total"] += 1
-                    if is_correct:
-                        dataset_stats[dataset_name]["per_repeat"][repeat_idx]["correct"] += 1
+                    dataset_stats[dataset_name]["total"] += 1
+                    if res['is_correct']:
+                        dataset_stats[dataset_name]["correct"] += 1
             else:
                 # Sequential evaluation for non-LCB datasets
                 for entry in tqdm(
                         entries, desc=f"Evaluating {dataset_name}", unit="entry"):
                     seq_id = entry['seq_id']
                     qsl_idx = entry['qsl_idx']
-                    repeat_idx = entry.get('repeat_idx', 0)
                     hex_data = entry['data']
 
                     ref_row = reference_df.iloc[qsl_idx]
@@ -553,7 +517,7 @@ def main():
                         )
                     except Exception as e:
                         logger.warning(
-                            f"Evaluation error for qsl_idx={qsl_idx}, repeat={repeat_idx}, dataset={dataset_name}: {e}")
+                            f"Evaluation error for qsl_idx={qsl_idx}, dataset={dataset_name}: {e}")
                         is_correct = False
                         extracted = None
                         eval_details = f"Evaluation error: {e}"
@@ -562,7 +526,6 @@ def main():
                     result = {
                         'seq_id': seq_id,
                         'qsl_idx': qsl_idx,
-                        'repeat_idx': repeat_idx,
                         'dataset': dataset_name,
                         'is_correct': is_correct,
                         'extracted_answer': str(extracted) if extracted is not None else None,
@@ -577,7 +540,6 @@ def main():
                     if args.save_outputs:
                         output_record = {
                             'qsl_idx': qsl_idx,
-                            'repeat_idx': repeat_idx,
                             'seq_id': seq_id,
                             'dataset': dataset_name,
                             'ground_truth': ground_truth,
@@ -589,14 +551,10 @@ def main():
                         }
                         outputs_data.append(output_record)
 
-                    # Track result for this (qsl_idx, repeat_idx)
-                    qsl_results[(dataset_name, qsl_idx)
-                                ][repeat_idx] = is_correct
-
-                    # Update per-repeat stats
-                    dataset_stats[dataset_name]["per_repeat"][repeat_idx]["total"] += 1
+                    # Update stats
+                    dataset_stats[dataset_name]["total"] += 1
                     if is_correct:
-                        dataset_stats[dataset_name]["per_repeat"][repeat_idx]["correct"] += 1
+                        dataset_stats[dataset_name]["correct"] += 1
 
     finally:
         # Clean up LiveCodeBench executor
@@ -605,124 +563,72 @@ def main():
             lcb_executor.shutdown(wait=True)
             os.environ.pop('TQDM_DISABLE', None)
 
-    # Aggregate results across repeats (pass@k logic)
-    logger.info("\nAggregating results across repeats...")
-    for (dataset_name, qsl_idx), repeat_results in qsl_results.items():
-        # Check if ANY repeat is correct (pass@k)
-        is_pass_k_correct = any(
-            result for result in repeat_results.values() if result is not None and result
-        )
+    # Calculate per-dataset scores and final score
+    # Final score = sum(dataset_correct / dataset_repeats)
+    logger.info("\nCalculating final scores...")
 
-        # Update aggregated stats (pass@k)
-        dataset_stats[dataset_name]["aggregated"]["total"] += 1
-        if is_pass_k_correct:
-            dataset_stats[dataset_name]["aggregated"]["correct"] += 1
+    total_correct = sum(stats["correct"] for stats in dataset_stats.values())
+    total_samples = sum(stats["total"] for stats in dataset_stats.values())
+    overall_accuracy = (total_correct / total_samples * 100) if total_samples > 0 else 0.0
 
-        # Update averaged stats (pass@1 with k repeats)
-        correct_count = sum(
-            1 for result in repeat_results.values() if result is not None and result)
-        dataset_stats[dataset_name]["averaged"]["correct_sum"] += correct_count
-        dataset_stats[dataset_name]["averaged"]["total"] += 1
-
-    # Calculate overall stats (aggregated pass@k if num_repeats > 1, else
-    # per-repeat[0])
-    if num_repeats > 1:
-        total_correct = sum(stats["aggregated"]["correct"]
-                            for stats in dataset_stats.values())
-        total_samples = sum(stats["aggregated"]["total"]
-                            for stats in dataset_stats.values())
-
-        # Calculate overall pass@1 with k repeats accuracy
-        total_averaged_correct_sum = sum(stats["averaged"]["correct_sum"]
-                                         for stats in dataset_stats.values())
-        total_averaged_samples = sum(stats["averaged"]["total"]
-                                     for stats in dataset_stats.values())
-        overall_averaged_accuracy = (
-            total_averaged_correct_sum /
-            (total_averaged_samples * num_repeats) * 100
-        ) if total_averaged_samples > 0 else 0.0
-    else:
-        total_correct = sum(stats["per_repeat"][0]["correct"]
-                            for stats in dataset_stats.values())
-        total_samples = sum(stats["per_repeat"][0]["total"]
-                            for stats in dataset_stats.values())
-
-    overall_accuracy = (
-        total_correct /
-        total_samples *
-        100) if total_samples > 0 else 0.0
+    # Calculate weighted final score
+    final_score = 0.0
+    final_score_components = {}
+    for dataset_name, stats in dataset_stats.items():
+        repeats = DATASET_REPEATS.get(dataset_name, 1)
+        component_score = stats["correct"] / repeats
+        final_score += component_score
+        final_score_components[dataset_name] = {
+            "correct": stats["correct"],
+            "total": stats["total"],
+            "repeats": repeats,
+            "component_score": component_score
+        }
 
     # Print results
     print("\n" + "=" * 80)
     print("MLPerf Accuracy Evaluation Results")
     print("=" * 80)
-    print(f"Evaluation mode: pass@{num_repeats}" if num_repeats >
-          1 else "Evaluation mode: single-pass")
-    print(f"Total unique samples: {total_samples}")
-    if num_repeats > 1:
-        print(
-            f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
-        total_score = total_averaged_correct_sum / num_repeats
-        print(
-            f"Overall pass@1 with {num_repeats} repeats: {overall_averaged_accuracy:.2f}% ({total_score:.1f}/{total_averaged_samples})")
-    else:
-        print(
-            f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+    print(f"Total samples evaluated: {total_samples}")
+    print(f"Overall raw accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
     print("=" * 80)
 
-    if num_repeats > 1:
-        print("\nPer-Dataset pass@k Results (aggregated):")
-        print("-" * 80)
-        for dataset_name in sorted(dataset_stats.keys()):
-            stats = dataset_stats[dataset_name]["aggregated"]
-            if stats["total"] > 0:
-                accuracy = (stats["correct"] / stats["total"] * 100)
-                print(
-                    f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
+    print("\nPer-Dataset Breakdown:")
+    print("-" * 80)
+    print(f"{'Dataset':25s} {'Correct':>8s} {'Total':>8s} {'Repeats':>8s} {'Score':>10s} {'Accuracy':>10s}")
+    print("-" * 80)
+    for dataset_name in sorted(dataset_stats.keys()):
+        stats = dataset_stats[dataset_name]
+        if stats["total"] > 0:
+            accuracy = (stats["correct"] / stats["total"] * 100)
+            repeats = DATASET_REPEATS.get(dataset_name, 1)
+            component_score = stats["correct"] / repeats
+            print(
+                f"{dataset_name:25s} {stats['correct']:8d} {stats['total']:8d} {repeats:8d} {component_score:10.2f} {accuracy:9.2f}%")
 
-        print("\nPer-Dataset pass@1 with k repeats Results:")
-        print("-" * 80)
-        for dataset_name in sorted(dataset_stats.keys()):
-            stats = dataset_stats[dataset_name]["averaged"]
-            if stats["total"] > 0:
-                accuracy = (stats["correct_sum"] /
-                            (stats["total"] * num_repeats) * 100)
-                total_score = stats["correct_sum"] / num_repeats
-                print(
-                    f"{dataset_name:20s}: {accuracy:6.2f}% ({total_score:7.1f}/{stats['total']:4d})")
-
-        print("\n" + "=" * 80)
-        print("Per-Dataset, Per-Repeat Breakdown:")
-        print("-" * 80)
-        for dataset_name in sorted(dataset_stats.keys()):
-            print(f"\n{dataset_name}:")
-            for repeat_idx in range(num_repeats):
-                stats = dataset_stats[dataset_name]["per_repeat"][repeat_idx]
-                if stats["total"] > 0:
-                    accuracy = (stats["correct"] / stats["total"] * 100)
-                    print(
-                        f"  Repeat {repeat_idx}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
-    else:
-        print("\nPer-Dataset Breakdown:")
-        print("-" * 80)
-        for dataset_name in sorted(dataset_stats.keys()):
-            stats = dataset_stats[dataset_name]["per_repeat"][0]
-            if stats["total"] > 0:
-                accuracy = (stats["correct"] / stats["total"] * 100)
-                print(
-                    f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
-
+    print("=" * 80)
+    print(f"\nFinal Score Calculation:")
+    print("-" * 80)
+    score_parts = []
+    value_parts = []
+    result_parts = []
+    for dataset_name in sorted(final_score_components.keys()):
+        comp = final_score_components[dataset_name]
+        score_parts.append(f"{dataset_name}/{comp['repeats']}")
+        value_parts.append(f"{comp['correct']}/{comp['repeats']}")
+        result_parts.append(f"{comp['component_score']:.2f}")
+    print(f"Formula: {' + '.join(score_parts)}")
+    print(f"         = {' + '.join(value_parts)}")
+    print(f"         = {' + '.join(result_parts)}")
+    print(f"\nFINAL SCORE: {final_score:.2f}")
     print("=" * 80)
 
     # Save detokenized outputs to pickle if requested
     if args.save_outputs:
         logger.info(f"Saving detokenized outputs to {args.save_outputs}...")
 
-        # Sort by (qsl_idx, repeat_idx) for ordered output
-        outputs_data_sorted = sorted(
-            outputs_data, key=lambda x: (
-                x['qsl_idx'], x.get(
-                    'repeat_idx', 0)))
+        # Sort by qsl_idx for ordered output
+        outputs_data_sorted = sorted(outputs_data, key=lambda x: x['qsl_idx'])
 
         # Convert to DataFrame for easier inspection
         outputs_df = pd.DataFrame(outputs_data_sorted)
@@ -742,54 +648,24 @@ def main():
         # Build per-dataset stats
         per_dataset_stats = {}
         for dataset_name, stats in dataset_stats.items():
-            if num_repeats > 1:
-                # Aggregated pass@k stats
-                agg_stats = stats["aggregated"]
-                avg_stats = stats["averaged"]
-                per_dataset_stats[dataset_name] = {
-                    "pass_k": num_repeats,
-                    "aggregated": {
-                        "correct": agg_stats["correct"],
-                        "total": agg_stats["total"],
-                        "accuracy": (agg_stats["correct"] / agg_stats["total"] * 100) if agg_stats["total"] > 0 else 0.0
-                    },
-                    "averaged": {
-                        "score": avg_stats["correct_sum"] / num_repeats,
-                        "total": avg_stats["total"],
-                        "accuracy": (avg_stats["correct_sum"] / (avg_stats["total"] * num_repeats) * 100) if avg_stats["total"] > 0 else 0.0
-                    },
-                    "per_repeat": {}
-                }
-                # Add per-repeat stats
-                for repeat_idx in range(num_repeats):
-                    repeat_stats = stats["per_repeat"][repeat_idx]
-                    if repeat_stats["total"] > 0:
-                        per_dataset_stats[dataset_name]["per_repeat"][repeat_idx] = {
-                            "correct": repeat_stats["correct"],
-                            "total": repeat_stats["total"],
-                            "accuracy": (repeat_stats["correct"] / repeat_stats["total"] * 100)
-                        }
-            else:
-                # Single-pass stats
-                single_stats = stats["per_repeat"][0]
-                per_dataset_stats[dataset_name] = {
-                    "correct": single_stats["correct"],
-                    "total": single_stats["total"],
-                    "accuracy": (single_stats["correct"] / single_stats["total"] * 100) if single_stats["total"] > 0 else 0.0
-                }
+            repeats = DATASET_REPEATS.get(dataset_name, 1)
+            component_score = stats["correct"] / repeats
+            per_dataset_stats[dataset_name] = {
+                "correct": stats["correct"],
+                "total": stats["total"],
+                "accuracy": (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0.0,
+                "repeats": repeats,
+                "component_score": component_score
+            }
 
         summary = {
-            "num_repeats": num_repeats,
             "total_samples": total_samples,
             "total_correct": total_correct,
             "overall_accuracy": overall_accuracy,
+            "final_score": final_score,
+            "dataset_repeats": DATASET_REPEATS,
             "per_dataset": per_dataset_stats
         }
-
-        # Add averaged metrics if num_repeats > 1
-        if num_repeats > 1:
-            summary["overall_averaged_score"] = total_averaged_correct_sum / num_repeats
-            summary["overall_averaged_accuracy"] = overall_averaged_accuracy
 
         output_data = {
             "summary": summary,

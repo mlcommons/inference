@@ -29,8 +29,6 @@ class LoadgenParser(BaseParser):
         """
         
         self.markers = [":::MLLOG", ":::ENDPTS"]
-        # keep a single-marker attribute for backward compatibility
-        self.marker = self.markers[0] if len(self.markers) > 0 else ""
         self.logger = logging.getLogger("LoadgenParser")
         self.messages = {}
         with open(log_path, "r", encoding="utf-8") as f:

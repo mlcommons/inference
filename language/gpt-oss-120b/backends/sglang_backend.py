@@ -53,19 +53,23 @@ class SGLangBackend(BaseBackend):
             return
 
         logger.info(f"Connecting to SGLang server at {self.server_url}")
-        logger.info(f"Configuring connection pool with max_pool_size={self.max_pool_size}")
+        logger.info(
+            f"Configuring connection pool with max_pool_size={self.max_pool_size}")
         # Create session with larger connection pool for high concurrency
         # Default pool size is 10, but we may have 100s-1000s of concurrent
         # requests
         self.session = requests.Session()
 
         # Increase connection pool size to support high concurrency
-        # pool_maxsize should be >= max_concurrency to avoid "pool is full" warnings
+        # pool_maxsize should be >= max_concurrency to avoid "pool is full"
+        # warnings
         adapter = requests.adapters.HTTPAdapter(
-            pool_connections=min(100, self.max_pool_size // 10),  # Number of connection pools to cache
+            # Number of connection pools to cache
+            pool_connections=min(100, self.max_pool_size // 10),
             pool_maxsize=self.max_pool_size,     # Maximum number of connections in the pool
             max_retries=3,                       # Retry failed requests
-            pool_block=False                     # Don't block when pool is full, create new connections
+            # Don't block when pool is full, create new connections
+            pool_block=False
         )
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
@@ -228,7 +232,7 @@ class SGLangBackend(BaseBackend):
                 - is_finished: True if generation is complete
                 - accumulated_token_ids: All tokens generated so far
                 - metadata: Additional info (TTFT, completion_tokens, etc.)
-                
+
         Note:
             SGLang's streaming API behavior:
             - Returns 'output_ids', 'text', and 'meta_info' in each chunk
@@ -302,49 +306,63 @@ class SGLangBackend(BaseBackend):
                             delta_text = chunk.get("text", "")
 
                             # Check if this is the final chunk
-                            # SGLang uses 'finish_reason' in meta_info, not 'finished' flag
+                            # SGLang uses 'finish_reason' in meta_info, not
+                            # 'finished' flag
                             meta_info = chunk.get("meta_info", {})
                             finish_reason = meta_info.get("finish_reason")
-                            is_finished = (finish_reason is not None and finish_reason != "null") or chunk.get("finished", False)
+                            is_finished = (
+                                finish_reason is not None and finish_reason != "null") or chunk.get(
+                                "finished", False)
 
                             # Extract token information from chunk
                             # SGLang's output_ids can have retractions, so use meta_info.completion_tokens
                             # which is the reliable cumulative count
                             chunk_output_ids = chunk.get("output_ids", [])
-                            completion_tokens = meta_info.get("completion_tokens", 0)
-                            
+                            completion_tokens = meta_info.get(
+                                "completion_tokens", 0)
+
                             if completion_tokens > 0:
-                                # Use completion_tokens as the authoritative count
+                                # Use completion_tokens as the authoritative
+                                # count
                                 previous_count = len(accumulated_token_ids)
-                                
+
                                 if completion_tokens > previous_count:
                                     # New tokens generated
                                     num_new_tokens = completion_tokens - previous_count
-                                    
-                                    if chunk_output_ids and len(chunk_output_ids) >= num_new_tokens:
+
+                                    if chunk_output_ids and len(
+                                            chunk_output_ids) >= num_new_tokens:
                                         # Use actual token IDs from chunk
-                                        delta_token_ids = chunk_output_ids[-num_new_tokens:] if num_new_tokens > 0 else []
+                                        delta_token_ids = chunk_output_ids[-num_new_tokens:] if num_new_tokens > 0 else [
+                                        ]
                                     else:
-                                        # Fallback: create placeholder tokens for counting
-                                        delta_token_ids = list(range(previous_count, completion_tokens))
-                                    
-                                    accumulated_token_ids.extend(delta_token_ids)
+                                        # Fallback: create placeholder tokens
+                                        # for counting
+                                        delta_token_ids = list(
+                                            range(previous_count, completion_tokens))
+
+                                    accumulated_token_ids.extend(
+                                        delta_token_ids)
                                 else:
                                     delta_token_ids = []
-                                
+
                             else:
-                                # No completion_tokens - fallback to output_ids or text estimation
+                                # No completion_tokens - fallback to output_ids
+                                # or text estimation
                                 if chunk_output_ids:
                                     delta_token_ids = chunk_output_ids
-                                    accumulated_token_ids.extend(delta_token_ids)
+                                    accumulated_token_ids.extend(
+                                        delta_token_ids)
                                 elif delta_text:
                                     # Estimate from text length
-                                    estimated_tokens = max(1, len(delta_text) // 4)
+                                    estimated_tokens = max(
+                                        1, len(delta_text) // 4)
                                     delta_token_ids = [0] * estimated_tokens
-                                    accumulated_token_ids.extend(delta_token_ids)
+                                    accumulated_token_ids.extend(
+                                        delta_token_ids)
                                 else:
                                     delta_token_ids = []
-                            
+
                             # Accumulate text
                             if delta_text:
                                 accumulated_text += delta_text

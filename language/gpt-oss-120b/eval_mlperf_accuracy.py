@@ -573,17 +573,23 @@ def main():
 
     # Calculate weighted final score
     final_score = 0.0
+    max_score = 0.0
     final_score_components = {}
     for dataset_name, stats in dataset_stats.items():
         repeats = DATASET_REPEATS.get(dataset_name, 1)
         component_score = stats["correct"] / repeats
+        max_component_score = stats["total"] / repeats
         final_score += component_score
+        max_score += max_component_score
         final_score_components[dataset_name] = {
             "correct": stats["correct"],
             "total": stats["total"],
             "repeats": repeats,
-            "component_score": component_score
+            "component_score": component_score,
+            "max_component_score": max_component_score
         }
+
+    final_score_percentage = (final_score / max_score * 100) if max_score > 0 else 0.0
 
     # Print results
     print("\n" + "=" * 80)
@@ -612,15 +618,20 @@ def main():
     score_parts = []
     value_parts = []
     result_parts = []
+    max_parts = []
     for dataset_name in sorted(final_score_components.keys()):
         comp = final_score_components[dataset_name]
         score_parts.append(f"{dataset_name}/{comp['repeats']}")
         value_parts.append(f"{comp['correct']}/{comp['repeats']}")
         result_parts.append(f"{comp['component_score']:.2f}")
+        max_parts.append(f"{comp['total']}/{comp['repeats']}")
     print(f"Formula: {' + '.join(score_parts)}")
-    print(f"         = {' + '.join(value_parts)}")
+    print(f"Score:   = {' + '.join(value_parts)}")
     print(f"         = {' + '.join(result_parts)}")
-    print(f"\nFINAL SCORE: {final_score:.2f}")
+    print(f"         = {final_score:.2f}")
+    print(f"Max:     = {' + '.join(max_parts)}")
+    print(f"         = {max_score:.2f}")
+    print(f"\nFINAL SCORE: {final_score_percentage:.2f}% ({final_score:.2f}/{max_score:.2f})")
     print("=" * 80)
 
     # Save detokenized outputs to pickle if requested
@@ -650,12 +661,14 @@ def main():
         for dataset_name, stats in dataset_stats.items():
             repeats = DATASET_REPEATS.get(dataset_name, 1)
             component_score = stats["correct"] / repeats
+            max_component_score = stats["total"] / repeats
             per_dataset_stats[dataset_name] = {
                 "correct": stats["correct"],
                 "total": stats["total"],
                 "accuracy": (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0.0,
                 "repeats": repeats,
-                "component_score": component_score
+                "component_score": component_score,
+                "max_component_score": max_component_score
             }
 
         summary = {
@@ -663,6 +676,8 @@ def main():
             "total_correct": total_correct,
             "overall_accuracy": overall_accuracy,
             "final_score": final_score,
+            "max_score": max_score,
+            "final_score_percentage": final_score_percentage,
             "dataset_repeats": DATASET_REPEATS,
             "per_dataset": per_dataset_stats
         }

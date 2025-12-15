@@ -30,6 +30,7 @@ _CATEGORY_SEPARATOR = " > "
 _WORKER_CONTEXT = {}
 _MAX_JOBS = 4
 
+
 def get_hierarchical_components(
     predicted_path: str,
     true_path: str,
@@ -112,6 +113,7 @@ def calculate_hierarchical_f1(
 
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
+
 def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
     """Calculate the F1 score of brand field.
 
@@ -142,6 +144,7 @@ def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
     # For 1-to-1 extraction, Accuracy = Recall = Micro F1
     return sum(matches) / len(matches)
 
+
 def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
     """Calculate F1 score of is_secondhand field.
 
@@ -169,6 +172,7 @@ def _process_chunk_rnd_brand(args: tuple[str, dict, dict]) -> tuple[str, str]:
     # We pass the specific data row needed, or the whole structure if efficient
     return (pred_brand, data_source[elem["qsl_idx"]]["ground_truth_brand"])
 
+
 def init_worker(dataset: dict) -> None:
     """Initialize worker data to process each chunk.
 
@@ -176,6 +180,7 @@ def init_worker(dataset: dict) -> None:
         dataset: huggingface dataset
     """
     _WORKER_CONTEXT["dataset"] = dataset
+
 
 def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
     """Retrieve relevant information from each chunk of data.
@@ -222,14 +227,15 @@ def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
                     ),
                 ),
                 brand=_PRED_BRAND_PAD,
-                is_secondhand=local_rng.choice([True, False], size=1).tolist()[0],
+                is_secondhand=local_rng.choice(
+                    [True, False], size=1).tolist()[0],
             )
             error_messages.append(
-            (
-                f"Response\n{response}\n(for the sample at index {idx})"
-                f"cannot be validated against"
-                f" the expected schema. Overwriting this response into \n{pred_item}\n",
-            ),
+                (
+                    f"Response\n{response}\n(for the sample at index {idx})"
+                    f"cannot be validated against"
+                    f" the expected schema. Overwriting this response into \n{pred_item}\n",
+                ),
             )
         category_dataset_pred_src.append(
             (pred_item.category, ground_truth_item["ground_truth_category"]),
@@ -258,16 +264,15 @@ def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
         )
 
     return {
-            "num_unparsable_responses": num_unparsable_responses,
-          "error_messages": error_messages,
-            "category_dataset_pred_src": category_dataset_pred_src,
-            "category_rand_pred_src": category_rand_pred_src,
-            "is_secondhand_pred_src": is_secondhand_pred_src,
-           "is_secondhand_rand_pred_src": is_secondhand_rand_pred_src,
-           "brand_pred_src": brand_pred_src,
-          "all_possible_brands": list(all_possible_brands),
-        }
-
+        "num_unparsable_responses": num_unparsable_responses,
+        "error_messages": error_messages,
+        "category_dataset_pred_src": category_dataset_pred_src,
+        "category_rand_pred_src": category_rand_pred_src,
+        "is_secondhand_pred_src": is_secondhand_pred_src,
+        "is_secondhand_rand_pred_src": is_secondhand_rand_pred_src,
+        "brand_pred_src": brand_pred_src,
+        "all_possible_brands": list(all_possible_brands),
+    }
 
 
 def run_evaluation(random_seed: int, filename: FilePath,
@@ -288,7 +293,7 @@ def run_evaluation(random_seed: int, filename: FilePath,
     chunk_size = max(len(model_output) // cpu_count, 1)
     # Create chunks
     output_chunks = [
-        model_output[i : i + chunk_size]
+        model_output[i: i + chunk_size]
         for i in range(0, len(model_output), chunk_size)
     ]
 
@@ -324,7 +329,8 @@ def run_evaluation(random_seed: int, filename: FilePath,
         category_dataset_pred_src.extend(chunk["category_dataset_pred_src"])
         category_rand_pred_src.extend(chunk["category_rand_pred_src"])
         is_secondhand_pred_src.extend(chunk["is_secondhand_pred_src"])
-        is_secondhand_rand_pred_src.extend(chunk["is_secondhand_rand_pred_src"])
+        is_secondhand_rand_pred_src.extend(
+            chunk["is_secondhand_rand_pred_src"])
         brand_pred_src.extend(chunk["brand_pred_src"])
         all_possible_brands.extend(chunk["all_possible_brands"])
 
@@ -339,7 +345,6 @@ def run_evaluation(random_seed: int, filename: FilePath,
 
     rand_is_seconhand_f1_score = calculate_secondhand_f1(
         is_secondhand_rand_pred_src)
-
 
     all_brands_list = list(set(all_possible_brands))
     random_brand_predictions = master_rng.choice(

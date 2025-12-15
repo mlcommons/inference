@@ -53,6 +53,7 @@ class Task(ABC):
         self.dataset = load_dataset(
             dataset.repo_id,
             token=dataset.token,
+            revision=dataset.revision,
             split="+".join(dataset.split),
         )
         logger.debug(
@@ -65,6 +66,7 @@ class Task(ABC):
             base_url=endpoint.url,
             http_client=DefaultAioHttpClient(),
             api_key=endpoint.api_key,
+            timeout=endpoint.request_timeout.total_seconds(),
         )
         self.event_loop, self.event_loop_thread = (
             self._create_event_loop_in_separate_thread()
@@ -75,12 +77,42 @@ class Task(ABC):
     def __del__(self) -> None:
         """Clean up the resources used by the task."""
         logger.trace("Cleaning up the resources used by the task...")
-        asyncio.run_coroutine_threadsafe(
-            self.openai_api_client.close(),
-            self.event_loop,
-        ).result()
+
+        # Cancel all pending tasks in the event loop
+        async def _cancel_all_tasks() -> None:
+            """Cancel all pending tasks in the event loop."""
+            tasks = [
+                task
+                for task in asyncio.all_tasks(self.event_loop)
+                if task is not asyncio.current_task() and not task.done()
+            ]
+            for task in tasks:
+                task.cancel()
+            # Wait briefly for tasks to cancel
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        try:
+            # Cancel any pending tasks first
+            asyncio.run_coroutine_threadsafe(
+                _cancel_all_tasks(),
+                self.event_loop,
+            ).result(timeout=5.0)
+        except Exception as e:
+            logger.trace("Error cancelling tasks during cleanup: {}", e)
+
+        # Try to close the OpenAI client gracefully
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.openai_api_client.close(),
+                self.event_loop,
+            ).result(timeout=5.0)
+        except Exception as e:
+            logger.trace("Error closing OpenAI client during cleanup: {}", e)
+
+        # Stop the event loop and join the thread
         self.event_loop.call_soon_threadsafe(self.event_loop.stop)
-        self.event_loop_thread.join()
+        self.event_loop_thread.join(timeout=5.0)
 
     @staticmethod
     def _create_event_loop_in_separate_thread() -> (
@@ -106,12 +138,18 @@ class Task(ABC):
         event_loop_thread.start()
         return event_loop, event_loop_thread
 
+    @staticmethod
     @abstractmethod
-    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
+    def formulate_loaded_sample(
+        sample: dict[str, Any],
+        *,
+        use_guided_decoding: bool = False,
+    ) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
             sample: The sample from the dataset to be formulated into a loaded sample.
+            use_guided_decoding: Whether to use guided decoding for the sample.
 
         Returns:
             The loaded sample to be used for issuing queries to the inference endpoint.
@@ -150,7 +188,11 @@ class Task(ABC):
                 self.total_num_samples),
         )
         estimation_samples = [
-            self.formulate_loaded_sample(self.dataset[i]) for i in estimation_indices
+            self.formulate_loaded_sample(
+                self.dataset[i],
+                use_guided_decoding=self.endpoint.use_guided_decoding,
+            )
+            for i in estimation_indices
         ]
         avg_messages_footprint = sum(
             asizeof.asizeof(m) for m in estimation_samples
@@ -187,6 +229,7 @@ class Task(ABC):
             for index in query_sample_indices:
                 self.loaded_samples[index] = self.formulate_loaded_sample(
                     self.dataset[index],
+                    use_guided_decoding=self.endpoint.use_guided_decoding,
                 )
 
         def _unload_samples_from_ram(query_sample_indices: list[int]) -> None:
@@ -418,7 +461,10 @@ class Task(ABC):
                 asyncio.run_coroutine_threadsafe(
                     (
                         self._query_endpoint_async_stream(query_sample)
-                        if self.settings.scenario is TestScenario.SERVER
+                        if (
+                            self.settings.scenario is TestScenario.SERVER
+                            and self.settings.use_token_latencies
+                        )
                         else self._query_endpoint_async_batch(query_sample)
                     ),
                     self.event_loop,
@@ -477,11 +523,17 @@ class ShopifyGlobalCatalogue(Task):
             random_seed=random_seed,
         )
 
-    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
+    @staticmethod
+    def formulate_loaded_sample(
+        sample: dict[str, Any],
+        *,
+        use_guided_decoding: bool = False,
+    ) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
             sample: The sample from the dataset to be formulated into a loaded sample.
+            use_guided_decoding: Whether to use guided decoding for the sample.
 
         Returns:
             The loaded sample to be used for issuing queries to the inference endpoint.
@@ -498,13 +550,20 @@ class ShopifyGlobalCatalogue(Task):
                 "content": f"""Please analyze the product from the user prompt
 and provide the following fields in a valid JSON object:
 - category
-- brands
+- brand
 - is_secondhand
 
 You must choose only one, which is the most appropriate, correct, and specifc
 category out of the list of possible product categories.
 
-Your response should only contain a valid JSON object and nothing more.
+The description of the product sometimes contains various types of source code
+(e.g., JavaScript, CSS, HTML, etc.), where useful product information is embedded
+somewhere inside the source code. For this task, you should extract the useful
+product information from the source code and leverage it, and discard the
+programmatic parts of the source code.
+
+Your response should only contain a valid JSON object and nothing more, e.g.,
+you should not fence the JSON object inside a ```json code block.
 The JSON object should match the followng JSON schema:
 ```json
 {json.dumps(ProductMetadata.model_json_schema(), indent=2)}
@@ -554,7 +613,7 @@ The following are the possible product categories:
                         "strict": True,
                     },
                 }
-                if self.endpoint.use_guided_decoding
+                if use_guided_decoding
                 else None
             ),
         )

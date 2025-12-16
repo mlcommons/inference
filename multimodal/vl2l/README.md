@@ -210,6 +210,17 @@ bash submit.sh --help
 > example scripts to the specific settings for the Slurm cluster that you are going
 > to use, before you try to launch any jobs.
 
+## Reference Implementation Specification
+
+- v6.0 Round
+  - vLLM version: [v0.12.0](https://github.com/vllm-project/vllm/releases/tag/v0.12.0)
+  - Model:
+    - [Qwen/Qwen3-VL-235B-A22B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct)
+    - Commit SHA: [710c13861be6c466e66de3f484069440b8f31389](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct/tree/710c13861be6c466e66de3f484069440b8f31389)
+  - Dataset:
+    - [Shopify/product-catalogue](https://huggingface.co/datasets/Shopify/product-catalogue)
+    - Commit SHA: [d5c517c509f5aca99053897ef1de797d6d7e5aa5](https://huggingface.co/datasets/Shopify/product-catalogue/tree/d5c517c509f5aca99053897ef1de797d6d7e5aa5)
+
 ## Developer Guide
 
 ### Linting

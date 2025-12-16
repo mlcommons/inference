@@ -297,11 +297,16 @@ class LocalVllmDeployer(LocalProcessDeployer):
             "vllm",
             "serve",
             self.endpoint.model.repo_id,
+            "--revision",
+            self.endpoint.model.revision,
             "--host",
             host,
             "--port",
             str(port),
         ]
+
+        if self.endpoint.model.token:
+            cmd.extend(["--hf-token", self.endpoint.model.token])
 
         # Add API key if provided
         if self.endpoint.api_key:

@@ -45,7 +45,7 @@
 #
 # ============================================================================
 
-ARG BASE_IMAGE_URL=vllm/vllm-openai:nightly
+ARG BASE_IMAGE_URL=vllm/vllm-openai:v0.12.0
 FROM ${BASE_IMAGE_URL}
 
 # MLPERF_INF_MM_VL2L_INSTALL_URL can be either:

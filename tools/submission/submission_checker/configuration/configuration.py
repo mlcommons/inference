@@ -9,13 +9,31 @@ class Config:
         version,
         extra_model_benchmark_map,
         ignore_uncommited=False,
+        skip_compliance=False,
         skip_power_check=False,
+        skip_meaningful_fields_emptiness_check=False,
+        skip_check_power_measure_files=False,
+        skip_empty_files_check=False,
+        skip_extra_files_in_root_check=False,
+        skip_extra_accuracy_files_check=False,
+        skip_all_systems_have_results_check=False,
+        skip_calibration_check=False
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
         self.version = version
         self.ignore_uncommited = ignore_uncommited
+
+        # Skip flags. All set to false for official submission
+        self.skip_compliance = skip_compliance
         self.skip_power_check = skip_power_check
+        self.skip_meaningful_fields_emptiness_check = skip_meaningful_fields_emptiness_check
+        self.skip_check_power_measure_files = skip_check_power_measure_files
+        self.skip_empty_files_check = skip_empty_files_check
+        self.skip_extra_files_in_root_check = skip_extra_files_in_root_check
+        self.skip_extra_accuracy_files_check = skip_extra_accuracy_files_check
+        self.skip_all_systems_have_results_check = skip_all_systems_have_results_check
+        self.skip_calibration_check = skip_calibration_check
         self.load_config(version)
         
 

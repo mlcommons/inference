@@ -6,6 +6,7 @@ from ..configuration.configuration import Config
 class SystemCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
         super().__init__(log, path)
+        self.name = "system checks"
         self.submission_logs = submission_logs
         self.system_json = self.submission_logs.system_json
         self.submitter = self.submission_logs.loader_data.get("submitter", "")
@@ -70,7 +71,7 @@ class SystemCheck(BaseCheck):
                     f"{self.path} incorrect network mode (={is_network}) for division '{self.division}'"
                 )
                 return False
-        return False
+        return True
     
     def required_fields_check(self):
         required_fields = SYSTEM_DESC_REQUIRED_FIELDS.copy()
@@ -78,7 +79,7 @@ class SystemCheck(BaseCheck):
         if is_network:
             required_fields += SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE
 
-        check_empty_fields = True
+        check_empty_fields = False if self.config.skip_meaningful_fields_emptiness_check else True
         is_valid = True
         for k in required_fields:
             if k not in self.system_json:

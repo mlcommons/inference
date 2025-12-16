@@ -30,6 +30,7 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.min_duration_check)
         self.checks.append(self.network_check)
         self.checks.append(self.llm_check)
+        self.checks.append(self.inferred_check)
 
     def missing_check(self):
         if self.mlperf_log is None:
@@ -265,4 +266,19 @@ class PerformanceCheck(BaseCheck):
                 limits["tpot"]
             )
             return False
+        return True
+    
+    def inferred_check(self):
+        if self.scenario.lower() != self.scenario_fixed.lower() and (self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
+            if "edge" not in self.system_json["system_type"].lower():
+                self.log.error("Result can not be inferred for %s suite for: %s. Scenario: %s, Scenario fixed: %s", self.system_json["system_type"], self.path, self.scenario, self.scenario_fixed)
+                return False
+            list_inferred = [
+                ("singlestream", "multistream"),
+                ("multistream", "offline"),
+                ("singlestream", "offline")
+            ]
+            if (self.scenario.lower(), self.scenario_fixed.lower()) not in list_inferred:
+                self.log.error("Result for scenario %s can not be inferred from %s for: %s", self.scenario_fixed, self.scenario, self.path)
+                return False
         return True

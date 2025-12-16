@@ -7,6 +7,9 @@ from .configuration.configuration import Config
 from .loader import Loader
 from .checks.performance_check import PerformanceCheck
 from .checks.accuracy_check import AccuracyCheck
+from .checks.system_check import SystemCheck
+from .checks.measurements_checks import MeasurementsCheck
+from .checks.compliance_check import ComplianceCheck
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -100,8 +103,13 @@ def main():
     for logs in loader.load():
         performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
         accuracy_checks = AccuracyCheck(log, logs.loader_data["acc_path"], config, logs)
+        system_checks = SystemCheck(log, logs.loader_data["system_path"], config, logs)
+        measurements_checks = MeasurementsCheck(log, logs.loader_data["measurements_path"], config, logs)
+        measurements_checks = ComplianceCheck(log, logs.loader_data["compliance_path"], config, logs)
         performance_checks()
         accuracy_checks()
+        system_checks()
+        measurements_checks()
 
     with open(args.csv, "w") as csv:
         # Output summary

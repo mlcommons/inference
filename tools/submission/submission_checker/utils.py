@@ -33,6 +33,14 @@ def list_files_recursively(*path):
     ]
 
 
+def files_diff(list1, list2, optional=None):
+    """returns a list of files that are missing or added."""
+    if not optional:
+        optional = []
+    optional = optional + ["mlperf_log_trace.json", "results.json", ".gitkeep"]
+    return set(list1).symmetric_difference(set(list2)) - set(optional)
+
+
 def check_extra_files(path, target_files):
     missing_files = []
     check_pass = True

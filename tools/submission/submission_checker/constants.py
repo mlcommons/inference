@@ -302,6 +302,33 @@ MODEL_CONFIG = {
             "rgat": {"SingleStream": 1024, "Offline": 1},
             "pointpainting": {"SingleStream": 1024},
         },
+        "models_TEST01": [
+            "resnet",
+            "retinanet",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "stable-diffusion-xl",
+            "rgat",
+            "pointpainting",
+        ],
+        "models_TEST04": [
+            "resnet",
+            "stable-diffusion-xl",
+            "pointpainting",
+        ],
+        "models_TEST06": [
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
+            "gptj-99",
+            "gptj-99.9",
+            "mixtral-8x7b",
+        ]
     },
     "v5.1": {
         "models": [
@@ -601,6 +628,37 @@ MODEL_CONFIG = {
             "deepseek-r1": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "whisper": {"SingleStream": 1024, "Offline": 1},
         },
+        "models_TEST01": [
+            "resnet",
+            "retinanet",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "stable-diffusion-xl",
+            "rgat",
+            "pointpainting",
+            "whisper",
+        ],
+        "models_TEST04": [
+            "resnet",
+            "stable-diffusion-xl",
+            "pointpainting",
+        ],
+        "models_TEST06": [
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
+            "llama3.1-405b",
+            "llama3.1-8b",
+            "llama3.1-8b-interactive",
+            "llama3.1-405b-interactive",
+            "mixtral-8x7b",
+            "deepseek-r1",
+        ]
     },
 }
 
@@ -1025,8 +1083,8 @@ ACCURACY_JSON_PATH = {
 }
 
 MEASUREMENTS_PATH = {
-    "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}.json",
-    "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}.json",
+    "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}",
+    "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
 }
@@ -1039,33 +1097,39 @@ TEST01_PERF_PATH = {
 }
 
 TEST01_ACC_PATH = {
-    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
-    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
 }
 
-TEST05_PERF_PATH = {
-    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
-    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
+TEST04_PERF_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
 }
 
-TEST05_ACC_PATH = {
-    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
-    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
+TEST04_ACC_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
 }
 
 TEST06_ACC_PATH = {
-    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
-    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
 }
 
+COMPLIANCE_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+}
 
 SYSTEM_PATH = {
     "v5.0": "{division}/{submitter}/systems/{system}.json",

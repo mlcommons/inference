@@ -969,6 +969,7 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "sw_notes",
     "host_network_card_count",
     "system_type_detail",
+    "network_speed_mbit",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -999,6 +1000,11 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "operating_system",
     "other_software_stack",
 ]
+
+SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS = [
+    "network_speed_mbit"
+]
+
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_management",
@@ -1080,6 +1086,13 @@ ACCURACY_JSON_PATH = {
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
+}
+
+POWER_DIR_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
 }
 
 MEASUREMENTS_PATH = {

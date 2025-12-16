@@ -22,6 +22,7 @@ dependencies = [
   "scikit-learn",
   "tabulate",
   "hiclass",
+  "rapidfuzz",
 ]
 dynamic = ["version"]
 

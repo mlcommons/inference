@@ -11,6 +11,7 @@ from datasets import load_dataset
 from hiclass.metrics import f1  # type: ignore[import-untyped]
 from loguru import logger
 from pydantic import ValidationError
+from rapidfuzz import fuzz  # type: ignore[import-untyped]
 from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from tabulate import tabulate
 
@@ -21,24 +22,23 @@ if TYPE_CHECKING:
 
 from .schema import ProductMetadata
 
-# Initialize the Generator
-# As of NumPy 1.17+,
-# this isolates the random state,
-# which is safer for reproducibility and parallel processing.
-rng = np.random.default_rng()
+_TRUE_CATEGORY_PAD = "<|__TRUE_CATEGORY_PAD__|>"
+_PRED_CATEGORY_PAD = "<|__PRED_CATEGORY_PAD__|>"
+_PRED_BRAND_PAD = "<|__PRED_BRAND_PAD__|>"
+_CATEGORY_SEPARATOR = " > "
 
 
 def get_hierarchical_components(
     predicted_path: str,
     true_path: str,
-    separator: str = " > ",
+    separator: str = _CATEGORY_SEPARATOR,
 ) -> tuple[int, int, int]:
     """Calculates the components for Hierarchical Precision.
 
     Args:
         predicted_path: Categories predicted by the VLM.
         true_path: Ground truth categories.
-        separator: String used to separate each category.
+        separator: The separator used to separate each level of the category.
 
     Returns:
         Tuple of number of intersections,
@@ -71,12 +71,15 @@ def get_hierarchical_components(
     return intersection_count, pred_length, true_length
 
 
-def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
+def calculate_hierarchical_f1(
+    data: list[tuple[str, str]],
+    separator: str = _CATEGORY_SEPARATOR,
+) -> float:
     """Calculates the aggregate hF scores for a list of samples.
 
     Args:
-        data: A list of tuples, where each tuple is
-            (predicted_path_str, true_path_str).
+        data: A list of tuples, where each tuple is (predicted_path_str, true_path_str).
+        separator: The separator used to split the paths into levels of the category.
 
     Returns:
         F1 score
@@ -88,8 +91,9 @@ def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
     # 1. Aggregate the components across all samples
     for pred_path, true_path in data:
         intersection, pred_len, true_len = get_hierarchical_components(
-            pred_path,
-            true_path,
+            predicted_path=pred_path,
+            true_path=true_path,
+            separator=separator,
         )
 
         total_intersection += intersection
@@ -107,22 +111,35 @@ def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
 
-def calculate_exact_match(generated_text: str, original_text: str) -> float:
-    """Calculates binary Exact Match (EM) score.
-
-    We clean the text (lowercase, strip whitespace) for a fairer comparison.
+def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
+    """Calculate the F1 score of brand field.
 
     Args:
-        generated_text: Output from the VLM.
-        original_text: Ground truth information from the dataset.
+        data: A list of tuples, where each tuple is
+            (predicted_path_str, true_path_str).
 
     Returns:
-        1 if the values match or 0 otherwise
+        F1 score
     """
-    gen = generated_text.strip().lower()
-    orig = original_text.strip().lower()
+    valid_threshold = 90
+    matches = []
+    for pred, src in data:
+        norm_truth = src.strip().lower()
+        norm_pred = pred.strip().lower()
 
-    return 1.0 if gen == orig else 0.0
+        # Fuzzy Match (Handles typos like "Adodas")
+        # fuzz.ratio calculates edit distance similarity (0-100)
+        score = fuzz.ratio(norm_truth, norm_pred)
+
+        # Threshold: If > 90/100 similarity, count as correct
+        if score > valid_threshold:
+            matches.append(1)
+        else:
+            matches.append(0)
+
+    # Calculate the Score
+    # For 1-to-1 extraction, Accuracy = Recall = Micro F1
+    return sum(matches) / len(matches)
 
 
 def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
@@ -142,11 +159,16 @@ def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
     return f1_score(y_src, y_pred)
 
 
-def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
+def calculate_hiclass_f1(
+    data: list[tuple[str, str]],
+    separator: str = _CATEGORY_SEPARATOR,
+) -> float:
     """Alt method to calculate hierarchical F1.
 
     Args:
-         data: List of tuples of predicted and true values
+        data: List of tuples of predicted and true values
+        separator: The separator used to split the paths into levels of the category.
+
     Returs:
         f1 score
     """
@@ -154,8 +176,8 @@ def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
     y_true_raw = []
 
     for pred, src in data:
-        path1 = pred.split(" > ")
-        path2 = src.split(" > ")
+        path1 = pred.split(separator)
+        path2 = src.split(separator)
 
         y_pred_raw.append(path1)
         y_true_raw.append(path2)
@@ -168,11 +190,11 @@ def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
     for i in range(len(y_true_raw)):
         # Pad Truth
         pad_len_true = max_len - len(y_true_raw[i])
-        y_true_raw[i] += [""] * pad_len_true
+        y_true_raw[i] += [_TRUE_CATEGORY_PAD] * pad_len_true
 
         # Pad Prediction
         pad_len_pred = max_len - len(y_pred_raw[i])
-        y_pred_raw[i] += [""] * pad_len_pred
+        y_pred_raw[i] += [_PRED_CATEGORY_PAD] * pad_len_pred
 
     # 4. Convert to numpy arrays
     y_true = np.array(y_true_raw)
@@ -182,8 +204,10 @@ def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
     return f1(y_true, y_pred)
 
 
-def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
+def run_evaluation(random_seed: int, filename: FilePath,
+                   dataset: DatasetCLI) -> None:
     """Main function to run the evaluation."""
+    rng = np.random.default_rng(seed=random_seed)
     with Path.open(filename) as f:
         model_output = json.load(f)
 
@@ -193,25 +217,43 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
         split="+".join(dataset.split),
     )
 
+    num_unparsable_responses = 0
     category_dataset_pred_src = []
     category_rand_pred_src = []
     is_secondhand_pred_src = []
     is_secondhand_rand_pred_src = []
+    brand_pred_src = []
+
+    all_possible_brands = set()
 
     for elem in model_output:
         idx = elem["qsl_idx"]
         response = bytes.fromhex(elem["data"]).decode("utf-8")
+        ground_truth_item = original_data[idx]
+        all_possible_brands.add(ground_truth_item["ground_truth_brand"])
         try:
             pred_item = ProductMetadata.model_validate_json(response)
         except ValidationError:
-            logger.exception(
+            num_unparsable_responses += 1
+            pred_item = ProductMetadata(
+                category=_CATEGORY_SEPARATOR.join(
+                    [_PRED_CATEGORY_PAD]
+                    * len(
+                        ground_truth_item["ground_truth_category"].split(
+                            _CATEGORY_SEPARATOR,
+                        ),
+                    ),
+                ),
+                brand=_PRED_BRAND_PAD,
+                is_secondhand=rng.choice([True, False], size=1).tolist()[0],
+            )
+            logger.error(
                 "Response\n{}\n(for the sample at index {}) cannot be validated against"
-                " the expected schema\n{}\n. Thus, this submission result is invalid.",
+                " the expected schema. Overwriting this response into \n{}\n",
                 response,
                 idx,
-                json.dumps(ProductMetadata.model_json_schema(), indent=2),
+                pred_item,
             )
-        ground_truth_item = original_data[idx]
         category_dataset_pred_src.append(
             (pred_item.category, ground_truth_item["ground_truth_category"]),
         )
@@ -221,42 +263,69 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
                 ground_truth_item["ground_truth_is_secondhand"],
             ),
         )
+        brand_pred_src.append(
+            (pred_item.brand, ground_truth_item["ground_truth_brand"]),
+        )
         # random category selection
         # Uniform distribution is the default
-        rand_cat = rng.choice(ground_truth_item["potential_product_categories"],
-                              size=1).tolist()[0]
-        category_rand_pred_src.append((rand_cat,
-                                       ground_truth_item["ground_truth_category"]))
-
+        rand_cat = rng.choice(
+            ground_truth_item["potential_product_categories"])
+        category_rand_pred_src.append(
+            (rand_cat, ground_truth_item["ground_truth_category"]),
+        )
         # random is_secondhand selection
-        rand_is_secondhand = rng.choice([True, False], size=1).tolist()[0]
-        is_secondhand_rand_pred_src.append((rand_is_secondhand,
-                                            ground_truth_item["ground_truth_is_secondhand"]))
+        rand_is_secondhand = rng.choice([True, False])
+        is_secondhand_rand_pred_src.append(
+            (rand_is_secondhand,
+             ground_truth_item["ground_truth_is_secondhand"]),
+        )
 
     category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
     hiclass_f1_score = calculate_hiclass_f1(category_dataset_pred_src)
     is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
+    brand_score = calculate_brand_f1_score(brand_pred_src)
 
     rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
-    rand_hiclass_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
+    rand_hiclass_f1_score = calculate_hiclass_f1(category_rand_pred_src)
     rand_is_seconhand_f1_score = calculate_secondhand_f1(
         is_secondhand_rand_pred_src)
-
-    data = [
-        ["category", category_f1_score, hiclass_f1_score,
-         rand_cat_f1_score, rand_hiclass_f1_score],
-        ["is_secondhand", is_secondhand_f1_score, 0,
-         rand_is_seconhand_f1_score, 0],
-    ]
+    rand_brand_score = calculate_brand_f1_score(
+        [
+            (
+                rng.choice(list(all_possible_brands)),
+                original_data[elem["qsl_idx"]]["ground_truth_brand"],
+            )
+            for elem in model_output
+        ],
+    )
 
     logger.info(
-        "Results:\n{}",
+        "{} responses cannot be parsed against the expected schema. Results:\n{}",
+        num_unparsable_responses,
         tabulate(
-            data,
-            headers=["Fields", "F1 Score",
-                     "HiClass F1 Score",
-                     "F1 Score Random Selection",
-                     "HiClass F1 Score Random Selection"],
+            [
+                [
+                    "From accuracy file",
+                    category_f1_score,
+                    hiclass_f1_score,
+                    brand_score,
+                    is_secondhand_f1_score,
+                ],
+                [
+                    "Random selection",
+                    rand_cat_f1_score,
+                    rand_hiclass_f1_score,
+                    rand_brand_score,
+                    rand_is_seconhand_f1_score,
+                ],
+            ],
+            headers=[
+                "Results",
+                "Category hierarchical F1 Score",
+                "Category HiClass F1 Score",
+                "Brand F1 Score",
+                "Is_secondhand F1 Score",
+            ],
             tablefmt="fancy_grid",
         ),
     )

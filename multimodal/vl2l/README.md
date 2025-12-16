@@ -220,6 +220,12 @@ bash submit.sh --help
   - Dataset:
     - [Shopify/product-catalogue](https://huggingface.co/datasets/Shopify/product-catalogue)
     - Commit SHA: [d5c517c509f5aca99053897ef1de797d6d7e5aa5](https://huggingface.co/datasets/Shopify/product-catalogue/tree/d5c517c509f5aca99053897ef1de797d6d7e5aa5)
+  - Constraint:
+    - Model quality:
+      - Category Hierarchical F1 Score >= `0.7824`.
+    - Server Scenario:
+      - Target latency percentile = `0.99`.
+      - Target latency <= 12 seconds.
 
 ## Developer Guide
 

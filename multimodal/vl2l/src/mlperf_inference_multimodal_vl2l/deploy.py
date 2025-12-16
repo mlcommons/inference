@@ -208,7 +208,9 @@ class LocalProcessDeployer(EndpointDeployer):
         """Start the local process."""
         cmd = self._build_command()
         logger.info("Starting local process with command: {}", cmd)
-        logger.info("Starting local process with environment variables: {}", os.environ)
+        logger.info(
+            "Starting local process with environment variables: {}",
+            os.environ)
 
         # Start the server
         process = subprocess.Popen(  # noqa: S603
@@ -251,7 +253,8 @@ class LocalProcessDeployer(EndpointDeployer):
         # Try graceful termination first
         self._process.terminate()
         try:
-            self._process.wait(timeout=self.endpoint.shutdown_timeout.total_seconds())
+            self._process.wait(
+                timeout=self.endpoint.shutdown_timeout.total_seconds())
             logger.info("Local process terminated gracefully")
         except subprocess.TimeoutExpired:
             logger.warning(

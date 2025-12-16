@@ -10,6 +10,7 @@ from .checks.accuracy_check import AccuracyCheck
 from .checks.system_check import SystemCheck
 from .checks.measurements_checks import MeasurementsCheck
 from .checks.compliance_check import ComplianceCheck
+from .checks.power_check import PowerCheck
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -101,15 +102,19 @@ def main():
 
     loader = Loader(args.input, args.version)
     for logs in loader.load():
+        # Initialize check classes
         performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
         accuracy_checks = AccuracyCheck(log, logs.loader_data["acc_path"], config, logs)
         system_checks = SystemCheck(log, logs.loader_data["system_path"], config, logs)
         measurements_checks = MeasurementsCheck(log, logs.loader_data["measurements_path"], config, logs)
         measurements_checks = ComplianceCheck(log, logs.loader_data["compliance_path"], config, logs)
+        power_checks = PowerCheck(log, logs.loader_data["power_dir_path"], config, logs)
+        # Run checks
         performance_checks()
         accuracy_checks()
         system_checks()
         measurements_checks()
+        power_checks()
 
     with open(args.csv, "w") as csv:
         # Output summary

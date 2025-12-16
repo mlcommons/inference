@@ -95,3 +95,10 @@ def sum_dict_values(x):
     for key in x:
         count += x[key]
     return count
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False

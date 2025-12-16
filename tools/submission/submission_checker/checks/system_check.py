@@ -2,6 +2,7 @@ from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
+from ..utils import *
 
 class SystemCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
@@ -93,6 +94,14 @@ class SystemCheck(BaseCheck):
                 is_valid = False
                 self.log.error(
                     "%s, field %s requires a meaningful response but is empty", self.path, k
+                )
+            elif (
+                check_empty_fields
+                and k in SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS
+                and not is_number(str(self.system_json[k]))
+            ):
+                self.log.error(
+                    "%s, field %s requires a numeric response but is empty", self.path, k
                 )
         return is_valid
     

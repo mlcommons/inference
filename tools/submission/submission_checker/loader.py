@@ -42,6 +42,7 @@ class Loader:
         self.test04_perf_path = os.path.join(self.root, TEST04_PERF_PATH.get(version, TEST04_PERF_PATH["default"]))
         self.test04_acc_path = os.path.join(self.root, TEST04_ACC_PATH.get(version, TEST04_ACC_PATH["default"]))
         self.test06_acc_path = os.path.join(self.root, TEST06_ACC_PATH.get(version, TEST06_ACC_PATH["default"]))
+        self.power_dir_path = os.path.join(self.root, POWER_DIR_PATH.get(version, POWER_DIR_PATH["default"]))
 
 
 
@@ -105,8 +106,9 @@ class Loader:
                             # Format Paths for a specific submission
                             perf_path = self.perf_log_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             acc_path = self.acc_log_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
-                            acc_result = self.acc_result_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
-                            acc_json = self.acc_json_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
+                            acc_result_path = self.acc_result_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
+                            acc_json_path = self.acc_json_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
+                            power_dir_path = self.power_dir_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             measurements_path = self.get_measurement_path(self.measurements_path, division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             compliance_path = self.compliance_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             test01_perf_path = self.test01_perf_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
@@ -118,8 +120,8 @@ class Loader:
                             # Load logs
                             perf_log = self.load_single_log(perf_path, "Performance")
                             acc_log = self.load_single_log(acc_path, "Accuracy")
-                            acc_result = self.load_single_log(acc_result, "AccuracyResult")
-                            acc_json = self.load_single_log(acc_json, "AccuracyJSON")
+                            acc_result = self.load_single_log(acc_result_path, "AccuracyResult")
+                            acc_json = self.load_single_log(acc_json_path, "AccuracyJSON")
                             measurements_json = self.load_single_log(measurements_path, "Measurements")
 
                             # Load test logs
@@ -144,6 +146,7 @@ class Loader:
                                 "measurements_dir": os.path.dirname(measurements_path),
                                 "compliance_path": compliance_path,
                                 "model_mapping": model_mapping,
+                                "power_dir_path": power_dir_path,
                                 # Test paths
                                 "TEST01_perf_path": test01_perf_path,
                                 "TEST01_acc_path": test01_acc_path,

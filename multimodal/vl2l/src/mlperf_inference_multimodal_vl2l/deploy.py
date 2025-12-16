@@ -7,7 +7,6 @@ import subprocess
 import time
 from abc import ABC, abstractmethod
 from datetime import timedelta  # noqa: TC003
-from pathlib import Path
 from typing import TYPE_CHECKING, Self
 from urllib.parse import urlparse
 
@@ -17,6 +16,7 @@ from loguru import logger
 from .log import get_log_file_path
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from types import TracebackType
 
     from .schema import EndpointToDeploy, Settings, VllmEndpoint

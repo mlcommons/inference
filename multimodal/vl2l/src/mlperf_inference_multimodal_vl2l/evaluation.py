@@ -17,6 +17,8 @@ from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from tabulate import tabulate
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from pydantic import FilePath
 
     from .cli import Dataset as DatasetCLI
@@ -60,8 +62,7 @@ def get_hierarchical_components(
     intersection_count = 0
 
     # Iterate through the paths simultaneously
-    for pred_cat, true_cat in zip(
-            predicted_categories, true_categories, strict=False):
+    for pred_cat, true_cat in zip(predicted_categories, true_categories, strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -182,7 +183,7 @@ def init_worker(dataset: dict) -> None:
     _WORKER_CONTEXT["dataset"] = dataset
 
 
-def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
+def _process_chunk(args: tuple[list[dict], int]) -> dict[str, Any]:
     """Retrieve relevant information from each chunk of data.
 
     Args:
@@ -227,14 +228,13 @@ def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
                     ),
                 ),
                 brand=_PRED_BRAND_PAD,
-                is_secondhand=local_rng.choice(
-                    [True, False], size=1).tolist()[0],
+                is_secondhand=local_rng.choice([True, False], size=1).tolist()[0],
             )
             error_messages.append(
                 (
                     f"Response\n{response}\n(for the sample at index {idx})"
-                    f"cannot be validated against"
-                    f" the expected schema. Overwriting this response into \n{pred_item}\n",
+                    f"cannot be validated against the expected schema. "
+                    f"Overwriting this response into \n{pred_item}\n",
                 ),
             )
         category_dataset_pred_src.append(
@@ -251,16 +251,14 @@ def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
         )
         # random category selection
         # Uniform distribution is the default
-        rand_cat = local_rng.choice(
-            ground_truth_item["potential_product_categories"])
+        rand_cat = local_rng.choice(ground_truth_item["potential_product_categories"])
         category_rand_pred_src.append(
             (rand_cat, ground_truth_item["ground_truth_category"]),
         )
         # random is_secondhand selection
         rand_is_secondhand = local_rng.choice([True, False])
         is_secondhand_rand_pred_src.append(
-            (rand_is_secondhand,
-             ground_truth_item["ground_truth_is_secondhand"]),
+            (rand_is_secondhand, ground_truth_item["ground_truth_is_secondhand"]),
         )
 
     return {
@@ -275,8 +273,7 @@ def _process_chunk(args: tuple[list[dict], int]) -> dict[str, any]:
     }
 
 
-def run_evaluation(random_seed: int, filename: FilePath,
-                   dataset: DatasetCLI) -> None:
+def run_evaluation(random_seed: int, filename: FilePath, dataset: DatasetCLI) -> None:
     """Main function to run the evaluation."""
     master_rng = np.random.default_rng(seed=random_seed)
     with Path.open(filename) as f:
@@ -293,7 +290,7 @@ def run_evaluation(random_seed: int, filename: FilePath,
     chunk_size = max(len(model_output) // cpu_count, 1)
     # Create chunks
     output_chunks = [
-        model_output[i: i + chunk_size]
+        model_output[i : i + chunk_size]
         for i in range(0, len(model_output), chunk_size)
     ]
 
@@ -329,8 +326,7 @@ def run_evaluation(random_seed: int, filename: FilePath,
         category_dataset_pred_src.extend(chunk["category_dataset_pred_src"])
         category_rand_pred_src.extend(chunk["category_rand_pred_src"])
         is_secondhand_pred_src.extend(chunk["is_secondhand_pred_src"])
-        is_secondhand_rand_pred_src.extend(
-            chunk["is_secondhand_rand_pred_src"])
+        is_secondhand_rand_pred_src.extend(chunk["is_secondhand_rand_pred_src"])
         brand_pred_src.extend(chunk["brand_pred_src"])
         all_possible_brands.extend(chunk["all_possible_brands"])
 
@@ -343,13 +339,13 @@ def run_evaluation(random_seed: int, filename: FilePath,
 
     rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
 
-    rand_is_seconhand_f1_score = calculate_secondhand_f1(
-        is_secondhand_rand_pred_src)
+    rand_is_seconhand_f1_score = calculate_secondhand_f1(is_secondhand_rand_pred_src)
 
     all_brands_list = list(set(all_possible_brands))
     random_brand_predictions = master_rng.choice(
         all_brands_list,
-        size=len(model_output))
+        size=len(model_output),
+    )
 
     args_list = (
         (pred, elem, original_data)
@@ -357,9 +353,9 @@ def run_evaluation(random_seed: int, filename: FilePath,
     )
 
     with ProcessPoolExecutor() as executor:
-        rand_brand_data = list(executor.map(_process_chunk_rnd_brand,
-                                            args_list,
-                                            chunksize=chunk_size))
+        rand_brand_data = list(
+            executor.map(_process_chunk_rnd_brand, args_list, chunksize=chunk_size),
+        )
 
     rand_brand_score = calculate_brand_f1_score(
         rand_brand_data,

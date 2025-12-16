@@ -11,19 +11,19 @@
 set -eux
 set -o pipefail
 
-mkdir -p ${OUTPUT_HOST_DIR}/${SLURM_JOB_ID}
+mkdir -p "${OUTPUT_HOST_DIR}"/"${SLURM_JOB_ID}"
 
 srun \
-    --container-image=${CONTAINER_IMAGE} \
-    --container-mounts=${CACHE_HOST_DIR}:${CACHE_CONTAINER_DIR},${OUTPUT_HOST_DIR}:${OUTPUT_CONTAINER_DIR} \
+    --container-image="${CONTAINER_IMAGE}" \
+    --container-mounts="${CACHE_HOST_DIR}":"${CACHE_CONTAINER_DIR}","${OUTPUT_HOST_DIR}":"${OUTPUT_CONTAINER_DIR}" \
     --no-container-mount-home \
     mlperf-inf-mm-vl2l benchmark vllm \
-        --settings.test.scenario=${SCENARIO} \
-        --settings.test.mode=${MODE} \
-        --settings.test.server_expected_qps=${SERVER_EXPECTED_QPS} \
-        --vllm.model.repo_id=${MODEL_REPO_ID} \
+        --settings.test.scenario="${SCENARIO}" \
+        --settings.test.mode="${MODE}" \
+        --settings.test.server_expected_qps="${SERVER_EXPECTED_QPS}" \
+        --vllm.model.repo_id="${MODEL_REPO_ID}" \
         --vllm.cli=--async-scheduling \
         --vllm.cli=--max-model-len=32768 \
         --vllm.cli=--limit-mm-per-prompt.video=0 \
-        --vllm.cli=--tensor-parallel-size=${TENSOR_PARALLEL_SIZE} \
-        --settings.logging.log_output.outdir=${OUTPUT_CONTAINER_DIR}/${SLURM_JOB_ID} 
+        --vllm.cli=--tensor-parallel-size="${TENSOR_PARALLEL_SIZE}" \
+        --settings.logging.log_output.outdir="${OUTPUT_CONTAINER_DIR}"/"${SLURM_JOB_ID}" 

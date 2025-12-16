@@ -67,8 +67,7 @@ class Task(ABC):
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint.url,
             http_client=DefaultAioHttpClient(
-                timeout=httpx.Timeout(
-                    timeout=request_timeout_seconds, connect=5.0),
+                timeout=httpx.Timeout(timeout=request_timeout_seconds, connect=5.0),
             ),
             api_key=endpoint.api_key,
             timeout=request_timeout_seconds,
@@ -103,7 +102,7 @@ class Task(ABC):
                 _cancel_all_tasks(),
                 self.event_loop,
             ).result(timeout=5.0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.trace("Error cancelling tasks during cleanup: {}", e)
 
         # Try to close the OpenAI client gracefully
@@ -112,7 +111,7 @@ class Task(ABC):
                 self.openai_api_client.close(),
                 self.event_loop,
             ).result(timeout=5.0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.trace("Error closing OpenAI client during cleanup: {}", e)
 
         # Stop the event loop and join the thread
@@ -188,9 +187,7 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(
-                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
-                self.total_num_samples),
+            k=min(MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_loaded_sample(
@@ -277,8 +274,7 @@ class Task(ABC):
             _unload_samples_from_ram,
         )
 
-    async def _query_endpoint_async_batch(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_batch(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         try:
             sample = self.loaded_samples[query_sample.index]
@@ -355,8 +351,7 @@ class Task(ABC):
                 ],
             )
 
-    async def _query_endpoint_async_stream(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_stream(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         ttft_set = False
         try:

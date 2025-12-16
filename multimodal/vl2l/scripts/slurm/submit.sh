@@ -47,7 +47,7 @@ Usage: ${BASH_SOURCE[0]}
     [-m | --mode]                  Benchmark mode (default: ${DEFAULT_MODE}).
     [-seq | --server-expected-qps] The expected QPS for the server scenario (default: ${DEFAULT_SERVER_EXPECTED_QPS}).
     [-tps | --tensor-parallel-size] Tensor parallelism size for the model deployment (default: ${DEFAULT_TENSOR_PARALLEL_SIZE}).
-    [-chd | --cache-host-dir]      Host directory of the `.cache` directory to which HuggingFace will dump the dataset and the model checkpoint, and vLLM will dump compilation artifacts (default: ${DEFAULT_CACHE_HOST_DIR}).
+    [-chd | --cache-host-dir]      Host directory of the ".cache" directory to which HuggingFace will dump the dataset and the model checkpoint, and vLLM will dump compilation artifacts (default: ${DEFAULT_CACHE_HOST_DIR}).
     [-ohd | --output-host-dir]     Host directory to which the benchmark and evaluation results will be dumped (default: ${DEFAULT_OUTPUT_HOST_DIR}).
     [-sa | --slurm-account]        Slurm account for submitting the benchmark and evaluation jobs (default: ${DEFAULT_SLURM_ACCOUNT}).
     [-bsp | --benchmark-slurm-partition] Slurm partition for submitting the benchmarking job; usually a partition with nodes that have GPUs (default: ${DEFAULT_BENCHMARK_SLURM_PARTITION}).

@@ -149,4 +149,3 @@ def validate_runner_args(args: argparse.Namespace, runner_type: str) -> None:
 
     if hasattr(args, 'skip_samples') and args.skip_samples < 0:
         raise ValidationError("--skip-samples cannot be negative")
-    

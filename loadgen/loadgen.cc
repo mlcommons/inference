@@ -621,18 +621,23 @@ void LoadSamplesToRam(QuerySampleLibrary* qsl,
 
 /// \brief Generates random sets of samples in the QSL that we can load into
 /// RAM at the same time.
+/// \param qsl The query sample library.
+/// \param settings The test settings.
+/// \param total_sample_count The total number of samples to generate indices for.
+///        In accuracy mode, this should be accuracy_sample_count.
+///        In performance mode, this should be performance_sample_count.
 std::vector<LoadableSampleSet> GenerateLoadableSets(
-    QuerySampleLibrary* qsl, const TestSettingsInternal& settings) {
+    QuerySampleLibrary* qsl, const TestSettingsInternal& settings,
+    size_t total_sample_count) {
   auto tracer = MakeScopedTracer(
       [](AsyncTrace& trace) { trace("GenerateLoadableSets"); });
 
   std::vector<LoadableSampleSet> result;
   std::mt19937 qsl_rng(settings.qsl_rng_seed);
 
-  // Generate indices for all available samples in the QSL.
-  const size_t qsl_total_count = qsl->TotalSampleCount();
-  std::vector<QuerySampleIndex> samples(qsl_total_count);
-  for (size_t i = 0; i < qsl_total_count; i++) {
+  // Generate indices for the specified sample count.
+  std::vector<QuerySampleIndex> samples(total_sample_count);
+  for (size_t i = 0; i < total_sample_count; i++) {
     samples[i] = static_cast<QuerySampleIndex>(i);
   }
 
@@ -754,7 +759,8 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
       });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, u_settings));
+      loadgen::GenerateLoadableSets(qsl, u_settings,
+                                    u_settings.performance_sample_count));
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
@@ -841,7 +847,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Use first loadable set as the performance set.
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, settings));
+      loadgen::GenerateLoadableSets(qsl, settings,
+                                    settings.performance_sample_count));
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
@@ -974,7 +981,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // 1. Check whether the lower bound came from user satisfy performance
   // constraints or not.
   std::vector<loadgen::LoadableSampleSet> base_loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, base_settings));
+      loadgen::GenerateLoadableSets(qsl, base_settings,
+                                    base_settings.performance_sample_count));
   const LoadableSampleSet& base_performance_set = base_loadable_sets.front();
   LoadSamplesToRam(qsl, base_performance_set.set);
 
@@ -1044,7 +1052,9 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Reuse performance_set, u_perf_summary has the largest 'samples_per_query'.
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, u_perf_summary.settings));
+      loadgen::GenerateLoadableSets(
+          qsl, u_perf_summary.settings,
+          u_perf_summary.settings.performance_sample_count));
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
@@ -1089,7 +1099,8 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, settings));
+      loadgen::GenerateLoadableSets(qsl, settings,
+                                    settings.accuracy_sample_count));
 
   for (auto& loadable_set : loadable_sets) {
     {

@@ -623,7 +623,8 @@ void LoadSamplesToRam(QuerySampleLibrary* qsl,
 /// RAM at the same time.
 /// \param qsl The query sample library.
 /// \param settings The test settings.
-/// \param total_sample_count The total number of samples to generate indices for.
+/// \param total_sample_count The total number of samples to generate indices
+/// for.
 ///        In accuracy mode, this should be accuracy_sample_count.
 ///        In performance mode, this should be performance_sample_count.
 std::vector<LoadableSampleSet> GenerateLoadableSets(
@@ -637,7 +638,8 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
 
   // Cap sample count to QSL's actual total to avoid out-of-range indices.
   const size_t qsl_total_count = qsl->TotalSampleCount();
-  const size_t effective_sample_count = std::min(total_sample_count, qsl_total_count);
+  const size_t effective_sample_count =
+      std::min(total_sample_count, qsl_total_count);
 
   // Generate indices for the specified sample count.
   std::vector<QuerySampleIndex> samples(effective_sample_count);

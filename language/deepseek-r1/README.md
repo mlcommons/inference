@@ -105,6 +105,8 @@ Launch a Docker container with your preferred backend:
 - **vllm**: vLLM's LLM api-based inference
 - **sglang**: sglang's OpenAI endpoint-based inference
 
+**NOTE**: `sglang` backend uses `sglang==0.5.4` installed into `lmsysorg/sglang:v0.5.2-cu129-b200` base image.
+
 ## Backend-Specific Setup
 
 After launching any Docker container, run the setup script which automatically detects your backend:

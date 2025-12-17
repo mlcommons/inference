@@ -24,7 +24,6 @@ import random
 import threading
 
 logging.basicConfig(level=logging.INFO)
-import math
 import os
 import sys
 import time
@@ -56,8 +55,6 @@ from utils import (
 logger: logging.Logger = logging.getLogger("main")
 
 torch.multiprocessing.set_start_method("spawn", force=True)
-
-NANO_SEC = 1e9
 
 USER_CONF = f"{os.path.dirname(__file__)}/user.conf"
 

@@ -95,8 +95,8 @@ BACKEND_REGISTRY = {
             "host": "0.0.0.0",
             "api_key": None,
             "tensor_parallel_size": 8,
-            # NOTE(vir): sg-lang crash without +2 additional
-            "context_length": MAX_ISL + MAX_OSL + MAX_TEMPLATE_TOKS + 2,
+            # NOTE(vir): sg-lang crash without +4 additional
+            "context_length": MAX_ISL + MAX_OSL + MAX_TEMPLATE_TOKS + 4,
             "max_tokens": MAX_OSL,
             "mem_fraction_static": 0.85,
             "random_seed": 42,

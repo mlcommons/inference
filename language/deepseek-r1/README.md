@@ -179,6 +179,17 @@ The reference implementation includes full support for MLPerf inference benchmar
     --output-dir mlperf_results
 ```
 
+#### Interactive Scenario
+
+```bash
+(.venv_BACKEND) $ python run_mlperf.py \
+    --mode interactive \
+    --input-file <input_dataset>.pkl \
+    --output-dir mlperf_results
+```
+
+**NOTE:** to enable Speculative Decoding for Sglang Backend, toggle `BACKEND_REGISTRY['sglang']['enable_speculative_decode']` in `utils/backend_registry.py` (disabled by default).
+
 #### Pytorch Backend for Mlperf
 
 PyTorch backend uses distributed execution with `torchrun` and `run_mlperf_mpi.py`:
@@ -217,9 +228,9 @@ For the DeepSeek-R1 Interactive Scenario, users can enable Speculative Decoding 
 
 When Enabled, SGLANG backend will run the allowed configuration as per [Inference Policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) (appendix-speculative-decoding):
 
-| Benchmark   | Scenario    | Speculative Decoding Algorithm                             | Configuration                                            | MTP Head                                         |
-| :---        | :---        | :---                                                       | :---                                                     | :---                                             |
-| DeepSeek-r1 | Interactive | EAGLE-style decoding with deepseek-ai/deepseek-r1 MTP head | `speculative-num-steps=3`, `speculative-eagle-topk=1.0`  | https://huggingface.co/deepseek-ai/DeepSeek-R1   |
+| Benchmark   | Scenario    | Speculative Decoding Algorithm                             | Configuration                                           | MTP Head                                       |
+| :---------- | :---------- | :--------------------------------------------------------- | :------------------------------------------------------ | :--------------------------------------------- |
+| DeepSeek-r1 | Interactive | EAGLE-style decoding with deepseek-ai/deepseek-r1 MTP head | `speculative-num-steps=3`, `speculative-eagle-topk=1.0` | https://huggingface.co/deepseek-ai/DeepSeek-R1 |
 
 > Note: ONLY Sglang backend supports speculative-decoding
 

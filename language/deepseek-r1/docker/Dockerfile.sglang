@@ -1,5 +1,5 @@
 # SGLang Backend Dockerfile
-FROM lmsysorg/sglang:v0.5.2-cu129-b200
+FROM lmsysorg/sglang:v0.5.4.post3
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive

@@ -149,9 +149,4 @@ def validate_runner_args(args: argparse.Namespace, runner_type: str) -> None:
 
     if hasattr(args, 'skip_samples') and args.skip_samples < 0:
         raise ValidationError("--skip-samples cannot be negative")
-
-    # Runner-specific validations
-    if runner_type in ['mlperf', 'mlperf_mpi']:
-        if hasattr(args, 'mode') and args.mode not in ['offline', 'server']:
-            raise ValidationError(
-                f"Invalid mode: {args.mode}. Must be 'offline' or 'server'")
+    

@@ -26,7 +26,6 @@ while [[ $# -gt 0 ]]; do
             echo "- Creates and activates virtual environment for all operations"
             echo "- Installs accuracy evaluation dependencies"
             echo "- Sets up MLPerf LoadGen"
-            echo "- Installs SGLang-specific optimizations"
             echo "- Virtual environment remains active after setup"
             echo ""
             echo "Note: SGLang server may take 20+ minutes to start for large models"
@@ -64,12 +63,11 @@ patch_prm800k_setup
 
 # Install evaluation requirements
 install_evaluation_requirements
+VIRTUAL_ENV=$VENV_DIR uv pip install --upgrade --force-reinstall transformers==4.57.3
+VIRTUAL_ENV=$VENV_DIR uv pip uninstall flashinfer-python
 
 # Install MLPerf LoadGen
 install_mlperf_loadgen "$FORCE_REBUILD" "$MLPERF_BACKEND"
-
-# Override sglang version to 0.5.4
-uv pip install sglang[all]==0.5.4 --prerelease=allow
 
 # Verify SGLang installation
 if python3 -c "import sglang" 2>/dev/null; then

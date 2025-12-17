@@ -635,9 +635,13 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   std::vector<LoadableSampleSet> result;
   std::mt19937 qsl_rng(settings.qsl_rng_seed);
 
+  // Cap sample count to QSL's actual total to avoid out-of-range indices.
+  const size_t qsl_total_count = qsl->TotalSampleCount();
+  const size_t effective_sample_count = std::min(total_sample_count, qsl_total_count);
+
   // Generate indices for the specified sample count.
-  std::vector<QuerySampleIndex> samples(total_sample_count);
-  for (size_t i = 0; i < total_sample_count; i++) {
+  std::vector<QuerySampleIndex> samples(effective_sample_count);
+  for (size_t i = 0; i < effective_sample_count; i++) {
     samples[i] = static_cast<QuerySampleIndex>(i);
   }
 

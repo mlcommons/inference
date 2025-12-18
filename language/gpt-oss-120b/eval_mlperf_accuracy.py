@@ -642,6 +642,9 @@ def main():
         f"\nFINAL SCORE: {final_score_percentage:.2f}% ({final_score:.2f}/{max_score:.2f})")
     print("=" * 80)
 
+    print("\n\nPrinting for submission_checker:")
+    print(f"\n'exact_match': {final_score}")
+
     # Save detokenized outputs to pickle if requested
     if args.save_outputs:
         logger.info(f"Saving detokenized outputs to {args.save_outputs}...")

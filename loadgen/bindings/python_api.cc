@@ -312,6 +312,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::server_num_issue_query_threads)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
+      .def_readwrite("sample_concatenate_permutation",
+                     &TestSettings::sample_concatenate_permutation)
       .def_readwrite("min_duration_ms", &TestSettings::min_duration_ms)
       .def_readwrite("max_duration_ms", &TestSettings::max_duration_ms)
       .def_readwrite("min_query_count", &TestSettings::min_query_count)
@@ -324,6 +326,14 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::accuracy_log_rng_seed)
       .def_readwrite("accuracy_log_probability",
                      &TestSettings::accuracy_log_probability)
+      .def_readwrite("accuracy_log_sampling_target",
+                     &TestSettings::accuracy_log_sampling_target)
+      .def_readwrite("test05", &TestSettings::test05)
+      .def_readwrite("test05_qsl_rng_seed", &TestSettings::test05_qsl_rng_seed)
+      .def_readwrite("test05_sample_index_rng_seed",
+                     &TestSettings::test05_sample_index_rng_seed)
+      .def_readwrite("test05_schedule_rng_seed",
+                     &TestSettings::test05_schedule_rng_seed) 
       .def_readwrite("print_timestamps", &TestSettings::print_timestamps)
       .def_readwrite("performance_issue_unique",
                      &TestSettings::performance_issue_unique)
@@ -333,12 +343,6 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::performance_issue_same_index)
       .def_readwrite("performance_sample_count_override",
                      &TestSettings::performance_sample_count_override)
-      .def_readwrite("test05", &TestSettings::test05)
-      .def_readwrite("test05_qsl_rng_seed", &TestSettings::test05_qsl_rng_seed)
-      .def_readwrite("test05_sample_index_rng_seed",
-                     &TestSettings::test05_sample_index_rng_seed)
-      .def_readwrite("test05_schedule_rng_seed",
-                     &TestSettings::test05_schedule_rng_seed)
       .def_readwrite("use_token_latencies", &TestSettings::use_token_latencies)
       .def_readwrite("ttft_latency", &TestSettings::server_ttft_latency)
       .def_readwrite("tpot_latency", &TestSettings::server_tpot_latency)

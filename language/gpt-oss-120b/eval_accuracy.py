@@ -138,7 +138,8 @@ def extract_final_section(text: str) -> str:
     if not text:
         return ""
 
-    # Flexible pattern to handle corrupted markers (allows chars between final and <|message|>)
+    # Flexible pattern to handle corrupted markers (allows chars between final
+    # and <|message|>)
     match = re.search(
         r'<\|channel\|>final[^<]*<\|message\|>(.*?)(?:<\|return\|>|$)',
         text, re.DOTALL
@@ -183,13 +184,15 @@ def parse_multiple_choice(text: str, max_option: str = 'D') -> Optional[str]:
     final_section = strip_markdown_bold(final_section)
 
     # Clean artifacts
-    if final_section.startswith(("['", '["')) and final_section.endswith(("']", '"]')):
+    if final_section.startswith(
+            ("['", '["')) and final_section.endswith(("']", '"]')):
         final_section = final_section[2:-2].strip()
 
     final_section = final_section.replace(r'\n', '\n').replace(r'\'', "'")
 
     # Try to extract from final section first
-    # Priority 1: Single letter answer at start of final section (common in harmony format)
+    # Priority 1: Single letter answer at start of final section (common in
+    # harmony format)
     single_letter_match = re.match(
         rf'^[^a-zA-Z]*([A-{max_option}])(?:[^a-zA-Z]|$)',
         final_section.strip(), re.IGNORECASE
@@ -296,14 +299,26 @@ def parse_code(text: str) -> Optional[str]:
     # Check if we got a different final section (harmony format detected)
     if final_section != text:
         # Parse code from final section only
-        python_matches = list(re.finditer(r"```python(.*?)```", final_section, re.DOTALL))
+        python_matches = list(
+            re.finditer(
+                r"```python(.*?)```",
+                final_section,
+                re.DOTALL))
         if python_matches:
             return python_matches[-1].group(1).strip()
 
-        plain_matches = list(re.finditer(r"```(.*?)```", final_section, re.DOTALL))
+        plain_matches = list(
+            re.finditer(
+                r"```(.*?)```",
+                final_section,
+                re.DOTALL))
         if plain_matches:
             code = plain_matches[-1].group(1).strip()
-            code = re.sub(r'^(?:python|py)\s*\n', '', code, flags=re.IGNORECASE)
+            code = re.sub(
+                r'^(?:python|py)\s*\n',
+                '',
+                code,
+                flags=re.IGNORECASE)
             return code
 
     # Fallback: search full text (for non-harmony outputs or if final section has no code)

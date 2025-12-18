@@ -81,13 +81,11 @@ def _run_benchmark(
     random_seed: int,
 ) -> None:
     """Run the VL2L benchmark."""
+    test_settings, log_settings = settings.to_lgtype()
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
-    test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
         dataset=dataset,
         endpoint=endpoint,

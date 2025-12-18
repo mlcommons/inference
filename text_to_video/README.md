@@ -30,10 +30,25 @@ cd inference/text_to_video
 - `run_evaluation.py` - VBench evaluation
 - `launch.sh` - Docker launcher
 - `data/vbench_prompts.txt` - Input prompts
-- `data/fixed_latent.pt` - Optional fixed latent tensor for deterministic generation
+- `data/fixed_latent.pt` - Fixed latent tensor for deterministic generation
+
+## Supported Hardware
+
+This implementation supports NVIDIA GPUs with CUDA 12.1 compatibility which includes Hopper and pre-Hopper architectures.
+
+## Accuracy
+
+### VBench Reference Score (BF16)
+
+| Metric | Value |
+|--------|-------|
+| Reference Accuracy | **70.48** |
+| Accuracy Threshold (99%) | **69.7752** |
+
+The accuracy threshold is set at 99% of the reference BF16 accuracy score.
 
 ## References
 
-- Model: [Wan-AI/Wan2.2-T2V-A14B-Diffusers](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers)
+- Model: [Wan-AI/Wan2.2-T2V-A14B-Diffusers](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers) (commit: `5be7df9619b54f4e2667b2755bc6a756675b5cd7`)
 - VBench: [GitHub](https://github.com/Vchitect/VBench)
 - MLPerf: [Inference](https://github.com/mlcommons/inference)

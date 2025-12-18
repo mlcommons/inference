@@ -249,7 +249,7 @@ MODEL_CONFIG = {
             "deepseek-r1": 4388,
             "whisper": 1633,
             "gpt-oss-120b": 6396, # TODO: Need to add accuracy sample count checkers as well (4395)
-            "qwen3-vl-235b-a22b": 9660,
+            "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
         },
         "dataset-size": {
@@ -273,7 +273,7 @@ MODEL_CONFIG = {
             "deepseek-r1": 4388,
             "whisper": 1633,
             "gpt-oss-120b": 6396, # TODO: Need to add accuracy sample count checkers as well (4395)
-            "qwen3-vl-235b-a22b": 9660,
+            "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
         },
         # model_mapping.json is expected in the root directory of the

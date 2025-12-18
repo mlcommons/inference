@@ -205,9 +205,11 @@ MODEL_CONFIG = {
             "pointpainting": ("mAP", 0.5425 * 0.999),
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
-            "gpt-oss-120b": ("exact_match", 83.13 * 0.99), # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99), # TODO: Placeholder for now
-            "dlrm-v3": ("AUC", 78.663 * 0.99), # TODO: Placeholder for now
+            # TODO: Placeholder for now
+            "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
+            # TODO: Placeholder for now
+            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -223,7 +225,8 @@ MODEL_CONFIG = {
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
             "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
             "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3886.2274),
-            "gpt-oss-120b": ("TOKENS_PER_SAMPLE", 1.1 * 9999), # TODO: Placeholder for now
+            # TODO: Placeholder for now
+            "gpt-oss-120b": ("TOKENS_PER_SAMPLE", 1.1 * 9999),
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
@@ -248,7 +251,8 @@ MODEL_CONFIG = {
             "pointpainting": 1024,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            "gpt-oss-120b": 6396, # TODO: Need to add accuracy sample count checkers as well (4395)
+            # TODO: Need to add accuracy sample count checkers as well (4395)
+            "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
         },
@@ -272,7 +276,8 @@ MODEL_CONFIG = {
             "pointpainting": 39987,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            "gpt-oss-120b": 6396, # TODO: Need to add accuracy sample count checkers as well (4395)
+            # TODO: Need to add accuracy sample count checkers as well (4395)
+            "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
         },
@@ -740,7 +745,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "rgat": 788379,
     "deepseek-r1": 4388,
     "whisper": 1633,
-    "gpt-oss-120b": 6396, # TODO: Need to add accuracy sample count checkers as well (4395)
+    # TODO: Need to add accuracy sample count checkers as well (4395)
+    "gpt-oss-120b": 6396,
     "qwen3-vl-235b-a22b": 9660,
     "dlrm-v3": 34996,
 }

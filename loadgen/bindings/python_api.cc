@@ -333,7 +333,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("test05_sample_index_rng_seed",
                      &TestSettings::test05_sample_index_rng_seed)
       .def_readwrite("test05_schedule_rng_seed",
-                     &TestSettings::test05_schedule_rng_seed) 
+                     &TestSettings::test05_schedule_rng_seed)
       .def_readwrite("print_timestamps", &TestSettings::print_timestamps)
       .def_readwrite("performance_issue_unique",
                      &TestSettings::performance_issue_unique)

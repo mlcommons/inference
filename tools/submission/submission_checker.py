@@ -25,47 +25,56 @@ log = logging.getLogger("main")
 submission_checker_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL_CONFIG = {
-    "v5.0": {
+    "v6.0": {
         "models": [
             "resnet",
             "retinanet",
             "bert-99",
             "bert-99.9",
-            "dlrm-v2-99",
-            "dlrm-v2-99.9",
             "3d-unet-99",
             "3d-unet-99.9",
-            "gptj-99",
-            "gptj-99.9",
+            "llama3.1-8b",
+            "llama3.1-8b-edge",
             "llama2-70b-99",
             "llama2-70b-99.9",
-            "llama2-70b-interactive-99",
-            "llama2-70b-interactive-99.9",
             "stable-diffusion-xl",
             "mixtral-8x7b",
             "llama3.1-405b",
             "rgat",
             "pointpainting",
+            "deepseek-r1",
+            "whisper",
+            "gpt-oss-120b",
+            "wan-2.2-t2v-a14b",
+            "qwen3-vl-235b-a22b",
+            "dlrm-v3",
         ],
         "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
             "retinanet": ["Server", "Offline"],
-            "dlrm-v2-99": ["Server", "Offline"],
-            "dlrm-v2-99.9": ["Server", "Offline"],
+            "dlrm-v3": ["Server", "Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
-            "gptj-99": ["Server", "Offline"],
-            "gptj-99.9": ["Server", "Offline"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-interactive-99": ["Server", "Offline"],
-            "llama2-70b-interactive-99.9": ["Server", "Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3.1-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
+            "whisper": ["Offline"],
+            "deepseek-r1": ["Offline"],
+            "gpt-oss-120b": ["Offline"],
+            "qwen3-vl-235b-a22b": ["Server", "Offline"],
+            "dlrm-v3": ["Server", "Offline"],
         },
-        "optional-scenarios-datacenter": {},
+        "optional-scenarios-datacenter": {
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-405b": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
+            "deepseek-r1": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Interactive", "Server"],
+        },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
             "retinanet": ["SingleStream", "MultiStream", "Offline"],
@@ -73,34 +82,43 @@ MODEL_CONFIG = {
             "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline"],
-            "gptj-99.9": ["SingleStream", "Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
+            "whisper": ["Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "resnet": ["SingleStream", "MultiStream", "Offline", "Server"],
             "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "bert-99": ["SingleStream", "Offline"],
             "bert-99.9": ["SingleStream", "Offline"],
-            "dlrm-v2-99": ["Offline", "Server"],
-            "dlrm-v2-99.9": ["Offline", "Server"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline", "Server"],
-            "gptj-99.9": ["SingleStream", "Offline", "Server"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-interactive-99": ["Server", "Offline"],
-            "llama2-70b-interactive-99.9": ["Server", "Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3.1-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
             "pointpainting": ["SingleStream"],
+            "deepseek-r1": ["Offline"],
+            "whisper": ["Offline"],
+            "gpt-oss-120b": ["Offline"],
+            "qwen3-vl-235b-a22b": ["Offline"],
+            "dlrm-v3": ["Offline", "Server"],
         },
-        "optional-scenarios-datacenter-edge": {},
+        "optional-scenarios-datacenter-edge": {
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-405b": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
+            "deepseek-r1": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Interactive", "Server"],
+            "qwen3-vl-235b-a22b": ["Interactive", "Server"],
+        },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             "retinanet": ("mAP", 37.55 * 0.99),
@@ -111,25 +129,29 @@ MODEL_CONFIG = {
             "3d-unet-99": ("DICE", 0.86170 * 0.99),
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
 
-            "gptj-99": (
+            "llama3.1-8b": (
                 "ROUGE1",
-                42.9865 * 0.99,
+                38.7792 * 0.99,
                 "ROUGE2",
-                20.1235 * 0.99,
+                15.9075 * 0.99,
                 "ROUGEL",
-                29.9881 * 0.99,
+                24.4957 * 0.99,
+                "ROUGELSUM",
+                35.793 * 0.99,
                 "GEN_LEN",
-                4016878 * 0.9,
+                8167644 * 0.9,
             ),
-            "gptj-99.9": (
+            "llama3.1-8b-edge": (
                 "ROUGE1",
-                42.9865 * 0.999,
+                39.06 * 0.99,
                 "ROUGE2",
-                20.1235 * 0.999,
+                16.1147 * 0.99,
                 "ROUGEL",
-                29.9881 * 0.999,
+                24.6375 * 0.99,
+                "ROUGELSUM",
+                36.124 * 0.99,
                 "GEN_LEN",
-                4016878 * 0.9,
+                3051113 * 0.9,
             ),
             "llama2-70b-99": (
                 "ROUGE1",
@@ -142,26 +164,6 @@ MODEL_CONFIG = {
                 294.45 * 0.9,
             ),
             "llama2-70b-99.9": (
-                "ROUGE1",
-                44.4312 * 0.999,
-                "ROUGE2",
-                22.0352 * 0.999,
-                "ROUGEL",
-                28.6162 * 0.999,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
-            "llama2-70b-interactive-99": (
-                "ROUGE1",
-                44.4312 * 0.99,
-                "ROUGE2",
-                22.0352 * 0.99,
-                "ROUGEL",
-                28.6162 * 0.99,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
-            "llama2-70b-interactive-99.9": (
                 "ROUGE1",
                 44.4312 * 0.999,
                 "ROUGE2",
@@ -201,6 +203,13 @@ MODEL_CONFIG = {
             ),
             "rgat": ("acc", 0.7286 * 0.99),
             "pointpainting": ("mAP", 0.5425 * 0.999),
+            "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
+            "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
+            # TODO: Placeholder for now
+            "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
+            # TODO: Placeholder for now
+            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -211,10 +220,13 @@ MODEL_CONFIG = {
             ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-interactive-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-interactive-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
+            "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
+            "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
+            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3886.2274),
+            # TODO: Placeholder for now
+            "gpt-oss-120b": ("TOKENS_PER_SAMPLE", 1.1 * 9999),
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
@@ -228,17 +240,21 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": 204800,
             "3d-unet-99": 43,
             "3d-unet-99.9": 43,
-            "gptj-99": 13368,
-            "gptj-99.9": 13368,
+            "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "llama2-70b-interactive-99": 24576,
-            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
             "rgat": 788379,
             "pointpainting": 1024,
+            "deepseek-r1": 4388,
+            "whisper": 1633,
+            # TODO: Need to add accuracy sample count checkers as well (4395)
+            "gpt-oss-120b": 6396,
+            "qwen3-vl-235b-a22b": 48289,
+            "dlrm-v3": 34996,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -249,17 +265,21 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": 330067,
             "3d-unet-99": 43,
             "3d-unet-99.9": 43,
-            "gptj-99": 13368,
-            "gptj-99.9": 13368,
+            "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "llama2-70b-interactive-99": 24576,
-            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
             "rgat": 788379,
             "pointpainting": 39987,
+            "deepseek-r1": 4388,
+            "whisper": 1633,
+            # TODO: Need to add accuracy sample count checkers as well (4395)
+            "gpt-oss-120b": 6396,
+            "qwen3-vl-235b-a22b": 48289,
+            "dlrm-v3": 34996,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -270,12 +290,14 @@ MODEL_CONFIG = {
             "mobilenet": "resnet",
             "resnet50": "resnet",
             "llama3_1-405b": "llama3.1-405b",
+            "llama3_1-8b": "llama3.1-8b",
+            "llama3_1-8b-edge": "llama3.1-8b-edge",
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 6023615788873153749,
-            "sample_index_rng_seed": 15036839855038426416,
-            "schedule_rng_seed": 9933818062894767841,
+            "qsl_rng_seed": 1780908523862526354,
+            "sample_index_rng_seed": 14771362308971278857,
+            "schedule_rng_seed": 18209322760996052031,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -283,15 +305,16 @@ MODEL_CONFIG = {
             "retinanet": {"Server": 100000000},
             "dlrm-v2-99": {"Server": 60000000},
             "dlrm-v2-99.9": {"Server": 60000000},
-            "gptj-99": {"Server": 20000000000},
-            "gptj-99.9": {"Server": 20000000000},
+            "llama3.1-8b": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "llama2-70b-interactive-99": {"Server": 20000000000},
-            "llama2-70b-interactive-99.9": {"Server": 20000000000},
             "mixtral-8x7b": {"Server": 20000000000},
-            "llama3.1-405b": {"Server": 60000000000}
+            "llama3.1-405b": {"Server": 60000000000},
+            "deepseek-r1": {"Server": 60000000000},
+            "gpt-oss-120b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
             "resnet": {
@@ -312,12 +335,10 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
             "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-8b-edge": {"SingleStream": 1024, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-interactive-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-interactive-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
                 "SingleStream": 1024,
                 "Server": 270336,
@@ -327,6 +348,11 @@ MODEL_CONFIG = {
             "llama3.1-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "rgat": {"SingleStream": 1024, "Offline": 1},
             "pointpainting": {"SingleStream": 1024},
+            "deepseek-r1": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "whisper": {"SingleStream": 1024, "Offline": 1},
+            "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v3": {"Server": 270336, "Offline": 1},
         },
     },
     "v5.1": {
@@ -719,6 +745,10 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "rgat": 788379,
     "deepseek-r1": 4388,
     "whisper": 1633,
+    # TODO: Need to add accuracy sample count checkers as well (4395)
+    "gpt-oss-120b": 6396,
+    "qwen3-vl-235b-a22b": 9660,
+    "dlrm-v3": 34996,
 }
 
 SCENARIO_MAPPING = {
@@ -873,8 +903,19 @@ LLM_LATENCY_LIMITS = {
     "deepseek-r1": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 1500 * 1000000, "tpot": 15 * 1000000
         }
-    }
+    },
+    "gpt-oss-120b": {
+        "Server": {
+            "ttft": 3000 * 1000000, "tpot": 75 * 1000000
+        },
+        "Interactive": {
+            "ttft": 1500 * 1000000, "tpot": 15 * 1000000
+        }
+    },
 
 }
 

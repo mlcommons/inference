@@ -110,32 +110,112 @@ def validate_dataset_name(dataset: Any) -> str:
 
 
 # =============================================================================
+# Harmony Format Extraction
+# =============================================================================
+
+
+def extract_final_section(text: str) -> str:
+    """Extract content from the <|channel|>final<|message|>...<|return|> section.
+
+    The model outputs have two sections:
+    - <|channel|>analysis<|message|>... (reasoning, may have draft answers)
+    - <|channel|>final<|message|>... (actual final answer)
+
+    This function extracts only the final section to avoid extracting
+    wrong answers from the analysis section.
+
+    Uses a flexible regex to handle corrupted markers like:
+    - <|channel|>final 明<|message|>
+    - <|channel|>final537<|message|>
+
+    Args:
+        text: Full model output text
+
+    Returns:
+        Content of final section if found, otherwise returns original text
+    """
+    text = validate_text_input(text)
+    if not text:
+        return ""
+
+    # Flexible pattern to handle corrupted markers (allows chars between final and <|message|>)
+    match = re.search(
+        r'<\|channel\|>final[^<]*<\|message\|>(.*?)(?:<\|return\|>|$)',
+        text, re.DOTALL
+    )
+    if match:
+        return match.group(1).strip()
+
+    # Fallback: return original text if no final section found
+    return text
+
+
+def strip_markdown_bold(text: str) -> str:
+    """Remove markdown bold formatting (**text**) from text.
+
+    Args:
+        text: Text that may contain **bold** formatting
+
+    Returns:
+        Text with bold markers removed
+    """
+    return re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+
+
+# =============================================================================
 # Answer Parsing Functions
 # =============================================================================
 
 def parse_multiple_choice(text: str, max_option: str = 'D') -> Optional[str]:
-    """Parse multiple choice answer (A-D or A-J)."""
+    """Parse multiple choice answer (A-D or A-J).
+
+    First extracts the final section from harmony-formatted outputs,
+    then parses the answer from that section only.
+    """
     text = validate_text_input(text)
     if not text:
         return None
 
+    # Extract final section first (for harmony format)
+    final_section = extract_final_section(text)
+
+    # Strip markdown bold formatting (**A** -> A)
+    final_section = strip_markdown_bold(final_section)
+
     # Clean artifacts
-    if text.startswith(("['", '["')) and text.endswith(("']", '"]')):
-        text = text[2:-2].strip()
+    if final_section.startswith(("['", '["')) and final_section.endswith(("']", '"]')):
+        final_section = final_section[2:-2].strip()
 
-    text = text.replace(r'\n', '\n').replace(r'\'', "'")
+    final_section = final_section.replace(r'\n', '\n').replace(r'\'', "'")
 
-    # Find ANSWER/FINAL ANSWER pattern
+    # Try to extract from final section first
+    # Priority 1: Single letter answer at start of final section (common in harmony format)
+    single_letter_match = re.match(
+        rf'^[^a-zA-Z]*([A-{max_option}])(?:[^a-zA-Z]|$)',
+        final_section.strip(), re.IGNORECASE
+    )
+    if single_letter_match:
+        return single_letter_match.group(1).upper()
+
+    # Priority 2: "Answer: X" pattern in final section
+    answer_pattern = rf'\b(?:Answer|ANSWER)\s*[:.]?\s*([A-{max_option}])\b'
+    answer_match = re.search(answer_pattern, final_section, re.IGNORECASE)
+    if answer_match:
+        return answer_match.group(1).upper()
+
+    # Priority 3: Fall back to ANSWER/FINAL ANSWER pattern in full text
+    # (for backwards compatibility with non-harmony outputs)
+    full_text = text.replace(r'\n', '\n').replace(r'\'', "'")
     pattern = rf"\b(?:ANSWER|FINAL\s*ANSWER)\b\s*[:=]?\s*(?:\(?\s*([A-{max_option}])\s*\)?)(?:\s*$|[^A-Za-z])"
-    matches = list(re.finditer(pattern, text, re.IGNORECASE))
+    matches = list(re.finditer(pattern, full_text, re.IGNORECASE))
 
     if matches:
         return matches[-1].group(1).upper()
 
-    # MMLU-Pro fallback: standalone letter
+    # MMLU-Pro fallback: standalone letter in final section
     if max_option == 'J':
         fallback_matches = list(re.finditer(
-            r"\b([A-J])\b", text, re.IGNORECASE))
+            rf"\b([A-{max_option}])\b", final_section, re.IGNORECASE))
         if fallback_matches:
             return fallback_matches[-1].group(1).upper()
 
@@ -197,14 +277,36 @@ def parse_aime_answer(text: str) -> Optional[int]:
 def parse_code(text: str) -> Optional[str]:
     """Parse code from ```python or plain ``` code block.
 
+    First extracts the final section from harmony-formatted outputs,
+    then parses code from that section only. This avoids extracting
+    malformed code blocks from the analysis section.
+
     Priority:
-    1. Last ```python block
-    2. Last plain ``` block (if it looks like Python code)
+    1. Code from final section (if harmony format detected)
+    2. Last ```python block from full text (fallback)
+    3. Last plain ``` block from full text (fallback)
     """
     text = validate_text_input(text)
     if not text:
         return None
 
+    # First try to extract from final section (for harmony format)
+    final_section = extract_final_section(text)
+
+    # Check if we got a different final section (harmony format detected)
+    if final_section != text:
+        # Parse code from final section only
+        python_matches = list(re.finditer(r"```python(.*?)```", final_section, re.DOTALL))
+        if python_matches:
+            return python_matches[-1].group(1).strip()
+
+        plain_matches = list(re.finditer(r"```(.*?)```", final_section, re.DOTALL))
+        if plain_matches:
+            code = plain_matches[-1].group(1).strip()
+            code = re.sub(r'^(?:python|py)\s*\n', '', code, flags=re.IGNORECASE)
+            return code
+
+    # Fallback: search full text (for non-harmony outputs or if final section has no code)
     # Try ```python blocks first (most specific)
     python_matches = list(re.finditer(r"```python(.*?)```", text, re.DOTALL))
     if python_matches:

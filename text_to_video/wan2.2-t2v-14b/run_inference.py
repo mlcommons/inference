@@ -19,6 +19,7 @@ import torch
 from diffusers import WanPipeline, AutoencoderKLWan
 from diffusers.utils import export_to_video
 
+# import modelopt.torch.opt as mto
 
 def setup_logging(rank):
     """Setup logging configuration for data parallel (all ranks log)."""
@@ -106,6 +107,19 @@ def generate_videos(args, config):
     )
     pipe.to(device)
     logging.info("Model loaded successfully!")
+
+    # if args.run_quantized:
+    #     logging.info("Loading quantized model...")
+    #     transformer_pt = os.path.join(args.quantized_model_path, "transformer.pt")
+    #     transformer_2_pt = os.path.join(args.quantized_model_path, "transformer_2.pt")
+
+    #     assert os.path.exists(transformer_pt)
+    #     assert os.path.exists(transformer_2_pt)
+    #     mto.restore(pipe.transformer, transformer_pt)
+    #     mto.restore(pipe.transformer_2, transformer_2_pt)
+
+    #     logging.info("Quantized model loaded successfully!")
+
     
     fixed_latent = None
     if args.fixed_latent:
@@ -133,6 +147,15 @@ def generate_videos(args, config):
             
             logging.info(f"[Prompt {global_idx+1}/{len(all_prompts)}, Iteration {iteration+1}/{args.num_iterations}] {prompt}")
             
+            # Check if video already exists
+            filename = f"{prompt}-{iteration}.mp4"
+            save_path = output_dir / filename
+            
+            if save_path.exists():
+                logging.info(f"Video already exists at {save_path}, skipping generation")
+                total_videos += 1
+                continue
+            
             # Generate video with seed based on iteration
             current_seed = base_seed + iteration
             
@@ -156,11 +179,8 @@ def generate_videos(args, config):
             output = pipe(**pipeline_kwargs).frames[0]
             
             # Save video with VBench format: <prompt>-<iteration>.mp4
-            filename = f"{prompt}-{iteration}.mp4"
-            save_path = output_dir / filename
-            
             logging.info(f"Saving to {save_path} (seed: {current_seed})")
-            export_to_video(output, str(save_path), fps=fps)
+            export_to_video(output, str(save_path), fps=25)
             total_videos += 1
             logging.info(f"Saved! ({total_videos}/{len(prompts) * args.num_iterations} for this GPU)")
             
@@ -217,6 +237,17 @@ def main():
         default="./data/fixed_latent.pt",
         help="Path to fixed latent .pt file for deterministic generation (default: data/fixed_latent.pt)"
     )
+    # parser.add_argument(
+    #     "--run-quantized",
+    #     action="store_true",
+    #     help="Run quantized model"
+    # )
+    # parser.add_argument(
+    #     "--quantized-model-path",
+    #     type=str,
+    #     default="./models/Wan2.2-T2V-FP8-Torch",
+    #     help="Path to quantized model (default: ./models/Wan2.2-T2V-FP8-Torch)"
+    # )
     
     args = parser.parse_args()
     

@@ -131,6 +131,7 @@ docker run $DOCKER_FLAGS \
     --ulimit stack=67108864 \
     --shm-size=32g \
     -v "$INFERENCE_ROOT:/workspace" \
-    -w /workspace/text_to_video \
+    -v "/home/scratch.svc_compute_arch:/home/scratch.svc_compute_arch" \
+    -w /workspace/wan2.2-t2v-14b \
     "$FULL_IMAGE" \
     $RUN_CMD

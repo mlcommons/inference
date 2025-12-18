@@ -31,6 +31,18 @@ Use [`./sglang/run_server.sh`](./sglang/run_server.sh) to launch an SGLang serve
 ```
 The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified. 
 
+You may also use docker:
+```bash
+docker run --runtime nvidia --gpus all --net host  \
+    -v ${HF_HOME}:/root/.cache/huggingface \
+    --env "HUGGING_FACE_HUB_TOKEN=$HF_TOKEN"     \
+    --ipc=host lmsysorg/sglang:latest \
+     python3 -m sglang.launch_server --model-path ${MODEL_NAME} \
+    --host 0.0.0.0  --port 3000 --data-parallel-size=1 --max-running-requests 512 \
+    --mem-fraction-static 0.85 --chunked-prefill-size 16384 --ep-size=1 \
+    --enable-metrics --stream-interval 500
+```
+
 Then, run a benchmark script that uses the client to send/recv requests.
 ### Run the inference
 

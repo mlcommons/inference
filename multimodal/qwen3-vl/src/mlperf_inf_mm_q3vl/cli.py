@@ -81,13 +81,17 @@ def _run_benchmark(
     random_seed: int,
 ) -> None:
     """Run the Qwen3-VL (Q3VL) benchmark."""
-    logger.info("Running Qwen3-VL (Q3VL) benchmark with settings: {}", settings)
+    logger.info(
+        "Running Qwen3-VL (Q3VL) benchmark with settings: {}",
+        settings)
     logger.info("Running Qwen3-VL (Q3VL) benchmark with dataset: {}", dataset)
     logger.info(
         "Running Qwen3-VL (Q3VL) benchmark with OpenAI API endpoint: {}",
         endpoint,
     )
-    logger.info("Running Qwen3-VL (Q3VL) benchmark with random seed: {}", random_seed)
+    logger.info(
+        "Running Qwen3-VL (Q3VL) benchmark with random seed: {}",
+        random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
         dataset=dataset,

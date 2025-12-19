@@ -1,4 +1,4 @@
-"""Schema definitions of various data structures in the VL2L benchmark."""
+"""Schema definitions of various data structures in the Qwen3-VL (Q3VL) benchmark."""
 
 from __future__ import annotations
 
@@ -366,8 +366,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -412,10 +411,8 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.sample_concatenate_permutation = self.sample_concatenate_permutation
 
         # Test duration settings
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
-        settings.max_duration_ms = round(
-            self.max_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
+        settings.max_duration_ms = round(self.max_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.max_query_count = self.max_query_count
 
@@ -442,10 +439,8 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
             self.performance_sample_count_override
         )
         settings.use_token_latencies = self.use_token_latencies
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
         settings.infer_token_latencies = self.infer_token_latencies
         settings.token_latency_scaling_factor = self.token_latency_scaling_factor
 
@@ -610,7 +605,7 @@ class Settings(BaseModelWithAttributeDescriptionsFromDocstrings):
 
 
 class Model(BaseModelWithAttributeDescriptionsFromDocstrings):
-    """Specifies the model to use for the VL2L benchmark."""
+    """Specifies the model to use for the Qwen3-VL (Q3VL) benchmark."""
 
     repo_id: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
     """The HuggingFace repository ID of the model."""
@@ -656,7 +651,7 @@ class Verbosity(StrEnum):
 
 
 class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
-    """Specifies the OpenAI API endpoint to use for the VL2L benchmark."""
+    """Specifies the OpenAI API endpoint to use for the Qwen3-VL (Q3VL) benchmark."""
 
     url: str = "http://localhost:8000/v1"
     """The URL of the OpenAI API endpoint that the inference requests are sent to."""
@@ -665,8 +660,8 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The API key to authenticate the inference requests."""
 
     model: Model
-    """The model to use for the VL2L benchmark, i.e., the model that was deployed behind
-    this OpenAI API endpoint.
+    """The model to use for the Qwen3-VL (Q3VL) benchmark, i.e., the model that was
+    deployed behind this OpenAI API endpoint.
     """
 
     use_guided_decoding: bool = False
@@ -686,7 +681,7 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
 
 
 class EndpointToDeploy(Endpoint):
-    """Specifies the endpoint to deploy for the VL2L benchmark."""
+    """Specifies the endpoint to deploy for the Qwen3-VL (Q3VL) benchmark."""
 
     startup_timeout: timedelta = timedelta(hours=1)
     """The timeout for the endpoint to start up."""
@@ -794,6 +789,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

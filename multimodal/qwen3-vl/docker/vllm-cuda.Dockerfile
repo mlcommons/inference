@@ -9,33 +9,33 @@
 #      docker build -t myimage .
 #
 # 2. Install from a different git URL or branch:
-#      docker build --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=git+https://github.com/USER/REPO.git@BRANCH#subdirectory=multimodal/vl2l \
+#      docker build --build-arg MLPERF_INF_MM_Q3VL_INSTALL_URL=git+https://github.com/USER/REPO.git@BRANCH#subdirectory=multimodal/qwen3-vl \
 #                   -t myimage .
 #
 # 3. Install from local directory (build from repo root with git auto-detection):
 #    (Version number will be auto-detected from git if the build context includes .git)
-#      docker build --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=multimodal/vl2l \
-#                   -f multimodal/vl2l/docker/vllm-cuda.Dockerfile \
+#      docker build --build-arg MLPERF_INF_MM_Q3VL_INSTALL_URL=multimodal/qwen3-vl \
+#                   -f multimodal/qwen3-vl/docker/vllm-cuda.Dockerfile \
 #                   -t myimage .
 #
-# 4. Install from local directory (build from multimodal/vl2l subdirectory):
+# 4. Install from local directory (build from multimodal/qwen3-vl subdirectory):
 #    (No .git in subdirectory, will use fallback version "0.0.0.dev0")
-#      docker build --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=. \
-#                   -f multimodal/vl2l/docker/vllm-cuda.Dockerfile \
-#                   -t myimage multimodal/vl2l
+#      docker build --build-arg MLPERF_INF_MM_Q3VL_INSTALL_URL=. \
+#                   -f multimodal/qwen3-vl/docker/vllm-cuda.Dockerfile \
+#                   -t myimage multimodal/qwen3-vl
 #
-# 5. Install from local directory when pwd is already multimodal/vl2l:
+# 5. Install from local directory when pwd is already multimodal/qwen3-vl:
 #    (No .git in subdirectory, will use fallback version "0.0.0.dev0")
-#      cd multimodal/vl2l
-#      docker build --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=. \
+#      cd multimodal/qwen3-vl
+#      docker build --build-arg MLPERF_INF_MM_Q3VL_INSTALL_URL=. \
 #                   -f docker/vllm-cuda.Dockerfile \
 #                   -t myimage .
 #
 # 6. Install from local directory with a custom fallback version:
 #    (Override the default "0.0.0.dev0" version when git is not available)
-#      cd multimodal/vl2l
-#      docker build --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=. \
-#                   --build-arg MLPERF_INF_MM_VL2L_VERSION=1.0.0 \
+#      cd multimodal/qwen3-vl
+#      docker build --build-arg MLPERF_INF_MM_Q3VL_INSTALL_URL=. \
+#                   --build-arg MLPERF_INF_MM_Q3VL_VERSION=1.0.0 \
 #                   -f docker/vllm-cuda.Dockerfile \
 #                   -t myimage .
 #
@@ -48,26 +48,26 @@
 ARG BASE_IMAGE_URL=vllm/vllm-openai:v0.12.0
 FROM ${BASE_IMAGE_URL}
 
-# MLPERF_INF_MM_VL2L_INSTALL_URL can be either:
+# MLPERF_INF_MM_Q3VL_INSTALL_URL can be either:
 #   1. A git URL (default): git+https://github.com/...
-#   2. A local directory path relative to the build context (e.g., multimodal/vl2l)
+#   2. A local directory path relative to the build context (e.g., multimodal/qwen3-vl)
 #      Note: The build context is the directory you pass to `docker build` (the final arg)
-#            MLPERF_INF_MM_VL2L_INSTALL_URL must be a valid path inside that build context
-ARG MLPERF_INF_MM_VL2L_INSTALL_URL=git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/vl2l
+#            MLPERF_INF_MM_Q3VL_INSTALL_URL must be a valid path inside that build context
+ARG MLPERF_INF_MM_Q3VL_INSTALL_URL=git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/qwen3-vl
 
 # Temporary directory inside the container where the build context will be copied
 # Only used when installing from a local directory path
-ARG BUILD_CONTEXT_DIR=/tmp/mm_vl2l_build_context
+ARG BUILD_CONTEXT_DIR=/tmp/mm_q3vl_build_context
 
 # Fallback version to use when building from local directory without git metadata
 # setuptools-scm will first try to detect version from .git, and use this as fallback
 # Must be a valid PEP 440 version string (e.g., "0.0.0.dev0", "1.0.0", "0.1.0.dev1")
 # Can be overridden at build time with --build-arg
-ARG MLPERF_INF_MM_VL2L_VERSION=0.0.0.dev0
+ARG MLPERF_INF_MM_Q3VL_VERSION=0.0.0.dev0
 
 # Install
 # - git (required for installing "git+..." dependencies to work)
-# - tmux (for `vllm serve` and `mlperf-inf-mm-vl2l` in different tmux sessions)
+# - tmux (for `vllm serve` and `mlperf-inf-mm-q3vl` in different tmux sessions)
 # - vim (for editing files in the container)
 RUN apt-get update && \
     apt-get install -y git tmux vim && \
@@ -79,25 +79,25 @@ RUN apt-get update && \
 #ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/torch/lib:$LD_LIBRARY_PATH
 
 # Copy build context.
-# This will be used only if MLPERF_INF_MM_VL2L_INSTALL_URL is a local path.
+# This will be used only if MLPERF_INF_MM_Q3VL_INSTALL_URL is a local path.
 COPY . ${BUILD_CONTEXT_DIR}/
 
-# Install the mlperf-inference-multimodal-vl2l package.
+# Install the mlperf-inference-multimodal-q3vl package.
 # We use --system to install into the container's global python environment.
-# Detect if MLPERF_INF_MM_VL2L_INSTALL_URL is a git URL or a local path:
-RUN if echo "${MLPERF_INF_MM_VL2L_INSTALL_URL}" | grep -q "^git+"; then \
-        echo "Installing from git URL: ${MLPERF_INF_MM_VL2L_INSTALL_URL}"; \
-        uv pip install --system --no-cache --verbose "${MLPERF_INF_MM_VL2L_INSTALL_URL}"; \
+# Detect if MLPERF_INF_MM_Q3VL_INSTALL_URL is a git URL or a local path:
+RUN if echo "${MLPERF_INF_MM_Q3VL_INSTALL_URL}" | grep -q "^git+"; then \
+        echo "Installing from git URL: ${MLPERF_INF_MM_Q3VL_INSTALL_URL}"; \
+        uv pip install --system --no-cache --verbose "${MLPERF_INF_MM_Q3VL_INSTALL_URL}"; \
     else \
-        echo "Installing from local path: ${MLPERF_INF_MM_VL2L_INSTALL_URL}"; \
+        echo "Installing from local path: ${MLPERF_INF_MM_Q3VL_INSTALL_URL}"; \
         # Check if the package directory is inside a git repository \
-        if cd "${BUILD_CONTEXT_DIR}/${MLPERF_INF_MM_VL2L_INSTALL_URL}" && git rev-parse --git-dir > /dev/null 2>&1; then \
+        if cd "${BUILD_CONTEXT_DIR}/${MLPERF_INF_MM_Q3VL_INSTALL_URL}" && git rev-parse --git-dir > /dev/null 2>&1; then \
             echo "Git repository detected, setuptools-scm will detect version automatically"; \
         else \
-            echo "Not in a git repository, using fallback version: ${MLPERF_INF_MM_VL2L_VERSION}"; \
-            export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_MLPERF_INFERENCE_MULTIMODAL_VL2L="${MLPERF_INF_MM_VL2L_VERSION}"; \
+            echo "Not in a git repository, using fallback version: ${MLPERF_INF_MM_Q3VL_VERSION}"; \
+            export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_MLPERF_INF_MM_Q3VL="${MLPERF_INF_MM_Q3VL_VERSION}"; \
         fi; \
-        uv pip install --system --no-cache --verbose "${BUILD_CONTEXT_DIR}/${MLPERF_INF_MM_VL2L_INSTALL_URL}"; \
+        uv pip install --system --no-cache --verbose "${BUILD_CONTEXT_DIR}/${MLPERF_INF_MM_Q3VL_INSTALL_URL}"; \
     fi && \
     rm -rf "${BUILD_CONTEXT_DIR}"
 

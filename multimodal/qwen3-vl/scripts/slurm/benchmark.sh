@@ -17,7 +17,7 @@ srun \
     --container-image="${CONTAINER_IMAGE}" \
     --container-mounts="${CACHE_HOST_DIR}":"${CACHE_CONTAINER_DIR}","${OUTPUT_HOST_DIR}":"${OUTPUT_CONTAINER_DIR}" \
     --no-container-mount-home \
-    mlperf-inf-mm-vl2l benchmark vllm \
+    mlperf-inf-mm-q3vl benchmark vllm \
         --settings.test.scenario="${SCENARIO}" \
         --settings.test.mode="${MODE}" \
         --settings.test.server_expected_qps="${SERVER_EXPECTED_QPS}" \

@@ -38,7 +38,7 @@ evaluate_slurm_partition=${DEFAULT_EVALUATE_SLURM_PARTITION}
 
 function _exit_with_help_msg() {
     cat <<EOF
-Submit a benchmarking (and optionally, an evaluation) job(s) for the VL2L benchmark.
+Submit a benchmarking (and optionally, an evaluation) job(s) for the Qwen3-VL (Q3VL) benchmark.
 
 Usage: ${BASH_SOURCE[0]}
     [-ci  | --container-image]     Container image to run the benchmark (default: ${DEFAULT_CONTAINER_IMAGE}).

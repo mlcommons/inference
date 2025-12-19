@@ -1,6 +1,6 @@
 [project]
-name = "mlperf-inference-multimodal-vl2l"
-description = "The reference implementation for the vision-language-to-language (VL2L) benchmark in MLPerf Inference"
+name = "mlperf-inf-mm-q3vl"
+description = "The reference implementation for the Qwen3-VL (Q3VL) benchmark in MLPerf Inference"
 readme = "README.md"
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -30,10 +30,10 @@ dynamic = ["version"]
 dev = ["black", "ruff", "mypy", "shellcheck-py", "pytest"]
 
 [project.scripts]
-mlperf-inf-mm-vl2l = "mlperf_inference_multimodal_vl2l.cli:app"
+mlperf-inf-mm-q3vl = "mlperf_inf_mm_q3vl.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/mlcommons/inference/multimodal/vl2l"
+Homepage = "https://github.com/mlcommons/inference/multimodal/qwen3-vl"
 
 [build-system]
 requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
@@ -43,7 +43,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"mlperf_inference_multimodal_vl2l" = ["py.typed"]
+"mlperf_inf_mm_q3vl" = ["py.typed"]
 
 [tool.setuptools_scm]
 root = "../../"

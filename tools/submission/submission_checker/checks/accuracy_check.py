@@ -29,8 +29,6 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.dataset_check)
 
     def accuracy_result_check(self):
-        if self.division.lower() == "open":
-            return True
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
             self.model
         )
@@ -95,7 +93,9 @@ class AccuracyCheck(BaseCheck):
         if not hash_val:
             self.log.error("%s not hash value for accuracy.txt", self.path)
             is_valid = False
-
+        self.submission_logs.loader_data["accuracy_metrics"] = result_acc
+        if self.division.lower() == "open":
+            return True
         return is_valid
     
     def accuracy_json_check(self):

@@ -84,7 +84,9 @@ def _run_benchmark(
     test_settings, log_settings = settings.to_lgtype()
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
+    logger.info(
+        "Running VL2L benchmark with OpenAI API endpoint: {}",
+        endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     task = ShopifyGlobalCatalogue(
         dataset=dataset,

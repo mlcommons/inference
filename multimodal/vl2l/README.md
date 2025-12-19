@@ -244,8 +244,9 @@ bash submit.sh --help
   - Constraints:
     - Model quality:
       - Category Hierarchical F1 Score >= `0.7824`. This is the 99% recovery of 
-        `0.7903037` which is the mean category hierarchical F1 score across 10 runs. The
-        standard deviation across those 10 runs is `0.0002250412555`.
+        `0.7903037` which is the mean category hierarchical F1 score across 10 runs on 
+        [the BF16 version of the model](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct).
+        The standard deviation across those 10 runs is `0.0002250412555`.
     - Server Scenario:
       - Target latency is used as the constraint, instead of Time to First Token (TTFT)
         or Time per Output Token (TPOT) latencies. 

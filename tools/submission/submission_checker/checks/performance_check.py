@@ -2,6 +2,7 @@ from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
+import os
 
 class PerformanceCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
@@ -31,6 +32,7 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.network_check)
         self.checks.append(self.llm_check)
         self.checks.append(self.inferred_check)
+        self.checks.append(self.get_performance_metric_check)
 
     def missing_check(self):
         if self.mlperf_log is None:
@@ -282,3 +284,78 @@ class PerformanceCheck(BaseCheck):
                 self.log.error("Result for scenario %s can not be inferred from %s for: %s", self.scenario_fixed, self.scenario, self.path)
                 return False
         return True
+    
+    def get_performance_metric_check(self):
+        # Assumes new logging format
+        is_valid = True
+        version = self.config.version
+        if (
+            "result_validity" in self.mlperf_log.get_keys()
+            and self.mlperf_log["result_validity"] == "VALID"
+        ):
+            is_valid = True
+        scenario = self.mlperf_log["effective_scenario"]
+
+        res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+        if (
+            version in RESULT_FIELD_BENCHMARK_OVERWRITE
+            and self.model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+            and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][self.model]
+        ):
+            res = float(
+                self.mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+                        [self.model][scenario]]
+            )
+
+        inferred = False
+        if self.scenario.lower() != self.scenario_fixed.lower() and (self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
+            res, is_valid = self.get_inferred_result(res)
+        self.submission_logs.loader_data["performance_metric"] = res
+        return is_valid
+    
+    def get_inferred_result(self, res):
+
+        inferred = False
+        is_valid = True
+        # Check if current scenario (and version) uses early stopping
+        uses_early_stopping = self.config.uses_early_stopping(self.scenario)
+
+        latency_mean = self.mlperf_log["result_mean_latency_ns"]
+        if self.scenario in ["MultiStream"]:
+            latency_99_percentile = self.mlperf_log[
+                "result_99.00_percentile_per_query_latency_ns"
+            ]
+            latency_mean = self.mlperf_log["result_mean_query_latency_ns"]
+        samples_per_query = self.mlperf_log["effective_samples_per_query"]
+        if self.scenario == "SingleStream":
+            # qps_wo_loadgen_overhead is only used for inferring Offline from
+            # SingleStream; only for old submissions
+            qps_wo_loadgen_overhead = self.mlperf_log["result_qps_without_loadgen_overhead"]
+
+        # special case for results inferred from different scenario
+        if self.scenario_fixed in ["Offline"] and self.scenario in ["SingleStream"]:
+            inferred = True
+            res = qps_wo_loadgen_overhead
+
+        if (self.scenario_fixed in ["Offline"]) and self.scenario in ["MultiStream"]:
+            inferred = True
+            res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
+
+        if (self.scenario_fixed in ["MultiStream"]) and self.scenario in ["SingleStream"]:
+            inferred = True
+            # samples_per_query does not match with the one reported in the logs
+            # when inferring MultiStream from SingleStream
+            samples_per_query = 8
+            if uses_early_stopping:
+                early_stopping_latency_ms = self.mlperf_log["early_stopping_latency_ms"]
+                if early_stopping_latency_ms == 0:
+                    self.log.error(
+                        "Not enough samples were processed for early stopping to make an estimate"
+                    )
+                    is_valid = False
+                res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
+            else:
+                res = (latency_99_percentile * samples_per_query) / MS_TO_NS
+        if (self.scenario_fixed in ["Interactive"]) and self.scenario not in ["Server"]:
+            is_valid = False
+        return res, is_valid

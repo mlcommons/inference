@@ -11,6 +11,7 @@ from .checks.system_check import SystemCheck
 from .checks.measurements_checks import MeasurementsCheck
 from .checks.compliance_check import ComplianceCheck
 from .checks.power_check import PowerCheck
+from .results import ResultExporter
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -101,6 +102,7 @@ def main():
         scenarios_to_skip = []
 
     loader = Loader(args.input, args.version)
+    exporter = ResultExporter(args.csv, config)
     for logs in loader.load():
         # Initialize check classes
         performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
@@ -110,15 +112,17 @@ def main():
         measurements_checks = ComplianceCheck(log, logs.loader_data["compliance_path"], config, logs)
         power_checks = PowerCheck(log, logs.loader_data["power_dir_path"], config, logs)
         # Run checks
-        performance_checks()
-        accuracy_checks()
-        system_checks()
-        measurements_checks()
-        power_checks()
-
-    with open(args.csv, "w") as csv:
-        # Output summary
-        pass
+        valid = True
+        valid &= performance_checks()
+        valid &= accuracy_checks()
+        valid &= system_checks()
+        valid &= measurements_checks()
+        valid &= power_checks()
+        # Add results to summary
+        if valid:
+            exporter.add_result(logs)
+    # Export results
+    exporter.export()
 
     # log results
     results = {}

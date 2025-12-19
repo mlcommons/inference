@@ -969,7 +969,7 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "sw_notes",
     "host_network_card_count",
     "system_type_detail",
-    "network_speed_mbit",
+    #"network_speed_mbit",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -1002,7 +1002,7 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
 ]
 
 SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS = [
-    "network_speed_mbit"
+    #"network_speed_mbit"
 ]
 
 
@@ -1051,6 +1051,67 @@ SYSTEM_IMP_REQUIRED_FILES = [
     "weight_data_types",
     "weight_transformations",
 ]
+
+SPECIAL_UNIT_DICT = {
+    "llama3.1-8b": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+    },
+    "llama3.1-8b-edge": {
+        "Offline": "Tokens/s",
+    },
+    "llama2-70b-99": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+    "llama2-70b-99.9": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+    "mixtral-8x7b": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+    "llama3.1-405b": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+    "deepseek-r1": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+}
+UNIT_DICT = {
+    "SingleStream": "Latency (ms)",
+    "MultiStream": "Latency (ms)",
+    "Offline": "Samples/s",
+    "Server": "Queries/s",
+    "Interactive": "Queries/s",
+
+    "singlestream": "Latency (ms)",
+    "multistream": "Latency (ms)",
+    "offline": "Samples/s",
+    "server": "Queries/s",
+    "interactive": "Queries/s",
+}
+POWER_UNIT_DICT = {
+    "SingleStream": "millijoules",
+    "MultiStream": "millijoules",
+    "Offline": "Watts",
+    "Server": "Watts",
+    "Interactive": "Watts",
+
+    "singlestream": "millijoules",
+    "multistream": "millijoules",
+    "offline": "Watts",
+    "server": "Watts",
+    "interactive": "Watts",
+}
 
 
 PERFORMANCE_LOG_PATH = {

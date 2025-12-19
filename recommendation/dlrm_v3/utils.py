@@ -390,7 +390,7 @@ def get_dataset(name: str, new_path_prefix: str = ""):
             DLRMv3SyntheticStreamingDataset,
             {
                 "ratings_file_prefix": os.path.join(
-                    new_path_prefix, "data/streaming-100b/"
+                    new_path_prefix, ""
                 ),
                 "train_ts": 90,
                 "total_ts": 100,
@@ -405,7 +405,7 @@ def get_dataset(name: str, new_path_prefix: str = ""):
             DLRMv3SyntheticStreamingDataset,
             {
                 "ratings_file_prefix": os.path.join(
-                    new_path_prefix, "data/streaming-100b/sampled_data/"
+                    new_path_prefix, "sampled_data/"
                 ),
                 "train_ts": 90,
                 "total_ts": 100,

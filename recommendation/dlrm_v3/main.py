@@ -75,49 +75,49 @@ def get_args():  # pyre-ignore [3]
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset", default="sampled-streaming-100b", choices=SUPPORTED_DATASETS, help="name of the dataset"
+        "--dataset", type=str, default="sampled-streaming-100b", choices=SUPPORTED_DATASETS, help="name of the dataset"
     )
     parser.add_argument(
-        "--model-path", default="", help="path to the model checkpoint. Example: /home/username/data/dlrmv3_trained_checkpoint/"
+        "--model-path", type=str, default="", help="path to the model checkpoint. Example: /home/username/data/dlrmv3_trained_checkpoint/"
     )
     parser.add_argument(
-        "--scenario-name", default="Server", choices={"Server", "Offline"}, help="inference benchmark scenario"
+        "--scenario-name", type=str, default="Server", choices={"Server", "Offline"}, help="inference benchmark scenario"
     )
     parser.add_argument(
-        "--batchsize", default=10, help="batch size used in the benchmark"
+        "--batchsize", type=int, default=10, help="batch size used in the benchmark"
     )
     parser.add_argument(
-        "--output-trace", default=False, help="Whether to output trace"
+        "--output-trace", type=bool, default=False, help="Whether to output trace"
     )
     parser.add_argument(
-        "--data-producer-threads", default=8, help="Number of threads used in data producer"
+        "--data-producer-threads", type=int, default=8, help="Number of threads used in data producer"
     )
     parser.add_argument(
-        "--compute-eval", default=False, help="If true, will run AccuracyOnly mode and outputs both predictions and labels for accuracy calcuations"
+        "--compute-eval", type=bool, default=False, help="If true, will run AccuracyOnly mode and outputs both predictions and labels for accuracy calcuations"
     )
     parser.add_argument(
-        "--find-peak-performance", default=False, help="Whether to find peak performance in the benchmark"
+        "--find-peak-performance", type=bool, default=False, help="Whether to find peak performance in the benchmark"
     )
     parser.add_argument(
-        "--dataset-path-prefix", default=f"/home/{os.getlogin()}/dlrmv3_dataset/", help="Prefix to the dataset path. Example: /home/username/"
+        "--dataset-path-prefix", type=str, default=f"/home/{os.getlogin()}/dlrmv3_dataset/", help="Prefix to the dataset path. Example: /home/username/"
     )
     parser.add_argument(
-        "--warmup-ratio", default=0.1, help="The ratio of the dataset used to warmup SUT"
+        "--warmup-ratio", type=float, default=0.1, help="The ratio of the dataset used to warmup SUT"
     )
     parser.add_argument(
-        "--num-queries", default=None, help="Number of queries to run in the benchmark"
+        "--num-queries", type=int, default=None, help="Number of queries to run in the benchmark"
     )
     parser.add_argument(
-        "--target-qps", default=1000, help="Benchmark target QPS. Needs to be tuned for different implementations to balance latency and throughput"
+        "--target-qps", type=int, default=1000, help="Benchmark target QPS. Needs to be tuned for different implementations to balance latency and throughput"
     )
     parser.add_argument(
-        "--numpy-rand-seed", default=123, help="Numpy random seed"
+        "--numpy-rand-seed", type=int, default=123, help="Numpy random seed"
     )
     parser.add_argument(
-        "--sparse-quant", default=False, help="Whether to quantize sparse arch"
+        "--sparse-quant", type=bool, default=False, help="Whether to quantize sparse arch"
     )
     parser.add_argument(
-        "--dataset-percentage", default=0.001, help="Percentage of the dataset to run in the benchmark"
+        "--dataset-percentage", type=float, default=0.0001, help="Percentage of the dataset to run in the benchmark"
     )
     args, unknown_args = parser.parse_known_args()
     logger.warning(f"unknown_args: {unknown_args}")
@@ -338,16 +338,24 @@ def add_results(
         result_batches: List of batch sizes processed.
     """
     percentiles: list[float] = [50.0, 80.0, 90.0, 95.0, 99.0, 99.9]
+    buckets_dict: Dict[str, List[float]] = {}
+    buckets_str_dict: Dict[str, str] = {}
     total_timing: list[float] = [result["total"] for result in result_timing]
-    buckets = np.percentile(total_timing, percentiles).tolist()
-    buckets_str: str = ",".join(
-        ["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)]
-    )
+    for key in ["total", "prediction", "queue", "batching", "sparse", "dense"]:
+        timing: list[float] = [result[key] for result in result_timing]
+        buckets: List[float] = np.percentile(timing, percentiles).tolist()
+        buckets_str: str = ",".join(
+            ["| {}:{:.4f}| ".format(p, b) for p, b in zip(percentiles, buckets)]
+        )
+        buckets_dict[key] = buckets
+        buckets_str_dict[key] = buckets_str
     total_batches = sum(result_batches)
 
     final_results["good"] = len(total_timing)
     final_results["avg_time"] = np.mean(total_timing)
-    final_results["percentiles"] = {str(k): v for k, v in zip(percentiles, buckets)}
+    final_results["percentiles"] = {
+        str(k): v for k, v in zip(percentiles, buckets_dict["total"])
+    }
     final_results["qps"] = total_batches / final_results["took"]
     final_results["count"] = total_batches
 
@@ -361,9 +369,11 @@ def add_results(
             final_results["avg_time"],
             final_results["took"],
             len(result_timing),
-            buckets_str,
+            buckets_str_dict["total"],
         )
     )
+    for key in ["prediction", "queue", "batching", "sparse", "dense"]:
+        logger.warning(f"{key}: {buckets_str_dict[key]}")
 
 
 def get_num_queries(

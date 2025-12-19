@@ -82,7 +82,7 @@ Set `run.compute_eval` will run the accuracy test and dump prediction outputs in
 ```
 python accuracy.py --path path/to/mlperf_log_accuracy.json
 ```
-We use normalized entropy (NE), accuracy, and AUC as the metrics to evaluate the model quality. The accuracy for the reference implementation evaluated on 34,996 requests across 10 inference timestamps are listed below:
+We use normalized entropy (NE), accuracy, and AUC as the metrics to evaluate the model quality. For accepted submissions, all three metrics (NE, Accuracy, AUC) must be within 99% of the reference implementation values. The accuracy for the reference implementation evaluated on 34,996 requests across 10 inference timestamps are listed below:
 ```
 NE: 86.687%
 Accuracy: 69.651%

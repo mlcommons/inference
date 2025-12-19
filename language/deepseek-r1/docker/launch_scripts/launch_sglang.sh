@@ -10,7 +10,10 @@ IMAGE_TAG=${IMAGE_TAG:-latest}
 LOCAL_USER=${LOCAL_USER:-1}
 WORK_DIR=${WORK_DIR:-$(dirname "$(realpath "$0")")/../..}
 CONTAINER_NAME=${CONTAINER_NAME:-sglang}
-RUN_CMD=${RUN_CMD:-}
+RUN_CMD=""
+
+# Additional mount directories (can be customized)
+EXTRA_MOUNTS=${EXTRA_MOUNTS:-""}
 
 # Get user information
 USER_ID=$(id --user)
@@ -73,6 +76,10 @@ while [[ $# -gt 0 ]]; do
             FINAL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}${IMAGE_TAG_SUFFIX}"
             shift 2
             ;;
+        --extra-mounts)
+            EXTRA_MOUNTS="$2"
+            shift 2
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo "Options:"
@@ -81,12 +88,17 @@ while [[ $# -gt 0 ]]; do
             echo "  --gpu-count COUNT        GPU count (default: all)"
             echo "  --model-cache-dir DIR    Model cache directory"
             echo "  --local-user 0|1         Enable local user setup (default: 1)"
+            echo "  --extra-mounts MOUNTS    Additional mount directories (format: 'host1:container1,host2:container2')"
             echo "  --help                   Show this help message"
             exit 0
             ;;
         *)
             # Store remaining arguments for passing to container
-            RUN_CMD="$RUN_CMD $1"
+            if [ -z "$RUN_CMD" ]; then
+                RUN_CMD="$1"
+            else
+                RUN_CMD="$RUN_CMD $1"
+            fi
             shift
             ;;
     esac
@@ -179,6 +191,27 @@ fi
 
 echo "Starting container with image: $FINAL_IMAGE"
 
+# Process extra mounts if specified
+EXTRA_MOUNT_OPTS=""
+if [[ -n "$EXTRA_MOUNTS" ]]; then
+    echo "Processing extra mounts: $EXTRA_MOUNTS"
+    # Split the comma-separated mount pairs
+    IFS=',' read -ra MOUNT_PAIRS <<< "$EXTRA_MOUNTS"
+    for mount_pair in "${MOUNT_PAIRS[@]}"; do
+        # Trim whitespace
+        mount_pair=$(echo "$mount_pair" | xargs)
+        if [[ -n "$mount_pair" ]]; then
+            # Check if the mount pair contains a colon
+            if [[ "$mount_pair" == *":"* ]]; then
+                EXTRA_MOUNT_OPTS="$EXTRA_MOUNT_OPTS -v $mount_pair"
+                echo "  Adding mount: $mount_pair"
+            else
+                echo "  Warning: Invalid mount format '$mount_pair' (expected 'host:container')"
+            fi
+        fi
+    done
+fi
+
 # Prepare inference mount if MOUNT_SELF_AS_LOADGEN is true
 INFERENCE_MOUNT=""
 if [ "$MOUNT_SELF_AS_LOADGEN" = "true" ]; then
@@ -203,11 +236,23 @@ else
     INFERENCE_MOUNT="-v ${INFERENCE_TMP}:/inference"
 fi
 
+# Setup model cache directory mount
+# If --model-cache-dir is provided, mount it to /raid/data/$USER/
+# If not provided, mount /raid/data/$USER/ from host
+if [ -n "$MODEL_CACHE_DIR" ]; then
+    MODEL_CACHE_MOUNT="-v ${MODEL_CACHE_DIR}:/raid/data/${USER_NAME}"
+    echo "Model cache directory: ${MODEL_CACHE_DIR} -> /raid/data/${USER_NAME}"
+else
+    MODEL_CACHE_MOUNT="-v /raid/data/${USER_NAME}:/raid/data/${USER_NAME}"
+    echo "Model cache directory: /raid/data/${USER_NAME} (host) -> /raid/data/${USER_NAME} (container)"
+fi
+
 # Run the Docker container with all mounts (same as main docker setup)
 docker run $DOCKER_RUN_OPTS $DOCKER_RUN_ARGS \
     $GPU_OPTS \
     -v /home/mlperf_inference_storage:/home/mlperf_inference_storage \
-    -v /raid/data:/raid/data \
+    $MODEL_CACHE_MOUNT \
+    $EXTRA_MOUNT_OPTS \
     -e HISTFILE="${WORK_DIR}/.bash_history" \
     --env "CCACHE_DIR=${CCACHE_DIR}" \
     --env "USER=${USER_NAME}" \
@@ -220,4 +265,4 @@ docker run $DOCKER_RUN_OPTS $DOCKER_RUN_ARGS \
     --hostname "$(hostname)-docker" \
     --name "${CONTAINER_NAME}-${RANDOM_NUM}-${USER_NAME}" \
     --tmpfs /tmp:exec \
-    "$FINAL_IMAGE" $RUN_CMD 
+    "$FINAL_IMAGE" ${RUN_CMD:-/bin/bash}

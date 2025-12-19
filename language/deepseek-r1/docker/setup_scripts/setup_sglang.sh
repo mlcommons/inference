@@ -26,7 +26,6 @@ while [[ $# -gt 0 ]]; do
             echo "- Creates and activates virtual environment for all operations"
             echo "- Installs accuracy evaluation dependencies"
             echo "- Sets up MLPerf LoadGen"
-            echo "- Installs SGLang-specific optimizations"
             echo "- Virtual environment remains active after setup"
             echo ""
             echo "Note: SGLang server may take 20+ minutes to start for large models"
@@ -68,26 +67,9 @@ install_evaluation_requirements
 # Install MLPerf LoadGen
 install_mlperf_loadgen "$FORCE_REBUILD" "$MLPERF_BACKEND"
 
-# SGLang-specific setup
-echo ""
-echo "=== SGLang Backend-Specific Setup ==="
-
-# Install core dependencies for SGLang
-echo "Installing core dependencies for SGLang..."
-VIRTUAL_ENV=$VENV_DIR uv pip install \
-    transformers \
-    pandas \
-    numpy \
-    tqdm \
-    huggingface_hub \
-    datasets \
-    accelerate \
-    openai \
-    httpx \
-    requests \
-    torch==2.6.0 \
-    sglang[all]==0.4.6.post5 \
-    sgl_kernel
+# Install sglang==0.5.4
+echo "Installing sglang==0.5.4"
+VIRTUAL_ENV=$VENV_DIR uv pip install sglang[all]==0.5.4 --prerelease=allow
 
 # Verify SGLang installation
 if python3 -c "import sglang" 2>/dev/null; then
@@ -96,13 +78,6 @@ if python3 -c "import sglang" 2>/dev/null; then
 else
     echo "Error: SGLang installation failed"
     exit 1
-fi
-
-# Verify sgl_kernel installation
-if python3 -c "import sgl_kernel" 2>/dev/null; then
-    echo "sgl_kernel installed successfully"
-else
-    echo "Warning: sgl_kernel import failed - this optimization may not be available"
 fi
 
 # Verify torch is available for SGLang
@@ -131,9 +106,6 @@ python3 -c "import sglang; print('✓ Installed')" 2>/dev/null || echo "✗ Not 
 
 echo -n "FlashInfer: "
 python3 -c "import flashinfer; print('✓ Installed')" 2>/dev/null || echo "✗ Not installed"
-
-echo -n "sgl_kernel: "
-python3 -c "import sgl_kernel; print('✓ Installed')" 2>/dev/null || echo "✗ Not installed"
 
 echo -n "DeepGEMM: "
 python3 -c "import deepgemm; print('✓ Installed')" 2>/dev/null || echo "✗ Not installed"

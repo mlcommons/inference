@@ -44,10 +44,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "Run MLPerf inference benchmarks with modular backends (async pattern)"
     )
 
-    # Scenario selection (no backend argument, auto-detected)
+    # Mode selection (no backend argument, auto-detected)
     parser.add_argument("--mode", type=str, default="offline",
-                        choices=["offline", "server"],
-                        help="MLPerf scenario mode")
+                        choices=["offline", "server", "interactive"],
+                        help="MLPerf mode (offline, server, or interactive)")
 
     # MLPerf configuration
     parser.add_argument("--mlperf-conf", type=str, default="/inference/mlperf.conf",
@@ -55,10 +55,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--user-conf", type=str, default="mlperf/user.conf",
                         help="Path to user configuration file")
-
-    parser.add_argument("--scenario", type=str, default=None,
-                        choices=["Offline", "Server"],
-                        help="MLPerf scenario (overrides --mode)")
 
     parser.add_argument("--accuracy", action="store_true",
                         help="Run accuracy mode instead of performance")
@@ -73,7 +69,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def configure_loadgen(scenario: str,
+def configure_loadgen(mode: str,
                       accuracy_mode: bool,
                       mlperf_conf: Optional[str] = None,
                       user_conf: Optional[str] = None,
@@ -82,7 +78,7 @@ def configure_loadgen(scenario: str,
     """Configure LoadGen test settings.
 
     Args:
-        scenario: MLPerf scenario ("offline" or "server")
+        mode: MLPerf mode ("offline", "server", or "interactive")
         accuracy_mode: Whether to run in accuracy mode
         mlperf_conf: Path to MLPerf config file
         user_conf: Path to user config file
@@ -94,13 +90,20 @@ def configure_loadgen(scenario: str,
     """
     settings = lg.TestSettings()
 
-    # Set scenario
-    if scenario.lower() == "offline":
+    # Set scenario based on mode
+    if mode == "offline":
         settings.scenario = lg.TestScenario.Offline
-    elif scenario.lower() == "server":
+        config_scenario = "Offline"
+    elif mode == "server" or mode == "interactive":
         settings.scenario = lg.TestScenario.Server
+        config_scenario = "Server"
     else:
-        raise ValueError(f"Unknown scenario: {scenario}")
+        raise ValueError(f"Unknown mode: {mode}")
+
+    # Adjust model name for interactive mode to use separate config
+    # LoadGen will look for "deepseek-r1-interactive.Server" config section
+    if mode == "interactive":
+        model_name = f"{model_name}-interactive"
 
     # Set mode
     if accuracy_mode:
@@ -110,9 +113,9 @@ def configure_loadgen(scenario: str,
 
     # Load configurations if files exist
     if mlperf_conf and Path(mlperf_conf).exists():
-        settings.FromConfig(mlperf_conf, model_name, scenario, 2)
+        settings.FromConfig(mlperf_conf, model_name, config_scenario, 2)
     if user_conf and Path(user_conf).exists():
-        settings.FromConfig(user_conf, model_name, scenario, 1)
+        settings.FromConfig(user_conf, model_name, config_scenario, 1)
 
     return settings
 
@@ -150,9 +153,8 @@ def main():
         # Detect backend early
         backend_name = validate_runner_for_backend('mlperf')
 
-        # Handle scenario override
-        if args.scenario:
-            args.mode = args.scenario.lower()
+        # Get mode (already in lowercase)
+        mode = args.mode
 
         # Create output directories
         output_dir = Path(args.output_dir)
@@ -161,17 +163,17 @@ def main():
         if args.log_dir:
             log_dir = Path(args.log_dir)
         else:
-            log_dir = output_dir / args.mode / \
+            log_dir = output_dir / mode / \
                 ("accuracy" if args.accuracy else "performance")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up output paths with mode information
-        _, output_file_base = setup_output_paths(args, mode=args.mode)
+        _, output_file_base = setup_output_paths(args, mode=mode)
         if args.output_file is None:
             # Create output file path in the log directory
             mode_str = "accuracy" if args.accuracy else "performance"
             output_file_base = str(
-                log_dir / f"{backend_name}_mlperf_{args.mode}_{mode_str}_output.pkl")
+                log_dir / f"{backend_name}_mlperf_{mode}_{mode_str}_output.pkl")
         else:
             output_file_base = args.output_file
 
@@ -190,7 +192,7 @@ def main():
         logger.info("MLPerf Inference Benchmark Runner (Async Pattern)")
         logger.info("=" * 80)
         logger.info(f"Backend: {backend_name}")
-        logger.info(f"Mode: {args.mode}")
+        logger.info(f"Mode: {mode}")
         logger.info(f"Accuracy: {args.accuracy}")
         logger.info(f"Input file: {args.input_file}")
         logger.info(f"Output directory: {output_dir}")
@@ -247,12 +249,12 @@ def main():
                     dataset_strings=strings_for_sut,
                     name=f"{backend_name}_offline_sut"
                 )
-            else:  # server
+            else:  # server or interactive
                 sut = ServerSUT(
                     backend=backend,
                     dataset=dataset_for_sut,
                     dataset_strings=strings_for_sut,
-                    name=f"{backend_name}_server_sut"
+                    name=f"{backend_name}_{args.mode}_sut"
                 )
 
             # Create QSL
@@ -260,7 +262,7 @@ def main():
 
             # Configure LoadGen
             settings = configure_loadgen(
-                scenario=args.mode,
+                mode=args.mode,
                 accuracy_mode=args.accuracy,
                 mlperf_conf=args.mlperf_conf,
                 user_conf=args.user_conf,

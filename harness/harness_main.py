@@ -8,6 +8,7 @@ import os
 import sys
 import argparse
 import logging
+import shlex
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -182,6 +183,13 @@ Examples:
     
     logger = logging.getLogger(__name__)
     
+    # Print command line used to run the harness
+    command_line = ' '.join(shlex.quote(arg) for arg in sys.argv)
+    logger.info("=" * 80)
+    logger.info("COMMAND LINE:")
+    logger.info(command_line)
+    logger.info("=" * 80)
+    
     # Validate model_category if provided
     valid_categories = ['llama3.1-8b', 'llama3_1-8b', 'llama31_8b', 
                        'llama2-70b', 'llama2_70b', 'llama270b',
@@ -265,6 +273,15 @@ Examples:
     logger.info("=" * 80)
     
     harness = harness_class(**harness_config)
+    
+    # Write command line to file in output directory
+    cmdline_file = harness.output_dir / "cmdline.txt"
+    try:
+        with open(cmdline_file, 'w') as f:
+            f.write(command_line + '\n')
+        logger.info(f"Command line written to: {cmdline_file}")
+    except Exception as e:
+        logger.warning(f"Failed to write command line to file: {e}")
     
     # Determine user_conf and lg_model_name
     user_conf = args.user_conf if hasattr(args, 'user_conf') else "user.conf"

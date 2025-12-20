@@ -241,6 +241,14 @@ bash submit.sh --help
     - Both the `train` and the `test` splits are used and concatenated in that order.
     - Total number of samples: `48289`.
   - Guided decoding is not used.
+  - Sampling parameters:
+    - Frequency penalty: `0.0` 
+    - Presence penalty: `0.0`
+    - Temperature: `1.0`
+    - Top-P: `1.0`
+    - Top-K: `0`
+    - Min-P: `0.0`
+    - Repetition penalty: `1.0`
   - Constraints:
     - Model quality:
       - Category Hierarchical F1 Score >= `0.7824`. This is the 99% recovery of 

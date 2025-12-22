@@ -42,11 +42,11 @@ Install `mlperf-inf-mm-vl2l` and the development tools with:
 
 - On Bash
 ```bash
-pip install multimodal/vl2l/[dev]
+pip install -e multimodal/vl2l/[dev]
 ```
 - On Zsh
 ```zsh
-pip install multimodal/vl2l/"[dev]"
+pip install -e multimodal/vl2l/"[dev]"
 ```
 
 ### Post VL2L benchmarking CLI installation 
@@ -63,7 +63,8 @@ You can enable shell autocompletion for `mlperf-inf-mm-vl2l` with:
 mlperf-inf-mm-vl2l --install-completion
 ```
 
-> NOTE: Shell auto-completion will take effect once you restart the terminal.
+> [!NOTE]
+> Shell auto-completion will take effect once you restart the terminal.
 
 ### Start an inference endpoint on your local host machine with vLLM
 
@@ -108,6 +109,12 @@ Accuracy only mode:
 mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario server --settings.test.mode accuracy_only
 ```
 
+### Evalute the response quality
+
+```bash
+mlperf-inf-mm-vl2l evaluate --filename output/mlperf_log_accuracy.json
+```
+
 ## Docker
 
 [docker/](docker/) provides examples of Dockerfiles that install the VL2L benchmarking
@@ -116,6 +123,30 @@ run both the inference engine and the VL2L benchmarking CLI inside the same cont
 for example, in a situation where you must use a GPU cluster managed by 
 [Slurm](https://slurm.schedmd.com/) with [enroot](https://github.com/nvidia/enroot) and
 [pyxis](https://github.com/NVIDIA/pyxis).
+
+As an illustrative example, assuming that you are at the root directory of the MLPerf 
+Inference repo:
+
+1. You can build a container image against the vLLM's
+`vllm/vllm-openai:v0.12.0` release by
+
+```bash
+docker build \
+    --build-arg BASE_IMAGE_URL=vllm/vllm-openai:v0.12.0 \
+    --build-arg MLPERF_INF_MM_VL2L_INSTALL_URL=multimodal/vl2l \
+    -f multimodal/vl2l/docker/vllm-cuda.Dockerfile \
+    -t mlperf-inf-mm-vl2l:vllm-openai-v0.12.0 \
+    .
+```
+> [!NOTE]
+> `MLPERF_INF_MM_VL2L_INSTALL_URL` can also take in a remote GitHub location, such as
+> `git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/vl2l/`.
+
+2. Afterwards, you can start the container in the interactive mode by
+
+```bash
+docker run --rm -it --gpus all -v ~/.cache:/root/.cache --ipc=host mlperf-inf-mm-vl2l:vllm-openai-v0.12.0
+```
 
 ### Benchmark against vLLM inside the container
 
@@ -128,16 +159,27 @@ vLLM (such as inside a container that was created using the
 2. Wait for the endpoint to be healthy.
 3. Run the benchmark against that endpoint.
 
-For example, inside the container, you can run the Offline scenario Performance only
+For example, inside the container, you can run the Offline scenario Accuracy only
 mode with:
 
 ```bash
 mlperf-inf-mm-vl2l benchmark vllm \
-    --vllm.model.repo_id Qwen/Qwen3-VL-235B-A22B-Instruct \
-    --vllm.arg=--tensor-parallel-size=8 \
-    --vllm.arg=--limit-mm-per-prompt.video=0 \
     --settings.test.scenario offline \
-    --settings.test.mode performance_only
+    --settings.test.mode accuracy_only \
+    --dataset.token ... \
+    --vllm.cli=--async-scheduling \
+    --vllm.cli=--max-model-len=32768 \
+    --vllm.cli=--max-num-seqs=1024 \
+    --vllm.cli=--compilation-config='{
+        "cudagraph_capture_sizes": [
+            1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128,
+            136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248,
+            256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480,
+            496, 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768
+        ]
+    }' \
+    --vllm.cli=--limit-mm-per-prompt.video=0 \
+    --vllm.cli=--tensor-parallel-size=8 
 ```
 
 ## Developer Guide

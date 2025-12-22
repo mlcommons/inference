@@ -106,6 +106,8 @@ install_evaluation_requirements() {
 	echo "Installing evaluation requirements..."
 	if [ -f "/work/docker/evaluation_requirements.txt" ]; then
 		VIRTUAL_ENV=$VENV_DIR uv pip install -r /work/docker/evaluation_requirements.txt
+		echo "Override datasets==3.0.0 (LiveCodeBench/code-generation-lite is not updated for datasets 3.2.0)..."
+		VIRTUAL_ENV=$VENV_DIR uv pip install --upgrade "datasets==3.0.0"
 		echo "Evaluation requirements installed successfully!"
 	else
 		echo "Warning: evaluation_requirements.txt not found at /work/docker/evaluation_requirements.txt"

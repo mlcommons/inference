@@ -73,15 +73,11 @@ while [[ $# -gt 0 ]]; do
             fi
             shift 2
             ;;
-        --extra-mounts)
-            EXTRA_MOUNTS="$2"
-            shift 2
-            ;;
         --help)
             show_usage
             exit 0
             ;;
-        --image-name|--container-name|--gpu-count|--model-cache-dir|--local-user)
+        --image-name|--container-name|--gpu-count|--model-cache-dir|--local-user|--extra-mounts)
             # Pass these arguments to the backend script
             BACKEND_ARGS+=("$1" "$2")
             shift 2
@@ -119,12 +115,6 @@ echo "======================================================="
 echo "Backend: $BACKEND"
 echo "Launch script: $LAUNCH_SCRIPT"
 echo "Work directory: $WORK_DIR"
-
-# Set environment variables for extra mounts if specified
-if [[ -n "$EXTRA_MOUNTS" ]]; then
-    echo "Extra mounts: $EXTRA_MOUNTS"
-    export EXTRA_MOUNTS
-fi
 
 # Set work directory environment variable
 export WORK_DIR

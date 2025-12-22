@@ -1,4 +1,4 @@
-"""The CLI definition for the VL2L benchmark."""
+"""The CLI definition for the Qwen3-VL (Q3VL) benchmark."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ benchmark_app = Typer()
 app.add_typer(
     benchmark_app,
     name="benchmark",
-    help="Main CLI for running the VL2L benchmark.",
+    help="Main CLI for running the Qwen3-VL (Q3VL) benchmark.",
 )
 
 
@@ -80,13 +80,18 @@ def _run_benchmark(
     endpoint: Endpoint,
     random_seed: int,
 ) -> None:
-    """Run the VL2L benchmark."""
-    logger.info("Running VL2L benchmark with settings: {}", settings)
-    logger.info("Running VL2L benchmark with dataset: {}", dataset)
+    """Run the Qwen3-VL (Q3VL) benchmark."""
     logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
-    logger.info("Running VL2L benchmark with random seed: {}", random_seed)
+        "Running Qwen3-VL (Q3VL) benchmark with settings: {}",
+        settings)
+    logger.info("Running Qwen3-VL (Q3VL) benchmark with dataset: {}", dataset)
+    logger.info(
+        "Running Qwen3-VL (Q3VL) benchmark with OpenAI API endpoint: {}",
+        endpoint,
+    )
+    logger.info(
+        "Running Qwen3-VL (Q3VL) benchmark with random seed: {}",
+        random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
         dataset=dataset,
@@ -96,9 +101,9 @@ def _run_benchmark(
     )
     sut = task.construct_sut()
     qsl = task.construct_qsl()
-    logger.info("Starting the VL2L benchmark with LoadGen...")
+    logger.info("Starting the Qwen3-VL (Q3VL) benchmark with LoadGen...")
     lg.StartTestWithLogSettings(sut, qsl, test_settings, log_settings)
-    logger.info("The VL2L benchmark with LoadGen completed.")
+    logger.info("The Qwen3-VL (Q3VL) benchmark with LoadGen completed.")
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
 

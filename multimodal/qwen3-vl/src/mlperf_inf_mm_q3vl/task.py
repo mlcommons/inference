@@ -1,4 +1,4 @@
-"""Task definitions for the VL2L benchmark."""
+"""Task definitions for the Qwen3-VL (Q3VL) benchmark."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any
 
+import httpx
 import mlperf_loadgen as lg
 from datasets import load_dataset
 from loguru import logger
@@ -56,17 +57,21 @@ class Task(ABC):
             revision=dataset.revision,
             split="+".join(dataset.split),
         )
-        logger.debug(
-            "Loaded {} samples from the dataset splits {}.",
+        logger.info(
+            "Imported {} samples from the dataset splits {}.",
             len(self.dataset),
             dataset.split,
         )
         self.endpoint = endpoint
+        request_timeout_seconds = endpoint.request_timeout.total_seconds()
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint.url,
-            http_client=DefaultAioHttpClient(),
+            http_client=DefaultAioHttpClient(
+                timeout=httpx.Timeout(
+                    timeout=request_timeout_seconds, connect=5.0),
+            ),
             api_key=endpoint.api_key,
-            timeout=endpoint.request_timeout.total_seconds(),
+            timeout=request_timeout_seconds,
         )
         self.event_loop, self.event_loop_thread = (
             self._create_event_loop_in_separate_thread()
@@ -98,7 +103,7 @@ class Task(ABC):
                 _cancel_all_tasks(),
                 self.event_loop,
             ).result(timeout=5.0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.trace("Error cancelling tasks during cleanup: {}", e)
 
         # Try to close the OpenAI client gracefully
@@ -107,7 +112,7 @@ class Task(ABC):
                 self.openai_api_client.close(),
                 self.event_loop,
             ).result(timeout=5.0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.trace("Error closing OpenAI client during cleanup: {}", e)
 
         # Stop the event loop and join the thread
@@ -204,8 +209,9 @@ class Task(ABC):
             self.total_num_samples,
         )
         logger.debug(
-            "Estimated number of performance samples that will be loaded into the host"
+            "Estimated number of performance samples that can be loaded into {} GB host"
             " memory before testing is {}.",
+            ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES / 1024 / 1024 / 1024,
             result,
         )
         if self.settings.performance_sample_count_override > 0:
@@ -226,11 +232,22 @@ class Task(ABC):
             Args:
                 query_sample_indices: The indices of the samples to load to host memory.
             """
+            logger.info(
+                "Starting to load {} samples to RAM...",
+                len(query_sample_indices),
+            )
+            tic = time.perf_counter()
             for index in query_sample_indices:
                 self.loaded_samples[index] = self.formulate_loaded_sample(
                     self.dataset[index],
                     use_guided_decoding=self.endpoint.use_guided_decoding,
                 )
+            logger.info(
+                "Loaded {} samples to RAM, which took {} seconds and {} GB in total.",
+                len(query_sample_indices),
+                time.perf_counter() - tic,
+                asizeof.asizeof(self.loaded_samples) / 1024 / 1024 / 1024,
+            )
 
         def _unload_samples_from_ram(query_sample_indices: list[int]) -> None:
             """Called by LoadGen to unload samples from host memory after testing.
@@ -239,9 +256,19 @@ class Task(ABC):
                 query_sample_indices: The indices of the samples to unload from host
                     memory.
             """
+            logger.info(
+                "Starting to unload {} samples from RAM...",
+                len(query_sample_indices),
+            )
+            tic = time.perf_counter()
             for index in query_sample_indices:
                 sample_to_unload = self.loaded_samples.pop(index, None)
                 del sample_to_unload
+            logger.info(
+                "Unloaded {} samples from RAM, which took {} seconds.",
+                len(query_sample_indices),
+                time.perf_counter() - tic,
+            )
 
         return lg.ConstructQSL(
             self.total_num_samples,
@@ -279,6 +306,15 @@ class Task(ABC):
                     if sample.response_format is not None
                     else None
                 ),
+                frequency_penalty=self.endpoint.sampling_params.frequency_penalty,
+                presence_penalty=self.endpoint.sampling_params.presence_penalty,
+                temperature=self.endpoint.sampling_params.temperature,
+                top_p=self.endpoint.sampling_params.top_p,
+                extra_body={
+                    k: getattr(self.endpoint.sampling_params, k)
+                    for k in ("top_k", "min_p", "repetition_penalty")
+                    if getattr(self.endpoint.sampling_params, k) is not None
+                },
             )
             logger.debug(
                 "Received response (ID: {}) from endpoint after {} seconds.",
@@ -360,6 +396,15 @@ class Task(ABC):
                     if sample.response_format is not None
                     else None
                 ),
+                frequency_penalty=self.endpoint.sampling_params.frequency_penalty,
+                presence_penalty=self.endpoint.sampling_params.presence_penalty,
+                temperature=self.endpoint.sampling_params.temperature,
+                top_p=self.endpoint.sampling_params.top_p,
+                extra_body={
+                    k: getattr(self.endpoint.sampling_params, k)
+                    for k in ("top_k", "min_p", "repetition_penalty")
+                    if getattr(self.endpoint.sampling_params, k) is not None
+                },
             )
             # iterate asynchronously
             total_tokens = 0
@@ -472,6 +517,10 @@ class Task(ABC):
 
         def _flush_queries() -> None:
             """Called by the LoadGen to indicate that all queries have been issued."""
+            logger.info(
+                "LoadGen has indicated that all queries have been issued. "
+                "Waiting for all pending queries to complete...",
+            )
 
             async def _wait_for_pending_queries_async() -> None:
                 """Wait for all pending queries to complete."""
@@ -494,6 +543,7 @@ class Task(ABC):
                 self.event_loop,
             )
             future.result()
+            logger.info("All pending queries has completed.")
 
         return lg.ConstructSUT(_issue_queries, _flush_queries)
 

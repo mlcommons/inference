@@ -16,6 +16,7 @@ from loguru import logger
 from .log import get_log_file_path
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from types import TracebackType
 
     from .schema import EndpointToDeploy, Settings, VllmEndpoint
@@ -100,11 +101,17 @@ class EndpointDeployer(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def _failfast(self) -> None:
+        """Raise an exception if the endpoint is already detected to be dead."""
+        raise NotImplementedError
+
     def _wait_for_ready(self) -> None:
         """Wait for the endpoint to be ready."""
         health_url = self.endpoint.url.rstrip("/v1") + "/health"
         start_time = time.time()
         while time.time() - start_time < self.endpoint.startup_timeout.total_seconds():
+            self._failfast()
             logger.info(
                 "Waiting {:0.2f} seconds for endpoint to be ready...",
                 time.time() - start_time,
@@ -134,6 +141,31 @@ class EndpointDeployer(ABC):
         raise NotImplementedError
 
 
+class LocalProcessNotStartedError(RuntimeError):
+    """The exception raised when the local process is not started yet."""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__("Local process is not started yet.")
+
+
+class LocalProcessDeadError(RuntimeError):
+    """The exception raised when the local process is already detected to be dead."""
+
+    def __init__(
+        self,
+        returncode: int,
+        stdout_file_path: Path,
+        stderr_file_path: Path,
+    ) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            f"Local process has already terminated with return code {returncode}. "
+            f"Please check the logs in {stdout_file_path} and "
+            f"{stderr_file_path} for more details.",
+        )
+
+
 class LocalProcessDeployer(EndpointDeployer):
     """Deploy and manage an endpoint that is powered by a local process."""
 
@@ -146,6 +178,14 @@ class LocalProcessDeployer(EndpointDeployer):
         """
         super().__init__(endpoint=endpoint, settings=settings)
         self._process: subprocess.Popen | None = None
+        self._stdout_file_path = get_log_file_path(
+            key=self._stdout_log_file_key,
+            settings=self.settings,
+        )
+        self._stderr_file_path = get_log_file_path(
+            key=self._stderr_log_file_key,
+            settings=self.settings,
+        )
 
     @abstractmethod
     def _build_command(self) -> list[str]:
@@ -172,33 +212,37 @@ class LocalProcessDeployer(EndpointDeployer):
             "Starting local process with environment variables: {}",
             os.environ)
 
-        # Get log file paths
-        stdout_file_path = get_log_file_path(
-            key=self._stdout_log_file_key,
-            settings=self.settings,
-        )
-        stderr_file_path = get_log_file_path(
-            key=self._stderr_log_file_key,
-            settings=self.settings,
-        )
-
         # Start the server
         process = subprocess.Popen(  # noqa: S603
             cmd,
-            stdout=stdout_file_path.open("w"),
-            stderr=stderr_file_path.open("w"),
+            stdout=self._stdout_file_path.open("w"),
+            stderr=self._stderr_file_path.open("w"),
             text=True,
         )
 
         logger.info("Started local process with PID: {}", process.pid)
         logger.info(
             "Local process stdout will be logged to: {}",
-            stdout_file_path)
+            self._stdout_file_path,
+        )
         logger.info(
             "Local process stderr will be logged to: {}",
-            stderr_file_path)
+            self._stderr_file_path,
+        )
 
         self._process = process
+
+    def _failfast(self) -> None:
+        """Raise an exception if the local process is already detected to be dead."""
+        if self._process is None:
+            raise LocalProcessNotStartedError
+        returncode = self._process.poll()
+        if returncode is not None:
+            raise LocalProcessDeadError(
+                returncode=returncode,
+                stdout_file_path=self._stdout_file_path,
+                stderr_file_path=self._stderr_file_path,
+            )
 
     def _shutdown(self) -> None:
         """Shut down the local process gracefully."""
@@ -256,11 +300,16 @@ class LocalVllmDeployer(LocalProcessDeployer):
             "vllm",
             "serve",
             self.endpoint.model.repo_id,
+            "--revision",
+            self.endpoint.model.revision,
             "--host",
             host,
             "--port",
             str(port),
         ]
+
+        if self.endpoint.model.token:
+            cmd.extend(["--hf-token", self.endpoint.model.token])
 
         # Add API key if provided
         if self.endpoint.api_key:

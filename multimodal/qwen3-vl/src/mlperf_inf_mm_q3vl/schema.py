@@ -366,7 +366,8 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float |
+                        str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -411,8 +412,10 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.sample_concatenate_permutation = self.sample_concatenate_permutation
 
         # Test duration settings
-        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
-        settings.max_duration_ms = round(self.max_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(
+            self.min_duration.total_seconds() * 1000)
+        settings.max_duration_ms = round(
+            self.max_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.max_query_count = self.max_query_count
 
@@ -439,8 +442,10 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
             self.performance_sample_count_override
         )
         settings.use_token_latencies = self.use_token_latencies
-        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.ttft_latency = round(
+            self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(
+            self.server_tpot_latency.total_seconds() * 1e9)
         settings.infer_token_latencies = self.infer_token_latencies
         settings.token_latency_scaling_factor = self.token_latency_scaling_factor
 
@@ -857,5 +862,6 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(message["content"])  # type: ignore[arg-type]
+                message["content"] = list(
+                    message["content"])  # type: ignore[arg-type]
         return messages

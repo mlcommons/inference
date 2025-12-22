@@ -51,9 +51,18 @@ FROM ${BASE_IMAGE_URL}
 # MLPERF_INF_MM_Q3VL_INSTALL_URL can be either:
 #   1. A git URL (default): git+https://github.com/...
 #   2. A local directory path relative to the build context (e.g., multimodal/qwen3-vl)
-#      Note: The build context is the directory you pass to `docker build` (the final arg)
-#            MLPERF_INF_MM_Q3VL_INSTALL_URL must be a valid path inside that build context
+#      Note: The build context is the directory you pass to `docker build` (the final arg).
+#            MLPERF_INF_MM_Q3VL_INSTALL_URL must be a valid path inside that build context.
 ARG MLPERF_INF_MM_Q3VL_INSTALL_URL=git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/qwen3-vl
+
+# LOADGEN_INSTALL_URL can be:
+#   1. A local directory path relative to the build context (e.g., loadgen/). Note: The
+#      build context is the directory you pass to `docker build` (the final arg).
+#      LOADGEN_INSTALL_URL must be a valid path inside that build context.
+#   2. A git URL: git+https://github.com/...
+#   3. If empty (default), the loadgen in the dependencies of the pyproject.toml will
+#      be used (i.e., from PyPI).
+ARG LOADGEN_INSTALL_URL=""
 
 # Temporary directory inside the container where the build context will be copied
 # Only used when installing from a local directory path
@@ -81,6 +90,19 @@ RUN apt-get update && \
 # Copy build context.
 # This will be used only if MLPERF_INF_MM_Q3VL_INSTALL_URL is a local path.
 COPY . ${BUILD_CONTEXT_DIR}/
+
+# Install the mlcommons-loadgen package if LOADGEN_INSTALL_URL is not empty.
+RUN if [ -n "${LOADGEN_INSTALL_URL}" ]; then \
+        if echo "${LOADGEN_INSTALL_URL}" | grep -q "^git+"; then \
+            echo "Installing from git URL: ${LOADGEN_INSTALL_URL}"; \
+            uv pip install --system --no-cache --verbose "${LOADGEN_INSTALL_URL}"; \
+        else \
+            echo "Installing from local path: ${LOADGEN_INSTALL_URL}"; \
+            uv pip install --system --no-cache --verbose "${BUILD_CONTEXT_DIR}/${LOADGEN_INSTALL_URL}"; \
+        fi; \
+    else \
+        echo "Using mlcommons-loadgen from dependencies of pyproject.toml (i.e., from PyPI)"; \
+    fi;
 
 # Install the mlperf-inference-multimodal-q3vl package.
 # We use --system to install into the container's global python environment.

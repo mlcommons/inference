@@ -6,12 +6,15 @@ from .power.power_checker import check as check_power_more
 from ..utils import *
 import os
 import sys
+import datetime
 
 class PowerCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.config = config
         self.submission_logs = submission_logs
+        self.mlperf_log = self.submission_logs.performance_log
+        self.scenario_fixed = self.submission_logs.loader_data.get("scenario", "")
         self.power_path = self.submission_logs.loader_data.get("power_dir_path", "")
         self.testing_path = os.path.dirname(self.submission_logs.loader_data.get("perf_path", ""))
         self.ranging_path = os.path.join(os.path.dirname(self.testing_path), "ranging")
@@ -21,6 +24,7 @@ class PowerCheck(BaseCheck):
     def setup_checks(self):
         self.checks.append(self.required_files_check)
         self.checks.append(self.external_power_check)
+        self.checks.append(self.get_power_metric_check)
 
     
     def required_files_check(self):
@@ -67,5 +71,85 @@ class PowerCheck(BaseCheck):
                     "Power WG power_checker.py did not pass for: %s",
                     perf_path)
                 return False
-
         return True
+    
+    def get_power_metric_check(self):
+        if not self.has_power:
+            return True
+        # parse the power logs
+        is_valid = True
+        server_timezone = datetime.timedelta(0)
+        client_timezone = datetime.timedelta(0)
+
+        datetime_format = "%m-%d-%Y %H:%M:%S.%f"
+        power_begin = (
+            datetime.datetime.strptime(self.mlperf_log["power_begin"], datetime_format)
+            + client_timezone
+        )
+        power_end = (
+            datetime.datetime.strptime(self.mlperf_log["power_end"], datetime_format)
+            + client_timezone
+        )
+        # Obtain the scenario also from logs to check if power is inferred
+        scenario = self.mlperf_log["effective_scenario"]
+
+        log_path = self.testing_path
+        spl_fname = os.path.join(log_path, "spl.txt")
+        power_list = []
+        with open(spl_fname) as f:
+            for line in f:
+                if not line.startswith("Time"):
+                    continue
+                timestamp = (
+                    datetime.datetime.strptime(line.split(",")[1], datetime_format)
+                    + server_timezone
+                )
+                if timestamp > power_begin and timestamp < power_end:
+                    value = float(line.split(",")[3])
+                    if value > 0:
+                        power_list.append(float(line.split(",")[3]))
+
+        if len(power_list) == 0:
+            self.log.error(
+                "%s has no power samples falling in power range: %s - %s",
+                spl_fname,
+                power_begin,
+                power_end,
+            )
+            is_valid = False
+        else:
+            avg_power = sum(power_list) / len(power_list)
+            power_duration = (power_end - power_begin).total_seconds()
+            if self.scenario_fixed.lower() in ["offline", "server", "interactive"]:
+                # In Offline and Server scenarios, the power metric is in W.
+                power_metric = avg_power
+                avg_power_efficiency = self.submission_logs.loader_data["performance_metric"] / avg_power
+
+            else:
+                # In SingleStream and MultiStream scenarios, the power metric is in
+                # mJ/query.
+                assert self.scenario_fixed.lower() in [
+                    "multistream",
+                    "singlestream",
+                ], "Unknown scenario: {:}".format(self.scenario_fixed)
+
+                num_queries = int(self.mlperf_log["result_query_count"])
+
+                power_metric = avg_power * power_duration * 1000 / num_queries
+
+                if self.scenario_fixed.lower() in ["singlestream"]:
+                    samples_per_query = 1
+                elif self.scenario_fixed.lower() in ["multistream"]:
+                    samples_per_query = 8
+
+                if (self.scenario_fixed.lower() in ["multistream"]
+                        ) and scenario.lower() in ["singlestream"]:
+                    power_metric = (
+                        avg_power * power_duration * samples_per_query * 1000 / num_queries
+                    )
+
+                avg_power_efficiency = (samples_per_query * 1000) / power_metric
+
+        self.submission_logs.loader_data["power_metric"] = power_metric
+        self.submission_logs.loader_data["avg_power_efficiency"] = avg_power_efficiency
+        return is_valid

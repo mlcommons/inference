@@ -82,7 +82,7 @@ class ResultExporter:
         row["weight_data_types"] = submission_logs.measurements_json["weight_data_types"]
         self.rows.append(row.copy())
         if row["has_power"]:
-            row["Result"] = submission_logs.loader_data["division"] #TODO
+            row["Result"] = submission_logs.loader_data["power_metric"]
             power_unit = POWER_UNIT_DICT[row["Scenario"]]
             row["Units"] = power_unit
             self.rows.append(row.copy())

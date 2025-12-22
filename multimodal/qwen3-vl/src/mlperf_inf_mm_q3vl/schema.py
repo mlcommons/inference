@@ -366,8 +366,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -412,10 +411,8 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.sample_concatenate_permutation = self.sample_concatenate_permutation
 
         # Test duration settings
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
-        settings.max_duration_ms = round(
-            self.max_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
+        settings.max_duration_ms = round(self.max_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.max_query_count = self.max_query_count
 
@@ -442,10 +439,8 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
             self.performance_sample_count_override
         )
         settings.use_token_latencies = self.use_token_latencies
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
         settings.infer_token_latencies = self.infer_token_latencies
         settings.token_latency_scaling_factor = self.token_latency_scaling_factor
 
@@ -658,28 +653,28 @@ class Verbosity(StrEnum):
 class SamplingParams(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Specifies the sampling parameters for the inference request to the endpoint."""
 
-    frequency_penalty: float = 0.0
+    frequency_penalty: float | None = None
     """Number between -2.0 and 2.0. Positive values penalize new tokens based on their
     existing frequency in the text so far, decreasing the model's likelihood to repeat
     the same line verbatim. See
     https://platform.openai.com/docs/api-reference/chat/create#chat_create-frequency_penalty
     """
 
-    presence_penalty: float = 0.0
+    presence_penalty: float | None = None
     """Number between -2.0 and 2.0. Positive values penalize new tokens based on whether
     they appear in the text so far, increasing the model's likelihood to talk about new
     topics. See
     https://platform.openai.com/docs/api-reference/chat/create#chat_create-presence_penalty
     """
 
-    temperature: float = 1.0
+    temperature: float | None = None
     """What sampling temperature to use, between 0 and 2. Higher values like 0.8 will
     make the output more random, while lower values like 0.2 will make it more focused
     and deterministic. We generally recommend altering this or top_p but not both. See
     https://platform.openai.com/docs/api-reference/chat/create#chat_create-temperature
     """
 
-    top_p: float = 1.0
+    top_p: float | None = None
     """An alternative to sampling with temperature, called nucleus sampling, where the
     model considers the results of the tokens with top_p probability mass. So 0.1 means
     only the tokens comprising the top 10% probability mass are considered. We generally
@@ -687,7 +682,7 @@ class SamplingParams(BaseModelWithAttributeDescriptionsFromDocstrings):
     See https://platform.openai.com/docs/api-reference/chat/create#chat_create-top_p
     """
 
-    top_k: int = 0
+    top_k: int | None = None
     """Controls the number of top tokens to consider. Set to 0 (or -1) to
     consider all tokens.
     Note that this is not part of the OpenAI API spec. Therefore, this field will be
@@ -697,7 +692,7 @@ class SamplingParams(BaseModelWithAttributeDescriptionsFromDocstrings):
     https://github.com/vllm-project/vllm/blob/83a317f650f210b86572b13b8198b7d38aaacb7e/vllm/entrypoints/openai/protocol.py#L566
     """
 
-    min_p: float = 0.0
+    min_p: float | None = None
     """Represents the minimum probability for a token to be considered,
     relative to the probability of the most likely token. Must be in [0, 1].
     Set to 0 to disable this.
@@ -708,7 +703,7 @@ class SamplingParams(BaseModelWithAttributeDescriptionsFromDocstrings):
     https://github.com/vllm-project/vllm/blob/83a317f650f210b86572b13b8198b7d38aaacb7e/vllm/entrypoints/openai/protocol.py#L567
     """
 
-    repetition_penalty: float = 1.0
+    repetition_penalty: float | None = None
     """Penalizes new tokens based on whether they appear in the prompt and the
     generated text so far. Values > 1 encourage the model to use new tokens,
     while values < 1 encourage the model to repeat tokens.
@@ -862,6 +857,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

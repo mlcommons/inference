@@ -67,8 +67,7 @@ class Task(ABC):
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint.url,
             http_client=DefaultAioHttpClient(
-                timeout=httpx.Timeout(
-                    timeout=request_timeout_seconds, connect=5.0),
+                timeout=httpx.Timeout(timeout=request_timeout_seconds, connect=5.0),
             ),
             api_key=endpoint.api_key,
             timeout=request_timeout_seconds,
@@ -188,9 +187,7 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(
-                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
-                self.total_num_samples),
+            k=min(MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_loaded_sample(
@@ -277,8 +274,7 @@ class Task(ABC):
             _unload_samples_from_ram,
         )
 
-    async def _query_endpoint_async_batch(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_batch(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         try:
             sample = self.loaded_samples[query_sample.index]
@@ -311,11 +307,9 @@ class Task(ABC):
                 temperature=self.endpoint.sampling_params.temperature,
                 top_p=self.endpoint.sampling_params.top_p,
                 extra_body={
-                    "top_k": self.endpoint.sampling_params.top_k,
-                    "min_p": self.endpoint.sampling_params.min_p,
-                    "repetition_penalty": (
-                        self.endpoint.sampling_params.repetition_penalty
-                    ),
+                    k: getattr(self.endpoint.sampling_params, k)
+                    for k in ("top_k", "min_p", "repetition_penalty")
+                    if getattr(self.endpoint.sampling_params, k) is not None
                 },
             )
             logger.debug(
@@ -366,8 +360,7 @@ class Task(ABC):
                 ],
             )
 
-    async def _query_endpoint_async_stream(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_stream(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         ttft_set = False
         try:
@@ -403,11 +396,9 @@ class Task(ABC):
                 temperature=self.endpoint.sampling_params.temperature,
                 top_p=self.endpoint.sampling_params.top_p,
                 extra_body={
-                    "top_k": self.endpoint.sampling_params.top_k,
-                    "min_p": self.endpoint.sampling_params.min_p,
-                    "repetition_penalty": (
-                        self.endpoint.sampling_params.repetition_penalty
-                    ),
+                    k: getattr(self.endpoint.sampling_params, k)
+                    for k in ("top_k", "min_p", "repetition_penalty")
+                    if getattr(self.endpoint.sampling_params, k) is not None
                 },
             )
             # iterate asynchronously

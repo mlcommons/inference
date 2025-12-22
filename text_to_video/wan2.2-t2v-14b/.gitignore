@@ -1,0 +1,38 @@
+# Model weights (large files)
+models/
+
+# Cache directories
+.cache/
+
+# Generated outputs and evaluation results
+data/outputs/
+data/outputs_*/
+data/results/
+data/evaluation_results/
+data/*_eval*/
+data/prompt_mapping.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and results
+*.log
+results/
+outputs/

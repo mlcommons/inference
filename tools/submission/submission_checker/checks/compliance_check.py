@@ -26,6 +26,7 @@ class ComplianceCheck(BaseCheck):
         self.checks.append(self.dir_exists_check)
         self.checks.append(self.performance_check)
         self.checks.append(self.accuracy_check)
+        self.checks.append(self.compliance_performance_check)
 
     def get_test_list(self, model):
         test_list = []
@@ -188,6 +189,9 @@ class ComplianceCheck(BaseCheck):
         return is_valid
     
     def compliance_performance_check(self):
+        if self.division.lower() == "open":
+            self.log.info("Compliance tests not needed for open division. Skipping tests on %s", self.path)
+            return True
         is_valid = True
         for test in self.test_list:
             test_dir = os.path.join(self.compliance_dir, test)

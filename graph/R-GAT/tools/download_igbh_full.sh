@@ -33,74 +33,93 @@ cd $1/full/processed
 mkdir paper
 cd paper
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper/node_feat.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper/node_label_19.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper/node_label_19.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper/node_label_2K.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper/node_label_2K.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper/paper_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper/paper_id_index_mapping.npy"; exit $?; }
 cd ..
 
 # paper__cites__paper
 mkdir paper__cites__paper
 cd paper__cites__paper
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper__cites__paper/edge_index.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper__cites__paper/edge_index.npy"; exit $?; }
 cd ..
 
 # author
 mkdir author
 cd author
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/author/author_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: author/author_id_index_mapping.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/author/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: author/node_feat.npy"; exit $?; }
 cd ..
 
 # conference
 mkdir conference
 cd conference
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/conference/conference_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: conference/conference_id_index_mapping.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/conference/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: conference/node_feat.npy"; exit $?; }
 cd ..
 
 # institute
 mkdir institute
 cd institute
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/institute/institute_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: institute/institute_id_index_mapping.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/institute/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: institute/node_feat.npy"; exit $?; }
 cd ..
 
 # journal
 mkdir journal
 cd journal
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/journal/journal_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: journal/journal_id_index_mapping.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/journal/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: journal/node_feat.npy"; exit $?; }
 cd ..
 
 # fos
 mkdir fos
 cd fos
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/fos/fos_id_index_mapping.npy
+test $? -eq 0 || { echo "❌ Failed to download: fos/fos_id_index_mapping.npy"; exit $?; }
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/fos/node_feat.npy
+test $? -eq 0 || { echo "❌ Failed to download: fos/node_feat.npy"; exit $?; }
 cd ..
 
 # author__affiliated_to__institute
 mkdir author__affiliated_to__institute
 cd author__affiliated_to__institute
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/author__affiliated_to__institute/edge_index.npy
+test $? -eq 0 || { echo "❌ Failed to download: author__affiliated_to__institute/edge_index.npy"; exit $?; }
 cd ..
 
 # paper__published__journal
 mkdir paper__published__journal
 cd paper__published__journal
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper__published__journal/edge_index.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper__published__journal/edge_index.npy"; exit $?; }
 cd ..
 
 # paper__topic__fos
 mkdir paper__topic__fos
 cd paper__topic__fos
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper__topic__fos/edge_index.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper__topic__fos/edge_index.npy"; exit $?; }
 cd ..
 
 # paper__venue__conference
 mkdir paper__venue__conference
 cd paper__venue__conference
 wget -c https://igb-public.s3.us-east-2.amazonaws.com/IGBH/processed/paper__venue__conference/edge_index.npy
+test $? -eq 0 || { echo "❌ Failed to download: paper__venue__conference/edge_index.npy"; exit $?; }
 cd ..
 
 # paper__written_by__author

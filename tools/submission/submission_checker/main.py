@@ -103,6 +103,14 @@ def main():
 
     loader = Loader(args.input, args.version)
     exporter = ResultExporter(args.csv, config)
+    results = {}
+    systems = {}
+    for division in ["closed", "open", "network"]:
+        systems[division] = {}
+        systems[division]["power"] = {}
+        systems[division]["non_power"] = {}
+
+    # Main loop over all the submissions
     for logs in loader.load():
         # Initialize check classes
         performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
@@ -120,12 +128,28 @@ def main():
         valid &= power_checks()
         # Add results to summary
         if valid:
+            # Results dictionary
+            results[logs.loader_data.get("perf_path")] = logs.loader_data.get("performance_metric")
+            # System dictionary
+            system_id = logs.loader_data.get("system")
+            if os.path.exists(logs.loader_data.get("power_dir_path", "")):
+                if system_id in systems[logs.loader_data.get("division")]["power"]:
+                    systems[logs.loader_data.get("division")]["power"][system_id] += 1
+                else:
+                    systems[logs.loader_data.get("division")]["power"][system_id] = 1
+            else:
+                if system_id in systems[logs.loader_data.get("division")]["non_power"]:
+                    systems[logs.loader_data.get("division")]["non_power"][system_id] += 1
+                else:
+                    systems[logs.loader_data.get("division")]["non_power"][system_id] = 1
+            # CSV exporter
             exporter.add_result(logs)
+        else:
+            results[logs.loader_data.get("perf_path")] = None
     # Export results
     exporter.export()
 
     # log results
-    results = {}
     log.info("---")
     with_results = 0
     for k, v in sorted(results.items()):
@@ -138,51 +162,134 @@ def main():
             log.error("NoResults %s", k)
 
 
+    closed_systems = systems.get("closed", {})
+    open_systems = systems.get("open", {})
+    network_systems = systems.get("network", {})
+    closed_power_systems = closed_systems.get("power", {})
+    closed_non_power_systems = closed_systems.get("non_power", {})
+    open_power_systems = open_systems.get("power", {})
+    open_non_power_systems = open_systems.get("non_power", {})
+    network_power_systems = network_systems.get("power", {})
+    network_non_power_systems = network_systems.get("non_power", {})
+
+    number_closed_power_systems = len(closed_power_systems)
+    number_closed_non_power_systems = len(closed_non_power_systems)
+    number_closed_systems = (
+        number_closed_power_systems + number_closed_non_power_systems
+    )
+    number_open_power_systems = len(open_power_systems)
+    number_open_non_power_systems = len(open_non_power_systems)
+    number_open_systems = number_open_power_systems + number_open_non_power_systems
+    number_network_power_systems = len(network_power_systems)
+    number_network_non_power_systems = len(network_non_power_systems)
+    number_network_systems = (
+        number_network_power_systems + number_network_non_power_systems
+    )
+
+    def merge_two_dict(x, y):
+        z = x.copy()
+        for key in y:
+            if key not in z:
+                z[key] = y[key]
+            else:
+                z[key] += y[key]
+        return z
+
+    # systems can be repeating in open, closed and network
+    unique_closed_systems = merge_two_dict(
+        closed_power_systems, closed_non_power_systems
+    )
+    unique_open_systems = merge_two_dict(
+        open_power_systems, open_non_power_systems)
+    unique_network_systems = merge_two_dict(
+        network_power_systems, network_non_power_systems
+    )
+
+    unique_systems = merge_two_dict(unique_closed_systems, unique_open_systems)
+    unique_systems = merge_two_dict(unique_systems, unique_network_systems)
+
+    # power systems can be repeating in open, closed and network
+    unique_power_systems = merge_two_dict(
+        closed_power_systems, open_power_systems)
+    unique_power_systems = merge_two_dict(
+        unique_power_systems, network_power_systems)
+
+    number_systems = len(unique_systems)
+    number_power_systems = len(unique_power_systems)
+
+    # Counting the number of closed,open and network results
+    def sum_dict_values(x):
+        count = 0
+        for key in x:
+            count += x[key]
+        return count
+
+    count_closed_power_results = sum_dict_values(closed_power_systems)
+    count_closed_non_power_results = sum_dict_values(closed_non_power_systems)
+    count_closed_results = count_closed_power_results + count_closed_non_power_results
+
+    count_open_power_results = sum_dict_values(open_power_systems)
+    count_open_non_power_results = sum_dict_values(open_non_power_systems)
+    count_open_results = count_open_power_results + count_open_non_power_results
+
+    count_network_power_results = sum_dict_values(network_power_systems)
+    count_network_non_power_results = sum_dict_values(
+        network_non_power_systems)
+    count_network_results = (
+        count_network_power_results + count_network_non_power_results
+    )
+
+    count_power_results = (
+        count_closed_power_results
+        + count_open_power_results
+        + count_network_power_results
+    )
+
     # print summary
     log.info("---")
     log.info(
         "Results=%d, NoResults=%d, Power Results=%d",
         with_results,
         len(results) - with_results,
-        0,
+        count_power_results,
     )
 
     log.info("---")
     log.info(
         "Closed Results=%d, Closed Power Results=%d\n",
-        0,
-        0,
+        count_closed_results,
+        count_closed_power_results,
     )
     log.info(
         "Open Results=%d, Open Power Results=%d\n",
-        0,
-        0,
+        count_open_results,
+        count_open_power_results,
     )
     log.info(
         "Network Results=%d, Network Power Results=%d\n",
-        0,
-        0,
+        count_network_results,
+        count_network_power_results,
     )
     log.info("---")
 
     log.info(
         "Systems=%d, Power Systems=%d",
-        0,
-        0)
+        number_systems,
+        number_power_systems)
     log.info(
         "Closed Systems=%d, Closed Power Systems=%d",
-        0,
-        0,
+        number_closed_systems,
+        number_closed_power_systems,
     )
     log.info(
         "Open Systems=%d, Open Power Systems=%d",
-        0,
-        0,
+        number_open_systems,
+        number_open_power_systems,
     )
     log.info(
         "Network Systems=%d, Network Power Systems=%d",
-        0,
-        0,
+        number_network_systems,
+        number_network_power_systems,
     )
     log.info("---")
     if len(results) != with_results:

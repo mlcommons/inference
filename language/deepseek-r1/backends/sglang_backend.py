@@ -84,6 +84,10 @@ class SGLangBackend(BaseBackend):
         # Use the utility function to get cache directory
         cache_base = get_cache_directory()
 
+        # Use models subdirectory to match user's example paths
+        self.cache_dir = cache_base.parent / 'models'
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
         # Set up HuggingFace cache environment variables
         setup_huggingface_cache()
 
@@ -121,7 +125,14 @@ class SGLangBackend(BaseBackend):
         ]
 
         # Add optimization flags
-        if self.config['enable_torch_compile']:
+        if self.config['enable_speculative_decode']:
+            cmd.extend(['--speculative-algorithm', self.config['speculative_algorithm']])
+            cmd.extend(['--speculative-num-steps',
+                        str(self.config['speculative_num_steps'])])
+            cmd.extend(['--speculative-eagle-topk',
+                        str(self.config['speculative_topk'])])
+
+        elif self.config['enable_torch_compile']:
             cmd.append('--enable-torch-compile')
 
         if self.config['enable_flashinfer']:
@@ -134,7 +145,6 @@ class SGLangBackend(BaseBackend):
 
         # Add performance settings
         cmd.extend([
-            '--cuda-graph-max-bs', str(self.config['cuda_graph_max_bs']),
             '--max-running-requests', str(self.config['max_running_requests'])
         ])
 
@@ -490,8 +500,7 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion: {e}")
-                raise RuntimeError(
-                    f"SGLang backend failed to generate tokens for prompt: {prompt[:100]}...")
+                results.append({'error': str(e)})
 
         return results
 
@@ -529,8 +538,7 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion for prompt {idx}: {e}")
-                raise RuntimeError(
-                    f"SGLang backend failed to generate tokens for prompt {idx}: {e}")
+                return idx, {'error': str(e)}
 
     @require_initialized
     def generate_async(self,

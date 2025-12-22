@@ -20,7 +20,7 @@ srun \
     mlperf-inf-mm-q3vl benchmark vllm \
         --settings.test.scenario="${SCENARIO}" \
         --settings.test.mode="${MODE}" \
-        --settings.test.server_expected_qps="${SERVER_EXPECTED_QPS}" \
+        --settings.test.server_target_qps="${SERVER_TARGET_QPS}" \
         --vllm.model.repo_id="${MODEL_REPO_ID}" \
         --vllm.cli=--async-scheduling \
         --vllm.cli=--max-model-len=32768 \

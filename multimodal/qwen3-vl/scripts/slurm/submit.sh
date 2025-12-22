@@ -15,8 +15,8 @@ scenario=${DEFAULT_SCENARIO}
 DEFAULT_MODE=accuracy_only
 mode=${DEFAULT_MODE}
 
-DEFAULT_SERVER_EXPECTED_QPS=5
-server_expected_qps=${DEFAULT_SERVER_EXPECTED_QPS}
+DEFAULT_SERVER_TARGET_QPS=5
+server_target_qps=${DEFAULT_SERVER_TARGET_QPS}
 
 DEFAULT_TENSOR_PARALLEL_SIZE=8
 tensor_parallel_size=${DEFAULT_TENSOR_PARALLEL_SIZE}
@@ -41,17 +41,17 @@ function _exit_with_help_msg() {
 Submit a benchmarking (and optionally, an evaluation) job(s) for the Qwen3-VL (Q3VL) benchmark.
 
 Usage: ${BASH_SOURCE[0]}
-    [-ci  | --container-image]     Container image to run the benchmark (default: ${DEFAULT_CONTAINER_IMAGE}).
-    [-mri | --model-repo-id]       HuggingFace repo ID of the model to benchmark (default: ${DEFAULT_MODEL_REPO_ID}).
-    [-s | --scenario]              Benchmark scenario (default: ${DEFAULT_SCENARIO}).
-    [-m | --mode]                  Benchmark mode (default: ${DEFAULT_MODE}).
-    [-seq | --server-expected-qps] The expected QPS for the server scenario (default: ${DEFAULT_SERVER_EXPECTED_QPS}).
-    [-tps | --tensor-parallel-size] Tensor parallelism size for the model deployment (default: ${DEFAULT_TENSOR_PARALLEL_SIZE}).
-    [-chd | --cache-host-dir]      Host directory of the ".cache" directory to which HuggingFace will dump the dataset and the model checkpoint, and vLLM will dump compilation artifacts (default: ${DEFAULT_CACHE_HOST_DIR}).
-    [-ohd | --output-host-dir]     Host directory to which the benchmark and evaluation results will be dumped (default: ${DEFAULT_OUTPUT_HOST_DIR}).
-    [-sa | --slurm-account]        Slurm account for submitting the benchmark and evaluation jobs (default: ${DEFAULT_SLURM_ACCOUNT}).
+    [-ci  | --container-image]           Container image to run the benchmark (default: ${DEFAULT_CONTAINER_IMAGE}).
+    [-mri | --model-repo-id]             HuggingFace repo ID of the model to benchmark (default: ${DEFAULT_MODEL_REPO_ID}).
+    [-s | --scenario]                    Benchmark scenario (default: ${DEFAULT_SCENARIO}).
+    [-m | --mode]                        Benchmark mode (default: ${DEFAULT_MODE}).
+    [-stq | --server-target-qps]         The target QPS for the server scenario (default: ${DEFAULT_SERVER_TARGET_QPS}).
+    [-tps | --tensor-parallel-size]      Tensor parallelism size for the model deployment (default: ${DEFAULT_TENSOR_PARALLEL_SIZE}).
+    [-chd | --cache-host-dir]            Host directory of the ".cache" directory to which HuggingFace will dump the dataset and the model checkpoint, and vLLM will dump compilation artifacts (default: ${DEFAULT_CACHE_HOST_DIR}).
+    [-ohd | --output-host-dir]           Host directory to which the benchmark and evaluation results will be dumped (default: ${DEFAULT_OUTPUT_HOST_DIR}).
+    [-sa | --slurm-account]              Slurm account for submitting the benchmark and evaluation jobs (default: ${DEFAULT_SLURM_ACCOUNT}).
     [-bsp | --benchmark-slurm-partition] Slurm partition for submitting the benchmarking job; usually a partition with nodes that have GPUs (default: ${DEFAULT_BENCHMARK_SLURM_PARTITION}).
-    [-esp | --evaluate-slurm-partition] Slurm partition for submitting the evaluation job; usually a partition with nodes that have CPUs only (default: ${DEFAULT_EVALUATE_SLURM_PARTITION}).
+    [-esp | --evaluate-slurm-partition]  Slurm partition for submitting the evaluation job; usually a partition with nodes that have CPUs only (default: ${DEFAULT_EVALUATE_SLURM_PARTITION}).
     [-h | --help]     Print this help message.
 EOF
     if [ -n "$1" ]; then
@@ -203,7 +203,7 @@ benchmark_job_id=$(
     CONTAINER_IMAGE="${container_image}" \
     SCENARIO="${scenario}" \
     MODE="${mode}" \
-    SERVER_EXPECTED_QPS="${server_expected_qps}" \
+    SERVER_TARGET_QPS="${server_target_qps}" \
     TENSOR_PARALLEL_SIZE="${tensor_parallel_size}" \
     MODEL_REPO_ID="${model_repo_id}" \
     sbatch --parsable \

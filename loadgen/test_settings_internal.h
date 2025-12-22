@@ -80,6 +80,7 @@ struct TestSettingsInternal {
   bool performance_issue_same;
   uint64_t performance_issue_same_index;
   uint64_t performance_sample_count;
+  uint64_t accuracy_sample_count;
 
   bool sample_concatenate_permutation;
   bool use_token_latencies = false;

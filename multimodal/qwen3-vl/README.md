@@ -242,13 +242,13 @@ bash submit.sh --help
     - Total number of samples: `48289`.
   - Guided decoding is not used.
   - Sampling parameters:
-    - Frequency penalty: `0.0` 
-    - Presence penalty: `0.0`
-    - Temperature: `1.0`
-    - Top-P: `1.0`
-    - Top-K: `0`
-    - Min-P: `0.0`
-    - Repetition penalty: `1.0`
+    - Frequency penalty: `None` (mathematically equivalent to `0.0`).
+    - Presence penalty: `None` (mathematically equivalent to `0.0`).
+    - Temperature: `None` (mathematically equivalent to `1.0`).
+    - Top-P: `None` (mathematically equivalent to `1.0`).
+    - Top-K: `None` (mathematically equivalent to `0`).
+    - Min-P: `None` (mathematically equivalent to `0.0`).
+    - Repetition penalty: `None` (mathematically equivalent to `1.0`).
   - Constraints:
     - Model quality:
       - Category Hierarchical F1 Score >= `0.7824`. This is the 99% recovery of 

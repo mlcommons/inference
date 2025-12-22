@@ -5,6 +5,10 @@ Processes all prompts from dataset while keeping model loaded.
 Supports multi-GPU inference with data parallelism (prompts divided among GPUs).
 """
 
+from diffusers.utils import export_to_video
+from diffusers import WanPipeline, AutoencoderKLWan
+import torch
+import yaml
 import argparse
 import logging
 import os
@@ -14,12 +18,9 @@ from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
-import yaml
-import torch
-from diffusers import WanPipeline, AutoencoderKLWan
-from diffusers.utils import export_to_video
 
 # import modelopt.torch.opt as mto
+
 
 def setup_logging(rank):
     """Setup logging configuration for data parallel (all ranks log)."""
@@ -50,12 +51,12 @@ def generate_videos(args, config):
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     rank = int(os.environ.get("RANK", 0))
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
-    
+
     torch.cuda.set_device(local_rank)
     device = torch.device(f"cuda:{local_rank}")
-    
+
     setup_logging(rank)
-    
+
     # Generation parameters from config
     height = config['height']
     width = config['width']
@@ -67,7 +68,7 @@ def generate_videos(args, config):
     negative_prompt = config['negative_prompt'].strip()
     sample_steps = config['sample_steps']
     base_seed = config['seed']
-    
+
     if rank == 0:
         logging.info(f"Model: Wan2.2 T2V-A14B-Diffusers")
         logging.info(f"Model path: {args.model_path}")
@@ -75,24 +76,25 @@ def generate_videos(args, config):
         logging.info(f"Sample steps: {sample_steps}")
         logging.info(f"Base seed: {base_seed}")
         logging.info(f"Iterations per prompt: {args.num_iterations}")
-    
+
     all_prompts = load_prompts(args.dataset)
-    
+
     if rank == 0:
         logging.info(f"Loaded {len(all_prompts)} prompts from {args.dataset}")
-    
+
     if args.num_prompts > 0:
         all_prompts = all_prompts[:args.num_prompts]
         if rank == 0:
             logging.info(f"Processing first {args.num_prompts} prompts")
-    
+
     # Divide prompts among GPUs (data parallelism)
     prompts = all_prompts[rank::world_size]
-    logging.info(f"This rank will process {len(prompts)} prompts (indices: {rank}, {rank + world_size}, ...)")
-    
+    logging.info(
+        f"This rank will process {len(prompts)} prompts (indices: {rank}, {rank + world_size}, ...)")
+
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logging.info("Loading Diffusers pipeline...")
     vae = AutoencoderKLWan.from_pretrained(
         args.model_path,
@@ -120,45 +122,49 @@ def generate_videos(args, config):
 
     #     logging.info("Quantized model loaded successfully!")
 
-    
     fixed_latent = None
     if args.fixed_latent:
         fixed_latent = torch.load(args.fixed_latent)
-        logging.info(f"Loaded fixed latent from {args.fixed_latent} with shape: {fixed_latent.shape}")
+        logging.info(
+            f"Loaded fixed latent from {args.fixed_latent} with shape: {fixed_latent.shape}")
         logging.info(f"This latent will be reused for all generations")
     else:
         logging.info("No fixed latent provided - using random initial latents")
-    
+
     if rank == 0:
-        logging.info(f"Starting batch generation: {len(all_prompts)} total prompts x {args.num_iterations} iterations")
+        logging.info(
+            f"Starting batch generation: {len(all_prompts)} total prompts x {args.num_iterations} iterations")
         logging.info(f"Each GPU processes ~{len(prompts)} prompts")
-    
-    # Generate videos: iterate through all prompts, then repeat for next iteration
+
+    # Generate videos: iterate through all prompts, then repeat for next
+    # iteration
     total_videos = 0
     for iteration in range(args.num_iterations):
         if rank == 0:
             logging.info(f"\n{'='*60}")
             logging.info(f"ITERATION {iteration + 1}/{args.num_iterations}")
             logging.info(f"{'='*60}")
-        
+
         for local_idx, prompt in enumerate(prompts):
             # Calculate global prompt index
             global_idx = rank + local_idx * world_size
-            
-            logging.info(f"[Prompt {global_idx+1}/{len(all_prompts)}, Iteration {iteration+1}/{args.num_iterations}] {prompt}")
-            
+
+            logging.info(
+                f"[Prompt {global_idx+1}/{len(all_prompts)}, Iteration {iteration+1}/{args.num_iterations}] {prompt}")
+
             # Check if video already exists
             filename = f"{prompt}-{iteration}.mp4"
             save_path = output_dir / filename
-            
+
             if save_path.exists():
-                logging.info(f"Video already exists at {save_path}, skipping generation")
+                logging.info(
+                    f"Video already exists at {save_path}, skipping generation")
                 total_videos += 1
                 continue
-            
+
             # Generate video with seed based on iteration
             current_seed = base_seed + iteration
-            
+
             # Prepare pipeline arguments
             pipeline_kwargs = {
                 "prompt": prompt,
@@ -171,21 +177,22 @@ def generate_videos(args, config):
                 "num_inference_steps": sample_steps,
                 "generator": torch.Generator(device=device).manual_seed(current_seed),
             }
-            
+
             # Only pass latents if fixed_latent is provided
             if fixed_latent is not None:
                 pipeline_kwargs["latents"] = fixed_latent
-            
+
             output = pipe(**pipeline_kwargs).frames[0]
-            
+
             # Save video with VBench format: <prompt>-<iteration>.mp4
             logging.info(f"Saving to {save_path} (seed: {current_seed})")
             export_to_video(output, str(save_path), fps=25)
             total_videos += 1
-            logging.info(f"Saved! ({total_videos}/{len(prompts) * args.num_iterations} for this GPU)")
-            
+            logging.info(
+                f"Saved! ({total_videos}/{len(prompts) * args.num_iterations} for this GPU)")
+
             torch.cuda.empty_cache()
-    
+
     logging.info(f"\n{'='*60}")
     logging.info(f"Batch generation complete for this GPU!")
     logging.info(f"Generated {total_videos} videos in {output_dir}")
@@ -193,8 +200,9 @@ def generate_videos(args, config):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Batch T2V inference with Wan2.2-Diffusers")
-    
+    parser = argparse.ArgumentParser(
+        description="Batch T2V inference with Wan2.2-Diffusers")
+
     parser.add_argument(
         "--model-path",
         type=str,
@@ -248,11 +256,11 @@ def main():
     #     default="./models/Wan2.2-T2V-FP8-Torch",
     #     help="Path to quantized model (default: ./models/Wan2.2-T2V-FP8-Torch)"
     # )
-    
+
     args = parser.parse_args()
-    
+
     config = load_config(args.config)
-    
+
     generate_videos(args, config)
 
 

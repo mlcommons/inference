@@ -1,4 +1,4 @@
-"""Logging utilities for the VL2L benchmark."""
+"""Logging utilities for the Qwen3-VL (Q3VL) benchmark."""
 
 from __future__ import annotations
 

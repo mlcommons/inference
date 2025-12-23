@@ -10,6 +10,7 @@ on:
     paths:
       - loadgen/**
 
+
 jobs:
   update_version:
     name: Update version only on ubuntu but used by windows and macos

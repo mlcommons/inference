@@ -977,6 +977,7 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "sw_notes",
     "host_network_card_count",
     "system_type_detail",
+    "network_speed_mbit"
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -1006,6 +1007,10 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "framework",
     "operating_system",
     "other_software_stack",
+]
+
+SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS = [
+    "network_speed_mbit"
 ]
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
@@ -1377,6 +1382,14 @@ def get_boolean(s):
         raise TypeError(
             f"Variable should be bool, string or int, got {type(s)} instead"
         )
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 
 def find_error_in_detail_log(config, fname):
@@ -1934,7 +1947,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -2943,6 +2956,14 @@ def check_system_desc_id(
             is_valid = False
             log.error(
                 "%s, field %s requires a meaningful response but is empty", fname, k
+            )
+        elif (
+            check_empty_fields
+            and k in SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS
+            and not is_number(str(systems_json[k]))
+        ):
+            log.error(
+                "%s, field %s requires a numeric response but is empty", fname, k
             )
 
     # SYSTEM_DESC_REQUIRED_FIELDS_POWER should be mandatory when a submission has power logs, but since we

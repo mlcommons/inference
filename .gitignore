@@ -6,3 +6,8 @@ generated/
 *.egg-info/
 *.so
 .vscode/
+
+# Local artifacts (do not commit)
+dataset/
+language/gpt-oss-120b/mlperf_results/
+tmux-client-*.log

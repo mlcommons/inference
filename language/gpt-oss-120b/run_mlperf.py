@@ -28,7 +28,7 @@ import mlperf_loadgen as lg
 import pandas as pd
 from tqdm import tqdm
 
-from backends import SGLangBackend
+from backends import SGLangBackend, VLLMBackend
 from mlperf import OfflineSUT, ServerSUT, QuerySampleLibrary
 from utils import load_tokenized_dataset, StandardTokenizer
 
@@ -127,7 +127,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--backend",
         type=str,
         default="sglang",
-        choices=["sglang"],
+        choices=["sglang", "vllm"],
         help="Backend to use for inference"
     )
 
@@ -355,15 +355,23 @@ def main():
         logger.info(f"  top_p: {top_p}")
 
         # Initialize backend
-        logger.debug(f"Initializing {args.backend} backend...")
+        logger.info(f"Initializing {args.backend} backend...")
         if args.backend == "sglang":
             # Set pool size to match max_concurrency with small safety margin
-            # This prevents "connection pool is full" warnings
             pool_size = int(args.max_concurrency * 1.1)  # 10% safety margin
             backend = SGLangBackend(
                 server_url=args.server_url,
                 timeout=args.timeout,
                 max_pool_size=pool_size
+            )
+        elif args.backend == "vllm":
+            backend = VLLMBackend(
+                model_name="/mnt/models/gpt-oss-120b",
+                tensor_parallel_size=2,
+                max_model_len=4096,
+                max_num_seqs=64,
+                gpu_memory_utilization=0.90,
+                trust_remote_code=True,
             )
         else:
             raise ValueError(f"Unknown backend: {args.backend}")

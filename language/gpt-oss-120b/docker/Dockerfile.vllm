@@ -1,0 +1,47 @@
+# vLLM Backend Dockerfile
+FROM nvidia/cuda:12.6.0-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV MLPERF_BACKEND=vllm
+ENV TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3-pip python3-dev git curl ca-certificates \
+    build-essential cmake ninja-build pybind11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Install UV package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx && \
+    chmod 755 /usr/local/bin/uv /usr/local/bin/uvx
+
+WORKDIR /vllm-install
+
+# Install PyTorch
+RUN pip3 install --no-cache-dir torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu126
+
+# Install vLLM
+RUN pip3 install vllm==0.9.0
+
+# Install MLPerf dependencies
+RUN pip3 install --no-cache-dir \
+    pandas numpy tqdm \
+    huggingface-hub[hf_transfer] \
+    datasets accelerate transformers
+
+# Set cache environment variables
+ENV HF_HOME=/raid/data/\$USER/.cache
+ENV HF_HUB_CACHE=/raid/data/\$USER/.cache
+ENV HUGGINGFACE_HUB_CACHE=/raid/data/\$USER/.cache
+
+WORKDIR /work
+ENV PATH="/work:${PATH}"
+
+EXPOSE 8000
+
+CMD ["/bin/bash"]

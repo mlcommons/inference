@@ -1,0 +1,10 @@
+{
+  "_comment": "Generation configuration for GPT-OSS-120B MLPerf benchmark",
+  "_note": "Use max_new_tokens=10240 for performance, 32768 for accuracy eval",
+  "_note2": "Fields starting with _ are ignored by the config loader",
+
+  "max_new_tokens": 10240,
+  "temperature": 1.0,
+  "top_k": -1,
+  "top_p": 1.0
+}

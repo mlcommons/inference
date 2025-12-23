@@ -383,6 +383,18 @@ def get_args():
 
     if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
+
+    if args.threads:
+        num_threads = args.threads
+        print("*****>>> Value of num_threads: {num_threads} **********")
+        os.environ["OMP_NUM_THREADS"] = str(num_threads)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(num_threads)
+        os.environ["MKL_NUM_THREADS"] = str(num_threads)
+        os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_threads)
+        os.environ["TF_NUM_INTEROP_THREADS"] = str(num_threads)
+        os.environ["TVM_NUM_THREADS"] = str(num_threads)
+        os.environ["TFLITE_NUM_THREADS"] = str(num_threads)
+        os.environ["NCNN_NUM_THREADS"] = str(num_threads)
     return args
 
 
@@ -646,7 +658,9 @@ def main():
         model = backend.load(
             args.model,
             inputs=args.inputs,
-            outputs=args.outputs)
+            outputs=args.outputs,
+            threads=args.threads,
+        )
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

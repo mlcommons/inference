@@ -16,7 +16,7 @@ import argparse
 import json
 import logging
 import sys
-from .base import BaseParser
+from submission_checker.parsers.base import BaseParser
 
 # pylint: disable=missing-docstring
 

@@ -1,4 +1,4 @@
-from .base import BaseCheck
+from submission_checker.checks.base import BaseCheck
 
 class StructureCheck(BaseCheck):
     def __init__(self, log, path, parsed_log):

@@ -1,4 +1,4 @@
-from ..constants import MODEL_CONFIG, ACC_PATTERN
+from submission_checker.constants import MODEL_CONFIG, ACC_PATTERN
 
 
 class Config:

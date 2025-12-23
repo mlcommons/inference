@@ -1,5 +1,5 @@
 
-from .base import BaseParser
+from submission_checker.parsers.base import BaseParser
 
 class SystemParser(BaseParser):
     def __init__(self, log_path):

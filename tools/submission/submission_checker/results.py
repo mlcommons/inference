@@ -1,10 +1,10 @@
-
-from .loader import SubmissionLogs
-from .configuration.configuration import Config
-import os
 import csv
-from .constants import *
 import json
+import os
+
+from submission_checker.loader import SubmissionLogs
+from submission_checker.configuration.configuration import Config
+from submission_checker.constants import *
 
 class ResultExporter:
     def __init__(self, csv_path, config: Config) -> None:

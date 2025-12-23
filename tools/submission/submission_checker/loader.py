@@ -1,11 +1,12 @@
-import os
-from .constants import *
-from .utils import list_dir
-from .parsers.loadgen_parser import LoadgenParser
-from typing import Generator, Literal
-from .utils import *
-import logging
 import json
+import logging
+import os
+from typing import Generator, Literal
+
+from submission_checker.constants import *
+from submission_checker.utils import list_dir
+from submission_checker.parsers.loadgen_parser import LoadgenParser
+from submission_checker.utils import *
 
 logging.basicConfig(
     level=logging.INFO,

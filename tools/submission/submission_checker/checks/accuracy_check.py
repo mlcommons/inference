@@ -1,9 +1,10 @@
-from .base import BaseCheck
-from ..constants import *
-from ..loader import SubmissionLogs
-from ..configuration.configuration import Config
-import re
 import os
+import re
+
+from submission_checker.checks.base import BaseCheck
+from submission_checker.constants import *
+from submission_checker.loader import SubmissionLogs
+from submission_checker.configuration.configuration import Config
 
 class AccuracyCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):

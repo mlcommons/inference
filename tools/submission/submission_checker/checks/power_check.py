@@ -1,12 +1,13 @@
-from .base import BaseCheck
-from ..constants import *
-from ..loader import SubmissionLogs
-from ..configuration.configuration import Config
-from .power.power_checker import check as check_power_more
-from ..utils import *
+import datetime
 import os
 import sys
-import datetime
+
+from submission_checker.checks.base import BaseCheck
+from submission_checker.constants import *
+from submission_checker.loader import SubmissionLogs
+from submission_checker.configuration.configuration import Config
+from submission_checker.checks.power.power_checker import check as check_power_more
+from submission_checker.utils import *
 
 class PowerCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):

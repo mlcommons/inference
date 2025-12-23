@@ -1,13 +1,14 @@
 
-from .base import BaseCheck
-from ..constants import *
-from ..loader import SubmissionLogs
-from ..configuration.configuration import Config
-from .performance_check import PerformanceCheck
-from .accuracy_check import AccuracyCheck
-from ..utils import *
-import re
 import os
+import re
+
+from submission_checker.checks.base import BaseCheck
+from submission_checker.constants import *
+from submission_checker.loader import SubmissionLogs
+from submission_checker.configuration.configuration import Config
+from submission_checker.checks.performance_check import PerformanceCheck
+from submission_checker.checks.accuracy_check import AccuracyCheck
+from submission_checker.utils import *
 
 class ComplianceCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):

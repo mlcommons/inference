@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from importlib.metadata import entry_points
 from typing import Annotated
 
 import mlperf_loadgen as lg
@@ -23,6 +25,56 @@ app.add_typer(
     name="benchmark",
     help="Main CLI for running the Qwen3-VL (Q3VL) benchmark.",
 )
+
+_PLUGIN_RESULT_APP_AND_NAME = 2
+
+
+def _load_benchmark_plugins() -> None:
+    """Load and register benchmark plugins from third-party packages."""
+    # Discover plugins from the entry point group
+    discovered_plugins = entry_points(group="mlperf_inf_mm_q3vl.benchmark_plugins")
+
+    for entry_point in discovered_plugins:
+        try:
+            # Load the plugin function
+            plugin_func = entry_point.load()
+
+            # Call the plugin function to get the command/typer app
+            plugin_result = plugin_func()
+
+            # Register it with the benchmark app
+            if (
+                isinstance(plugin_result, Sequence)
+                and len(plugin_result) == _PLUGIN_RESULT_APP_AND_NAME
+            ):
+                # Plugin returns (typer_app, name)
+                plugin_app, plugin_name = plugin_result
+                benchmark_app.add_typer(plugin_app, name=plugin_name)
+                logger.debug(
+                    "Loaded benchmark plugin: {} from {}",
+                    plugin_name,
+                    entry_point.name,
+                )
+            elif callable(plugin_result):
+                # Plugin returns just a command function
+                benchmark_app.command(name=entry_point.name)(plugin_result)
+                logger.debug("Loaded benchmark command: {}", entry_point.name)
+            else:
+                logger.warning(
+                    "Unsupported plugin function return type {} for plugin {}",
+                    type(plugin_result),
+                    entry_point.name,
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Failed to load benchmark plugin {} with error: {}",
+                entry_point.name,
+                e,
+            )
+
+
+# Load plugins when the module is imported
+_load_benchmark_plugins()
 
 
 @app.command()
@@ -66,7 +118,7 @@ def benchmark_endpoint(
     accessible via a URL (and an API key, if applicable).
     """
     setup_loguru_for_benchmark(settings=settings, verbosity=verbosity)
-    _run_benchmark(
+    run_benchmark(
         settings=settings,
         dataset=dataset,
         endpoint=endpoint,
@@ -74,24 +126,20 @@ def benchmark_endpoint(
     )
 
 
-def _run_benchmark(
+def run_benchmark(
     settings: Settings,
     dataset: Dataset,
     endpoint: Endpoint,
     random_seed: int,
 ) -> None:
     """Run the Qwen3-VL (Q3VL) benchmark."""
-    logger.info(
-        "Running Qwen3-VL (Q3VL) benchmark with settings: {}",
-        settings)
+    logger.info("Running Qwen3-VL (Q3VL) benchmark with settings: {}", settings)
     logger.info("Running Qwen3-VL (Q3VL) benchmark with dataset: {}", dataset)
     logger.info(
         "Running Qwen3-VL (Q3VL) benchmark with OpenAI API endpoint: {}",
         endpoint,
     )
-    logger.info(
-        "Running Qwen3-VL (Q3VL) benchmark with random seed: {}",
-        random_seed)
+    logger.info("Running Qwen3-VL (Q3VL) benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
         dataset=dataset,
@@ -130,7 +178,7 @@ def benchmark_vllm(
     """
     setup_loguru_for_benchmark(settings=settings, verbosity=verbosity)
     with LocalVllmDeployer(endpoint=vllm, settings=settings):
-        _run_benchmark(
+        run_benchmark(
             settings=settings,
             dataset=dataset,
             endpoint=vllm,

@@ -99,12 +99,12 @@ while [[ $# -gt 0 ]]; do
         shift
         ;;
     -seq | --server-expected-qps)
-        server_expected_qps=$2
+        server_target_qps=$2
         shift
         shift
         ;;
     -seq=* | --server-expected-qps=*)
-        server_expected_qps=${1#*=}
+        server_target_qps=${1#*=}
         shift
         ;;
     -tps | --tensor-parallel-size)

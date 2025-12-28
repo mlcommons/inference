@@ -23,9 +23,18 @@ conda create -n llama2-70b python=3.9
 conda activate llama2-70b
 
 # Install packages
+
 conda install pybind11==2.10.4 -c conda-forge -y
-python -m pip install torch==2.2.0.dev20231006+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+# Install a stable CPU version of torch. Adjust version as needed for compatibility.
+python -m pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 pip install transformers==4.31.0 nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0
+
+# Troubleshooting:
+# If you see 'No matching distribution found for torch', check available versions at:
+#   https://download.pytorch.org/whl/cpu/torch_stable.html
+# Or run:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu --upgrade --dry-run
+# to see available versions for your Python version and platform.
 
 export CUR_DIR=${PWD}
 cd <inference-repo-root>/loadgen

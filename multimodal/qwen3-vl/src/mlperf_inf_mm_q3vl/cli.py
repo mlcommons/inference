@@ -6,17 +6,16 @@ from collections.abc import Sequence
 from importlib.metadata import entry_points
 from typing import Annotated
 
-import mlperf_loadgen as lg
 from loguru import logger
 from pydantic import FilePath  # noqa: TC002
 from pydantic_typer import Typer
 from typer import Option
 
+from .benchmark import run_benchmark
 from .deploy import LocalVllmDeployer
 from .evaluation import run_evaluation
 from .log import setup_loguru_for_benchmark
 from .schema import Dataset, Endpoint, Settings, Verbosity, VllmEndpoint
-from .task import ShopifyGlobalCatalogue
 
 app = Typer()
 benchmark_app = Typer()
@@ -124,36 +123,6 @@ def benchmark_endpoint(
         endpoint=endpoint,
         random_seed=random_seed,
     )
-
-
-def run_benchmark(
-    settings: Settings,
-    dataset: Dataset,
-    endpoint: Endpoint,
-    random_seed: int,
-) -> None:
-    """Run the Qwen3-VL (Q3VL) benchmark."""
-    logger.info("Running Qwen3-VL (Q3VL) benchmark with settings: {}", settings)
-    logger.info("Running Qwen3-VL (Q3VL) benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running Qwen3-VL (Q3VL) benchmark with OpenAI API endpoint: {}",
-        endpoint,
-    )
-    logger.info("Running Qwen3-VL (Q3VL) benchmark with random seed: {}", random_seed)
-    test_settings, log_settings = settings.to_lgtype()
-    task = ShopifyGlobalCatalogue(
-        dataset=dataset,
-        endpoint=endpoint,
-        settings=settings.test,
-        random_seed=random_seed,
-    )
-    sut = task.construct_sut()
-    qsl = task.construct_qsl()
-    logger.info("Starting the Qwen3-VL (Q3VL) benchmark with LoadGen...")
-    lg.StartTestWithLogSettings(sut, qsl, test_settings, log_settings)
-    logger.info("The Qwen3-VL (Q3VL) benchmark with LoadGen completed.")
-    lg.DestroyQSL(qsl)
-    lg.DestroySUT(sut)
 
 
 @benchmark_app.command(name="vllm")

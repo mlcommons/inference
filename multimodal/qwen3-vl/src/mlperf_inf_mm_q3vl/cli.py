@@ -31,7 +31,8 @@ _PLUGIN_RESULT_APP_AND_NAME = 2
 def _load_benchmark_plugins() -> None:
     """Load and register benchmark plugins from third-party packages."""
     # Discover plugins from the entry point group
-    discovered_plugins = entry_points(group="mlperf_inf_mm_q3vl.benchmark_plugins")
+    discovered_plugins = entry_points(
+        group="mlperf_inf_mm_q3vl.benchmark_plugins")
 
     for entry_point in discovered_plugins:
         try:

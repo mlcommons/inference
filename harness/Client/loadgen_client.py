@@ -102,6 +102,13 @@ class LoadGenClient(BaseClient):
         if self.endpoint_type not in ['completions', 'chat_completions']:
             raise ValueError(f"Invalid endpoint_type: {self.endpoint_type}. Must be 'completions' or 'chat_completions'")
         
+        # Max tokens configuration - determine from model name or use config/default
+        self.max_tokens = self._determine_max_tokens(model_name, config)
+        self.logger.info(f"Using max_tokens: {self.max_tokens} for model: {model_name}")
+        
+        # Debug mode for accuracy mode
+        self.debug_mode = config.get('debug_mode', False) if config else False
+        
         # Server scenario specific components (for async processing)
         self.num_workers = config.get('num_workers', 1) if config else 1
         self.worker_threads: List[Optional[threading.Thread]] = []
@@ -204,6 +211,34 @@ class LoadGenClient(BaseClient):
         except Exception as e:
             self.logger.warning(f"Could not initialize tokenizer: {e}")
             self.tokenizer = None
+    
+    def _determine_max_tokens(self, model_name: str, config: Optional[Dict[str, Any]]) -> int:
+        """
+        Determine max_tokens based on model name or config.
+        
+        Defaults:
+        - deepseek-r1: 20000
+        - llama3.1-8b: 1024
+        - llama2-70b: 1024
+        - default: 1024
+        """
+        # Check if explicitly set in config
+        if config and 'max_tokens' in config:
+            return int(config['max_tokens'])
+        
+        # Determine from model name
+        model_lower = model_name.lower()
+        if 'deepseek' in model_lower and 'r1' in model_lower:
+            return 20000
+        elif 'llama3.1' in model_lower or 'llama-3.1' in model_lower or 'llama3_1' in model_lower:
+            if '8b' in model_lower or '8-b' in model_lower:
+                return 1024
+        elif 'llama2' in model_lower or 'llama-2' in model_lower:
+            if '70b' in model_lower or '70-b' in model_lower:
+                return 1024
+        
+        # Default
+        return 1024
     
     def _validate_endpoint(self):
         """Validate that the requested endpoint exists for the backend."""
@@ -428,7 +463,7 @@ class LoadGenOfflineClient(LoadGenClient):
                 api_payload = {
                     "model": self.model_name,
                     "messages": [{"role": "user", "content": text_prompts[0]}],
-                    "max_tokens": 128,
+                    "max_tokens": self.max_tokens,
                     "temperature": 0.0,
                     "top_p": 1.0,
                     "stream": False
@@ -439,7 +474,7 @@ class LoadGenOfflineClient(LoadGenClient):
                 api_payload = {
                     "model": self.model_name,
                     "messages": [[{"role": "user", "content": prompt}] for prompt in text_prompts],
-                    "max_tokens": 128,
+                    "max_tokens": self.max_tokens,
                     "temperature": 0.0,
                     "top_p": 1.0,
                     "stream": False
@@ -450,7 +485,7 @@ class LoadGenOfflineClient(LoadGenClient):
             api_payload = {
                 "model": self.model_name,
                 "prompt": text_prompts,
-                "max_tokens": 128,
+                "max_tokens": self.max_tokens,
                 "temperature": 0.0,
                 "top_p": 1.0,
                 "top_k": 1,
@@ -495,9 +530,9 @@ class LoadGenOfflineClient(LoadGenClient):
             choices = api_result.get("choices", [])
         
         # Process responses
-        self._process_api_responses(choices, original_query_ids, original_query_indexes)
+        self._process_api_responses(choices, original_query_ids, original_query_indexes, text_prompts)
     
-    def _process_api_responses(self, choices: List[Dict], query_ids: List[int], query_indexes: List[int]) -> None:
+    def _process_api_responses(self, choices: List[Dict], query_ids: List[int], query_indexes: List[int], text_prompts: Optional[List[str]] = None) -> None:
         """Process API responses and send to Loadgen."""
         self.logger.debug(f"Processing {len(choices)} API responses for {len(query_ids)} queries")
         
@@ -513,6 +548,11 @@ class LoadGenOfflineClient(LoadGenClient):
             # Extract text response
             text_response = choice.get("text", "")
             
+            # Get the original query/prompt if available
+            query_prompt = None
+            if text_prompts and i < len(text_prompts):
+                query_prompt = text_prompts[i]
+            
             # Convert back to token IDs
             if self.tokenizer:
                 try:
@@ -524,6 +564,16 @@ class LoadGenOfflineClient(LoadGenClient):
                 token_ids = [1, 2, 3]  # Fallback
             
             token_count = len(token_ids)
+            
+            # Debug mode: print query, text response and token count in accuracy mode
+            if self.debug_mode and self.test_mode == "accuracy":
+                # Truncate text for display (first 200 chars)
+                query_preview = query_prompt[:200] + "..." if query_prompt and len(query_prompt) > 200 else (query_prompt or "N/A")
+                text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
+                self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+                self.logger.info(f"  Query: {query_preview}")
+                self.logger.info(f"  Text Response: {text_preview}")
+                self.logger.info(f"  Total Tokens: {token_count}")
             
             # Create Loadgen response
             token_array = np.array(token_ids, dtype=np.int32)
@@ -690,7 +740,7 @@ class LoadGenServerClient(LoadGenClient):
             json_data = {
                 'model': self.model_name,
                 'messages': [{"role": "user", "content": input_text}],
-                'max_tokens': 128,
+                'max_tokens': self.max_tokens,
                 'temperature': 0.0,
                 'stream': True,
                 'top_p': 1.0,
@@ -701,7 +751,7 @@ class LoadGenServerClient(LoadGenClient):
             json_data = {
                 'model': self.model_name,
                 'prompt': input_text,
-                'max_tokens': 128,
+                'max_tokens': self.max_tokens,
                 'min_tokens': 1,
                 'temperature': 0.0,
                 'stream': True,

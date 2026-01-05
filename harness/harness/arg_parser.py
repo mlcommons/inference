@@ -80,6 +80,10 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
                        dest='server_target_qps',
                        help="Target queries per second for Server scenario (alias for --server-target-qps, Server only)")
     
+    # Debug arguments
+    parser.add_argument("--debug-mode", action="store_true",
+                       help="Enable debug mode: print text response and total tokens in accuracy mode")
+    
     # Note: --engine-args is NOT added here because it must be added last (after all other arguments)
     # when using argparse.REMAINDER. It should be added in harness_main.py after all other arguments.
 
@@ -136,6 +140,7 @@ def parse_common_harness_args(args):
         'input_column': args.input_column,
         'input_ids_column': args.input_ids_column,
         'output_column': args.output_column,
-        'engine_args': engine_args
+        'engine_args': engine_args,
+        'debug_mode': args.debug_mode if hasattr(args, 'debug_mode') else False
     }
 

@@ -5,7 +5,7 @@
 backend: vllm
 
 # Model name or path
-model: deepseek-ai/DeepSeek-R1-0528
+model: deepseek-ai/DeepSeek-R1
 
 # Server port
 port: 8000

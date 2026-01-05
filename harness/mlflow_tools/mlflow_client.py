@@ -633,6 +633,16 @@ class MLflowClient:
         try:
             self.logger.info(f"Uploading artifacts from: {upload_dir}")
             
+            # Check for MLPerf log summary and log it explicitly
+            summary_file = upload_dir / "mlperf" / "mlperf_log_summary.txt"
+            if summary_file.exists():
+                self.logger.info(f"Found MLPerf log summary: {summary_file}")
+                # Upload summary file explicitly to ensure it's visible
+                mlflow.log_artifact(str(summary_file), "output/mlperf")
+                self.logger.info(f"Uploaded MLPerf log summary to output/mlperf/mlperf_log_summary.txt")
+            else:
+                self.logger.warning(f"MLPerf log summary not found at: {summary_file}")
+            
             if include_subdirs:
                 # Upload entire directory structure
                 mlflow.log_artifacts(str(upload_dir), "output")

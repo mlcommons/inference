@@ -101,7 +101,8 @@ class BaseHarness:
                  input_column: Optional[str] = None,
                  input_ids_column: Optional[str] = None,
                  output_column: Optional[str] = None,
-                 engine_args: Optional[list] = None):
+                 engine_args: Optional[list] = None,
+                 debug_mode: bool = False):
         """
         Initialize base harness.
         
@@ -153,6 +154,9 @@ class BaseHarness:
         
         # Engine arguments for overriding server config
         self.engine_args = engine_args
+        
+        # Debug mode
+        self.debug_mode = debug_mode
         
         # MLflow configuration
         self.mlflow_tracking_uri = mlflow_tracking_uri
@@ -509,6 +513,10 @@ class BaseHarness:
         # Ensure backend is in config for endpoint validation
         if 'backend' not in client_config:
             client_config['backend'] = self.server_config.get('backend', 'vllm') if self.server_config else 'vllm'
+        
+        # Add debug_mode to client config if available
+        if hasattr(self, 'debug_mode') and self.debug_mode:
+            client_config['debug_mode'] = True
         
         self.client = create_loadgen_client(
             scenario=self.scenario,

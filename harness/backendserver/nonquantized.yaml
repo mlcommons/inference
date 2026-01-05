@@ -49,8 +49,6 @@ config:
   api_server_args:
     - --tensor-parallel-size
     - "1"
-    - --data-parallel-size
-    - "4"
     - --gpu-memory-utilization
     - "0.9"
     # Add any other vLLM arguments here

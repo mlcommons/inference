@@ -97,7 +97,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--mlperf-conf",
         type=str,
-        default="/home/scratch.shobhitv_coreai/mlcinf-repos/gpt-oss-perf/loadgen/mlperf.conf",
+        default="inference/mlperf.conf",
         help="Path to MLPerf configuration file"
     )
 

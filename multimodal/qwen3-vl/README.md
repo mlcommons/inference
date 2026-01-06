@@ -300,8 +300,13 @@ mlperf-inf-mm-q3vl-foo/
 └── src/
     └── mlperf_inf_mm_q3vl_foo/
         ├── __init__.py
+        ├── schema.py
+        ├── deploy.py
         └── plugin.py
 ```
+
+Note that this is only a minimalistically illustrative example. The users are free to
+structure and name their Python packages and modules in any way that they wish. 
 
 #### Step 2: Implement the `mlperf-inf-mm-q3vl-foo` plugin
 
@@ -320,7 +325,7 @@ from mlperf_inf_mm_q3vl.log import setup_loguru_for_benchmark
 
 from .schema import FooEndpoint
 
-def register_foo_benchmark() -> Callable[[Settings, Dataset, FooEndpoint, int, int, Verbosity], None]:
+def register_foo_benchmark() -> Callable:
     """Entry point for the plugin to benchmark the Foo inference system.
     
     This function is called when the CLI discovers the plugin.

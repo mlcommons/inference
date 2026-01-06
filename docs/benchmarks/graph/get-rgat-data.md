@@ -46,7 +46,7 @@ Get the Official MLPerf R-GAT Model
 
     ### PyTorch
     ```
-    mlcr get,ml-model,rgat -j
+    mlcr get,ml-model,rgat,_r2-downloader,_mlcommons -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_RGAT_MODEL>` could be provided to download the model to a specific location.

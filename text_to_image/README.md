@@ -55,10 +55,10 @@ We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face
 The following MLCommons MLC commands can be used to programmatically download the model checkpoints.
 
 ```
-mlcr get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp16,_r2-downloader --outdirname=$MODEL_PATH -j
 ```
 ```
-mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname=$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp32,_r2-downloader --outdirname=$MODEL_PATH -j
 ```
 #### Manual method
 

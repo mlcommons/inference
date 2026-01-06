@@ -95,7 +95,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 **Validation**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation,_r2-downloader --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_r2-downloader,_validation --outdirname=<path to download> -j
 ```
 
 **Calibration**

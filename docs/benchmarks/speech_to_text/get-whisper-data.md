@@ -15,7 +15,7 @@ The benchmark implementation run command will automatically download the validat
 
         ### Get Preprocessed Validation Dataset
         ```
-        mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+        mlcr get,dataset,whisper,_preprocessed,_mlc,_r2-downloader --outdirname=<path to download> -j
         ```
 
     === "Unprocessed"
@@ -34,7 +34,7 @@ The benchmark implementation run command will automatically download the require
 
         ### Get the Official MLPerf Whisper model from MLCOMMONS Cloudflare R2
         ```
-        mlcr get,ml-model,whisper,_rclone,_mlc s-j
+        mlcr get,ml-model,whisper,_r2-downloader,_mlc -j
         ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_WHISPER_MODEL>` could be provided to download the model to a specific location.

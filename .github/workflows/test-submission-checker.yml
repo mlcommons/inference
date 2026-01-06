@@ -5,7 +5,7 @@ name: Test for MLPerf inference submission checker using MLC script automation
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master_off", "dev_off" ]
     paths:
       - tools/submission/**
       - .github/workflows/test-submission-checker.yml
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.8", "3.11", "3.12" ]
+        python-version: [ "3.10", "3.12", "3.14" ]
 
     steps:
     - uses: actions/checkout@v3
@@ -31,8 +31,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python3 -m pip install mlc-scripts
+        python3 -m pip install mlcflow
+        mlc pull repo mlcommons@mlperf-automations --branch=sub-gen-change
         git clone https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0 --depth 1
+      # python3 -m pip install mlc-scripts
     - name: Test MLPerf inference submission checker
       run: |
-        mlcr run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src.version=custom --input=`pwd`/mlperf_inference_unofficial_submissions_v5.0 --src_version=v5.0 --extra_args=" --skip-extra-files-in-root-check --skip-extra-accuracy-files-check --skip-all-systems-have-results-check --skip-calibration-check" --quiet 
+        mlcr run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.submission_dir --adr.inference-src.version=custom --input=`pwd`/mlperf_inference_unofficial_submissions_v5.0 --src_version=v5.0 --extra_args=" --skip-extra-files-in-root-check --skip-extra-accuracy-files-check --skip-all-systems-have-results-check --skip-calibration-check" --quiet 

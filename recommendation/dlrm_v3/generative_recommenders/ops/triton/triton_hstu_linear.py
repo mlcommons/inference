@@ -15,6 +15,8 @@
 #!/usr/bin/env python3
 
 
+from triton.language.extra import libdevice
+from generative_recommenders.ops.utils import is_sm100
 from typing import List, Optional, Tuple
 
 import torch
@@ -46,11 +48,7 @@ def _get_layer_norm_mul_dropout_fwd_multirow_configs() -> List[triton.Config]:
     return configs
 
 
-from generative_recommenders.ops.utils import is_sm100
-
 # @manual=//triton:triton
-from triton.language.extra import libdevice
-
 try:
     # @manual=//triton:triton
     from triton.language.extra.libdevice import fast_dividef
@@ -100,7 +98,8 @@ def _generate_random_mask(
     STRIDE: tl.constexpr,
     BLOCK_D: tl.constexpr,
 ):
-    # NOTE: This function appears to be incomplete/unused - kept for compatibility
+    # NOTE: This function appears to be incomplete/unused - kept for
+    # compatibility
     pid = tl.program_id(0)
     cols = tl.arange(0, BLOCK_D)
     col_mask = cols < D
@@ -222,8 +221,10 @@ def _ln_mul_dropout_fwd_rng(
             col_offsets = tl.arange(0, BLOCK_D)
 
             # Load precomputed random masks for u, x, y
-            u_offsets = row_offsets[:, None] * stride_mask + col_offsets[None, :]
-            x_offsets = (row_offsets[:, None] + N) * stride_mask + col_offsets[None, :]
+            u_offsets = row_offsets[:, None] * \
+                stride_mask + col_offsets[None, :]
+            x_offsets = (row_offsets[:, None] + N) * \
+                stride_mask + col_offsets[None, :]
             y_offsets = (row_offsets[:, None] + 2 * N) * stride_mask + col_offsets[
                 None, :
             ]
@@ -242,7 +243,8 @@ def _ln_mul_dropout_fwd_rng(
             col_offsets = tl.arange(0, BLOCK_D)
 
             # Load precomputed random mask for y
-            y_offsets = row_offsets[:, None] * stride_mask + col_offsets[None, :]
+            y_offsets = row_offsets[:, None] * \
+                stride_mask + col_offsets[None, :]
             mask = (row_offsets[:, None] < N) & (col_offsets[None, :] < D)
 
             y_keep = tl.load(RANDOM_MASK + y_offsets, mask=mask, other=True)
@@ -276,9 +278,18 @@ def _ln_mul_dropout_fwd_rng(
             order=(1, 0),
         )
 
-        tl.store(Y_block_ptr_u, u_block.to(Y.dtype.element_ty), boundary_check=(0, 1))
-        tl.store(Y_block_ptr_x, x_block.to(Y.dtype.element_ty), boundary_check=(0, 1))
-        tl.store(Y_block_ptr_y, y.to(Y.dtype.element_ty), boundary_check=(0, 1))
+        tl.store(
+            Y_block_ptr_u, u_block.to(
+                Y.dtype.element_ty), boundary_check=(
+                0, 1))
+        tl.store(
+            Y_block_ptr_x, x_block.to(
+                Y.dtype.element_ty), boundary_check=(
+                0, 1))
+        tl.store(
+            Y_block_ptr_y, y.to(
+                Y.dtype.element_ty), boundary_check=(
+                0, 1))
     else:
         Y_block_ptr = tl.make_block_ptr(
             base=Y,
@@ -470,7 +481,8 @@ def _ln_mul_dropout_bwd_dx_du_rng(
                 dx = tl.where(dx_keep, dx / (1.0 - dropout_ratio), 0.0)
                 dy = tl.where(dy_keep, dy / (1.0 - dropout_ratio), 0.0)
             else:
-                # Load dropout mask directly instead of generating random numbers
+                # Load dropout mask directly instead of generating random
+                # numbers
                 dy_keep = tl.load(RANDOM_MASK + cols, mask=mask, other=True)
                 dy = tl.where(dy_keep, dy / (1.0 - dropout_ratio), 0.0)
 
@@ -620,7 +632,8 @@ def _ln_mul_dropout_bwd_dx_du(
             if CONCAT_UX:
                 # apply dropout on du
                 if FAST_DROPOUT:
-                    random_du, random_dx, random_dy = rand3x(seed, random_offsets)
+                    random_du, random_dx, random_dy = rand3x(
+                        seed, random_offsets)
                 else:
                     random_du = tl.rand(seed, random_offsets)
                 du_keep = random_du > dropout_ratio
@@ -754,8 +767,16 @@ def _ln_mul_dropout_bwd_dwdb(
 
     sum_dw = tl.sum(dw, axis=0)
     sum_db = tl.sum(db, axis=0)
-    tl.store(FINAL_DW + cols, sum_dw.to(FINAL_DW.dtype.element_ty), mask=cols < D)
-    tl.store(FINAL_DB + cols, sum_db.to(FINAL_DB.dtype.element_ty), mask=cols < D)
+    tl.store(
+        FINAL_DW + cols,
+        sum_dw.to(
+            FINAL_DW.dtype.element_ty),
+        mask=cols < D)
+    tl.store(
+        FINAL_DB + cols,
+        sum_db.to(
+            FINAL_DB.dtype.element_ty),
+        mask=cols < D)
 
 
 def triton_layer_norm_mul_dropout_fwd(
@@ -792,10 +813,12 @@ def triton_layer_norm_mul_dropout_fwd(
     MAX_FUSED_SIZE = 65536 // x.element_size()
     BLOCK_D: int = min(MAX_FUSED_SIZE, triton.next_power_of_2(D))
     if D > BLOCK_D:
-        raise RuntimeError("This layer norm doesn't support feature dim >= 64KB.")
+        raise RuntimeError(
+            "This layer norm doesn't support feature dim >= 64KB.")
 
     if seed is None:
-        seed = torch.randint(low=0, high=2**62, size=(1,), dtype=torch.int64).item()
+        seed = torch.randint(low=0, high=2**62, size=(1,),
+                             dtype=torch.int64).item()
     num_warps: int = min(max(BLOCK_D // 256, 1), 8)
     sms = torch.cuda.get_device_properties("cuda").multi_processor_count
     # Benchmark shows separating RNG from ln_mul_dropout kernel only benefits on
@@ -1174,7 +1197,11 @@ def _group_norm_mul_dropout_fwd(
     if CONCAT_UX:
         tl.store(Y + offsets, u.to(Y.dtype.element_ty), mask=mask)
         tl.store(Y + Heads * D + offsets, x.to(Y.dtype.element_ty), mask=mask)
-        tl.store(Y + 2 * Heads * D + offsets, y.to(Y.dtype.element_ty), mask=mask)
+        tl.store(
+            Y + 2 * Heads * D + offsets,
+            y.to(
+                Y.dtype.element_ty),
+            mask=mask)
     else:
         tl.store(Y + offsets, y.to(Y.dtype.element_ty), mask=mask)
 
@@ -1229,8 +1256,23 @@ def _group_norm_mul_dropout_bwd_dx_du(
     x = tl.load(X + offsets, mask=mask, other=0).to(tl.float32)
     if CONCAT_UX:
         du = tl.load(DY + offsets, mask=mask, other=0).to(tl.float32)
-        dx = tl.load(DY + Heads * D + offsets, mask=mask, other=0).to(tl.float32)
-        dy = tl.load(DY + 2 * Heads * D + offsets, mask=mask, other=0).to(tl.float32)
+        dx = tl.load(
+            DY +
+            Heads *
+            D +
+            offsets,
+            mask=mask,
+            other=0).to(
+            tl.float32)
+        dy = tl.load(
+            DY +
+            2 *
+            Heads *
+            D +
+            offsets,
+            mask=mask,
+            other=0).to(
+            tl.float32)
     else:
         du = tl.zeros([BLOCK_H, BLOCK_D], dtype=tl.float32)
         dx = tl.zeros([BLOCK_H, BLOCK_D], dtype=tl.float32)
@@ -1303,8 +1345,16 @@ def _group_norm_mul_dropout_bwd_dx_du(
                 )
         if CONCAT_UX:
             tl.store(Y + offsets, u.to(Y.dtype.element_ty), mask=mask)
-            tl.store(Y + Heads * D + offsets, x.to(Y.dtype.element_ty), mask=mask)
-            tl.store(Y + 2 * Heads * D + offsets, y.to(Y.dtype.element_ty), mask=mask)
+            tl.store(
+                Y + Heads * D + offsets,
+                x.to(
+                    Y.dtype.element_ty),
+                mask=mask)
+            tl.store(
+                Y + 2 * Heads * D + offsets,
+                y.to(
+                    Y.dtype.element_ty),
+                mask=mask)
         else:
             tl.store(Y + offsets, y.to(Y.dtype.element_ty), mask=mask)
 
@@ -1367,9 +1417,11 @@ def triton_group_norm_mul_dropout_fwd(
     assert bias.numel() == num_heads
 
     if concat_ux:
-        y = torch.empty((N, 3 * num_heads * linear_dim), dtype=x.dtype, device=x.device)
+        y = torch.empty((N, 3 * num_heads * linear_dim),
+                        dtype=x.dtype, device=x.device)
     else:
-        y = torch.empty((N, num_heads * linear_dim), dtype=x.dtype, device=x.device)
+        y = torch.empty((N, num_heads * linear_dim),
+                        dtype=x.dtype, device=x.device)
     mean = torch.empty((N * num_heads,), dtype=torch.float32, device=x.device)
     rstd = torch.empty((N * num_heads,), dtype=torch.float32, device=x.device)
     if N == 0:
@@ -1384,7 +1436,8 @@ def triton_group_norm_mul_dropout_fwd(
         )
 
     if seed is None:
-        seed = torch.randint(low=0, high=2**62, size=(1,), dtype=torch.int64).item()
+        seed = torch.randint(low=0, high=2**62, size=(1,),
+                             dtype=torch.int64).item()
     num_warps: int = min(max(BLOCK_D * BLOCK_H // 256, 1), 8)
     # pyre-ignore[28]
     _group_norm_mul_dropout_fwd[(N,)](
@@ -1444,7 +1497,8 @@ def triton_group_norm_mul_dropout_bwd(
                 (N, 3 * num_heads * linear_dim), dtype=x.dtype, device=x.device
             )
         else:
-            y = torch.empty((N, num_heads * linear_dim), dtype=x.dtype, device=x.device)
+            y = torch.empty((N, num_heads * linear_dim),
+                            dtype=x.dtype, device=x.device)
     if N == 0:
         return (
             torch.zeros_like(x),
@@ -1464,8 +1518,16 @@ def triton_group_norm_mul_dropout_bwd(
     else:
         GROUP_N = 64 * 8
     GROUP_N = N if GROUP_N > N else GROUP_N
-    _dweight = torch.zeros((GROUP_N, num_heads), dtype=torch.float32, device=x.device)
-    _dbias = torch.zeros((GROUP_N, num_heads), dtype=torch.float32, device=x.device)
+    _dweight = torch.zeros(
+        (GROUP_N,
+         num_heads),
+        dtype=torch.float32,
+        device=x.device)
+    _dbias = torch.zeros(
+        (GROUP_N,
+         num_heads),
+        dtype=torch.float32,
+        device=x.device)
     dweight = torch.empty((num_heads,), dtype=weight.dtype, device=x.device)
     dbias = torch.empty((num_heads,), dtype=weight.dtype, device=x.device)
     # pyre-ignore[28]
@@ -1713,7 +1775,14 @@ class HSTUComputeOutputFunction(torch.autograd.Function):
 
         out = maybe_triton_addmm_fwd(x=y, w=output_weight, y=x)
 
-        saved_tensors = [attn, u, norm_weight, norm_bias, mean, rstd, output_weight]
+        saved_tensors = [
+            attn,
+            u,
+            norm_weight,
+            norm_bias,
+            mean,
+            rstd,
+            output_weight]
         if not recompute_y_in_backward:
             saved_tensors.append(y)
         ctx.save_for_backward(*saved_tensors)
@@ -1953,7 +2022,8 @@ def helion_layer_norm_mul_dropout_fwd(
     N, D = x.shape
 
     if seed is None:
-        seed = torch.randint(low=0, high=2**62, size=(1,), dtype=torch.int64).item()
+        seed = torch.randint(low=0, high=2**62, size=(1,),
+                             dtype=torch.int64).item()
 
     if concat_ux:
         y = torch.empty([N, 3 * D], dtype=x.dtype, device=x.device)

@@ -258,7 +258,8 @@ class ModelFamilySparseDist:
                         activation=quant.PlaceholderObserver.with_args(
                             dtype=torch.float
                         ),
-                        weight=quant.PlaceholderObserver.with_args(dtype=torch.int8),
+                        weight=quant.PlaceholderObserver.with_args(
+                            dtype=torch.int8),
                     ),
                 },
                 mapping={
@@ -361,8 +362,10 @@ class ModelFamilyDenseDist:
         self.dist_backend = "nccl"
 
         ctx = mp.get_context("spawn")
-        self.samples_q: List[mp.Queue] = [ctx.Queue() for _ in range(self.world_size)]
-        self.result_q: List[mp.Queue] = [ctx.Queue() for _ in range(self.world_size)]
+        self.samples_q: List[mp.Queue] = [ctx.Queue()
+                                          for _ in range(self.world_size)]
+        self.result_q: List[mp.Queue] = [ctx.Queue()
+                                         for _ in range(self.world_size)]
 
     def load(self, model_path: str) -> None:
         """
@@ -387,7 +390,8 @@ class ModelFamilyDenseDist:
             p.start()
             processes.append(p)
 
-    def distributed_setup(self, rank: int, world_size: int, model_path: str) -> None:
+    def distributed_setup(self, rank: int, world_size: int,
+                          model_path: str) -> None:
         """
         Initialize and run a dense worker process.
 
@@ -431,7 +435,8 @@ class ModelFamilyDenseDist:
                     assert profiler is not None
                     profiler.step()
                 with torch.profiler.record_function("get_item_from_queue"):
-                    # Copy here to release data in the producer to avoid invalid cuda caching allocator release.
+                    # Copy here to release data in the producer to avoid
+                    # invalid cuda caching allocator release.
                     item = copy.deepcopy(item)
                     (
                         id,
@@ -510,7 +515,8 @@ class ModelFamilyDenseDist:
         max_num_candidates: int,
         num_candidates: Optional[torch.Tensor],
     ) -> Optional[
-        Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor], float]
+        Tuple[torch.Tensor, Optional[torch.Tensor],
+              Optional[torch.Tensor], float]
     ]:
         """
         Run distributed dense forward pass.

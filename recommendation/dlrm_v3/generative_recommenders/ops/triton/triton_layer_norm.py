@@ -400,8 +400,16 @@ def _weighted_layer_norm_bwd_dx(
 
             dx = dy_block * sigmoid_layer_norm + dx
             # Write dx
-            tl.store(DX_block_ptr, dx.to(DX.dtype.element_ty), boundary_check=(0, 1))
-            partial_dw = tl.sum(dy_block * x_block * xhat * sigmoid_deriv, axis=0)
+            tl.store(
+                DX_block_ptr, dx.to(
+                    DX.dtype.element_ty), boundary_check=(
+                    0, 1))
+            partial_dw = tl.sum(
+                dy_block *
+                x_block *
+                xhat *
+                sigmoid_deriv,
+                axis=0)
             partial_db = tl.sum(dy_block * x_block * sigmoid_deriv, axis=0)
         else:
             c1 = tl.sum(xhat * wdy, axis=1) / D
@@ -410,7 +418,10 @@ def _weighted_layer_norm_bwd_dx(
             c2 = tl.expand_dims(c2, 1)
             dx = (wdy - (xhat * c1 + c2)) * rstd
             # Write dx
-            tl.store(DX_block_ptr, dx.to(DX.dtype.element_ty), boundary_check=(0, 1))
+            tl.store(
+                DX_block_ptr, dx.to(
+                    DX.dtype.element_ty), boundary_check=(
+                    0, 1))
             partial_dw = tl.sum(dy_block * xhat, axis=0)
             partial_db = tl.sum(dy_block, axis=0)
 
@@ -471,8 +482,16 @@ def _layer_norm_bwd_dwdb(
 
     sum_dw = tl.sum(dw, axis=0)
     sum_db = tl.sum(db, axis=0)
-    tl.store(FINAL_DW + cols, sum_dw.to(FINAL_DW.dtype.element_ty), mask=cols < D)
-    tl.store(FINAL_DB + cols, sum_db.to(FINAL_DB.dtype.element_ty), mask=cols < D)
+    tl.store(
+        FINAL_DW + cols,
+        sum_dw.to(
+            FINAL_DW.dtype.element_ty),
+        mask=cols < D)
+    tl.store(
+        FINAL_DB + cols,
+        sum_db.to(
+            FINAL_DB.dtype.element_ty),
+        mask=cols < D)
 
 
 def triton_weighted_layer_norm_fwd(
@@ -505,13 +524,14 @@ def triton_weighted_layer_norm_fwd(
     MAX_FUSED_SIZE = 65536 // x.element_size()
     BLOCK_D: int = min(MAX_FUSED_SIZE, triton.next_power_of_2(D))
     if D > BLOCK_D:
-        raise RuntimeError("This layer norm doesn't support feature dim >= 64KB.")
+        raise RuntimeError(
+            "This layer norm doesn't support feature dim >= 64KB.")
 
     if N == 0:
         return y, mean, rstd, BLOCK_D
 
     # pyre-ignore[28]
-    grid = lambda meta: (  # noqa E731
+    def grid(meta): return (  # noqa E731
         triton.cdiv(N, meta["BLOCK_N"]),
     )
     if learnable:
@@ -569,8 +589,10 @@ def triton_weighted_layer_norm_bwd(
         dx = torch.empty_like(x)
         sms = torch.cuda.get_device_properties(x.device).multi_processor_count
         tile_num = max(1, min(sms * 8, N // 4))
-        _dweight = torch.empty((tile_num, D), dtype=torch.float32, device=x.device)
-        _dbias = torch.empty((tile_num, D), dtype=torch.float32, device=x.device)
+        _dweight = torch.empty(
+            (tile_num, D), dtype=torch.float32, device=x.device)
+        _dbias = torch.empty(
+            (tile_num, D), dtype=torch.float32, device=x.device)
         dweight = torch.empty((D,), dtype=weight.dtype, device=x.device)
         dbias = torch.empty((D,), dtype=weight.dtype, device=x.device)
         if N == 0:
@@ -768,7 +790,8 @@ def _weighted_rms_norm_fwd(
     y = y * w[None, :]
 
     if SILU:
-        # pyre-ignore[16]: Module `triton.language.math` has no attribute `fast_dividef`
+        # pyre-ignore[16]: Module `triton.language.math` has no attribute
+        # `fast_dividef`
         y = fast_dividef(y, 1.0 + tl.exp(-y))
 
     tl.store(Y_block_ptr, y.to(Y.dtype.element_ty), boundary_check=(0, 1))
@@ -928,7 +951,8 @@ def _weighted_rms_norm_bwd(
             # pyre-fixme[16]
             sig_y = fast_dividef(1.0, 1.0 + tl.exp(-y_before_silu))
             # SILU derivative: sigmoid(y) + y * sigmoid(y) * (1 - sigmoid(y))
-            dy_block = dy_block * (sig_y + y_before_silu * sig_y * (1.0 - sig_y))
+            dy_block = dy_block * \
+                (sig_y + y_before_silu * sig_y * (1.0 - sig_y))
 
         wdy = w[None, :] * dy_block
 
@@ -937,7 +961,10 @@ def _weighted_rms_norm_bwd(
         dx = (wdy - (xhat * c1)) * rstd
 
         # Write dx
-        tl.store(DX_block_ptr, dx.to(DX.dtype.element_ty), boundary_check=(0, 1))
+        tl.store(
+            DX_block_ptr, dx.to(
+                DX.dtype.element_ty), boundary_check=(
+                0, 1))
 
         # Accumulate partial sums for dw
         # Compute dw for all rows, then sum locally before atomic operation
@@ -975,7 +1002,11 @@ def _rms_norm_bwd_dwdb(
         dw += tl.load(DW + offs, mask=mask, other=0.0)
 
     sum_dw = tl.sum(dw, axis=0)
-    tl.store(FINAL_DW + cols, sum_dw.to(FINAL_DW.dtype.element_ty), mask=cols < D)
+    tl.store(
+        FINAL_DW + cols,
+        sum_dw.to(
+            FINAL_DW.dtype.element_ty),
+        mask=cols < D)
 
 
 class RMSNormFunction(torch.autograd.Function):
@@ -1001,7 +1032,8 @@ class RMSNormFunction(torch.autograd.Function):
         MAX_FUSED_SIZE = 65536 // x.element_size()
         BLOCK_D = min(MAX_FUSED_SIZE, triton.next_power_of_2(D))
         if D > BLOCK_D:
-            raise RuntimeError("This layer norm doesn't support feature dim >= 64KB.")
+            raise RuntimeError(
+                "This layer norm doesn't support feature dim >= 64KB.")
 
         ctx.save_for_backward(x, weight, rstd)
         ctx.silu = silu
@@ -1009,7 +1041,7 @@ class RMSNormFunction(torch.autograd.Function):
             return y
 
         # pyre-ignore[28]
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             triton.cdiv(N, meta["BLOCK_N"]),
         )
         _weighted_rms_norm_fwd[grid](
@@ -1110,7 +1142,7 @@ class SwishLayerNormFunction(torch.autograd.Function):
             return y
 
         # pyre-ignore[28]
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             triton.cdiv(N, meta["BLOCK_N"]),
         )
         _weighted_layer_norm_fwd[grid](
@@ -1143,8 +1175,10 @@ class SwishLayerNormFunction(torch.autograd.Function):
         dx = torch.empty_like(x)
         sms = torch.cuda.get_device_properties(x.device).multi_processor_count
         tile_num = max(1, min(sms * 8, N // 4))
-        _dweight = torch.empty((tile_num, D), dtype=torch.float32, device=x.device)
-        _dbias = torch.empty((tile_num, D), dtype=torch.float32, device=x.device)
+        _dweight = torch.empty(
+            (tile_num, D), dtype=torch.float32, device=x.device)
+        _dbias = torch.empty(
+            (tile_num, D), dtype=torch.float32, device=x.device)
         dweight = torch.empty((D,), dtype=weight.dtype, device=x.device)
         dbias = torch.empty((D,), dtype=weight.dtype, device=x.device)
         if N == 0:

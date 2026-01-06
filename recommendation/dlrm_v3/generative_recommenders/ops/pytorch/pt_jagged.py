@@ -129,7 +129,8 @@ def pytorch_concat_2D_dense_jagged(
     )
     concatted_dense = torch.cat([dense_values, jagged_dense], dim=1)
     concatted_offsets = (
-        dense_size * _arange(B + 1, device=jagged_offsets.device) + jagged_offsets
+        dense_size * _arange(B + 1,
+                             device=jagged_offsets.device) + jagged_offsets
     )
     return torch.ops.fbgemm.dense_to_jagged(
         concatted_dense,
@@ -148,7 +149,8 @@ def pytorch_concat_2D_jagged_jagged(
     is_replace: bool = False,
     n_prefix_from_right: int = 0,
 ) -> torch.Tensor:
-    # is_replace with n_prefix_from_right != 0 is not supported yet (neither in triton)
+    # is_replace with n_prefix_from_right != 0 is not supported yet (neither
+    # in triton)
     if is_replace:
         return pytorch_replace_last_n_with_jagged(
             max_seq_len_left,
@@ -179,7 +181,11 @@ def pytorch_concat_2D_jagged_jagged(
         dense_b, [n_prefix_from_right, max_seq_len_right - n_prefix_from_right], dim=1
     )
     dense = torch.cat([dense_b_prefix, dense_a, dense_b_suffix], dim=1)
-    mask = _arange(max_seq_len, device=offsets_left.device).expand(B, max_seq_len)
+    mask = _arange(
+        max_seq_len,
+        device=offsets_left.device).expand(
+        B,
+        max_seq_len)
     mask = torch.logical_or(
         mask < lengths_a.view(B, 1) + n_prefix_from_right,
         torch.logical_and(
@@ -198,8 +204,10 @@ def pytorch_jagged_remove_first_or_last_1D(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     values = values.view(-1, 1)
     shrunk_lengths = lengths - 1
-    k_lengths = torch.stack([shrunk_lengths, torch.ones_like(lengths)], dim=1).view(-1)
-    q_lengths = torch.stack([torch.ones_like(lengths), shrunk_lengths], dim=1).view(-1)
+    k_lengths = torch.stack(
+        [shrunk_lengths, torch.ones_like(lengths)], dim=1).view(-1)
+    q_lengths = torch.stack(
+        [torch.ones_like(lengths), shrunk_lengths], dim=1).view(-1)
     all_indices = torch.arange(
         start=0, end=q_lengths.numel(), device=values.device
     ).reshape(-1, 2)

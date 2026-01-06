@@ -150,7 +150,8 @@ def _add_timestamp_position_embeddings_kernel(
         seq_emb = tl.load(SeqEmb + seq_emb_offsets, mask=mask)
         pos_emb = tl.load(PosEmb + pos_emb_offsets, mask=mask)
         ts_emb = tl.load(TsEmb + ts_emb_offsets, mask=mask)
-        tl.store(out_offsets, seq_emb + (pos_emb + ts_emb).to(seq_emb.dtype), mask=mask)
+        tl.store(out_offsets, seq_emb + (pos_emb +
+                 ts_emb).to(seq_emb.dtype), mask=mask)
         seq_emb_offsets += BLOCK_D
         pos_emb_offsets += BLOCK_D
         ts_emb_offsets += BLOCK_D
@@ -274,7 +275,7 @@ class _AddTimestampPositionEmbeddingsFunction(torch.autograd.Function):
         pos_inds = torch.empty_like(seq_embeddings[:, 0], dtype=torch.int32)
         ts_emb_size = ts_embeddings.shape[0]
 
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             B,
             triton.cdiv(max_seq_len, meta["BLOCK_N"]),
         )
@@ -309,7 +310,8 @@ class _AddTimestampPositionEmbeddingsFunction(torch.autograd.Function):
             BLOCK_D=BLOCK_D,
         )
         try:
-            values = torch.arange(0, N, dtype=torch.int32, device=timestamps.device)
+            values = torch.arange(
+                0, N, dtype=torch.int32, device=timestamps.device)
             sorted_ts_key_inds, sorted_ts_value_inds = torch.ops.hammer.sort_kv_pairs(
                 ts_inds, values
             )
@@ -363,7 +365,7 @@ class _AddTimestampPositionEmbeddingsFunction(torch.autograd.Function):
         d_ts_embeddings = torch.empty(
             (ctx.ts_emb_size, ctx.D), device=d_out.device, dtype=torch.float32
         )
-        grid = lambda meta: (triton.cdiv(d_out.shape[0], meta["BLOCK"]),)  # noqa E731
+        def grid(meta): return (triton.cdiv(d_out.shape[0], meta["BLOCK"]),)  # noqa E731
         AUTOTUNE_B = prev_power_of_2(ctx.B)
         _add_embeddings_bwd_kernel[grid](
             In=d_out,

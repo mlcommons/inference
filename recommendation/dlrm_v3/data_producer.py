@@ -90,7 +90,8 @@ class SingleThreadDataProducer:
         """
         with torch.profiler.record_function("data batching"):
             t0_batching: float = time.time()
-            samples: Union[Samples, List[Samples]] = self.ds.get_samples(content_ids)
+            samples: Union[Samples, List[Samples]
+                           ] = self.ds.get_samples(content_ids)
             dt_batching: float = time.time() - t0_batching
             if isinstance(samples, Samples):
                 query = QueryItem(
@@ -106,7 +107,7 @@ class SingleThreadDataProducer:
                 for sample in samples:
                     batch_size: int = sample.batch_size()
                     query = QueryItem(
-                        query_ids=query_ids[start_idx : start_idx + batch_size],
+                        query_ids=query_ids[start_idx: start_idx + batch_size],
                         samples=sample,
                         start=t0,
                         dt_queue=dt_queue,
@@ -148,7 +149,9 @@ class MultiThreadDataProducer:
         )
         self.workers: List[threading.Thread] = []
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker = threading.Thread(
+                target=self.handle_tasks, args=(
+                    self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -172,7 +175,8 @@ class MultiThreadDataProducer:
                 break
             query_ids, content_ids, t0, dt_queue = query_and_content_ids
             t0_batching: float = time.time()
-            samples: Union[Samples, List[Samples]] = self.ds.get_samples(content_ids)
+            samples: Union[Samples, List[Samples]
+                           ] = self.ds.get_samples(content_ids)
             dt_batching: float = time.time() - t0_batching
             if isinstance(samples, Samples):
                 qitem = QueryItem(
@@ -189,7 +193,7 @@ class MultiThreadDataProducer:
                 for sample in samples:
                     batch_size: int = sample.batch_size()
                     qitem = QueryItem(
-                        query_ids=query_ids[start_idx : start_idx + batch_size],
+                        query_ids=query_ids[start_idx: start_idx + batch_size],
                         samples=sample,
                         start=t0,
                         dt_queue=dt_queue,

@@ -85,7 +85,8 @@ class ActionEncoder(HammerModule):
             watchtimes = seq_payloads[self._watchtime_feature_name]
             for threshold, weight in self._watchtime_to_action_thresholds_and_weights:
                 seq_actions = torch.bitwise_or(
-                    seq_actions, (watchtimes >= threshold).to(torch.int64) * weight
+                    seq_actions, (watchtimes >= threshold).to(
+                        torch.int64) * weight
                 )
         exploded_actions = (
             torch.bitwise_and(
@@ -94,7 +95,8 @@ class ActionEncoder(HammerModule):
             > 0
         )
         action_embeddings = (
-            exploded_actions.unsqueeze(-1) * self._action_embedding_table.unsqueeze(0)
+            exploded_actions.unsqueeze(-1) *
+            self._action_embedding_table.unsqueeze(0)
         ).view(-1, self._num_action_types * self._action_embedding_dim)
         total_targets: int = seq_embeddings.size(0) - action_embeddings.size(0)
         action_embeddings = concat_2D_jagged(

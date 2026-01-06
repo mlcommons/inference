@@ -222,7 +222,8 @@ def jagged_dense_bmm_broadcast_add_kernel(
         jg = tl.load(
             jg_ptrs,
             # pyre-fixme[16]: `int` has no attribute `__getitem__`.
-            mask=(offs_m[:, None] < (seq_len - start_m)) & ((k + offs_k)[None, :] < K),
+            mask=(offs_m[:, None] < (seq_len - start_m)
+                  ) & ((k + offs_k)[None, :] < K),
             other=0.0,
         )
         dn = tl.load(
@@ -237,10 +238,12 @@ def jagged_dense_bmm_broadcast_add_kernel(
     if HAS_BIAS:
         if ELEMENTWISE:
             Bias += (seq_start + start_m) * stride_bias_b
-            bias_ptrs = Bias + offs_m[:, None] * stride_bias_b + offs_n[None, :]
+            bias_ptrs = Bias + offs_m[:, None] * \
+                stride_bias_b + offs_n[None, :]
             bias = tl.load(
                 bias_ptrs,
-                mask=(offs_m[:, None] < (seq_len - start_m)) & (offs_n[None, :] < N),
+                mask=(offs_m[:, None] < (seq_len - start_m)
+                      ) & (offs_n[None, :] < N),
                 other=0.0,
             )
             accumulator += bias.to(tl.float32)
@@ -357,14 +360,16 @@ def _jagged_jagged_bmm_reduce_sum(
     JaggedA += seq_start * stride_ak
     JaggedB += seq_start * stride_bk
     offs_k = tl.arange(0, BLOCK_K)
-    jg_a_ptrs = JaggedA + offs_k[None, :] * stride_ak + (start_m + offs_m)[:, None]
+    jg_a_ptrs = JaggedA + offs_k[None, :] * \
+        stride_ak + (start_m + offs_m)[:, None]
     jg_b_ptrs = JaggedB + offs_k[:, None] * stride_bk + offs_n[None, :]
 
     for k in range(0, seq_len, BLOCK_K):
         jg_a = tl.load(
             jg_a_ptrs,
             # pyre-fixme[16]: `int` has no attribute `__getitem__`.
-            mask=(offs_m[:, None] < (M - start_m)) & ((k + offs_k)[None, :] < seq_len),
+            mask=(offs_m[:, None] < (M - start_m)
+                  ) & ((k + offs_k)[None, :] < seq_len),
             other=0.0,
         )
         jg_b = tl.load(
@@ -411,7 +416,7 @@ class _JaggedDenseBmmFunction(torch.autograd.Function):
         B, _, K = dense.shape
         bmm_out = torch.empty((L, K), dtype=jagged.dtype, device=jagged.device)
 
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             triton.cdiv(K, meta["BLOCK_N"]),
             triton.cdiv(max_seq_len, meta["BLOCK_M"]),
             B,
@@ -453,7 +458,7 @@ class _JaggedDenseBmmFunction(torch.autograd.Function):
         d_jagged = torch.empty_like(jagged)
         d_dense = torch.empty_like(dense)
 
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             triton.cdiv(ctx.D, meta["BLOCK_N"]),
             triton.cdiv(ctx.max_seq_len, meta["BLOCK_M"]),
             ctx.B,
@@ -478,7 +483,7 @@ class _JaggedDenseBmmFunction(torch.autograd.Function):
             ELEMENTWISE=False,
         )
 
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             triton.cdiv(ctx.D, meta["BLOCK_M"]),
             triton.cdiv(ctx.K, meta["BLOCK_N"]),
             ctx.B,
@@ -636,7 +641,7 @@ class _JaggedDenseBroadcastAddFunction(torch.autograd.Function):
         B, _ = dense.shape
         out = torch.empty_like(jagged)
 
-        grid = lambda meta: (  # noqa E731
+        def grid(meta): return (  # noqa E731
             B,
             triton.cdiv(max_seq_len, meta["BLOCK_N"]),
         )
@@ -666,7 +671,8 @@ class _JaggedDenseBroadcastAddFunction(torch.autograd.Function):
         ctx, d_out: torch.Tensor
     ) -> Tuple[None, None, torch.Tensor, torch.Tensor]:
         seq_offsets = ctx.saved_tensors[0]
-        d_dense = torch.empty((ctx.B, ctx.D), device=d_out.device, dtype=d_out.dtype)
+        d_dense = torch.empty(
+            (ctx.B, ctx.D), device=d_out.device, dtype=d_out.dtype)
         BLOCK_D = triton.next_power_of_2(ctx.D) if ctx.D < 64 else 64
         jagged_reduce_sum[(ctx.B, triton.cdiv(ctx.D, BLOCK_D))](
             seq_offsets=seq_offsets,
@@ -694,7 +700,7 @@ def triton_jagged_dense_bmm_add_fwd(
     B, _, N = dense.shape
     out = torch.empty((L, N), dtype=jagged.dtype, device=jagged.device)
 
-    grid = lambda meta: (  # noqa E731
+    def grid(meta): return (  # noqa E731
         triton.cdiv(N, meta["BLOCK_N"]),
         triton.cdiv(max_seq_len, meta["BLOCK_M"]),
         B,
@@ -733,7 +739,7 @@ def triton_jagged_dense_bmm_add_bwd_jagged(
     B: int,
     N: int,
 ) -> torch.Tensor:
-    grid = lambda meta: (  # noqa E731
+    def grid(meta): return (  # noqa E731
         triton.cdiv(K, meta["BLOCK_N"]),
         triton.cdiv(max_seq_len, meta["BLOCK_M"]),
         B,
@@ -774,7 +780,7 @@ def triton_jagged_dense_bmm_add_bwd_dense_bias(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     d_bias = torch.empty((B, N), device=d_out.device, dtype=d_out.dtype)
 
-    grid = lambda meta: (  # noqa E731
+    def grid(meta): return (  # noqa E731
         triton.cdiv(K, meta["BLOCK_M"]),
         triton.cdiv(N, meta["BLOCK_N"]),
         B,
@@ -937,7 +943,8 @@ def concat_2D_jagged_w_prefix(
                 + offs_d
             )
         else:
-            in_ptrs = ValuesA + (off_a + seq_start_a).to(tl.int64) * stride_ad + offs_d
+            in_ptrs = ValuesA + \
+                (off_a + seq_start_a).to(tl.int64) * stride_ad + offs_d
     else:
         off_b = off_n - out_seq_b_start + n_prefix_from_B
         if off_n < n_prefix_from_B:
@@ -950,7 +957,8 @@ def concat_2D_jagged_w_prefix(
                 + offs_d
             )
         else:
-            in_ptrs = ValuesB + (off_b + seq_start_b).to(tl.int64) * stride_bd + offs_d
+            in_ptrs = ValuesB + \
+                (off_b + seq_start_b).to(tl.int64) * stride_bd + offs_d
     v = tl.load(in_ptrs, mask=offs_d < D)
     tl.store(out_ptrs, v, mask=offs_d < D)
 
@@ -1084,12 +1092,14 @@ def split_2D_jagged_w_prefix(
     in_ptrs = JaggedIn + (seq_start + off_n).to(tl.int64) * stride_id + offs_d
     if off_n < out_seq_b_start and off_n >= n_prefix_to_B:
         off_a = off_n - n_prefix_to_B
-        out_ptrs = OutA + (off_a + seq_start_a).to(tl.int64) * stride_ad + offs_d
+        out_ptrs = OutA + (off_a + seq_start_a).to(tl.int64) * \
+            stride_ad + offs_d
     else:
         off_b = off_n - out_seq_b_start + n_prefix_to_B
         if off_n < n_prefix_to_B:
             off_b += out_seq_b_start - n_prefix_to_B
-        out_ptrs = OutB + (off_b + seq_start_b).to(tl.int64) * stride_bd + offs_d
+        out_ptrs = OutB + (off_b + seq_start_b).to(tl.int64) * \
+            stride_bd + offs_d
     v = tl.load(in_ptrs, mask=offs_d < D)
     tl.store(out_ptrs, v, mask=offs_d < D)
 
@@ -1425,9 +1435,11 @@ class _Split2DJaggedFunction(torch.autograd.Function):
                     offsets_b.device, non_blocking=True
                 )
                 if seq_len_a is None:
-                    seq_len_a = offsets_a.index_select(dim=0, index=offsets_a_last_idx)
+                    seq_len_a = offsets_a.index_select(
+                        dim=0, index=offsets_a_last_idx)
                 if seq_len_b is None:
-                    seq_len_b = offsets_b.index_select(dim=0, index=offsets_b_last_idx)
+                    seq_len_b = offsets_b.index_select(
+                        dim=0, index=offsets_b_last_idx)
             else:
                 if seq_len_a is None:
                     seq_len_a = int(offsets_a[-1].item())
@@ -1436,9 +1448,11 @@ class _Split2DJaggedFunction(torch.autograd.Function):
         _, D = values.shape
         BLOCK_D = triton.next_power_of_2(D)
         # pyre-ignore[6] Incompatible parameter type
-        values_a = torch.empty((seq_len_a, D), device=values.device, dtype=values.dtype)
+        values_a = torch.empty(
+            (seq_len_a, D), device=values.device, dtype=values.dtype)
         # pyre-ignore[6] Incompatible parameter type
-        values_b = torch.empty((seq_len_b, D), device=values.device, dtype=values.dtype)
+        values_b = torch.empty(
+            (seq_len_b, D), device=values.device, dtype=values.dtype)
         _triton_split_2D_jagged_internal(
             jagged_in=values,
             max_seq_len=max_seq_len,
@@ -1599,7 +1613,8 @@ def triton_jagged_dense_bmm(
     jagged: torch.Tensor,
     dense: torch.Tensor,
 ) -> torch.Tensor:
-    return _JaggedDenseBmmFunction.apply(max_seq_len, seq_offsets, jagged, dense)
+    return _JaggedDenseBmmFunction.apply(
+        max_seq_len, seq_offsets, jagged, dense)
 
 
 @torch.jit.unused
@@ -1690,7 +1705,8 @@ def concat_2D_jagged_w_prefix_multirow(
         + offs_d[None, :]
     )
 
-    to_a_mask = (offs_n < out_seq_b_start) & (offs_n >= n_prefix_from_B) & valid_mask
+    to_a_mask = (offs_n < out_seq_b_start) & (
+        offs_n >= n_prefix_from_B) & valid_mask
     to_b_mask = ~to_a_mask & valid_mask
 
     off_a = offs_n - n_prefix_from_B
@@ -1708,12 +1724,18 @@ def concat_2D_jagged_w_prefix_multirow(
             + offs_d[None, :]
         )
 
-    v_a = tl.load(in_a_ptrs, mask=to_a_mask[:, None] & (offs_d[None, :] < D), other=0.0)
+    v_a = tl.load(in_a_ptrs, mask=to_a_mask[:, None] & (
+        offs_d[None, :] < D), other=0.0)
     tl.store(out_ptrs, v_a, mask=to_a_mask[:, None] & (offs_d[None, :] < D))
 
     prefix_mask = offs_n < n_prefix_from_B
 
-    off_b = tl.where(prefix_mask, offs_n, offs_n - out_seq_b_start + n_prefix_from_B)
+    off_b = tl.where(
+        prefix_mask,
+        offs_n,
+        offs_n -
+        out_seq_b_start +
+        n_prefix_from_B)
     if IS_DENSE_B:
         in_b_ptrs = (
             ValuesB
@@ -1728,7 +1750,8 @@ def concat_2D_jagged_w_prefix_multirow(
             + offs_d[None, :]
         )
 
-    v_b = tl.load(in_b_ptrs, mask=to_b_mask[:, None] & (offs_d[None, :] < D), other=0.0)
+    v_b = tl.load(in_b_ptrs, mask=to_b_mask[:, None] & (
+        offs_d[None, :] < D), other=0.0)
     tl.store(out_ptrs, v_b, mask=to_b_mask[:, None] & (offs_d[None, :] < D))
 
 
@@ -1883,22 +1906,31 @@ def split_2D_jagged_w_prefix_multirow(
         + offs_d[None, :]
     )
 
-    v = tl.load(in_ptrs, mask=valid_mask[:, None] & (offs_d[None, :] < D), other=0.0)
+    v = tl.load(in_ptrs, mask=valid_mask[:, None] & (
+        offs_d[None, :] < D), other=0.0)
 
-    to_a_mask = (offs_n < out_seq_b_start) & (offs_n >= n_prefix_to_B) & valid_mask
+    to_a_mask = (offs_n < out_seq_b_start) & (
+        offs_n >= n_prefix_to_B) & valid_mask
     to_b_mask = ~to_a_mask & valid_mask
 
     off_a = offs_n - n_prefix_to_B
     out_a_ptrs = (
-        OutA + (off_a[:, None] + seq_start_a).to(tl.int64) * stride_ad + offs_d[None, :]
+        OutA + (off_a[:, None] + seq_start_a).to(tl.int64) *
+        stride_ad + offs_d[None, :]
     )
     tl.store(out_a_ptrs, v, mask=to_a_mask[:, None] & (offs_d[None, :] < D))
 
     prefix_mask = offs_n < n_prefix_to_B
 
-    off_b = tl.where(prefix_mask, offs_n, offs_n - out_seq_b_start + n_prefix_to_B)
+    off_b = tl.where(
+        prefix_mask,
+        offs_n,
+        offs_n -
+        out_seq_b_start +
+        n_prefix_to_B)
     out_b_ptrs = (
-        OutB + (off_b[:, None] + seq_start_b).to(tl.int64) * stride_bd + offs_d[None, :]
+        OutB + (off_b[:, None] + seq_start_b).to(tl.int64) *
+        stride_bd + offs_d[None, :]
     )
     tl.store(out_b_ptrs, v, mask=to_b_mask[:, None] & (offs_d[None, :] < D))
 
@@ -2023,7 +2055,10 @@ def _helion_split_2d_jagged_kernel(
         ),
     )
     # Load output boundaries for part A
-    out_a_start = tl.load(offsets_a + batch_id * 1, None, eviction_policy="evict_last")
+    out_a_start = tl.load(
+        offsets_a + batch_id * 1,
+        None,
+        eviction_policy="evict_last")
     batch_id_plus_1 = 1 + triton_helpers.div_floor_integer(
         flat_program_id,
         triton_helpers.div_floor_integer(
@@ -2079,7 +2114,8 @@ def _helion_split_2d_jagged_kernel(
             disallow_acc_multi_buffer=True,
             flatten=True,
         ):
-            feature_indices = feature_offset + tl.arange(0, _BLOCK_SIZE_1).to(tl.int32)
+            feature_indices = feature_offset + \
+                tl.arange(0, _BLOCK_SIZE_1).to(tl.int32)
 
             # Compute D constant and feature mask once per feature iteration
             D_const = tl.full([], tl.cast(D, tl.int32), tl.int32)
@@ -2090,15 +2126,18 @@ def _helion_split_2d_jagged_kernel(
             row_subscript = row_indices[:, None]
             input_row_a = input_start_i32 + row_subscript
             input_idx_a = (
-                tl.cast(input_row_a * D_const, tl.int32) + feature_indices[None, :]
+                tl.cast(input_row_a * D_const, tl.int32) +
+                feature_indices[None, :]
             )
 
             out_a_row = out_a_start_i32 + row_subscript
             out_a_idx = (
-                tl.cast(out_a_row * D_const, tl.int32) + feature_indices[None, :]
+                tl.cast(out_a_row * D_const, tl.int32) +
+                feature_indices[None, :]
             )
 
-            mask_a = is_part_a[:, None] & valid_mask[:, None] & feature_mask[None, :]
+            mask_a = is_part_a[:, None] & valid_mask[:,
+                                                     None] & feature_mask[None, :]
 
             # Load and store part A data
             slice_a = tl.load(
@@ -2118,7 +2157,8 @@ def _helion_split_2d_jagged_kernel(
             row_minus_len_a = row_subscript - len_a_i32
             out_b_row = out_b_start_i32 + row_minus_len_a
             out_b_idx = (
-                tl.cast(out_b_row * D_const, tl.int32) + feature_indices[None, :]
+                tl.cast(out_b_row * D_const, tl.int32) +
+                feature_indices[None, :]
             )
 
             mask_b = is_part_b[:, None] & feature_mask[None, :]
@@ -2185,8 +2225,10 @@ def _helion_split_2d_jagged(
     num_seq_blocks = (max_seq_len + block_size_0 - 1) // block_size_0
     total_len_a = int(offsets_a[-1].item())
     total_len_b = int(offsets_b[-1].item())
-    out_a = torch.empty([total_len_a, D], dtype=values.dtype, device=values.device)
-    out_b = torch.empty([total_len_b, D], dtype=values.dtype, device=values.device)
+    out_a = torch.empty(
+        [total_len_a, D], dtype=values.dtype, device=values.device)
+    out_b = torch.empty(
+        [total_len_b, D], dtype=values.dtype, device=values.device)
     values_flat = values.view(-1)
     out_a_flat = out_a.view(-1)
     out_b_flat = out_b.view(-1)

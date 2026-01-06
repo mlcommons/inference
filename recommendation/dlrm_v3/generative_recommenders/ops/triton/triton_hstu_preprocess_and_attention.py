@@ -189,7 +189,8 @@ class _HSTUPreprocessAndAttentionFunction(torch.autograd.Function):
             idx += 1
         if ctx.recompute_uvqk_in_backward:
             uvqk_bias = ctx.saved_tensors[idx]
-            uvqk = maybe_triton_addmm_fwd(x=normed_x, w=uvqk_weight, y=uvqk_bias)
+            uvqk = maybe_triton_addmm_fwd(
+                x=normed_x, w=uvqk_weight, y=uvqk_bias)
             idx += 1
         else:
             uvqk = ctx.saved_tensors[idx]

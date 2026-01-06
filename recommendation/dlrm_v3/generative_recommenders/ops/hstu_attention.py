@@ -34,7 +34,7 @@ try:
     from hammer.ops.triton.cc.hstu_attention.triton_cc_hstu_attention import (
         triton_cc_hstu_mha,
     )
-except:
+except BaseException:
     from generative_recommenders.ops.triton.triton_hstu_attention import (
         triton_hstu_mha as triton_cc_hstu_mha,
     )
@@ -75,8 +75,12 @@ def hstu_mha(
             torch._assert(q.is_cuda, "q must be CUDA tensor")
             torch._assert(k.is_cuda, "k must be CUDA tensor")
             torch._assert(v.is_cuda, "v must be CUDA tensor")
-            torch._assert(seq_offsets.is_cuda, "seq_offsets must be CUDA tensor")
-            torch._assert(dropout_pr < 1e-6, "dropout for triton path not implemented")
+            torch._assert(
+                seq_offsets.is_cuda,
+                "seq_offsets must be CUDA tensor")
+            torch._assert(
+                dropout_pr < 1e-6,
+                "dropout for triton path not implemented")
             torch._assert(
                 min_full_attn_seq_len == 0, "min_full_attn_seq_len not implemented"
             )
@@ -159,9 +163,13 @@ def delta_hstu_mha(
     if kernel in [HammerKernel.TRITON, HammerKernel.TRITON_CC]:
         if not is_fx_tracing() and kernel == HammerKernel.TRITON:
             torch._assert(delta_q.is_cuda, "q must be CUDA tensor")
-            torch._assert(seq_offsets.is_cuda, "seq_offsets must be CUDA tensor")
+            torch._assert(
+                seq_offsets.is_cuda,
+                "seq_offsets must be CUDA tensor")
             if num_targets is not None:
-                torch._assert(num_targets.is_cuda, "num_targets must be CUDA tensor")
+                torch._assert(
+                    num_targets.is_cuda,
+                    "num_targets must be CUDA tensor")
         seq_offsets = seq_offsets.contiguous()
         delta_q = switch_to_contiguous_if_needed(delta_q)
         k = switch_to_contiguous_if_needed(k)

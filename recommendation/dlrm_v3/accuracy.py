@@ -67,9 +67,10 @@ def main() -> None:
         num_candidates = data[-1].astype(int)
         assert len(data) == 1 + num_candidates * 3
         mt_target_preds = torch.from_numpy(data[0:num_candidates])
-        mt_target_labels = torch.from_numpy(data[num_candidates : num_candidates * 2])
+        mt_target_labels = torch.from_numpy(
+            data[num_candidates: num_candidates * 2])
         mt_target_weights = torch.from_numpy(
-            data[num_candidates * 2 : num_candidates * 3]
+            data[num_candidates * 2: num_candidates * 3]
         )
         num_candidates = torch.tensor([num_candidates])
         metrics.update(

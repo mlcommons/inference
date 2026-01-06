@@ -254,7 +254,8 @@ class L2STU(DynamicSTU):
             x_lengths - self._max_l2_len - num_targets - self._contextual_seq_len
         )
         prefix_lengths = torch.clamp(prefix_lengths, min=0)
-        prefix_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(prefix_lengths)
+        prefix_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(
+            prefix_lengths)
         l2_lengths = x_lengths - prefix_lengths
         l2_offsets = x_offsets - prefix_offsets
         self._runtime_max_l2_len: int = fx_infer_max_len(l2_lengths)

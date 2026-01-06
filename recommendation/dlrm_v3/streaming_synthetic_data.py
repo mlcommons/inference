@@ -133,7 +133,8 @@ class StreamingSyntheticDataGenerator:
         total_cnt = sum(category_to_cnt.values())
         p = np.array(
             [
-                (alpha / len(categories) + category_to_cnt[c]) / (alpha + total_cnt)
+                (alpha / len(categories) +
+                 category_to_cnt[c]) / (alpha + total_cnt)
                 for c in categories
             ]
         )
@@ -146,7 +147,8 @@ class StreamingSyntheticDataGenerator:
         )
         sample_inds = np.random.randint(0, sample_end_idx, size=seq_len)
         offsets = np.array(
-            [self.category_to_start_end_item_idx[cat][0] for cat in item_categories]
+            [self.category_to_start_end_item_idx[cat][0]
+                for cat in item_categories]
         )
         sample_inds = sample_inds + offsets
         num_categories = len(categories)
@@ -205,7 +207,8 @@ class StreamingSyntheticDataGenerator:
             for i in range(seq_len)
         ]
         if not inference:
-            sub_indices = random.sample(range(seq_len), self.num_eval_candidates)
+            sub_indices = random.sample(
+                range(seq_len), self.num_eval_candidates)
             sample_candidate_inds = [sample_inds[i] for i in sub_indices]
             sample_candidate_ratings = [sample_ratings[i] for i in sub_indices]
             sample_uih_inds = sample_inds
@@ -281,7 +284,10 @@ class StreamingSyntheticDataGenerator:
         Returns:
             List of CSV row values for this user's data.
         """
-        categories = random.sample(range(self.num_categories), self.categories_per_user)
+        categories = random.sample(
+            range(
+                self.num_categories),
+            self.categories_per_user)
         category_to_cnt = {c: 0 for c in categories}
         out_list: List[str] = []
         # t = -1 as base UIH
@@ -304,7 +310,8 @@ class StreamingSyntheticDataGenerator:
             ts_buffers=ts_buffers,
         )
         out_list.append(",".join([str(ind) for ind in sample_candidate_inds]))
-        out_list.append(",".join([str(rat) for rat in sample_candidate_ratings]))
+        out_list.append(",".join([str(rat)
+                        for rat in sample_candidate_ratings]))
         out_list.append(",".join([str(ind) for ind in sample_inds]))
         out_list.append(",".join([str(rat) for rat in sample_ratings]))
         # train
@@ -328,7 +335,8 @@ class StreamingSyntheticDataGenerator:
                     file_idx=file_idx,
                     ts_buffers=ts_buffers,
                 )
-                out_list.append(",".join([str(ind) for ind in sample_candidate_inds]))
+                out_list.append(",".join([str(ind)
+                                for ind in sample_candidate_inds]))
                 out_list.append(
                     ",".join([str(rat) for rat in sample_candidate_ratings])
                 )
@@ -356,7 +364,8 @@ class StreamingSyntheticDataGenerator:
             ts_buffers=ts_buffers,
         )
         out_list.append(",".join([str(ind) for ind in sample_candidate_inds]))
-        out_list.append(",".join([str(rat) for rat in sample_candidate_ratings]))
+        out_list.append(",".join([str(rat)
+                        for rat in sample_candidate_ratings]))
         out_list.append(",".join([str(ind) for ind in sample_inds]))
         out_list.append(",".join([str(rat) for rat in sample_ratings]))
         # inference
@@ -382,7 +391,8 @@ class StreamingSyntheticDataGenerator:
                     file_idx=file_idx,
                     ts_buffers=ts_buffers,
                 )
-                out_list.append(",".join([str(ind) for ind in sample_candidate_inds]))
+                out_list.append(",".join([str(ind)
+                                for ind in sample_candidate_inds]))
                 out_list.append(
                     ",".join([str(rat) for rat in sample_candidate_ratings])
                 )
@@ -491,7 +501,10 @@ def worker(
         rank=rank,
     )
     num_files_per_rank = num_files // world_size
-    file_indices = [i + rank * num_files_per_rank for i in range(num_files_per_rank)]
+    file_indices = [
+        i +
+        rank *
+        num_files_per_rank for i in range(num_files_per_rank)]
     for file_idx in file_indices:
         logger.warning(f"rank {rank}: start generating file {file_idx}")
         generator.write_dataset(
@@ -534,7 +547,8 @@ def write_offset(output_folder: str, num_files: int, num_users: int) -> None:
             writer.writerow([",".join([str(offset) for offset in offsets])])
 
 
-def write_ts_metadata(output_folder: str, total_ts: int, num_files: int) -> None:
+def write_ts_metadata(output_folder: str, total_ts: int,
+                      num_files: int) -> None:
     """
     Write timestamp metadata for streaming simulation.
 
@@ -563,7 +577,8 @@ def write_ts_metadata(output_folder: str, total_ts: int, num_files: int) -> None
                         num_users_per_file.append(size)
                 cumsum = np.cumsum(num_users_per_file).tolist()
                 assert cumsum[-1] == len(requests)
-                requests_writer.writerow([",".join([str(r) for r in requests])])
+                requests_writer.writerow(
+                    [",".join([str(r) for r in requests])])
                 cumsum_writer.writerow([",".join([str(s) for s in cumsum])])
                 logger.warning(f"ts {ts} finished")
     with open(
@@ -579,7 +594,8 @@ def write_ts_metadata(output_folder: str, total_ts: int, num_files: int) -> None
                 if not line:
                     break
                 offsets.append(offset)
-        assert len(offsets) == total_ts, f"total_ts {total_ts} != {len(offsets)}"
+        assert len(
+            offsets) == total_ts, f"total_ts {total_ts} != {len(offsets)}"
         logger.warning("offsets for file requests_per_ts.csv finished")
         writer.writerow([",".join([str(offset) for offset in offsets])])
 

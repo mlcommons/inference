@@ -92,11 +92,13 @@ class LayerNormPostprocessor(OutputPostprocessor):
     ) -> torch.Tensor:
         # pyre-fixme[6]: For 1st argument expected `dtype` but got `Union[dtype,
         #  Tensor, Module]`.
-        return self._layer_norm(seq_embeddings.to(self._layer_norm.weight.dtype))
+        return self._layer_norm(seq_embeddings.to(
+            self._layer_norm.weight.dtype))
 
 
 @torch.fx.wrap
-def _unsqueeze_if_needed(t: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+def _unsqueeze_if_needed(t: torch.Tensor,
+                         embedding: torch.Tensor) -> torch.Tensor:
     if embedding.dim() == 3:
         return t.unsqueeze(0)
     return t
@@ -141,7 +143,8 @@ class TimestampLayerNormPostprocessor(OutputPostprocessor):
 
         timestamps = timestamps.unsqueeze(-1)
         period_units = _unsqueeze_if_needed(period_units, combined_embeddings)
-        units_per_period = _unsqueeze_if_needed(units_per_period, combined_embeddings)
+        units_per_period = _unsqueeze_if_needed(
+            units_per_period, combined_embeddings)
         _units_since_epoch = torch.div(
             timestamps, period_units, rounding_mode="floor"
         )  # [sum(N_i), num_time_features] or [B, N, num_time_features]
@@ -161,7 +164,8 @@ class TimestampLayerNormPostprocessor(OutputPostprocessor):
             -2, -1
         )  # [sum(N_i), num_time_features * 2] or [B, N, num_time_features * 2]
         _units_elapsed = _cast_dtype(_units_elapsed, _units_elapsed_type)
-        combined_embeddings = torch.cat([combined_embeddings, _units_elapsed], dim=-1)
+        combined_embeddings = torch.cat(
+            [combined_embeddings, _units_elapsed], dim=-1)
         return combined_embeddings
 
     def forward(
@@ -171,6 +175,7 @@ class TimestampLayerNormPostprocessor(OutputPostprocessor):
         seq_payloads: Dict[str, torch.Tensor],
     ) -> torch.Tensor:
         user_embeddings = self._time_feature_combiner(
-            self._concat_time_features(seq_embeddings, timestamps=seq_timestamps)
+            self._concat_time_features(
+                seq_embeddings, timestamps=seq_timestamps)
         )
         return self._layer_norm(user_embeddings)

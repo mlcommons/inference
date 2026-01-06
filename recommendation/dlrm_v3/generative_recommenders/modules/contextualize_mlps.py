@@ -127,7 +127,8 @@ class ParameterizedContextualizedMLP(ContextualizedMLP):
         max_seq_len: int,
         contextual_embeddings: Optional[torch.Tensor],
     ) -> torch.Tensor:
-        shared_input = self._dense_features_compress(none_throws(contextual_embeddings))
+        shared_input = self._dense_features_compress(
+            none_throws(contextual_embeddings))
         attn_weights = self._attn_weights_norm(
             self._attn_raw_weights(shared_input).reshape(
                 -1, self._sequential_input_dim, self._sequential_output_dim

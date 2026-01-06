@@ -17,6 +17,31 @@
 mlperf dlrm_v3 inference benchmarking tool.
 """
 
+from utils import (
+    get_dataset,
+    profiler_or_nullcontext,
+    SUPPORTED_DATASETS,
+)
+from model_family import HSTUModelFamily
+from inference_modules import set_is_inference
+from data_producer import (
+    MultiThreadDataProducer,
+    QueryItem,
+    SingleThreadDataProducer,
+)
+from datasets.synthetic_streaming import (
+    DLRMv3SyntheticStreamingDataset,
+)
+from datasets.dataset import Dataset, Samples
+from configs import get_embedding_table_config, get_hstu_configs
+from generative_recommenders.common import set_dev_mode, set_verbose_level
+import torch
+import numpy as np
+import mlperf_loadgen as lg  # @manual
+from typing import Any, Dict, List, Optional, Union
+import time
+import sys
+import os
 import argparse
 import array
 import logging
@@ -24,33 +49,8 @@ import random
 import threading
 
 logging.basicConfig(level=logging.INFO)
-import os
-import sys
-import time
-from typing import Any, Dict, List, Optional, Union
 
 # pyre-ignore [21]
-import mlperf_loadgen as lg  # @manual
-import numpy as np
-import torch
-from generative_recommenders.common import set_dev_mode, set_verbose_level
-from configs import get_embedding_table_config, get_hstu_configs
-from datasets.dataset import Dataset, Samples
-from datasets.synthetic_streaming import (
-    DLRMv3SyntheticStreamingDataset,
-)
-from data_producer import (
-    MultiThreadDataProducer,
-    QueryItem,
-    SingleThreadDataProducer,
-)
-from inference_modules import set_is_inference
-from model_family import HSTUModelFamily
-from utils import (
-    get_dataset,
-    profiler_or_nullcontext,
-    SUPPORTED_DATASETS,
-)
 
 logger: logging.Logger = logging.getLogger("main")
 
@@ -221,15 +221,17 @@ class Runner:
                     query_mt_target_preds = (
                         mt_target_preds[  # pyre-ignore [61]
                             0,
-                            candidate_size * i : candidate_size * (i + 1),
+                            candidate_size * i: candidate_size * (i + 1),
                         ]
                         .view(-1)
                         .float()
                         .numpy()
                     )
-                    response_array = array.array("B", query_mt_target_preds.tobytes())
+                    response_array = array.array(
+                        "B", query_mt_target_preds.tobytes())
                     bi = response_array.buffer_info()
-                    # since we send buffer to loadgen, needs `response_array` in memory during send
+                    # since we send buffer to loadgen, needs `response_array`
+                    # in memory during send
                     lg.QuerySamplesComplete(
                         [lg.QuerySampleResponse(query_id, bi[0], bi[1])]
                     )
@@ -237,7 +239,7 @@ class Runner:
                 for i, query_id in enumerate(qitem.query_ids):
                     query_mt_target_preds = (
                         mt_target_preds[  # pyre-ignore [61]
-                            0, candidate_size * i : candidate_size * (i + 1)
+                            0, candidate_size * i: candidate_size * (i + 1)
                         ]
                         .view(-1)
                         .float()
@@ -245,7 +247,7 @@ class Runner:
                     )
                     query_mt_target_labels = (
                         mt_target_labels[  # pyre-ignore [16,61]
-                            0, candidate_size * i : candidate_size * (i + 1)
+                            0, candidate_size * i: candidate_size * (i + 1)
                         ]
                         .view(-1)
                         .float()
@@ -253,7 +255,7 @@ class Runner:
                     )
                     query_mt_target_weights = (
                         mt_target_weights[  # pyre-ignore [61]
-                            0, candidate_size * i : candidate_size * (i + 1)
+                            0, candidate_size * i: candidate_size * (i + 1)
                         ]
                         .view(-1)
                         .float()
@@ -269,7 +271,8 @@ class Runner:
                     )
                     response_array = array.array("B", np_array.tobytes())
                     bi = response_array.buffer_info()
-                    # since we send buffer to loadgen, needs `response_array` in memory during send
+                    # since we send buffer to loadgen, needs `response_array`
+                    # in memory during send
                     lg.QuerySamplesComplete(
                         [lg.QuerySampleResponse(query_id, bi[0], bi[1])]
                     )
@@ -297,10 +300,10 @@ class Runner:
             for i in range(len(self.current_query_ids) // self.batchsize):
                 self.data_producer.enqueue(
                     query_ids=self.current_query_ids[
-                        i * self.batchsize : (i + 1) * self.batchsize
+                        i * self.batchsize: (i + 1) * self.batchsize
                     ],
                     content_ids=self.current_content_ids[
-                        i * self.batchsize : (i + 1) * self.batchsize
+                        i * self.batchsize: (i + 1) * self.batchsize
                     ],
                     t0=t0,
                     dt_queue=dt_queue,
@@ -345,7 +348,8 @@ def add_results(
         timing: list[float] = [result[key] for result in result_timing]
         buckets: List[float] = np.percentile(timing, percentiles).tolist()
         buckets_str: str = ",".join(
-            ["| {}:{:.4f}| ".format(p, b) for p, b in zip(percentiles, buckets)]
+            ["| {}:{:.4f}| ".format(p, b)
+             for p, b in zip(percentiles, buckets)]
         )
         buckets_dict[key] = buckets
         buckets_str_dict[key] = buckets_str
@@ -397,7 +401,8 @@ def get_num_queries(
         Number of queries to execute in the benchmark run.
     """
     if scenario_name == "Offline":
-        # consistent with https://github.com/mlcommons/inference/blob/8999c4d686f6e4a180da14597c97063fce7c9f33/loadgen/test_settings_internal.cc#L147
+        # consistent with
+        # https://github.com/mlcommons/inference/blob/8999c4d686f6e4a180da14597c97063fce7c9f33/loadgen/test_settings_internal.cc#L147
         return int(1.1 * target_duration / 1000 * offline_target_qps)
     else:
         if input_size is None:
@@ -547,7 +552,8 @@ class StreamingQuerySampler:
             if curr_ts_idx == self.inference_ts - 1:
                 curr_ts_queries += self.remaining_queries
             begin_query_idx: int = self.ts_processed_cnt
-            end_query_idx: int = min(begin_query_idx + batch_size, curr_ts_queries)
+            end_query_idx: int = min(
+                begin_query_idx + batch_size, curr_ts_queries)
             begin_request_idx: int = begin_query_idx % curr_ts_unique_requests
             end_request_idx: int = end_query_idx % curr_ts_unique_requests
             if begin_query_idx + batch_size >= curr_ts_queries:
@@ -639,7 +645,8 @@ def run(
     """
     set_dev_mode(False)
     if scenario_name not in SCENARIO_MAP:
-        raise NotImplementedError("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
+        raise NotImplementedError(
+            "valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     scenario = SCENARIO_MAP[scenario_name]
     np.random.seed(numpy_rand_seed)
     random.seed(numpy_rand_seed)
@@ -773,7 +780,8 @@ def run(
             ds.unload_query_samples,
         )
         with profiler_or_nullcontext(enabled=output_trace, with_stack=False):
-            logger.info(f"starting warmup {scenario} with {warmup_count} queries")
+            logger.info(
+                f"starting warmup {scenario} with {warmup_count} queries")
             lg.StartTest(sut, qsl, settings)
             lg.DestroyQSL(qsl)
             lg.DestroySUT(sut)

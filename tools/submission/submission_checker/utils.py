@@ -83,6 +83,7 @@ def get_boolean(s):
             f"Variable should be bool, string or int, got {type(s)} instead"
         )
 
+
 def merge_two_dict(x, y):
     z = x.copy()
     for key in y:
@@ -92,11 +93,13 @@ def merge_two_dict(x, y):
             z[key] += y[key]
     return z
 
+
 def sum_dict_values(x):
     count = 0
     for key in x:
         count += x[key]
     return count
+
 
 def is_number(s):
     try:
@@ -104,7 +107,7 @@ def is_number(s):
         return True
     except ValueError:
         return False
-    
+
 
 def get_performance_metric(
         config, model, path, scenario_fixed):
@@ -303,7 +306,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

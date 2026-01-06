@@ -260,8 +260,9 @@ struct TestSettings {
   /// \brief Overrides QSL->PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;
   /// \brief Specifies the number of samples for accuracy evaluation.
-  /// When non-zero, accuracy mode generates sample indices [0, accuracy_sample_count_override).
-  /// When zero (default), uses performance_sample_count.
+  /// When non-zero, accuracy mode generates sample indices [0,
+  /// accuracy_sample_count_override). When zero (default), uses
+  /// performance_sample_count.
   uint64_t accuracy_sample_count_override = 0;
   /// \brief Measure token latencies
   bool use_token_latencies = false;

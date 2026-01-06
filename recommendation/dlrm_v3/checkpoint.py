@@ -46,7 +46,8 @@ class SparseState(Stateful):
         sparse_tensor_keys: Set of keys identifying sparse tensors in the model's state dict.
     """
 
-    def __init__(self, model: torch.nn.Module, sparse_tensor_keys: Set[str]) -> None:
+    def __init__(self, model: torch.nn.Module,
+                 sparse_tensor_keys: Set[str]) -> None:
         self.model = model
         self.sparse_tensor_keys = sparse_tensor_keys
 
@@ -62,7 +63,8 @@ class SparseState(Stateful):
         return out_dict
 
     def load_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
-        incompatible_keys = self.model.load_state_dict(state_dict, strict=False)
+        incompatible_keys = self.model.load_state_dict(
+            state_dict, strict=False)
         assert not incompatible_keys.unexpected_keys
 
 
@@ -70,9 +72,14 @@ def is_sparse_key(k: str, v: torch.Tensor) -> bool:
     return isinstance(v, ShardedTensor) or "embedding_collection" in k
 
 
-def load_dense_state_dict(model: torch.nn.Module, state_dict: Dict[str, Any]) -> None:
+def load_dense_state_dict(model: torch.nn.Module,
+                          state_dict: Dict[str, Any]) -> None:
     own_state = model.state_dict()
-    own_state_dense_keys = {k for k, v in own_state.items() if not is_sparse_key(k, v)}
+    own_state_dense_keys = {
+        k for k,
+        v in own_state.items() if not is_sparse_key(
+            k,
+            v)}
     state_dict_dense_keys = {
         k for k, v in state_dict.items() if not is_sparse_key(k, v)
     }
@@ -156,7 +163,8 @@ def save_dmp_checkpoint(
     sparse_dict = {"sparse_dict": SparseState(model, sparse_tensor_keys)}
     torch.distributed.checkpoint.save(
         sparse_dict,
-        storage_writer=torch.distributed.checkpoint.FileSystemWriter(sparse_path),
+        storage_writer=torch.distributed.checkpoint.FileSystemWriter(
+            sparse_path),
     )
     torch.distributed.barrier()
     print("checkpoint successfully saved")
@@ -178,7 +186,8 @@ def load_sparse_checkpoint(
     gc.collect()
     torch.distributed.checkpoint.load(
         sparse_dict,
-        storage_reader=torch.distributed.checkpoint.FileSystemReader(sparse_path),
+        storage_reader=torch.distributed.checkpoint.FileSystemReader(
+            sparse_path),
     )
     gc.collect()
     print("sparse checkpoint successfully loaded")

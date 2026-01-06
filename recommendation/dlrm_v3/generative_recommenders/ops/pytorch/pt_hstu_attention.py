@@ -60,9 +60,16 @@ def _get_valid_attn_mask(
         row_ids = row_ids.view(1, N, N)
         col_ids = col_ids.view(1, N, N)
     row_col_dist = row_ids - col_ids
-    valid_attn_mask = torch.eye(N, device=device, dtype=torch.bool).view(1, N, N)
+    valid_attn_mask = torch.eye(
+        N,
+        device=device,
+        dtype=torch.bool).view(
+        1,
+        N,
+        N)
     if not causal:
-        row_col_dist = torch.where(row_col_dist > 0, row_col_dist, -row_col_dist)
+        row_col_dist = torch.where(
+            row_col_dist > 0, row_col_dist, -row_col_dist)
     valid_attn_mask = torch.logical_or(valid_attn_mask, row_col_dist > 0)
     if max_attn_len > 0:
         if min_full_attn_seq_len > 0:
@@ -184,7 +191,9 @@ def pytorch_hstu_mha(
         qk_attn = F.dropout(qk_attn, p=dropout_pr, training=training)
     attn_dense = torch.einsum("bhxd,bhdv->bhxv", qk_attn, v)  # [B, H, N, V]
     return torch.ops.fbgemm.dense_to_jagged(
-        attn_dense.transpose(1, 2).flatten(2, 3),  # [B, N, H, V]->[B, N, H * V]
+        attn_dense.transpose(
+            1, 2).flatten(
+            2, 3),  # [B, N, H, V]->[B, N, H * V]
         [seq_offsets],
         L,
     )[0].view(L, H, V)

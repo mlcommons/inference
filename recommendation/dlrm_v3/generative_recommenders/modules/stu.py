@@ -196,7 +196,8 @@ class STULayer(STU):
         self._target_aware: bool = config.target_aware
         self._causal: bool = config.causal
         self._max_attn_len: int = config.max_attn_len or 0
-        self._attn_alpha: float = config.attn_alpha or 1.0 / (self._attention_dim**0.5)
+        self._attn_alpha: float = config.attn_alpha or 1.0 / \
+            (self._attention_dim**0.5)
         self._use_group_norm: bool = config.use_group_norm
         self._recompute_normed_x: bool = config.recompute_normed_x
         self._recompute_uvqk: bool = config.recompute_uvqk
@@ -426,7 +427,8 @@ class STUStack(STU):
         is_inference: bool = False,
     ) -> None:
         super().__init__(is_inference=is_inference)
-        self._stu_layers: torch.nn.ModuleList = torch.nn.ModuleList(modules=stu_list)
+        self._stu_layers: torch.nn.ModuleList = torch.nn.ModuleList(
+            modules=stu_list)
 
     def forward(
         self,

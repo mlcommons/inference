@@ -51,7 +51,8 @@ def _get_col_indices(
     )
     if num_targets is not None:
         if interleave_targets:
-            high_inds = seq_lengths - fx_unwrap_optional_tensor(num_targets) * 2
+            high_inds = seq_lengths - \
+                fx_unwrap_optional_tensor(num_targets) * 2
         else:
             high_inds = seq_lengths - fx_unwrap_optional_tensor(num_targets)
         col_indices = torch.clamp(col_indices, max=high_inds.view(-1, 1))

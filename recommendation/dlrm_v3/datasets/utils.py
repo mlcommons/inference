@@ -45,7 +45,7 @@ def json_loads(
         y = json.loads(x)
     else:
         y = x
-    y_list = [y] if type(y) == int else list(y)
+    y_list = [y] if isinstance(y, int) else list(y)
     return y_list
 
 
@@ -72,7 +72,7 @@ def separate_uih_candidates(
         y = json.loads(x)
     else:
         y = x
-    y_list = [y] if type(y) == int else list(y)
+    y_list = [y] if isinstance(y, int) else list(y)
     candidates, uih = (
         y_list[-candidates_max_seq_len:],
         y_list[:-candidates_max_seq_len],

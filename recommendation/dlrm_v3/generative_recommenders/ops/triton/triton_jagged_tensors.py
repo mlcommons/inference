@@ -206,7 +206,8 @@ def _concat_2D_jagged_multirow(
     valid_mask = offs_n < seq_len
 
     out_seq_start = seq_start_a + seq_start_b + offs_n
-    out_ptrs = Out + out_seq_start[:, None].to(tl.int64) * stride_od + offs_d[None, :]
+    out_ptrs = Out + \
+        out_seq_start[:, None].to(tl.int64) * stride_od + offs_d[None, :]
 
     from_prefix_b_mask = (offs_n < n_prefix_from_B) & valid_mask
     from_a_mask = (
@@ -224,7 +225,8 @@ def _concat_2D_jagged_multirow(
     v_b1 = tl.load(
         in_b1_ptrs, mask=from_prefix_b_mask[:, None] & (offs_d[None, :] < D), other=0.0
     )
-    tl.store(out_ptrs, v_b1, mask=from_prefix_b_mask[:, None] & (offs_d[None, :] < D))
+    tl.store(out_ptrs, v_b1, mask=from_prefix_b_mask[:, None] & (
+        offs_d[None, :] < D))
 
     off_a = offs_n - n_prefix_from_B
     in_a_ptrs = (
@@ -246,7 +248,8 @@ def _concat_2D_jagged_multirow(
     v_b2 = tl.load(
         in_b2_ptrs, mask=from_suffix_b_mask[:, None] & (offs_d[None, :] < D), other=0.0
     )
-    tl.store(out_ptrs, v_b2, mask=from_suffix_b_mask[:, None] & (offs_d[None, :] < D))
+    tl.store(out_ptrs, v_b2, mask=from_suffix_b_mask[:, None] & (
+        offs_d[None, :] < D))
 
 
 @triton_autotune(
@@ -343,11 +346,13 @@ def _split_2D_jagged_multirow(
         + offs_d[None, :]
     )
 
-    v = tl.load(in_ptrs, mask=valid_mask[:, None] & (offs_d[None, :] < D), other=0.0)
+    v = tl.load(in_ptrs, mask=valid_mask[:, None] & (
+        offs_d[None, :] < D), other=0.0)
 
     to_prefix_b_mask = (offs_n < n_prefix_to_B) & valid_mask
     to_a_mask = (
-        (offs_n >= n_prefix_to_B) & (offs_n < seq_len_a + n_prefix_to_B) & valid_mask
+        (offs_n >= n_prefix_to_B) & (
+            offs_n < seq_len_a + n_prefix_to_B) & valid_mask
     )
     to_suffix_b_mask = (offs_n >= seq_len_a + n_prefix_to_B) & valid_mask
 
@@ -356,19 +361,23 @@ def _split_2D_jagged_multirow(
         + (offs_n[:, None] + seq_start_b).to(tl.int64) * stride_bd
         + offs_d[None, :]
     )
-    tl.store(out_b1_ptrs, v, mask=to_prefix_b_mask[:, None] & (offs_d[None, :] < D))
+    tl.store(out_b1_ptrs, v, mask=to_prefix_b_mask[:, None] & (
+        offs_d[None, :] < D))
 
     off_a = offs_n - n_prefix_to_B
     out_a_ptrs = (
-        OutA + (off_a[:, None] + seq_start_a).to(tl.int64) * stride_ad + offs_d[None, :]
+        OutA + (off_a[:, None] + seq_start_a).to(tl.int64) *
+        stride_ad + offs_d[None, :]
     )
     tl.store(out_a_ptrs, v, mask=to_a_mask[:, None] & (offs_d[None, :] < D))
 
     off_b = offs_n - seq_len_a
     out_b2_ptrs = (
-        OutB + (off_b[:, None] + seq_start_b).to(tl.int64) * stride_bd + offs_d[None, :]
+        OutB + (off_b[:, None] + seq_start_b).to(tl.int64) *
+        stride_bd + offs_d[None, :]
     )
-    tl.store(out_b2_ptrs, v, mask=to_suffix_b_mask[:, None] & (offs_d[None, :] < D))
+    tl.store(out_b2_ptrs, v, mask=to_suffix_b_mask[:, None] & (
+        offs_d[None, :] < D))
 
 
 @triton_autotune(
@@ -455,7 +464,8 @@ def _concat_2D_jagged(
     out_seq_start = seq_start_a + seq_start_b + off_n
     out_ptrs = Out + out_seq_start.to(tl.int64) * stride_od + offs_d
     if off_n < n_prefix_from_B:
-        in_ptrs = ValuesB + (off_n + seq_start_b).to(tl.int64) * stride_bd + offs_d
+        in_ptrs = ValuesB + \
+            (off_n + seq_start_b).to(tl.int64) * stride_bd + offs_d
     elif off_n < seq_len_a + n_prefix_from_B:
         in_ptrs = (
             ValuesA
@@ -513,7 +523,8 @@ def _split_2D_jagged(
     offs_d = tl.arange(0, BLOCK_D)
     in_ptrs = JaggedIn + (seq_start + off_n).to(tl.int64) * stride_id + offs_d
     if off_n < n_prefix_to_B:
-        out_ptrs = OutB + (off_n + seq_start_b).to(tl.int64) * stride_bd + offs_d
+        out_ptrs = OutB + (off_n + seq_start_b).to(tl.int64) * \
+            stride_bd + offs_d
     elif off_n < seq_len_a + n_prefix_to_B:
         out_ptrs = (
             OutA
@@ -522,7 +533,8 @@ def _split_2D_jagged(
         )
     else:
         out_ptrs = (
-            OutB + (off_n - seq_len_a + seq_start_b).to(tl.int64) * stride_bd + offs_d
+            OutB + (off_n - seq_len_a + seq_start_b).to(tl.int64) *
+            stride_bd + offs_d
         )
     v = tl.load(in_ptrs, mask=offs_d < D)
     tl.store(out_ptrs, v, mask=offs_d < D)

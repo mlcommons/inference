@@ -79,7 +79,8 @@ class ContentEncoder(HammerModule):
         if self._target_enrich_dummy_embeddings:
             total_seq_len: int = seq_embeddings.size(0)
             for name, param in self._target_enrich_dummy_embeddings.items():
-                enrich_embeddings_target = seq_payloads[name].to(seq_embeddings.dtype)
+                enrich_embeddings_target = seq_payloads[name].to(
+                    seq_embeddings.dtype)
                 total_targets: int = enrich_embeddings_target.size(0)
                 total_uih_len: int = total_seq_len - total_targets
                 enrich_embeddings_uih = param.tile(total_uih_len, 1).to(

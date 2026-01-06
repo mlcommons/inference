@@ -76,8 +76,10 @@ class DlrmHSTUConfig:
     hstu_group_norm: bool = False
     hstu_input_dropout_ratio: float = 0.2
     hstu_linear_dropout_rate: float = 0.2
-    contextual_feature_to_max_length: Dict[str, int] = field(default_factory=dict)
-    contextual_feature_to_min_uih_length: Dict[str, int] = field(default_factory=dict)
+    contextual_feature_to_max_length: Dict[str, int] = field(
+        default_factory=dict)
+    contextual_feature_to_min_uih_length: Dict[str, int] = field(
+        default_factory=dict)
     candidates_weight_feature_name: str = ""
     candidates_watchtime_feature_name: str = ""
     candidates_querytime_feature_name: str = ""
@@ -108,7 +110,8 @@ def _get_supervision_labels_and_weights(
     supervision_weights: Dict[str, torch.Tensor] = {}
     for task in task_configs:
         if task.task_type == MultitaskTaskType.REGRESSION:
-            supervision_labels[task.task_name] = watchtime_sequence.to(torch.float32)
+            supervision_labels[task.task_name] = watchtime_sequence.to(
+                torch.float32)
         elif task.task_type == MultitaskTaskType.BINARY_CLASSIFICATION:
             supervision_labels[task.task_name] = (
                 torch.bitwise_and(supervision_bitmasks, task.task_weight) > 0
@@ -292,7 +295,8 @@ class DlrmHSTU(HammerModule):
             **{
                 x + "_offsets": contextual_offsets[i]
                 for i, x in enumerate(
-                    list(self._hstu_configs.contextual_feature_to_max_length.keys())
+                    list(
+                        self._hstu_configs.contextual_feature_to_max_length.keys())
                 )
             },
             **{
@@ -394,7 +398,8 @@ class DlrmHSTU(HammerModule):
                 dim=0,
             ),
         )
-        seq_embeddings_dict = self._embedding_collection(merged_sparse_features)
+        seq_embeddings_dict = self._embedding_collection(
+            merged_sparse_features)
         num_candidates = fx_mark_length_features(
             candidates_features.lengths().view(len(candidates_features.keys()), -1)
         )[0]
@@ -430,7 +435,8 @@ class DlrmHSTU(HammerModule):
                         device=values_left.device,
                     )
                 else:
-                    values_right = candidates_features[candidate_feature_name].values()
+                    values_right = candidates_features[candidate_feature_name].values(
+                    )
                 payload_features[uih_feature_name] = values_left
                 payload_features[candidate_feature_name] = values_right
         payload_features["uih_offsets"] = torch.ops.fbgemm.asynchronous_complete_cumsum(

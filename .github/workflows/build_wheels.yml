@@ -123,10 +123,10 @@ jobs:
           name: wheels-macos-latest
           path: wheels
       # Download the built wheels from macOS-13 (x86)
-      - name: Download macOS-13 (x86) wheels
+      - name: Download macOS-15 (x86) wheels
         uses: actions/download-artifact@v4
         with:
-          name: wheels-macos-13
+          name: wheels-macos-15
           path: wheels
       # Download the built wheels from Windows
       - name: Download Windows wheels

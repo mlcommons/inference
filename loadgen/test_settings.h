@@ -234,10 +234,6 @@ struct TestSettings {
   uint64_t test05_qsl_rng_seed = 0;
   uint64_t test05_sample_index_rng_seed = 0;
   uint64_t test05_schedule_rng_seed = 0;
-
-  /// \brief Load mlperf parameter config from file.
-  int FromConfig(const std::string &path, const std::string &model,
-                 const std::string &scenario, int conf_type = 1);
   /**@}*/
 
   // ==================================
@@ -272,6 +268,10 @@ struct TestSettings {
   bool infer_token_latencies = false;
   uint64_t token_latency_scaling_factor;
   /**@}*/
+
+  /// \brief Load mlperf parameter config from file.
+  int FromConfig(const std::string &path, const std::string &model,
+                 const std::string &scenario, int conf_type = 1);
 };
 
 ///

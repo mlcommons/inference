@@ -60,7 +60,8 @@ nav:
   - Install MLCFlow:
     - install/index.md
   - Submission:
-    - Submission Generation: submission/index.md
+    - Submission Guide: submission/index.md
+    - Automated Submission CLI: submission/submission-cli.md
   - Power:
     - power/index.md
   - Release Notes:

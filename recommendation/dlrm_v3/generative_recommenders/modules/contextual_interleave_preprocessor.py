@@ -63,7 +63,8 @@ class ContextualInterleavePreprocessor(InputPreprocessor):
         self._contextual_feature_to_min_uih_length: Dict[str, int] = (
             contextual_feature_to_min_uih_length
         )
-        std = 1.0 * sqrt(2.0 / float(input_embedding_dim + output_embedding_dim))
+        std = 1.0 * \
+            sqrt(2.0 / float(input_embedding_dim + output_embedding_dim))
         self._batched_contextual_linear_weights = torch.nn.Parameter(
             torch.empty(
                 (
@@ -141,7 +142,8 @@ class ContextualInterleavePreprocessor(InputPreprocessor):
                 valid_mask = torch.logical_and(
                     indices < seq_lengths_by_2.view(-1, 1),
                     torch.logical_or(
-                        indices < (output_seq_lengths - num_targets).view(-1, 1),
+                        indices < (output_seq_lengths -
+                                   num_targets).view(-1, 1),
                         torch.remainder(indices, 2) == 0,
                     ),
                 )
@@ -249,7 +251,8 @@ class ContextualInterleavePreprocessor(InputPreprocessor):
         with torch.autocast(
             "cuda",
             dtype=torch.bfloat16,
-            enabled=(not self.is_inference and self._training_dtype == torch.bfloat16),
+            enabled=(
+                not self.is_inference and self._training_dtype == torch.bfloat16),
         ):
             # get contextual_embeddings
             contextual_embeddings: Optional[torch.Tensor] = None
@@ -285,8 +288,10 @@ class ContextualInterleavePreprocessor(InputPreprocessor):
                 ).transpose(0, 1)
 
             # content embeddings
-            seq_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(seq_lengths)
-            target_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(num_targets)
+            seq_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(
+                seq_lengths)
+            target_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(
+                num_targets)
             uih_offsets = seq_offsets - target_offsets
             content_embeddings = self._content_encoder(
                 max_uih_len=max_uih_len,

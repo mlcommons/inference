@@ -204,11 +204,13 @@ def kjt_batch_func(
     bs_offset = torch.ops.fbgemm.asynchronous_complete_cumsum(
         torch.tensor(bs_list)
     ).int()
-    batched_offset = torch.ops.fbgemm.asynchronous_complete_cumsum(batched_length)
+    batched_offset = torch.ops.fbgemm.asynchronous_complete_cumsum(
+        batched_length)
     reorder_length = torch.ops.fbgemm.reorder_batched_ad_lengths(
         batched_length, bs_offset, bs
     )
-    reorder_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(reorder_length)
+    reorder_offsets = torch.ops.fbgemm.asynchronous_complete_cumsum(
+        reorder_length)
     reorder_indices = torch.ops.fbgemm.reorder_batched_ad_indices(
         batched_offset, batched_indices, reorder_offsets, bs_offset, bs
     )
@@ -345,7 +347,8 @@ class DLRMv3RandomDataset(Dataset):
         self.num_aggregated_samples = num_aggregated_samples
         self.items_in_memory = {}
 
-    def get_sample(self, id: int) -> Tuple[KeyedJaggedTensor, KeyedJaggedTensor]:
+    def get_sample(
+            self, id: int) -> Tuple[KeyedJaggedTensor, KeyedJaggedTensor]:
         """
         Get a sample by ID from in-memory storage.
 

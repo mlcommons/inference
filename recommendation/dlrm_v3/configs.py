@@ -114,7 +114,8 @@ def get_hstu_configs(dataset: str = "debug") -> DlrmHSTUConfig:
     return hstu_config
 
 
-def get_embedding_table_config(dataset: str = "debug") -> Dict[str, EmbeddingConfig]:
+def get_embedding_table_config(
+        dataset: str = "debug") -> Dict[str, EmbeddingConfig]:
     """
     Create and return embedding table configurations.
 

@@ -238,7 +238,8 @@ class HSTUTransducer(HammerModule):
                 )
                 candidate_timestamps = candidate_timestamps.squeeze(-1)
                 if interleave_targets:
-                    candidate_timestamps = candidate_timestamps.view(-1, 2)[:, 0]
+                    candidate_timestamps = candidate_timestamps.view(-1, 2)[
+                        :, 0]
                 candidate_embeddings = self._output_postprocessor(
                     seq_embeddings=candidate_embeddings,
                     seq_timestamps=candidate_timestamps,
@@ -312,7 +313,8 @@ class HSTUTransducer(HammerModule):
         )
 
         if not self._is_inference:
-            encoded_candidate_embeddings = encoded_candidate_embeddings.to(orig_dtype)
+            encoded_candidate_embeddings = encoded_candidate_embeddings.to(
+                orig_dtype)
             if self._return_full_embeddings:
                 encoded_embeddings = fx_unwrap_optional_tensor(encoded_embeddings).to(
                     orig_dtype

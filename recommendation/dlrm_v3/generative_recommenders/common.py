@@ -188,7 +188,8 @@ def generate_sparse_seq_len(
     if sparsity == 0.0:
         return torch.zeros(size=(size,), device=device, dtype=torch.int)
     elif sparsity == 1.0:
-        return torch.ones(size=(size,), device=device, dtype=torch.int) * max_seq_len
+        return torch.ones(size=(size,), device=device,
+                          dtype=torch.int) * max_seq_len
     elif sparsity >= 0.5:
         min_seq_len: int = int((2 * sparsity - 1.0) * max_seq_len)
         return torch.randint(
@@ -265,10 +266,12 @@ def switch_to_contiguous_if_needed(x: torch.Tensor) -> torch.Tensor:
 def prev_power_of_2(x: int) -> int:
     if torch.compiler.is_compiling():
         # Re-write to make Dynamo happy
-        x_tensor = torch.scalar_tensor(x, dtype=torch.int64)  # type: ignore[arg-type]
+        x_tensor = torch.scalar_tensor(
+            x, dtype=torch.int64)  # type: ignore[arg-type]
         x_tensor_orig = x_tensor.clone()
         out = triton.next_power_of_2(x_tensor)  # type: ignore[arg-type]
-        return int(torch.where(torch.lt(x_tensor_orig, out), out // 2, out).item())  # type: ignore[return-value]
+        return int(torch.where(torch.lt(x_tensor_orig, out), out //
+                   2, out).item())  # type: ignore[return-value]
     else:
         out = triton.next_power_of_2(x)
         return out // 2 if out > x else out
@@ -340,7 +343,9 @@ def _generate_fine_grained_buckets() -> List[int]:
 def _fine_grained_bucket_size(x: int) -> int:
     if torch.compiler.is_compiling():
         x_tensor = torch.scalar_tensor(x, dtype=torch.int64)
-        buckets = torch.tensor(_generate_fine_grained_buckets(), dtype=torch.int64)
+        buckets = torch.tensor(
+            _generate_fine_grained_buckets(),
+            dtype=torch.int64)
 
         mask = buckets >= x_tensor
         valid_buckets = torch.where(
@@ -361,7 +366,8 @@ def _fine_grained_bucket_size(x: int) -> int:
 
 
 @torch.fx.wrap
-def fx_unwrap_optional_tensor(optional: Optional[torch.Tensor]) -> torch.Tensor:
+def fx_unwrap_optional_tensor(
+        optional: Optional[torch.Tensor]) -> torch.Tensor:
     assert optional is not None, "Expected optional to be non-None Tensor"
     return optional
 

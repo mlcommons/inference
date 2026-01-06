@@ -276,7 +276,8 @@ def _get_fw_configs() -> List[triton.Config]:  # noqa: C901
             ),
         ]
 
-        # Add 'USE_TLX' : False, 'NUM_BUFFERS': 1, 'NUM_MMA_WARPS_PER_GROUP': 1, 'NUM_MMA_GROUPS': 1 to non-TLX configs
+        # Add 'USE_TLX' : False, 'NUM_BUFFERS': 1, 'NUM_MMA_WARPS_PER_GROUP':
+        # 1, 'NUM_MMA_GROUPS': 1 to non-TLX configs
         for config in configs:
             if not config.kwargs.get("USE_TLX", False):
                 config.kwargs["USE_TLX"] = False
@@ -486,7 +487,9 @@ def _hstu_attn_fwd_compute(  # noqa C901
                     block_shape=(BLOCK_M, BLOCK_D_Q),
                     order=(1, 0),
                 )
-            q = tl.load(Q_block_ptr, boundary_check=(0,), padding_option="zero")
+            q = tl.load(
+                Q_block_ptr, boundary_check=(
+                    0,), padding_option="zero")
 
             K_block_ptr = tl.make_block_ptr(
                 base=K + off_h * stride_kh + seq_start * stride_kn,
@@ -633,7 +636,8 @@ def _hstu_attn_fwd_compute(  # noqa C901
             offs_m_delta = start_m_delta + tl.arange(0, BLOCK_M)
             offs_v_d = tl.arange(0, BLOCK_D_V)
             off_o = Out + off_z * DeltaSize * stride_om + off_h * stride_oh
-            out_ptrs = off_o + offs_m_delta[:, None] * stride_om + offs_v_d[None, :]
+            out_ptrs = off_o + offs_m_delta[:,
+                                            None] * stride_om + offs_v_d[None, :]
             tl.store(out_ptrs, acc, mask=(offs_m_delta < DeltaSize)[:, None])
         else:
             # rematerialize offsets to save registers
@@ -805,18 +809,21 @@ def _hstu_attn_fwd_compute_main_loop_tlx_pipelined(  # noqa C901
 
     # Pingpong
     if cid == 0:
-        # Consumer 0 waits for Consumer 1 to reach synchronization point at barrier 9.
+        # Consumer 0 waits for Consumer 1 to reach synchronization point at
+        # barrier 9.
         tlx.named_barrier_wait(9, 256)
     else:
         # Consumer 1 signals its arrival at barrier 9.
         tlx.named_barrier_arrive(9, 256)
-        # Then waits at barrier 10 until Consumer 0 finishes issuing its async_dot.
+        # Then waits at barrier 10 until Consumer 0 finishes issuing its
+        # async_dot.
         tlx.named_barrier_wait(10, 256)
 
     qk = tlx.async_dot(q_tile, k_tile)
 
     if cid == 0:
-        # After issuing async_dot, Consumer 0 signals barrier 10 to unblock Consumer 1.
+        # After issuing async_dot, Consumer 0 signals barrier 10 to unblock
+        # Consumer 1.
         tlx.named_barrier_arrive(10, 256)
 
     # wait for the MMA using to complete
@@ -1157,7 +1164,8 @@ def _hstu_attn_fwd_load_Q_K_V(
         BLOCK_N,
     )
 
-    for cid in tl.range(1, NUM_MMA_GROUPS, loop_unroll_factor=NUM_MMA_GROUPS - 1):
+    for cid in tl.range(1, NUM_MMA_GROUPS,
+                        loop_unroll_factor=NUM_MMA_GROUPS - 1):
         _hstu_attn_fwd_load_Q(
             Q,
             q_tiles,
@@ -1233,7 +1241,8 @@ def _hstu_attn_fwd_load_Q_K_V(
     if uih_end < start_m:
         low_delta = start_m
         high_delta = start_m + BLOCK_M
-        for start_delta in tl.range(low_delta, high_delta, BLOCK_N, num_stages=0):
+        for start_delta in tl.range(
+                low_delta, high_delta, BLOCK_N, num_stages=0):
             # pyre-ignore[58]
             buf_id = loop_trip_cnt % NUM_BUFFERS
             # buffers in a row share the same phase
@@ -1333,8 +1342,10 @@ def _hstu_attn_fwd_compute_tlx(  # noqa C901
     q_tiles = tlx.local_alloc(
         (BLOCK_M_SPLIT, BLOCK_D_Q), tlx.dtype_of(Q), NUM_MMA_GROUPS
     )
-    k_tiles = tlx.local_alloc((BLOCK_N, BLOCK_D_Q), tlx.dtype_of(K), NUM_BUFFERS)
-    v_tiles = tlx.local_alloc((BLOCK_N, BLOCK_D_V), tlx.dtype_of(V), NUM_BUFFERS)
+    k_tiles = tlx.local_alloc(
+        (BLOCK_N, BLOCK_D_Q), tlx.dtype_of(K), NUM_BUFFERS)
+    v_tiles = tlx.local_alloc(
+        (BLOCK_N, BLOCK_D_V), tlx.dtype_of(V), NUM_BUFFERS)
 
     # allocate barriers
     q_fulls = tlx.alloc_barriers(num_barriers=NUM_MMA_GROUPS, arrive_count=1)
@@ -1393,7 +1404,8 @@ def _hstu_attn_fwd_compute_tlx(  # noqa C901
             cid = tlx.async_task_replica_id()
             acc = tl.zeros([BLOCK_M_SPLIT, BLOCK_D_V], dtype=tl.float32)
             # initialize offsets
-            offs_m = start_m + tl.arange(0, BLOCK_M_SPLIT) + cid * BLOCK_M_SPLIT
+            offs_m = start_m + tl.arange(0,
+                                         BLOCK_M_SPLIT) + cid * BLOCK_M_SPLIT
             offs_n = tl.arange(0, BLOCK_N)
 
             low, high, uih_end = _hstu_attn_fwd_caculate_range(
@@ -1485,15 +1497,20 @@ def _hstu_attn_fwd_compute_tlx(  # noqa C901
                 offs_m_delta = start_m_delta + tl.arange(0, BLOCK_M_SPLIT)
                 offs_v_d = tl.arange(0, BLOCK_D_V)
                 off_o = Out + off_z * DeltaSize * stride_om + off_h * stride_oh
-                out_ptrs = off_o + offs_m_delta[:, None] * stride_om + offs_v_d[None, :]
-                tl.store(out_ptrs, acc, mask=(offs_m_delta < DeltaSize)[:, None])
+                out_ptrs = off_o + \
+                    offs_m_delta[:, None] * stride_om + offs_v_d[None, :]
+                tl.store(
+                    out_ptrs, acc, mask=(
+                        offs_m_delta < DeltaSize)[
+                        :, None])
             else:
                 # rematerialize offsets to save registers
                 start_m = pid * BLOCK_M + cid * BLOCK_M_SPLIT
                 offs_m = start_m + tl.arange(0, BLOCK_M_SPLIT)
                 offs_v_d = tl.arange(0, BLOCK_D_V)
                 off_o = Out + seq_start * stride_om + off_h * stride_oh
-                out_ptrs = off_o + offs_m[:, None] * stride_om + offs_v_d[None, :]
+                out_ptrs = off_o + offs_m[:, None] * \
+                    stride_om + offs_v_d[None, :]
                 tl.store(out_ptrs, acc, mask=(offs_m < seq_len)[:, None])
 
 
@@ -1851,12 +1868,14 @@ def _hstu_attn_bwd_one_block(  # noqa C901
     # compute dk and dq
     dqk_trans = tl.dot(v, tl.trans(do), allow_tf32=ALLOW_TF32)
     dqk_trans = (
-        dqk_trans * sig_trans * (1 + qk_trans * (1 - sig_trans)) * (1.0 / MAX_SEQ_LEN)
+        dqk_trans * sig_trans *
+        (1 + qk_trans * (1 - sig_trans)) * (1.0 / MAX_SEQ_LEN)
     )
     dqk_trans = tl.where(invalid_mask_trans, dqk_trans, 0)
     dqk_trans = dqk_trans.to(k.dtype)
 
-    # Note: the factor `alpha` is delayed until the end of the function to reduce the cost
+    # Note: the factor `alpha` is delayed until the end of the function to
+    # reduce the cost
     dk += tl.dot(dqk_trans, tl.trans(q_trans), allow_tf32=ALLOW_TF32)
     acc_dq(
         dq_ptrs_trans=dq_ptrs_trans,
@@ -2080,8 +2099,10 @@ def _hstu_attn_bwd_one_col_block(  # noqa C901
     else:
         dv_ptrs = DV + (offs_n[:, None] * stride_dvn + offs_v_d[None, :])
         dk_ptrs = DK + (offs_n[:, None] * stride_dkn + offs_qk_d[None, :])
-        tl.store(dv_ptrs, dv.to(k.dtype), mask=mask_n[:, None])  # pyre-ignore[61]
-        tl.store(dk_ptrs, dk.to(k.dtype), mask=mask_n[:, None])  # pyre-ignore[61]
+        tl.store(dv_ptrs, dv.to(k.dtype),
+                 mask=mask_n[:, None])  # pyre-ignore[61]
+        tl.store(dk_ptrs, dk.to(k.dtype),
+                 mask=mask_n[:, None])  # pyre-ignore[61]
 
 
 def _bwd_pre_hook(nargs):
@@ -2242,43 +2263,56 @@ def _get_bw_configs() -> List[triton.Config]:
     if torch.cuda.is_available() and torch.version.cuda < "12.8":
         configs += [
             triton.Config(
-                {"BLOCK_M": 16, "BLOCK_N": 64, "SEQUENCE_PARALLEL": False, "UNROLL": 1},
+                {"BLOCK_M": 16,
+                 "BLOCK_N": 64,
+                 "SEQUENCE_PARALLEL": False,
+                 "UNROLL": 1},
                 num_stages=1,
                 num_warps=4,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 64, "SEQUENCE_PARALLEL": False, "UNROLL": 1},
+                {"BLOCK_M": 32,
+                 "BLOCK_N": 64,
+                 "SEQUENCE_PARALLEL": False,
+                 "UNROLL": 1},
                 num_stages=1,
                 num_warps=4,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 64, "SEQUENCE_PARALLEL": False, "UNROLL": 1},
+                {"BLOCK_M": 32,
+                 "BLOCK_N": 64,
+                 "SEQUENCE_PARALLEL": False,
+                 "UNROLL": 1},
                 num_stages=1,
                 num_warps=8,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 64, "SEQUENCE_PARALLEL": True, "UNROLL": 1},
+                {"BLOCK_M": 32, "BLOCK_N": 64,
+                    "SEQUENCE_PARALLEL": True, "UNROLL": 1},
                 num_stages=1,
                 num_warps=8,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 128, "SEQUENCE_PARALLEL": True, "UNROLL": 1},
+                {"BLOCK_M": 32, "BLOCK_N": 128,
+                    "SEQUENCE_PARALLEL": True, "UNROLL": 1},
                 num_stages=3,
                 num_warps=8,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 64, "SEQUENCE_PARALLEL": True, "UNROLL": 1},
+                {"BLOCK_M": 32, "BLOCK_N": 64,
+                    "SEQUENCE_PARALLEL": True, "UNROLL": 1},
                 num_stages=1,
                 num_warps=4,
                 pre_hook=_bwd_pre_hook,
             ),
             triton.Config(
-                {"BLOCK_M": 32, "BLOCK_N": 64, "SEQUENCE_PARALLEL": True, "UNROLL": 1},
+                {"BLOCK_M": 32, "BLOCK_N": 64,
+                    "SEQUENCE_PARALLEL": True, "UNROLL": 1},
                 num_stages=2,
                 num_warps=4,
                 pre_hook=_bwd_pre_hook,
@@ -2616,7 +2650,8 @@ def triton_hstu_attention_fwd(
 
     # pyre-ignore [6]
     triton.set_allocator(alloc_fn)
-    grid = lambda meta: (  # noqa E731
+
+    def grid(meta): return (  # noqa E731
         triton.cdiv(N, meta["BLOCK_M"]),
         Z * H,
     )
@@ -2689,7 +2724,8 @@ def triton_hstu_attention_bwd(
     Z = seq_offsets.numel() - 1
     _, H, DimQ = q.shape
     _, _, DimV = v.shape
-    grid = lambda meta: (  # noqa E731
+
+    def grid(meta): return (  # noqa E731
         Z * H,
         (triton.cdiv(N, meta["BLOCK_N"]) if meta["SEQUENCE_PARALLEL"] else 1),
     )
@@ -2928,7 +2964,12 @@ def triton_cached_hstu_mha(
     DELTA_L, H, DimQ = delta_q.shape
     DeltaSize = DELTA_L // Z
     L, _, DimV = v.shape
-    out = torch.empty((DELTA_L, H, DimV), dtype=delta_q.dtype, device=delta_q.device)
+    out = torch.empty(
+        (DELTA_L,
+         H,
+         DimV),
+        dtype=delta_q.dtype,
+        device=delta_q.device)
 
     TMA_DESC_SIZE = 128
     desc_q = delta_q
@@ -2962,7 +3003,8 @@ def triton_cached_hstu_mha(
 
     # pyre-ignore [6]
     triton.set_allocator(alloc_fn)
-    grid = lambda meta: (  # noqa E731
+
+    def grid(meta): return (  # noqa E731
         triton.cdiv(DeltaSize, meta["BLOCK_M"]),
         Z * H,
     )

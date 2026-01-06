@@ -146,7 +146,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
     def unload_query_samples(self, sample_list: List[int]) -> None:
         self.items_in_memory = {}
 
-    def get_sample(self, id: int) -> Tuple[KeyedJaggedTensor, KeyedJaggedTensor]:
+    def get_sample(
+            self, id: int) -> Tuple[KeyedJaggedTensor, KeyedJaggedTensor]:
         return self.items_in_memory[self.ts][id]
 
     def get_sample_with_ts(
@@ -192,7 +193,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
         reader = csv.reader([line])
         parsed_line = next(reader)
         # total ts + one more eval ts + one base ts so that uih won't be zero
-        # for each ts, ordered as candidate_ids, candidate_ratings, uih_ids, uih_ratings
+        # for each ts, ordered as candidate_ids, candidate_ratings, uih_ids,
+        # uih_ratings
         assert len(parsed_line) == 4 * (self.total_ts + 2)
         uih_item_ids_list = []
         uih_ratings_list = []
@@ -290,7 +292,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
             assert len(row) == 1
             requests = json_loads(row[0])
             self.requests = requests
-            logger.warning(f"DLRMv3SyntheticStreamingDataset: ts={ts} requests loaded")
+            logger.warning(
+                f"DLRMv3SyntheticStreamingDataset: ts={ts} requests loaded")
         assert self.ts_to_users_cumsum[self.ts][-1] == len(self.requests)
         logger.warning(
             f"DLRMv3SyntheticStreamingDataset: ts={ts} users_cumsum={self.ts_to_users_cumsum[self.ts]}"
@@ -336,7 +339,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
         timestamps_uih = maybe_truncate_seq(timestamps_uih, self._max_uih_len)
         ids_candidates = maybe_truncate_seq(ids_candidates, max_num_candidates)
         num_candidates = len(ids_candidates)
-        ratings_candidates = maybe_truncate_seq(ratings_candidates, max_num_candidates)
+        ratings_candidates = maybe_truncate_seq(
+            ratings_candidates, max_num_candidates)
         action_weights_uih = [
             self.action_weights[int(rating) - 1] for rating in ratings_uih
         ]
@@ -366,7 +370,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
             [
                 uih_seq_len
                 for _ in range(
-                    len(self._uih_keys) - len(self._contextual_feature_to_max_length)
+                    len(self._uih_keys) -
+                    len(self._contextual_feature_to_max_length)
                 )
             ]
         )
@@ -380,7 +385,8 @@ class DLRMv3SyntheticStreamingDataset(DLRMv3RandomDataset):
             values=torch.tensor(uih_kjt_values).long(),
         )
 
-        candidates_kjt_lengths = num_candidates * torch.ones(len(self._candidates_keys))
+        candidates_kjt_lengths = num_candidates * \
+            torch.ones(len(self._candidates_keys))
         item_candidate_category_ids = [
             id // self.items_per_category for id in ids_candidates
         ]

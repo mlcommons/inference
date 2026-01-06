@@ -222,7 +222,9 @@ def jagged_dense_bmm_broadcast_add(
         _, K = jagged.shape
         B, _, N = dense.shape
         torch._assert(dense.shape[1] == K, "wrong dense shape[1]")
-        torch._assert(seq_offsets.shape[0] == B + 1, "wrong seq_offsets shape[0]")
+        torch._assert(
+            seq_offsets.shape[0] == B + 1,
+            "wrong seq_offsets shape[0]")
         torch._assert(bias.shape[0] == B, "wrong bias shape[0]")
         torch._assert(bias.shape[1] == N, "wrong bias shape[1]")
     if kernel == HammerKernel.TRITON:

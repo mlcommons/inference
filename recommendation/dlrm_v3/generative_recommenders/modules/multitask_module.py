@@ -83,7 +83,7 @@ def _compute_pred_and_logits(
     mt_preds_list: List[torch.Tensor] = []
     for task_type in MultitaskTaskType:
         logits = mt_logits[
-            task_offsets[task_type] : task_offsets[task_type + 1],
+            task_offsets[task_type]: task_offsets[task_type + 1],
             :,
         ]
         if task_offsets[task_type + 1] - task_offsets[task_type] > 0:
@@ -140,15 +140,15 @@ def _compute_loss(
     for task_type in MultitaskTaskType:
         if task_offsets[task_type + 1] - task_offsets[task_type] > 0:
             logits = mt_logits[
-                task_offsets[task_type] : task_offsets[task_type + 1],
+                task_offsets[task_type]: task_offsets[task_type + 1],
                 :,
             ]
             labels = mt_labels[
-                task_offsets[task_type] : task_offsets[task_type + 1],
+                task_offsets[task_type]: task_offsets[task_type + 1],
                 :,
             ]
             weights = mt_weights[
-                task_offsets[task_type] : task_offsets[task_type + 1],
+                task_offsets[task_type]: task_offsets[task_type + 1],
                 :,
             ]
             if task_type == MultitaskTaskType.REGRESSION:
@@ -168,7 +168,8 @@ def _compute_loss(
     else:
         mt_losses = mt_losses_list[0]
     mt_losses = (
-        mt_losses.sum(-1) / mt_weights.sum(-1).clamp(min=1.0) * causal_multitask_weights
+        mt_losses.sum(-1) / mt_weights.sum(-1).clamp(min=1.0) *
+        causal_multitask_weights
     )
     return mt_losses
 
@@ -214,13 +215,15 @@ class DefaultMultitaskModule(MultitaskModule):
     ]:
         orig_dtype = encoded_user_embeddings.dtype
         if not self._is_inference:
-            encoded_user_embeddings = encoded_user_embeddings.to(self._training_dtype)
+            encoded_user_embeddings = encoded_user_embeddings.to(
+                self._training_dtype)
             item_embeddings = item_embeddings.to(self._training_dtype)
 
         with torch.autocast(
             "cuda",
             dtype=torch.bfloat16,
-            enabled=(not self.is_inference and self._training_dtype == torch.bfloat16),
+            enabled=(
+                not self.is_inference and self._training_dtype == torch.bfloat16),
         ):
             mt_preds, mt_logits = _compute_pred_and_logits(
                 prediction_module=self._prediction_module,

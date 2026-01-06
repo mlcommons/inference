@@ -326,9 +326,11 @@ def _addmm_fwd(
     mask_m = (pid_m * BLOCK_M + offs_m)[:, None] < M
     mask_n = (pid_n * BLOCK_N + offs_n)[None, :] < N
     x_ptr += pid_m.to(tl.int64) * BLOCK_M * stride_xm
-    x_ptrs = x_ptr + (offs_m[:, None] * stride_xm + offs_k[None, :] * stride_xk)
+    x_ptrs = x_ptr + (offs_m[:, None] * stride_xm +
+                      offs_k[None, :] * stride_xk)
     w_ptr += pid_n.to(tl.int64) * BLOCK_N * stride_wn
-    w_ptrs = w_ptr + (offs_k[:, None] * stride_wk + offs_n[None, :] * stride_wn)
+    w_ptrs = w_ptr + (offs_k[:, None] * stride_wk +
+                      offs_n[None, :] * stride_wn)
     accumulator = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
     for k in range(0, tl.cdiv(K, BLOCK_K)):
         mask_k = offs_k[None, :] < K - k * BLOCK_K
@@ -348,7 +350,8 @@ def _addmm_fwd(
     else:
         y_ptr += pid_m.to(tl.int64) * BLOCK_M * stride_ym
         y_ptr += pid_n.to(tl.int64) * BLOCK_N * stride_yn
-        y_ptrs = y_ptr + stride_ym * offs_m[:, None] + stride_yn * offs_n[None, :]
+        y_ptrs = y_ptr + stride_ym * \
+            offs_m[:, None] + stride_yn * offs_n[None, :]
         y = tl.load(y_ptrs, mask=z_mask)
     z = (accumulator + y.to(tl.float32)).to(z_ptr.dtype.element_ty)
     z_ptr += pid_m.to(tl.int64) * BLOCK_M * stride_zm
@@ -454,8 +457,10 @@ def _addmm_fwd_tma_ws(
     BROADCAST_Y: tl.constexpr,
     NUM_SMEM_BUFFERS: tl.constexpr,
 ):
-    x_buffers = tlx.local_alloc((BLOCK_M, BLOCK_K), x_desc.dtype, NUM_SMEM_BUFFERS)
-    w_buffers = tlx.local_alloc((BLOCK_K, BLOCK_N), w_desc.dtype, NUM_SMEM_BUFFERS)
+    x_buffers = tlx.local_alloc(
+        (BLOCK_M, BLOCK_K), x_desc.dtype, NUM_SMEM_BUFFERS)
+    w_buffers = tlx.local_alloc(
+        (BLOCK_K, BLOCK_N), w_desc.dtype, NUM_SMEM_BUFFERS)
     acc_tmem_buffer = tlx.local_alloc(
         (BLOCK_M, BLOCK_N), tl.float32, tl.constexpr(1), tlx.storage_kind.tmem
     )
@@ -463,11 +468,15 @@ def _addmm_fwd_tma_ws(
     if BROADCAST_Y:
         y_buffer = tlx.local_alloc((1, BLOCK_N), y_desc.dtype, tl.constexpr(1))
     else:
-        y_buffer = tlx.local_alloc((BLOCK_M, BLOCK_N), y_desc.dtype, tl.constexpr(1))
-    z_buffer = tlx.local_alloc((BLOCK_M, BLOCK_N), z_desc.dtype, tl.constexpr(1))
+        y_buffer = tlx.local_alloc(
+            (BLOCK_M, BLOCK_N), y_desc.dtype, tl.constexpr(1))
+    z_buffer = tlx.local_alloc(
+        (BLOCK_M, BLOCK_N), z_desc.dtype, tl.constexpr(1))
 
-    smem_full_bars = tlx.alloc_barriers(num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
-    smem_empty_bars = tlx.alloc_barriers(num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
+    smem_full_bars = tlx.alloc_barriers(
+        num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
+    smem_empty_bars = tlx.alloc_barriers(
+        num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
     y_load_barrier = tlx.alloc_barriers(num_barriers=1, arrive_count=1)
 
     with tlx.async_tasks():
@@ -502,10 +511,12 @@ def _addmm_fwd_tma_ws(
                     2 * (BLOCK_M * BLOCK_K + BLOCK_K * BLOCK_N),
                 )
                 tlx.async_descriptor_load(
-                    x_desc, x_buffers[buf], [offs_xm, offs_k], smem_full_bars[buf]
+                    x_desc, x_buffers[buf], [
+                        offs_xm, offs_k], smem_full_bars[buf]
                 )
                 tlx.async_descriptor_load(
-                    w_desc, w_buffers[buf], [offs_k, offs_wn], smem_full_bars[buf]
+                    w_desc, w_buffers[buf], [
+                        offs_k, offs_wn], smem_full_bars[buf]
                 )
 
                 load_phase = load_phase ^ (buf == NUM_SMEM_BUFFERS - 1)
@@ -532,7 +543,9 @@ def _addmm_fwd_tma_ws(
             y_load_bar = tlx.local_view(y_load_barrier, 0)
             if BROADCAST_Y:
                 tlx.barrier_expect_bytes(y_load_bar, 1 * BLOCK_N * 2)
-                tlx.async_descriptor_load(y_desc, y_buf_view, [0, offs_wn], y_load_bar)
+                tlx.async_descriptor_load(
+                    y_desc, y_buf_view, [
+                        0, offs_wn], y_load_bar)
             else:
                 tlx.barrier_expect_bytes(y_load_bar, BLOCK_M * BLOCK_N * 2)
                 tlx.async_descriptor_load(
@@ -595,18 +608,24 @@ def _addmm_fwd_tma_ws_persistent(
     NUM_SMS: tl.constexpr,
 ):
     # Allocate buffers once for all tiles
-    x_buffers = tlx.local_alloc((BLOCK_M, BLOCK_K), x_desc.dtype, NUM_SMEM_BUFFERS)
-    w_buffers = tlx.local_alloc((BLOCK_K, BLOCK_N), w_desc.dtype, NUM_SMEM_BUFFERS)
+    x_buffers = tlx.local_alloc(
+        (BLOCK_M, BLOCK_K), x_desc.dtype, NUM_SMEM_BUFFERS)
+    w_buffers = tlx.local_alloc(
+        (BLOCK_K, BLOCK_N), w_desc.dtype, NUM_SMEM_BUFFERS)
     tmem_buffers = tlx.local_alloc(
         (BLOCK_M, BLOCK_N), tl.float32, NUM_TMEM_BUFFERS, tlx.storage_kind.tmem
     )
 
     # Barriers for producer <-> MMA
-    smem_full_bars = tlx.alloc_barriers(num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
-    smem_empty_bars = tlx.alloc_barriers(num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
+    smem_full_bars = tlx.alloc_barriers(
+        num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
+    smem_empty_bars = tlx.alloc_barriers(
+        num_barriers=NUM_SMEM_BUFFERS, arrive_count=1)
     # Barriers for MMA <-> Epilogue
-    tmem_full_bars = tlx.alloc_barriers(num_barriers=NUM_TMEM_BUFFERS, arrive_count=1)
-    tmem_empty_bars = tlx.alloc_barriers(num_barriers=NUM_TMEM_BUFFERS, arrive_count=1)
+    tmem_full_bars = tlx.alloc_barriers(
+        num_barriers=NUM_TMEM_BUFFERS, arrive_count=1)
+    tmem_empty_bars = tlx.alloc_barriers(
+        num_barriers=NUM_TMEM_BUFFERS, arrive_count=1)
 
     with tlx.async_tasks():
         # Epilogue consumer: loads Y, adds bias, stores Z
@@ -672,7 +691,9 @@ def _addmm_fwd_tma_ws_persistent(
                 )
 
                 # Wait for epilogue to finish with this TMEM buffer
-                tlx.barrier_wait(tmem_empty_bars[cur_tmem_buf], tmem_write_phase)
+                tlx.barrier_wait(
+                    tmem_empty_bars[cur_tmem_buf],
+                    tmem_write_phase)
                 tmem_write_phase = tmem_write_phase ^ (
                     cur_tmem_buf == int(NUM_TMEM_BUFFERS) - 1
                 )
@@ -694,8 +715,10 @@ def _addmm_fwd_tma_ws_persistent(
                     dot_phase = dot_phase ^ (buf == int(NUM_SMEM_BUFFERS) - 1)
 
                 # Wait for last MMA to complete
-                last_buf = (processed_k_iters + k_tiles - 1) % int(NUM_SMEM_BUFFERS)
-                last_dot_phase = dot_phase ^ (last_buf == int(NUM_SMEM_BUFFERS) - 1)
+                last_buf = (processed_k_iters + k_tiles -
+                            1) % int(NUM_SMEM_BUFFERS)
+                last_dot_phase = dot_phase ^ (
+                    last_buf == int(NUM_SMEM_BUFFERS) - 1)
                 tlx.barrier_wait(smem_empty_bars[last_buf], last_dot_phase)
 
                 # Signal epilogue that result is ready
@@ -735,13 +758,16 @@ def _addmm_fwd_tma_ws_persistent(
                         2 * (BLOCK_M + BLOCK_N) * BLOCK_K,
                     )
                     tlx.async_descriptor_load(
-                        x_desc, x_buffers[buf], [offs_xm, offs_k], smem_full_bars[buf]
+                        x_desc, x_buffers[buf], [
+                            offs_xm, offs_k], smem_full_bars[buf]
                     )
                     tlx.async_descriptor_load(
-                        w_desc, w_buffers[buf], [offs_k, offs_wn], smem_full_bars[buf]
+                        w_desc, w_buffers[buf], [
+                            offs_k, offs_wn], smem_full_bars[buf]
                     )
 
-                    load_phase = load_phase ^ (buf == int(NUM_SMEM_BUFFERS) - 1)
+                    load_phase = load_phase ^ (
+                        buf == int(NUM_SMEM_BUFFERS) - 1)
 
                 processed_k_iters += k_tiles
 
@@ -763,7 +789,8 @@ def triton_addmm_fwd_tma_persistent(
     if M == 0 or N == 0:
         return z
 
-    # A dummy block value that will be overwritten when we have the real block size
+    # A dummy block value that will be overwritten when we have the real block
+    # size
     dummy_block = [1, 1]
     # pyre-ignore[6]: In call `TensorDescriptor.__init__`, for 2nd positional
     # argument, expected `List[int]` but got `Size`
@@ -823,7 +850,8 @@ def triton_addmm_fwd_tma_ws_tlx(
     if M == 0 or N == 0:
         return z
 
-    # A dummy block value that will be overwritten when we have the real block size
+    # A dummy block value that will be overwritten when we have the real block
+    # size
     dummy_block = [1, 1]
     # pyre-ignore[6]: In call `TensorDescriptor.__init__`, for 2nd positional
     # argument, expected `List[int]` but got `Size`
@@ -944,7 +972,7 @@ def triton_addmm_fwd(
     if M == 0 or N == 0:
         return z
 
-    grid = lambda meta: (  # noqa E731
+    def grid(meta): return (  # noqa E731
         triton.cdiv(M, meta["BLOCK_M"]),
         triton.cdiv(N, meta["BLOCK_N"]),
     )
@@ -1015,7 +1043,8 @@ class _AddMmFunction(torch.autograd.Function):
         if is_sm100() and TMA_AVAILABLE and _check_tma_alignment(x, w, y):
             if x.dtype == torch.float32 or HAS_TLX == False:
                 # use TMA persistent kernel on sm100
-                return triton_addmm_fwd_tma_persistent(x, w, y, warp_specialize=True)
+                return triton_addmm_fwd_tma_persistent(
+                    x, w, y, warp_specialize=True)
             else:
                 return triton_addmm_fwd_tma_ws_persistent_tlx(
                     x, w, y

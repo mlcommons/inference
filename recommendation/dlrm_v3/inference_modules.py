@@ -195,7 +195,8 @@ def move_sparse_output_to_device(
     seq_embeddings = {
         k: SequenceEmbedding(
             lengths=seq_embeddings[k].lengths.to(device),
-            embedding=seq_embeddings[k].embedding.to(device).to(torch.bfloat16),
+            embedding=seq_embeddings[k].embedding.to(
+                device).to(torch.bfloat16),
         )
         for k in seq_embeddings.keys()
     }

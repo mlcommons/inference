@@ -137,7 +137,8 @@ def _split_2D_jagged_jagged(
         mask >= lengths_left.view(-1, 1),
         mask < (lengths_left + lengths_right).view(-1, 1),
     )
-    return padded_values[mask_left.view(-1), :], padded_values[mask_right.view(-1), :]
+    return padded_values[mask_left.view(-1),
+                         :], padded_values[mask_right.view(-1), :]
 
 
 @torch.fx.wrap
@@ -233,7 +234,8 @@ def pytorch_hstu_concat_l2_embeddings(
         ],
         dim=1,
     )
-    mask = fx_arange(max_prefix_len + max_l2_len, device=prefix_x.device).view(1, -1)
+    mask = fx_arange(max_prefix_len + max_l2_len,
+                     device=prefix_x.device).view(1, -1)
     prefix_lengths = prefix_offsets[1:] - prefix_offsets[:-1]
     l2_lengths = l2_offsets[1:] - l2_offsets[:-1]
     mask = torch.logical_or(

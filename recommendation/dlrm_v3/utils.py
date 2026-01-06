@@ -34,7 +34,8 @@ from generative_recommenders.modules.multitask_module import (
     MultitaskTaskType,
     TaskConfig,
 )
-from torch.profiler import profile, profiler, ProfilerActivity  # pyre-ignore [21]
+# pyre-ignore [21]
+from torch.profiler import profile, profiler, ProfilerActivity
 from torch.utils.tensorboard import SummaryWriter
 from torchrec.metrics.accuracy import AccuracyMetricComputation
 from torchrec.metrics.gauc import GAUCMetricComputation
@@ -94,7 +95,8 @@ def profiler_or_nullcontext(enabled: bool, with_stack: bool):
     """
     return (
         profile(
-            # pyre-fixme[16]: Module `profiler` has no attribute `ProfilerActivity`.
+            # pyre-fixme[16]: Module `profiler` has no attribute
+            # `ProfilerActivity`.
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             on_trace_ready=_on_trace_ready_fn(),
             with_stack=with_stack,
@@ -126,7 +128,8 @@ class Profiler:
                 repeat=1,
             ),
             on_trace_ready=_on_trace_ready_fn(self.rank),
-            # pyre-fixme[16]: Module `profiler` has no attribute `ProfilerActivity`.
+            # pyre-fixme[16]: Module `profiler` has no attribute
+            # `ProfilerActivity`.
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             record_shapes=True,
             profile_memory=False,
@@ -180,7 +183,8 @@ class MetricsLogger:
         assert all_classification_tasks + all_regression_tasks == [
             task.task_name for task in multitask_configs
         ]
-        self.task_names: List[str] = all_classification_tasks + all_regression_tasks
+        self.task_names: List[str] = all_classification_tasks + \
+            all_regression_tasks
 
         self.class_metrics: Dict[str, List[RecMetricComputation]] = {
             "train": [],
@@ -239,7 +243,8 @@ class MetricsLogger:
         self.global_step: Dict[str, int] = {"train": 0, "eval": 0}
         self.tb_logger: Optional[SummaryWriter] = None
         if tensorboard_log_path != "":
-            self.tb_logger = SummaryWriter(log_dir=tensorboard_log_path, purge_step=0)
+            self.tb_logger = SummaryWriter(
+                log_dir=tensorboard_log_path, purge_step=0)
             self.tb_logger.flush()
 
     @property

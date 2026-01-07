@@ -295,7 +295,7 @@ class Task(ABC):
                 sample,
             )
             tic = time.perf_counter()
-            response = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload]
+            response = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload, misc]
                 model=self.endpoint.model.repo_id,
                 messages=sample.messages,
                 response_format=(
@@ -383,7 +383,7 @@ class Task(ABC):
                 sample,
             )
             word_array = []
-            stream = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload]
+            stream = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload, misc]
                 stream=True,
                 model=self.endpoint.model.repo_id,
                 messages=sample.messages,

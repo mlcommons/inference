@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from rapidfuzz import fuzz  # type: ignore[import-untyped]
 from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from tabulate import tabulate
+import hashlib
 
 if TYPE_CHECKING:
     from typing import Any
@@ -398,3 +399,13 @@ def run_evaluation(random_seed: int, filename: FilePath,
             tablefmt="fancy_grid",
         ),
     )
+
+    # Generate accuracy.txt file
+    results_dict = {"f1": category_f1_score}
+    data_string = json.dumps(results_dict, sort_keys=True)
+    file_hash = hashlib.sha256(data_string.encode()).hexdigest()
+
+    with open("accuracy.txt", "w") as f:
+        f.write("Results\n\n")
+        f.write(f"{data_string}\n\n")
+        f.write(f"hash={file_hash}")

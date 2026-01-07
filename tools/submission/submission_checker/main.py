@@ -1,6 +1,8 @@
 import argparse
 import logging
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from .constants import MODEL_CONFIG
 from .configuration.configuration import Config

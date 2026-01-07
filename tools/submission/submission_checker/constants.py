@@ -1330,7 +1330,7 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "sw_notes",
     "host_network_card_count",
     "system_type_detail",
-    #"network_speed_mbit",
+    # "network_speed_mbit",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -1363,7 +1363,7 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
 ]
 
 SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS = [
-    #"network_speed_mbit"
+    # "network_speed_mbit"
 ]
 
 

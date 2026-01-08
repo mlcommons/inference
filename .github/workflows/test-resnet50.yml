@@ -36,7 +36,7 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install mlcflow
-        mlc pull repo mlcommons@mlperf-automation --branch=subcheckmod_change
+        mlc pull repo mlcommons@mlperf-automations --branch=subcheckmod_change
 #python3 -m pip install mlc-scripts
     - name: Test Resnet50 and end to end submission generation
       run: |

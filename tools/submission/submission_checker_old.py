@@ -1567,10 +1567,9 @@ def check_accuracy_dir(config, model, path, verbose):
         )
 
     # check accuracy_sample_count if the field exists (v6.0+)
-    accuracy_sample_count = mlperf_log.get("effective_accuracy_sample_count")
-    if accuracy_sample_count is not None:
-        required_accuracy_sample_count = config.get_accuracy_sample_count(
-            model)
+    if "effective_accuracy_sample_count" in mlperf_log.get_keys():
+        accuracy_sample_count = mlperf_log["effective_accuracy_sample_count"]
+        required_accuracy_sample_count = config.get_accuracy_sample_count(model)
         if accuracy_sample_count < required_accuracy_sample_count:
             log.error(
                 "%s accuracy_sample_count, found %d, needs to be >= %d",

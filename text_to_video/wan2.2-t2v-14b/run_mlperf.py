@@ -45,8 +45,11 @@ def load_prompts(dataset_path):
 
 
 class Model:
-    def __init__(self, model_path, device, config, prompts, fixed_latent = None):
+    def __init__(
+        self, model_path, device, config, prompts, fixed_latent = None, rank = 0
+    ):
         self.device = device
+        self.rank = rank
         self.height = config['height']
         self.width = config['width']
         self.num_frames = config['num_frames']
@@ -104,7 +107,9 @@ class Model:
 
 
 class DebugModel:
-    def __init__(self, model_path, device, config, prompts, fixed_latent = None):
+    def __init__(
+        self, model_path, device, config, prompts, fixed_latent = None, rank = 0
+    ):
         self.prompts = prompts
 
     def issue_queries(self, query_samples):
@@ -251,8 +256,8 @@ def run_mlperf(args, config):
         logging.info("No fixed latent provided - using random initial latents")
 
     # Loading model
-    model = Model(args.model_path, device, config, dataset, fixed_latent)
-    #model = DebugModel(args.model_path, device, config, dataset, fixed_latent)
+    model = Model(args.model_path, device, config, dataset, fixed_latent, rank)
+    #model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
     logging.info("Model loaded successfully!")
 
     # Prepare loadgen for run

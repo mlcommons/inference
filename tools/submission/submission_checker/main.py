@@ -107,15 +107,15 @@ def main():
         args.version,
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
-        skip_compliance = args.skip_power_check,
-        skip_power_check = args.skip_power_check,
-        skip_meaningful_fields_emptiness_check = args.skip_meaningful_fields_emptiness_check,
-        skip_check_power_measure_files = args.skip_check_power_measure_files,
-        skip_empty_files_check = args.skip_empty_files_check,
-        skip_extra_files_in_root_check = args.skip_extra_files_in_root_check,
-        skip_extra_accuracy_files_check = args.skip_extra_accuracy_files_check,
-        skip_all_systems_have_results_check = args.skip_all_systems_have_results_check,
-        skip_calibration_check = args.skip_calibration_check,
+        skip_compliance=args.skip_power_check,
+        skip_power_check=args.skip_power_check,
+        skip_meaningful_fields_emptiness_check=args.skip_meaningful_fields_emptiness_check,
+        skip_check_power_measure_files=args.skip_check_power_measure_files,
+        skip_empty_files_check=args.skip_empty_files_check,
+        skip_extra_files_in_root_check=args.skip_extra_files_in_root_check,
+        skip_extra_accuracy_files_check=args.skip_extra_accuracy_files_check,
+        skip_all_systems_have_results_check=args.skip_all_systems_have_results_check,
+        skip_calibration_check=args.skip_calibration_check,
     )
 
     if args.scenarios_to_skip:
@@ -136,12 +136,18 @@ def main():
     # Main loop over all the submissions
     for logs in loader.load():
         # Initialize check classes
-        performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
-        accuracy_checks = AccuracyCheck(log, logs.loader_data["acc_path"], config, logs)
-        system_checks = SystemCheck(log, logs.loader_data["system_path"], config, logs)
-        measurements_checks = MeasurementsCheck(log, logs.loader_data["measurements_path"], config, logs)
-        measurements_checks = ComplianceCheck(log, logs.loader_data["compliance_path"], config, logs)
-        power_checks = PowerCheck(log, logs.loader_data["power_dir_path"], config, logs)
+        performance_checks = PerformanceCheck(
+            log, logs.loader_data["perf_path"], config, logs)
+        accuracy_checks = AccuracyCheck(
+            log, logs.loader_data["acc_path"], config, logs)
+        system_checks = SystemCheck(
+            log, logs.loader_data["system_path"], config, logs)
+        measurements_checks = MeasurementsCheck(
+            log, logs.loader_data["measurements_path"], config, logs)
+        measurements_checks = ComplianceCheck(
+            log, logs.loader_data["compliance_path"], config, logs)
+        power_checks = PowerCheck(
+            log, logs.loader_data["power_dir_path"], config, logs)
         # Run checks
         valid = True
         valid &= performance_checks()
@@ -152,19 +158,26 @@ def main():
         # Add results to summary
         if valid:
             # Results dictionary
-            results[logs.loader_data.get("perf_path")] = logs.loader_data.get("performance_metric")
+            results[logs.loader_data.get("perf_path")] = logs.loader_data.get(
+                "performance_metric")
             # System dictionary
             system_id = logs.loader_data.get("system")
             if os.path.exists(logs.loader_data.get("power_dir_path", "")):
-                if system_id in systems[logs.loader_data.get("division")]["power"]:
-                    systems[logs.loader_data.get("division")]["power"][system_id] += 1
+                if system_id in systems[logs.loader_data.get(
+                        "division")]["power"]:
+                    systems[logs.loader_data.get(
+                        "division")]["power"][system_id] += 1
                 else:
-                    systems[logs.loader_data.get("division")]["power"][system_id] = 1
+                    systems[logs.loader_data.get(
+                        "division")]["power"][system_id] = 1
             else:
-                if system_id in systems[logs.loader_data.get("division")]["non_power"]:
-                    systems[logs.loader_data.get("division")]["non_power"][system_id] += 1
+                if system_id in systems[logs.loader_data.get(
+                        "division")]["non_power"]:
+                    systems[logs.loader_data.get(
+                        "division")]["non_power"][system_id] += 1
                 else:
-                    systems[logs.loader_data.get("division")]["non_power"][system_id] = 1
+                    systems[logs.loader_data.get(
+                        "division")]["non_power"][system_id] = 1
             # CSV exporter
             exporter.add_result(logs)
         else:
@@ -183,7 +196,6 @@ def main():
     for k, v in sorted(results.items()):
         if v is None:
             log.error("NoResults %s", k)
-
 
     closed_systems = systems.get("closed", {})
     open_systems = systems.get("open", {})

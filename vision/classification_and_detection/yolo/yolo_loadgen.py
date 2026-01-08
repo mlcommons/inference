@@ -62,8 +62,10 @@ class Runner:
         for qitem in query_samples:
             img_path, img_id = self.ds.get_item_loc(qitem.index)
 
-            # low confidence threshold set to capture enough detection for valid mAP for accuracy runs
-            results = self.model.predict(img_path, conf=0.001, verbose=False)[0]
+            # low confidence threshold set to capture enough detection for
+            # valid mAP for accuracy runs
+            results = self.model.predict(
+                img_path, conf=0.001, verbose=False)[0]
 
             h, w = results.orig_shape
             response_payload = b""
@@ -77,18 +79,24 @@ class Runner:
                     category_id = COCO_80_TO_91[cls]
                     # h, w = results.orig_shape
 
-                    # pack as [qsl_idx, ymin, xmin, ymax, xmax, score, cat_id] - 7f format is required for MLPerf accuracy scripts
+                    # pack as [qsl_idx, ymin, xmin, ymax, xmax, score, cat_id]
+                    # - 7f format is required for MLPerf accuracy scripts
                     response_payload += struct.pack("7f",
-                        float(qitem.index),
-                        float(box[1] / h), float(box[0] / w), # ymin, xmin
-                        float(box[3] / h), float(box[2] / w), # ymax, xmax
-                        float(score),
-                        float(category_id)
-                    )
+                                                    float(qitem.index),
+                                                    # ymin, xmin
+                                                    float(
+                                                        box[1] / h), float(box[0] / w),
+                                                    # ymax, xmax
+                                                    float(
+                                                        box[3] / h), float(box[2] / w),
+                                                    float(score),
+                                                    float(category_id)
+                                                    )
 
             response_array = array.array('B', response_payload)
             bi = response_array.buffer_info()
-            lg.QuerySamplesComplete([lg.QuerySampleResponse(qitem.id, bi[0], bi[1])])
+            lg.QuerySamplesComplete(
+                [lg.QuerySampleResponse(qitem.id, bi[0], bi[1])])
 
 
 def main():
@@ -96,7 +104,11 @@ def main():
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--dataset-path", type=str, required=True)
     parser.add_argument("--annotation-file", type=str, required=True)
-    parser.add_argument("--count", type=int, default=None, help="Number of samples to run")
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="Number of samples to run")
     parser.add_argument("--output", type=str, help="Directory for MLPerf logs")
 
     # mode flags
@@ -105,14 +117,22 @@ def main():
     mode_group.add_argument("--PerformanceOnly", action="store_true")
 
     # scenario selection
-    parser.add_argument("--scenario", type=str, choices=["SingleStream", "MultiStream", "Offline"], default="SingleStream")
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        choices=[
+            "SingleStream",
+            "MultiStream",
+            "Offline"],
+        default="SingleStream")
     args = parser.parse_args()
 
     # output logs
     if args.output:
         log_path = os.path.abspath(args.output)
     else:
-        log_path = os.path.abspath(f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        log_path = os.path.abspath(
+            f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
 
     if not os.path.exists(log_path):
         os.makedirs(log_path, exist_ok=True)
@@ -125,8 +145,10 @@ def main():
     def flush_queries(): pass
     sut = lg.ConstructSUT(runner.enqueue, flush_queries)
 
-    # standard edge QSL: min of 500 performance_sample_count and the full dataset count
-    qsl = lg.ConstructQSL(ds.count, min(ds.count, 500), lambda x: None, lambda x: None)
+    # standard edge QSL: min of 500 performance_sample_count and the full
+    # dataset count
+    qsl = lg.ConstructQSL(ds.count, min(ds.count, 500),
+                          lambda x: None, lambda x: None)
 
     settings = lg.TestSettings()
 
@@ -196,6 +218,7 @@ def main():
                 print(f" [!!] Found {f} in CURRENT DIR instead of output dir!")
             else:
                 print(f" [!!] {f} MISSING")
+
 
 if __name__ == "__main__":
     main()

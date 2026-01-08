@@ -20,6 +20,7 @@ from .base import BaseParser
 
 # pylint: disable=missing-docstring
 
+
 class LoadgenParser(BaseParser):
     def __init__(self, log_path, strict=True):
         """
@@ -193,7 +194,8 @@ def main():
     Inspect a detailed log.
     """
     args = get_args()
-    mlperf_log = LoadgenParser(args.input, strict=not args.ignore_invalid_lines)
+    mlperf_log = LoadgenParser(args.input,
+                               strict=not args.ignore_invalid_lines)
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s",

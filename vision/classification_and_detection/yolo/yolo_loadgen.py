@@ -1,274 +1,201 @@
 """
-YOLOv11 LoadGen MLPerf 
+YOLOv11 LoadGen MLPerf
 """
-
 import argparse
 import array
 import json
-import logging
-import os 
+import os
 import sys
+import struct
 import time
+from datetime import datetime
 from pathlib import Path
-
 import numpy as np
 import mlperf_loadgen as lg
 from ultralytics import YOLO
 
 
-# COCO Dataset handler for YOLO
+# Standard YOLO (80 classes) to COCO (91 classes) mapping
+COCO_80_TO_91 = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+    35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+    64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90
+]
+
+
 class Coco:
-    def __init__(self, data_path, count=None):
+    def __init__(self, data_path, annotation_file, count=None):
         self.image_list = []
         self.image_ids = []
         self.data_path = data_path
 
-        # load from annotations
-        annotations_file = Path(data_path).parent.parent / "annotations" / "instances_val2017.json"
-        if not annotations_file.exists():
-            annotations_file = Path(data_path).parent.parent / "annotations" / "image_info_test-dev2017.json"
-       
-        if annotations_file.exists():
-            with open(annotations_file, 'r') as f:
-                coco = json.load(f)
-            for img_info in coco['images']:
-                img_path = os.path.join(data_path, img_info['file_name'])
-                if os.path.exists(img_path):
-                    self.image_list.append(img_path)
-                    self.image_ids.append(img_info['id'])
-        else:
-            # load from directory
-            for img_path in sorted(Path(data_path).glob("*.jpg")):
-                self.image_list.append(str(img_path))
-                self.image_ids.append(int(img_path.stem))
-       
-        self.count = len(self.image_list) if count is None else min(count, len(self.image_list))
-        print(f"Loaded {self.count} images")
+        print(f"Loading official COCO annotations from: {annotation_file}")
+        with open(annotation_file, 'r') as f:
+            coco_data = json.load(f)
 
-    def get_item_count(self):
-        return self.count
+        # image order needs to match the JSON for correct qsl_idx mapping
+        for img_info in coco_data['images']:
+            img_name = img_info['file_name']
+            img_path = os.path.join(data_path, img_name)
 
-    def get_item_loc(self, idx):
-        return self.image_list[idx], self.image_ids[idx]
+            if os.path.exists(img_path):
+                self.image_list.append(img_path)
+                self.image_ids.append(img_info['id'])
+
+            # Stop if we hit the requested count
+            if count and len(self.image_list) >= count:
+                break
+
+        self.count = len(self.image_list)
+        print(f"Loaded {self.count} images in official COCO order.")
+
+    def get_item_loc(self, index):
+        return self.image_list[index], self.image_ids[index]
 
 
-# post process COCO - convert YOLO outputs to COCO format
-class PostProcessCoco:
-    def __init__(self):
-        self.results = []
-
-    def start(self):
-        self.results = []
-
-    def add_results(self, results):
-        self.results.extend(results)
-
-    def finalize(self, output_dir):
-        if output_dir:
-            output_file = os.path.join(output_dir, "predictions.json")
-            with open(output_file, 'w') as f:
-                json.dump(self.results, f)
-            print(f"saved {len(self.results)} predictions to {output_file}")
-
-
-# YOLO inference engine backend
-class BackendYOLO:
-    def __init__(self, model_path, device="cuda:0"):
-        print(f"loading model: {model_path}")
-        self.model = YOLO(model_path)
-        self.model.to(device)
-        print("model has been loaded")
-
-    def predict(self, img_path):
-        results = self.model.predict(
-                img_path,
-                conf=0.001,
-                iou=0.6,
-                max_det=300,
-                imgsz=640,
-                verbose=False
-        )
-        return results[0]
-
-
-# runner for orchestration, dataset, model and LoadGen - based on inference/vision/classification_and_detection/python/main.py
 class Runner:
-    def __init__(self, model, ds, post_proc):
-        self.model = model
-        self.ds = ds
-        self.post_proc = post_proc
-        self.take_accuracy = False
+    def __init__(self, model_path, dataset):
+        self.model = YOLO(model_path)
+        self.ds = dataset
 
-    def start_run(self, take_accuracy):
-        self.take_accuracy = take_accuracy
-        self.post_proc.start()
-
-    # convert YOLO result to COCO format
-    def convert_to_coco(self, result, image_id):
-        detections = []
-
-        if len(result.boxes) == 0:
-            return detections
-
-        boxes = result.boxes.xyxy.cpu().numpy()
-        scores = result.boxes.conf.cpu().numpy()
-        classes = result.boxes.cls.cpu().numpy()
-
-        for box, score, cls in zip(boxes, scores, classes):
-            x1, y1, x2, y2 = box
-            detection = {
-                "image_id": int(image_id),
-                "category_id": int(cls) + 1,  # COCO is 1-indexed
-                "bbox": [float(x1), float(y1), float(x2 - x1), float(y2 - y1)],
-                "score": float(score)
-            }
-            detections.append(detection)
-
-        return detections
-
-    # to process the query samples
     def enqueue(self, query_samples):
         for qitem in query_samples:
             img_path, img_id = self.ds.get_item_loc(qitem.index)
 
-            # run inference
-            result = self.model.predict(img_path)
+            # low confidence threshold set to capture enough detection for valid mAP for accuracy runs
+            results = self.model.predict(img_path, conf=0.001, verbose=False)[0]
 
-            # convert to COCO format
-            detections = self.convert_to_coco(result, img_id)
+            h, w = results.orig_shape
+            response_payload = b""
 
-            # store for accuracy
-            if self.take_accuracy:
-                self.post_proc.add_results(detections)
+            if len(results.boxes) > 0:
+                boxes = results.boxes.xyxy.cpu().numpy()
+                scores = results.boxes.conf.cpu().numpy()
+                classes = results.boxes.cls.cpu().numpy().astype(int)
 
-            # prepare response for LoadGen
-            response_data = json.dumps(detections).encode('utf-8')
-            response_array = array.array('B', response_data)
+                for box, score, cls in zip(boxes, scores, classes):
+                    category_id = COCO_80_TO_91[cls]
+                    # h, w = results.orig_shape
+
+                    # pack as [qsl_idx, ymin, xmin, ymax, xmax, score, cat_id] - 7f format is required for MLPerf accuracy scripts
+                    response_payload += struct.pack("7f",
+                        float(qitem.index),
+                        float(box[1] / h), float(box[0] / w), # ymin, xmin
+                        float(box[3] / h), float(box[2] / w), # ymax, xmax
+                        float(score),
+                        float(category_id)
+                    )
+
+            response_array = array.array('B', response_payload)
             bi = response_array.buffer_info()
-
-            response = lg.QuerySampleResponse(qitem.id, bi[0], bi[1])
-            lg.QuerySamplesComplete([response])
-
-
-# QSL/SUT LoadGen
-class QueueRunner:
-    def __init__(self, runner):
-        self.runner = runner
-        self.qsl = None
-        self.sut = None
-
-    def load_query_samples(self, sample_list):
-        pass
-
-    def unload_query_samples(self, sample_list):
-        pass
-   
-    def issue_queries(self, query_samples):
-        self.runner.enqueue(query_samples)
-   
-    def flush_queries(self):
-        pass
-
-# creaet SUT 
-def get_sut(ds, runner):
-    queue_runner = QueueRunner(runner)
-   
-    qsl = lg.ConstructQSL(
-        ds.get_item_count(),
-        ds.get_item_count(),
-        queue_runner.load_query_samples,
-        queue_runner.unload_query_samples
-    )
-    queue_runner.qsl = qsl
-   
-    sut = lg.ConstructSUT(
-        queue_runner.issue_queries,
-        queue_runner.flush_queries
-    )
-    queue_runner.sut = sut
-
-   
-    return qsl, sut, queue_runner
+            lg.QuerySamplesComplete([lg.QuerySampleResponse(qitem.id, bi[0], bi[1])])
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-path", required=True, help="path to dataset images")
-    parser.add_argument("--model", required=True, help="path to YOLO model")
-    parser.add_argument("--device", default="cuda:0", help="device")
-    parser.add_argument("--scenario", default="Offline", choices=["Offline", "SingleStream", "MultiStream"])
-    parser.add_argument("--accuracy", action="store_true", help="run accuracy mode")
-    parser.add_argument("--count", type=int, help="number of samples")
-    parser.add_argument("--output", default="output", help="output directory")
+    parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--dataset-path", type=str, required=True)
+    parser.add_argument("--annotation-file", type=str, required=True)
+    parser.add_argument("--count", type=int, default=None, help="Number of samples to run")
+    parser.add_argument("--output", type=str, help="Directory for MLPerf logs")
+
+    # mode flags
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument("--AccuracyOnly", action="store_true")
+    mode_group.add_argument("--PerformanceOnly", action="store_true")
+
+    # scenario selection
+    parser.add_argument("--scenario", type=str, choices=["SingleStream", "MultiStream", "Offline"], default="SingleStream")
     args = parser.parse_args()
-    
-    print("=" * 60)
-    print("YOLOv11 MLC LoadGen POC")
-    print("=" * 60)
 
-    os.makedirs(args.output, exist_ok=True)
+    # output logs
+    if args.output:
+        log_path = os.path.abspath(args.output)
+    else:
+        log_path = os.path.abspath(f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
 
-    # load dataset
-    ds = Coco(args.dataset_path, count=args.count)
+    if not os.path.exists(log_path):
+        os.makedirs(log_path, exist_ok=True)
 
-    # load model
-    backend = BackendYOLO(args.model, device=args.device)
+    # initialize dataset
+    ds = Coco(args.dataset_path, args.annotation_file, args.count)
+    runner = Runner(args.model, ds)
 
-    # create post-processor and runner
-    post_proc = PostProcessCoco()
-    runner = Runner(backend, ds, post_proc)
+    # MLPerf LoadGen Setup
+    def flush_queries(): pass
+    sut = lg.ConstructSUT(runner.enqueue, flush_queries)
 
-    # create QSL and SUT
-    qsl, sut, queue_runner = get_sut(ds, runner)
+    # standard edge QSL: min of 500 performance_sample_count and the full dataset count
+    qsl = lg.ConstructQSL(ds.count, min(ds.count, 500), lambda x: None, lambda x: None)
 
-    # configure LoadGen
     settings = lg.TestSettings()
-    settings.scenario = getattr(lg.TestScenario, args.scenario)
-    settings.mode = lg.TestMode.AccuracyOnly if args.accuracy else lg.TestMode.PerformanceOnly
 
-    if args.scenario == "Offline":
-        settings.offline_expected_qps = 100
-    elif args.scenario == "SingleStream":
-        settings.single_stream_expected_latency_ns = 10000000  # 10ms
-    elif args.scenario == "MultiStream":
+    # scenario configurations
+    scenario_map = {
+        "SingleStream": lg.TestScenario.SingleStream,
+        "MultiStream": lg.TestScenario.MultiStream,
+        "Offline": lg.TestScenario.Offline
+    }
+    settings.scenario = scenario_map[args.scenario]
+
+    # MultiStream samples per query
+    if args.scenario == "MultiStream":
+        # NOTE: set to 8 for Edge submission
         settings.multi_stream_samples_per_query = 8
-        settings.multi_stream_target_latency_ns = 50000000  # 50ms
 
-    settings.min_duration_ms = 60000
-    settings.min_query_count = 100
+    # mode and duration
+    if args.AccuracyOnly:
+        settings.mode = lg.TestMode.AccuracyOnly
+    else:
+        settings.mode = lg.TestMode.PerformanceOnly
+        # NOTE MLPerf requirement: minimum 10 minute run for performance
+        settings.min_duration_ms = 600000
+        settings.min_query_count = 100
 
-    # logging - come back to this
+        # NOTE: user configs can override this in submission, this is the reference implementation so purposely left barebones
+        # settings.target_qps = ...
+        # ...
+
+    # configure logs
     log_settings = lg.LogSettings()
-    log_settings.log_output.outdir = args.output
+    log_settings.log_output.outdir = log_path
     log_settings.log_output.copy_summary_to_stdout = True
-    log_settings.enable_trace = False
 
-    # run
-    print(f"\nRunning {args.scenario} scenario...")
-    print("-" * 60)
+    print(f"Starting MLPerf run")
+    print(f"Scenario: {args.scenario}")
+    print(f"{'Accuracy' if args.AccuracyOnly else 'Performance'} run")
+    print(f"Log directory: {log_path}")
 
-    runner.start_run(args.accuracy)
+    try:
+        lg.StartTestWithLogSettings(sut, qsl, settings, lg.LogSettings())
+        print(f"MLPerf run complete - cleaning up")
+    except Exception as e:
+        print(f"An error occured during StartTest: {e}")
+    finally:
+        print(f"cleaning up LoadGen and flushing logs")
+        lg.DestroyQSL(qsl)
+        lg.DestroySUT(sut)
 
-    start = time.time()
-    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
-    elapsed = time.time() - start
+        del qsl
+        del sut
 
-    print("-" * 60)
-    print(f"Completed in {elapsed:.2f}s\n")
+        time.sleep(2)
 
-    # save results
-    if args.accuracy:
-        post_proc.finalize(args.output)
+    # final sanity check for logs
+    expected_files = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
+    if args.AccuracyOnly:
+        expected_files.append("mlperf_log_accuracy.json")
 
-    print("=" * 60)
-    print(f"Results: {args.output}")
-    print("=" * 60)
-
-    # destroy qsl and sut cleanup
-    lg.DestroyQSL(qsl)
-    lg.DestroySUT(sut)
-
+    print(f"Checking for logs in {log_path}:")
+    for f in expected_files:
+        fpath = os.path.join(log_path, f)
+        if os.path.exists(fpath):
+            print(f" [OK] {f} present ({os.path.getsize(fpath)} bytes)")
+        else:
+            if os.path.exists(f):
+                print(f" [!!] Found {f} in CURRENT DIR instead of output dir!")
+            else:
+                print(f" [!!] {f} MISSING")
 
 if __name__ == "__main__":
     main()
-

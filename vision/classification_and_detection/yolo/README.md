@@ -13,7 +13,7 @@ The full coco dataset has images that are not compliant with MLC legal rules. In
 `python filter_coco_safe_images.py` to create a new folder with just the images that comply with license agreements  
 `python create_safe_annotations.py` to create the correct associated annotations file, needed for the mAP accuracy score calcuations.
 
-The dataset has been uploaded the MLC S3 bucket, instructions for how to pull the safe dataset to come shortly. This is what your dataset path should look like:\
+The dataset has been uploaded the MLC S3 bucket, instructions for how to pull the safe dataset can be found at this website: https://inference.mlcommons-storage.org/index.html. This is what your dataset path should look like:\
 coco_safe/\
 ├── annotations/\
 &nbsp;&nbsp;&nbsp;&nbsp;instances_val2017_safe.json\
@@ -24,19 +24,21 @@ coco_safe.checksums
 ## How to run yolo_loadgen.py
 Examples usage:  
 Perf run  
-`python yolo_loadgen.py --dataset-path {DATASET_PATH} --model {MODEL_FILE} --scenario {Offline, SingleStream, MultiStream} --output {OUTPUT_RESULTS_DIR}`
+`python yolo_loadgen.py --model {MODEL_FILE} --dataset-path {DATASET_PATH} --annotation-file {ANNOTATIONS_JSON_FILE} --count {integer value sample count} --output {OUTPUT_PATH} --PerformanceOnly --scenario {Offline, SingleStream, MultiStream}`
 
 Accuracy run  
-`python yolo_loadgen.py --dataset-path {DATASET_PATH} --model {MODEL_FILE} --scenario {Offline, SingleStream, MultiStream} --accuracy --output {OUTPUT_RESULTS_DIR}`
+`python yolo_loadgen.py --model {MODEL_FILE} --dataset-path {DATASET_PATH} --annotation-file {ANNOTATIONS_JSON_FILE} --count {integer value sample count} --output {OUTPUT_PATH} --AccuracyOnly --scenario {Offline, SingleStream, MultiStream}`
 
 Arguments:  
-`--dataset-path` -> path to dataset images  
-`--model` -> path to YOLO model  
-`--device` -> device # leave as is  
+`--model` -> path to YOLO model
+`--dataset-path` -> path to dataset images
+`--annotation-file` -> path to annotation json file  
+`--count` -> number of samples
+`--output` -> output directory
 `--scenario` -> ["Offline", "SingleStream", "MultiStream"]  
-`--accuracy` -> run accuracy mode  
-`--count` -> number of samples  
-`--output` -> output directory  
+`--PerformanceOnly` -> run performance run  # mutually exclusive with AccuracyOnly
+`--AccuracyOnly` -> run accuracy mode
+
 
 Example output is under inference/vision/classification_and_detection/yolo_result_10232025/ for YOLOv11[N, S, M, L, X]
 
@@ -48,6 +50,10 @@ Example output is under inference/vision/classification_and_detection/yolo_resul
 `--data` -> yaml file that contains the path to the dir of images as well as the labels  
 `--annotations` -> path to the annotations json file  
 `--output_json` -> output file  
+
+## How to get mAP accuracy results with accuracy-coco.py looking at mlperf_log_accuracy.json
+## RECOMMENDED APPROACH for accuracy results
+`python /inference/vision/classification_and_detection/tools/accuracy-coco.py --mlperf-accuracy-file {PATH TO mlperf_log_accuracy.json} --coco-dir {DATASET_PATH} --verbose`
 
 ## Method in which accuracy will be computed using mlperf_log_accuracy.json
 1. LoadGen runs → creates mlperf_log_accuracy.json (hex-encoded)

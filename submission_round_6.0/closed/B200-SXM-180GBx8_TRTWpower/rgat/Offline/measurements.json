@@ -1,0 +1,7 @@
+{
+    "input_data_types": "int64",
+    "retraining": "No",
+    "starting_weights_filename": "RGAT.pt hosted by MLCommons",
+    "weight_data_types": "fp16",
+    "weight_transformations": "none"
+}

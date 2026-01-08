@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "https://github.com/mlcommons/mlperf-automations/tree/dev/script/get-ml-model-pointpainting,https://github.com/mlcommons/mlperf-automations/tree/dev/script/get-ml-model-resnet50-deeplab",
+  "retraining": "no",
+  "input_data_types": "fp32",
+  "weight_data_types": "fp32",
+  "weight_transformations": "none"
+}

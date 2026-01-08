@@ -257,12 +257,14 @@ MODEL_CONFIG = {
             "pointpainting": 1024,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
             "yolo-95": 5000,
             "yolo-99": 5000,
+        },
+        "accuracy-sample-count": {
+            "gpt-oss-120b": 4395,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -284,8 +286,7 @@ MODEL_CONFIG = {
             "pointpainting": 39987,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            # TODO: Need to add accuracy sample count checkers as well (4395)
-            "gpt-oss-120b": 6396,
+            "gpt-oss-120b": 4395,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
             "yolo-95": 1525,
@@ -1097,6 +1098,7 @@ class Config:
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
+        self.accuracy_sample_count = self.base.get("accuracy-sample-count", self.performance_sample_count)
         self.dataset_size = self.base["dataset-size"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -1179,6 +1181,13 @@ class Config:
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
+
+    def get_accuracy_sample_count(self, model):
+        model = self.get_mlperf_model(model)
+        if model not in self.accuracy_sample_count:
+            log.warning("accuracy_sample_count not found for model %s, using performance_sample_count", model)
+            return self.get_performance_sample_count(model)
+        return self.accuracy_sample_count[model]
 
     def ignore_errors(self, line):
         for error in self.base["ignore_errors"]:
@@ -1553,6 +1562,19 @@ def check_accuracy_dir(config, model, path, verbose):
         log.error(
             "%s accurcy run does not cover all dataset, accuracy samples: %s, dataset size: %s", path, qsl_total_count, expected_qsl_total_count
         )
+
+    # check accuracy_sample_count if the field exists (v6.0+)
+    accuracy_sample_count = mlperf_log.get("effective_accuracy_sample_count")
+    if accuracy_sample_count is not None:
+        required_accuracy_sample_count = config.get_accuracy_sample_count(model)
+        if accuracy_sample_count < required_accuracy_sample_count:
+            log.error(
+                "%s accuracy_sample_count, found %d, needs to be >= %d",
+                fname,
+                accuracy_sample_count,
+                required_accuracy_sample_count,
+            )
+            is_valid = False
 
     return is_valid, result_acc
 

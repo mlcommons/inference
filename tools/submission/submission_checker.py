@@ -3093,15 +3093,8 @@ def check_measurement_dir(
                 is_valid = False
 
     for i in files:
-        if i.startswith(system_desc) and i.endswith(
-                "_" + scenario + ".json"):
+        if i.lower() == "measurements.json":
             system_file = i
-            end = len("_" + scenario + ".json")
-            break
-        elif i.startswith(system_desc) and i.endswith(".json"):
-            system_file = i
-            end = len(".json")
-            break
 
     weight_data_types = None
     if system_file:
@@ -3117,7 +3110,7 @@ def check_measurement_dir(
                     log.error(
                         "%s, field %s is missing meaningful value", fname, k)
 
-        code_dir = os.path.join(root, "code", model)
+        code_dir = os.path.join(root, "src", model)
         if not os.path.exists(code_dir):
             # see if the code dir is per model
             if not os.path.exists(os.path.dirname(code_dir)):

@@ -4,16 +4,16 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from .constants import MODEL_CONFIG
-from .configuration.configuration import Config
-from .loader import Loader
-from .checks.performance_check import PerformanceCheck
-from .checks.accuracy_check import AccuracyCheck
-from .checks.system_check import SystemCheck
-from .checks.measurements_checks import MeasurementsCheck
-from .checks.compliance_check import ComplianceCheck
-from .checks.power_check import PowerCheck
-from .results import ResultExporter
+from submission_checker.constants import MODEL_CONFIG
+from submission_checker.configuration.configuration import Config
+from submission_checker.loader import Loader
+from submission_checker.checks.performance_check import PerformanceCheck
+from submission_checker.checks.accuracy_check import AccuracyCheck
+from submission_checker.checks.system_check import SystemCheck
+from submission_checker.checks.measurements_checks import MeasurementsCheck
+from submission_checker.checks.compliance_check import ComplianceCheck
+from submission_checker.checks.power_check import PowerCheck
+from submission_checker.results import ResultExporter
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")

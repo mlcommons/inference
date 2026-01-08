@@ -9,7 +9,7 @@ import sys
 import shutil
 import json
 
-import submission_checker as checker
+import submission_checker_old as checker
 
 
 logging.basicConfig(level=logging.INFO)

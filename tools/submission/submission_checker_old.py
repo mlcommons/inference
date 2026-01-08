@@ -1569,7 +1569,8 @@ def check_accuracy_dir(config, model, path, verbose):
     # check accuracy_sample_count if the field exists (v6.0+)
     if "effective_accuracy_sample_count" in mlperf_log.get_keys():
         accuracy_sample_count = mlperf_log["effective_accuracy_sample_count"]
-        required_accuracy_sample_count = config.get_accuracy_sample_count(model)
+        required_accuracy_sample_count = config.get_accuracy_sample_count(
+            model)
         if accuracy_sample_count < required_accuracy_sample_count:
             log.error(
                 "%s accuracy_sample_count, found %d, needs to be >= %d",
@@ -1986,7 +1987,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

@@ -1098,7 +1098,8 @@ class Config:
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
-        self.accuracy_sample_count = self.base.get("accuracy-sample-count", self.performance_sample_count)
+        self.accuracy_sample_count = self.base.get(
+            "accuracy-sample-count", self.performance_sample_count)
         self.dataset_size = self.base["dataset-size"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -1185,7 +1186,9 @@ class Config:
     def get_accuracy_sample_count(self, model):
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
-            log.warning("accuracy_sample_count not found for model %s, using performance_sample_count", model)
+            log.warning(
+                "accuracy_sample_count not found for model %s, using performance_sample_count",
+                model)
             return self.get_performance_sample_count(model)
         return self.accuracy_sample_count[model]
 
@@ -1566,7 +1569,8 @@ def check_accuracy_dir(config, model, path, verbose):
     # check accuracy_sample_count if the field exists (v6.0+)
     accuracy_sample_count = mlperf_log.get("effective_accuracy_sample_count")
     if accuracy_sample_count is not None:
-        required_accuracy_sample_count = config.get_accuracy_sample_count(model)
+        required_accuracy_sample_count = config.get_accuracy_sample_count(
+            model)
         if accuracy_sample_count < required_accuracy_sample_count:
             log.error(
                 "%s accuracy_sample_count, found %d, needs to be >= %d",

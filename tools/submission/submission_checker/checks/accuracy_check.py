@@ -127,6 +127,11 @@ class AccuracyCheck(BaseCheck):
         return True
     
     def dataset_check(self):
+        if self.config.skip_dataset_size_check:
+            self.log.info(
+                "%s Skipping dataset size check", self.path
+            )
+            return True
         qsl_total_count = self.mlperf_log["qsl_reported_total_count"]
         expected_qsl_total_count = self.config.get_dataset_size(self.model)
         if qsl_total_count != expected_qsl_total_count:

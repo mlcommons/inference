@@ -101,6 +101,11 @@ def get_args():
         action="store_true",
         help="skips the check that the calibration documentation should exist",
     )
+    parser.add_argument(
+        "--skip-dataset-size-check",
+        action="store_true",
+        help="skips dataset size check, only for backwards compatibility",
+    )
     args = parser.parse_args()
     return args
 
@@ -121,6 +126,7 @@ def main():
         skip_extra_accuracy_files_check=args.skip_extra_accuracy_files_check,
         skip_all_systems_have_results_check=args.skip_all_systems_have_results_check,
         skip_calibration_check=args.skip_calibration_check,
+        skip_dataset_size_check=args.skip_dataset_size_check
     )
 
     if args.scenarios_to_skip:

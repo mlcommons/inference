@@ -17,7 +17,8 @@ class Config:
         skip_extra_files_in_root_check=False,
         skip_extra_accuracy_files_check=False,
         skip_all_systems_have_results_check=False,
-        skip_calibration_check=False
+        skip_calibration_check=False,
+        skip_dataset_size_check=False
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -34,6 +35,7 @@ class Config:
         self.skip_extra_accuracy_files_check = skip_extra_accuracy_files_check
         self.skip_all_systems_have_results_check = skip_all_systems_have_results_check
         self.skip_calibration_check = skip_calibration_check
+        self.skip_dataset_size_check = skip_dataset_size_check
         self.load_config(version)
         
 

@@ -33,7 +33,7 @@ class LoadgenParser(BaseParser):
         self.marker = ""
         self.log_is_endpoints = False
         self.logger = logging.getLogger("MLPerfLog")
-        self.messages = []
+        self.messages = {}
         with open(log_path, "r", encoding="utf-8") as f:
             for i, line in enumerate(f):
                 line = line.rstrip()

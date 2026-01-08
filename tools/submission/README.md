@@ -60,6 +60,15 @@ python3 -m inference.tools.submission.submission_checker.main
     [--skip_compliance]
     [--extra-model-benchmark-map <extra-mapping-string>]
     [--submission-exceptions]
+    [--skip-power-check]
+    [--skip-meaningful-fields-emptiness-check]
+    [--skip-check-power-measure-files]
+    [--skip-empty-files-check]
+    [--skip-extra-files-in-root-check]
+    [--skip-extra-accuracy-files-check]
+    [--scenarios-to-skip]
+    [--skip-all-systems-have-results-check]
+    [--skip-calibration-check]
 ```
 
 ### implemented checks

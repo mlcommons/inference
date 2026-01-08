@@ -232,7 +232,7 @@ class LoadGenClient(BaseClient):
             return 20000
         elif 'llama3.1' in model_lower or 'llama-3.1' in model_lower or 'llama3_1' in model_lower:
             if '8b' in model_lower or '8-b' in model_lower:
-                return 1024
+                return 128
         elif 'llama2' in model_lower or 'llama-2' in model_lower:
             if '70b' in model_lower or '70-b' in model_lower:
                 return 1024

@@ -89,7 +89,7 @@ class ResultExporter:
 
 
     def export_row(self, row: dict):
-        values = [str(row.get(key, "")) for key in self.head]
+        values = [f'"{row.get(key, "")}"' for key in self.head]
         csv_row = ",".join(values) + "\n"
         with open(self.csv_path, "+a") as csv:
             csv.write(csv_row)

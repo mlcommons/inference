@@ -1143,6 +1143,12 @@ RESULT_FIELD_NEW = {
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
     },
+    "v6.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {

@@ -2,6 +2,11 @@ import argparse
 import logging
 import os
 
+if __name__ == "__main__" and __package__ is None:
+        import sys
+        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+        __package__ = "submission_checker"
+
 from .constants import MODEL_CONFIG
 from .configuration.configuration import Config
 from .loader import Loader
@@ -336,8 +341,4 @@ def main():
 
 
 if __name__ == "__main__":
-    if __package__ is None:
-        import sys
-        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-        __package__ = "submission_checker"
     main()

@@ -208,7 +208,7 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
         },
         "accuracy-upper-limit": {
@@ -313,7 +313,7 @@ MODEL_CONFIG = {
             "llama3.1-405b": {"Server": 60000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 12000000000},
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -779,6 +779,12 @@ RESULT_FIELD_NEW = {
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
     },
+    "v6.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
@@ -938,7 +944,8 @@ ACC_PATTERN = {
     "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
-    "exact_match": r".*'exact_match':\s([\d.]+).*"
+    "exact_match": r".*'exact_match':\s([\d.]+).*",
+    "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}'
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1507,6 +1514,7 @@ def check_accuracy_dir(config, model, path, verbose):
         is_valid = False
     else:
         if os.stat(fname).st_size > MAX_ACCURACY_LOG_SIZE:
+            log.error("Max expected file size is: %s bytes", MAX_ACCURACY_LOG_SIZE)
             log.error("%s is not truncated", fname)
             is_valid = False
 
@@ -3302,6 +3310,7 @@ def check_compliance_dir(
         "rgat",
         "deepseek-r1",
         "whisper",
+        "qwen3-vl-235b-a22b"
     ]:
         test_list.remove("TEST04")
 
@@ -3312,7 +3321,8 @@ def check_compliance_dir(
         "llama2-70b-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
-        "deepseek-r1"
+        "deepseek-r1",
+        "qwen3-vl-235b-a22b"
     ]:
         test_list.remove("TEST01")
 

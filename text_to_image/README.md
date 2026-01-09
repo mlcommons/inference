@@ -53,38 +53,32 @@ We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face
 #### MLC method
 
 The following MLCommons MLC commands can be used to programmatically download the model checkpoints.
-
+FP16:
 ```
 mlcr get,ml-model,sdxl,_fp16,_r2-downloader --outdirname=$MODEL_PATH -j
 ```
+FP32
 ```
 mlcr get,ml-model,sdxl,_fp32,_r2-downloader --outdirname=$MODEL_PATH -j
 ```
 #### Manual method
 
-The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+The above command automatically runs a set of commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the commands manually, you can do so as follows:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following commands to download the checkpoints:
+(More information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org))
+
+Navigate in the terminal to your desired download directory and run the following commands to download the checkpoints:
 ```
 cd $MODEL_PATH
 ```
 
 **`fp32`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 $MODEL_PATH -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d $MODEL_PATH https://inference.mlcommons-storage.org/metadata/stable-diffusion-xl-1-0-fp32-checkpoint.uri
 ```
 **`fp16`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 $MODEL_PATH -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d $MODEL_PATH https://inference.mlcommons-storage.org/metadata/stable-diffusion-xl-1-0-fp16-checkpoint.uri
 ```
 
 ### Download validation dataset

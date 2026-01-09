@@ -56,7 +56,7 @@ coco_safe/\
 coco_safe.checksums
 
 ## Model download
-Instructions for how to download the model can be found at this website: TODO
+Instructions for how to download the model can be found at this website: [TODO](https://inference.mlcommons-storage.org/index.html)
 ## UPDATES TO THE MLC LINK TO REFELECT ABOVE STATEMENT TO COME
 
 ## How to run yolo_loadgen.py
@@ -82,17 +82,6 @@ Arguments:
 
 
 Example output is under inference/vision/classification_and_detection/yolo_result_10232025/ for YOLOv11[N, S, M, L, X]
-
-## How to get mAP accuracy results with yolo_ultra_map.py
-```bash
-python yolo_ultra_map.py --option {1, 2} --model {MODEL_FILE} --images {DATASET PATH} --data {DATA YAML FILE PATH} --annotations {ANNOTATION JSON FILE PATH} --output_json {OUTPUT JSON FILE PATH}
-```
-`--option` -> 1 is for the in built YOLO method (does not work) and 2 is for the pycocotools approach that requires the predicitions.json as well as the annotations file.  
-`--model` -> model to run test on  
-`--images` -> path for the dataset of images  
-`--data` -> yaml file that contains the path to the dir of images as well as the labels  
-`--annotations` -> path to the annotations json file  
-`--output_json` -> output file  
 
 ## How to get mAP accuracy results with accuracy-coco.py looking at mlperf_log_accuracy.json
 ### RECOMMENDED APPROACH for accuracy results

@@ -1578,3 +1578,10 @@ SYSTEM_PATH = {
     "v6.0": "{division}/{submitter}/systems/{system}.json",
     "default": "{division}/{submitter}/systems/{system}.json",
 }
+
+SRC_PATH = {
+    "v5.0": "{division}/{submitter}/code",
+    "v5.1": "{division}/{submitter}/code",
+    "v6.0": "{division}/{submitter}/src",
+    "default": "{division}/{submitter}/src",
+}

@@ -7,22 +7,25 @@ import os
 
 
 class MeasurementsCheck(BaseCheck):
-    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
+    def __init__(self, log, path, config: Config,
+                 submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.name = "measurement checks"
         self.submission_logs = submission_logs
         self.measurements_json = self.submission_logs.measurements_json
         self.submitter = self.submission_logs.loader_data.get("submitter", "")
         self.division = self.submission_logs.loader_data.get("division", "")
-        self.measurements_dir = self.submission_logs.loader_data.get("measurements_dir", "")
+        self.measurements_dir = self.submission_logs.loader_data.get(
+            "measurements_dir", "")
+        self.src_dir = self.submission_logs.loader_data.get("src_path", "")
         self.config = config
         self.setup_checks()
 
     def setup_checks(self):
         self.checks.append(self.missing_check)
+        self.checks.append(self.directory_exist_check)
         self.checks.append(self.required_files_check)
         self.checks.append(self.required_fields_check)
-    
 
     def missing_check(self):
         if self.measurements_json is None:
@@ -32,7 +35,16 @@ class MeasurementsCheck(BaseCheck):
             )
             return False
         return True
-    
+
+    def directory_exist_check(self):
+        if not os.path.exists(self.src_dir):
+            self.log.error(
+                "%s src directory does not exist",
+                self.src_dir
+            )
+            return False
+        return True
+
     def required_files_check(self):
         is_valid = True
         files = list_files(self.measurements_dir)
@@ -43,7 +55,10 @@ class MeasurementsCheck(BaseCheck):
             elif not self.config.skip_empty_files_check and (
                 os.stat(os.path.join(self.measurements_dir, i)).st_size == 0
             ):
-                self.log.error("%s is having empty %s", self.measurements_dir, i)
+                self.log.error(
+                    "%s is having empty %s",
+                    self.measurements_dir,
+                    i)
                 is_valid = False
         return is_valid
 

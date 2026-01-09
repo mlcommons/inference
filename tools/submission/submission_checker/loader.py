@@ -43,7 +43,7 @@ class Loader:
         self.test04_acc_path = os.path.join(self.root, TEST04_ACC_PATH.get(version, TEST04_ACC_PATH["default"]))
         self.test06_acc_path = os.path.join(self.root, TEST06_ACC_PATH.get(version, TEST06_ACC_PATH["default"]))
         self.power_dir_path = os.path.join(self.root, POWER_DIR_PATH.get(version, POWER_DIR_PATH["default"]))
-
+        self.src_path = os.path.join(self.root, SRC_PATH.get(version, SRC_PATH["default"]))
 
 
     def get_measurement_path(self, path, division, submitter, system, benchmark, scenario):
@@ -116,6 +116,7 @@ class Loader:
                             test04_perf_path = self.test04_perf_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             test04_acc_path = self.test04_acc_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
                             test06_acc_path = self.test06_acc_path.format(division = division, submitter = submitter, system = system, benchmark = benchmark, scenario = scenario)
+                            src_path = self.src_path.format(division = division, submitter = submitter)
 
                             # Load logs
                             perf_log = self.load_single_log(perf_path, "Performance")
@@ -147,6 +148,7 @@ class Loader:
                                 "compliance_path": compliance_path,
                                 "model_mapping": model_mapping,
                                 "power_dir_path": power_dir_path,
+                                "src_path": src_path,
                                 # Test paths
                                 "TEST01_perf_path": test01_perf_path,
                                 "TEST01_acc_path": test01_acc_path,

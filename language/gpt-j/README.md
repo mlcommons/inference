@@ -9,7 +9,7 @@ You can also do `pip install mlc-scripts` and then use `mlcr` commands for downl
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,gptj,_fp32,_pytorch,_r2-downloader --outdirname=<path_to_download> -j
+mlcr get,ml-model,gptj,_pytorch,_fp32,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
 ### Download dataset through MLCFlow Automation
@@ -103,21 +103,14 @@ mlcr get,ml-model,gptj,_pytorch,_rclone ---outdirname =./model -P
 
 #### Manual method
 
-The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+The above command automatically runs a set of commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the commands manually, you can do so as follows:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+(More information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org))
+
+Navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/gpt-j ./model -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d model https://inference.mlcommons-storage.org/metadata/gpt-j-model-checkpoint.uri
 ```
 
 

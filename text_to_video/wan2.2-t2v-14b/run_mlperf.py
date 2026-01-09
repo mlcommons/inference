@@ -21,6 +21,7 @@ SCENARIO_MAP = {
 NANO_SEC = 1e9
 MILLI_SEC = 1000
 
+
 def setup_logging(rank):
     """Setup logging configuration for data parallel (all ranks log)."""
     logging.basicConfig(
@@ -46,7 +47,7 @@ def load_prompts(dataset_path):
 
 class Model:
     def __init__(
-        self, model_path, device, config, prompts, fixed_latent = None, rank = 0
+        self, model_path, device, config, prompts, fixed_latent=None, rank=0
     ):
         self.device = device
         self.rank = rank
@@ -108,7 +109,7 @@ class Model:
 
 class DebugModel:
     def __init__(
-        self, model_path, device, config, prompts, fixed_latent = None, rank = 0
+        self, model_path, device, config, prompts, fixed_latent=None, rank=0
     ):
         self.prompts = prompts
 
@@ -133,13 +134,15 @@ class DebugModel:
 def load_query_samples(sample_list):
     pass
 
+
 def unload_query_samples(sample_list):
     pass
+
 
 def get_args():
     parser = argparse.ArgumentParser(
         description="Batch T2V inference with Wan2.2-Diffusers")
-    ## Model Arguments
+    # Model Arguments
     parser.add_argument(
         "--model-path",
         type=str,
@@ -182,7 +185,7 @@ def get_args():
         default="./data/fixed_latent.pt",
         help="Path to fixed latent .pt file for deterministic generation (default: data/fixed_latent.pt)"
     )
-    ## MLPerf loadgen arguments
+    # MLPerf loadgen arguments
     parser.add_argument(
         "--scenario",
         default="SingleStream",
@@ -225,6 +228,7 @@ def get_args():
 
     return parser.parse_args()
 
+
 def run_mlperf(args, config):
     # Load dataset
     dataset = load_prompts(args.dataset)
@@ -240,7 +244,6 @@ def run_mlperf(args, config):
     setup_logging(rank)
 
     # Generation parameters from config
-    
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -257,7 +260,7 @@ def run_mlperf(args, config):
 
     # Loading model
     model = Model(args.model_path, device, config, dataset, fixed_latent, rank)
-    #model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
+    # model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
     logging.info("Model loaded successfully!")
 
     # Prepare loadgen for run
@@ -292,12 +295,11 @@ def run_mlperf(args, config):
             settings.server_target_qps = qps
             settings.offline_expected_qps = qps
 
-
         count_override = False
         count = args.count
         if count:
             count_override = True
-        
+
         if args.count:
             settings.min_query_count = count
             settings.max_query_count = count
@@ -306,24 +308,26 @@ def run_mlperf(args, config):
         if args.samples_per_query:
             settings.multi_stream_samples_per_query = args.samples_per_query
         if args.max_latency:
-            settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
+            settings.server_target_latency_ns = int(
+                args.max_latency * NANO_SEC)
             settings.multi_stream_expected_latency_ns = int(
                 args.max_latency * NANO_SEC)
-        
+
         performance_sample_count = (
             args.performance_sample_count
             if args.performance_sample_count
             else min(count, 500)
         )
-        
+
         sut = lg.ConstructSUT(model.issue_queries, model.flush_queries)
         qsl = lg.ConstructQSL(
             count, performance_sample_count, load_query_samples, unload_query_samples
         )
 
-        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
+        lg.StartTestWithLogSettings(
+            sut, qsl, settings, log_settings, audit_config)
         if args.accuracy:
-            ## TODO: output accuracy
+            # TODO: output accuracy
             final_results = {}
             with open("results.json", "w") as f:
                 json.dump(final_results, f, sort_keys=True, indent=4)
@@ -331,11 +335,11 @@ def run_mlperf(args, config):
         lg.DestroyQSL(qsl)
         lg.DestroySUT(sut)
 
+
 def main():
     args = get_args()
     config = load_config(args.config)
     run_mlperf(args, config)
-
 
 
 if __name__ == "__main__":

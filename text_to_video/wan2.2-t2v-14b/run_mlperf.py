@@ -272,11 +272,11 @@ def run_mlperf(args, config):
 
         user_conf = os.path.abspath(args.user_conf)
         settings = lg.TestSettings()
-        settings.FromConfig(user_conf, "qwen3-vl-235b-a22b", args.scenario)
+        settings.FromConfig(user_conf, "wan2.2-t2v-14b", args.scenario)
 
         audit_config = os.path.abspath(args.audit_conf)
         if os.path.exists(audit_config):
-            settings.FromConfig(audit_config, "qwen3-vl-235b-a22b", args.scenario)
+            settings.FromConfig(audit_config, "wan2.2-t2v-14b", args.scenario)
         settings.scenario = SCENARIO_MAP[args.scenario]
 
         settings.mode = lg.TestMode.PerformanceOnly

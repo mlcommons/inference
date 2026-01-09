@@ -56,7 +56,7 @@ coco_safe/\
 coco_safe.checksums
 
 ## Model download
-Instructions for how to download the model can be found at this website: [TODO](https://inference.mlcommons-storage.org/index.html)
+Instructions for how to download the model can be found at this website: https://inference.mlcommons-storage.org/index.html
 ## UPDATES TO THE MLC LINK TO REFELECT ABOVE STATEMENT TO COME
 
 ## How to run yolo_loadgen.py

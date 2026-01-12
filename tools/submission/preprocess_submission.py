@@ -120,6 +120,8 @@ def copy_submission_dir(src, dst, filter_submitter, keep_structure=True):
                             src, division, submitter, dir)):
                         target_dir = "results" if dir in [
                             "compliance", "measurements"] else dir
+                        target_dir = "src" if dir in [
+                            "code"] else target_dir
                         shutil.copytree(
                             os.path.join(src, division, submitter, dir),
                             os.path.join(dst, division, submitter, target_dir),
@@ -301,12 +303,10 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 model_compliance_path = model_results_path
                 model_code_path = os.path.join(
                     change_folder_name_in_path(
-                        log_path, "results", "code"), model)
+                        log_path, "results", "src"), model)
                 if not args.nomove_failed_to_open:
                     target_code_path = change_first_directory_to_open(
                         model_code_path)
-                    target_code_path = change_folder_name_in_path(
-                        log_path, "code", "src")
                     target_results_path = change_first_directory_to_open(
                         model_results_path)
                     target_measurements_path = change_first_directory_to_open(

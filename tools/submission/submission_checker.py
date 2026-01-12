@@ -1514,7 +1514,9 @@ def check_accuracy_dir(config, model, path, verbose):
         is_valid = False
     else:
         if os.stat(fname).st_size > MAX_ACCURACY_LOG_SIZE:
-            log.error("Max expected file size is: %s bytes", MAX_ACCURACY_LOG_SIZE)
+            log.error(
+                "Max expected file size is: %s bytes",
+                MAX_ACCURACY_LOG_SIZE)
             log.error("%s is not truncated", fname)
             is_valid = False
 

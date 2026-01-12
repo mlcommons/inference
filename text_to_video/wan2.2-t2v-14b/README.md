@@ -28,6 +28,7 @@ cd inference/text_to_video
 - `download_model.py` - Model download
 - `run_inference.py` - Video generation  
 - `run_evaluation.py` - VBench evaluation
+- `run_mlperf.py` - Run mlperf loadgen using Wan2.2 T2V-A14B-Diffusers model
 - `launch.sh` - Docker launcher
 - `data/vbench_prompts.txt` - Input prompts
 - `data/fixed_latent.pt` - Fixed latent tensor for deterministic generation

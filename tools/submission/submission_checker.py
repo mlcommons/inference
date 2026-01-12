@@ -48,6 +48,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "dlrm-v3",
+            "yolo-95",
+            "yolo-99",
         ],
         "required-scenarios-datacenter": {
             "retinanet": ["Server", "Offline"],
@@ -86,6 +88,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
             "whisper": ["Offline"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -210,6 +214,8 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "yolo-95": ("mAP", 53.4 * 0.95),
+            "yolo-99": ("mAP", 53.4 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -255,6 +261,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
+            "yolo-95": 5000,
+            "yolo-99": 5000,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -280,6 +288,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
+            "yolo-95": 1525,
+            "yolo-99": 1525,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -353,6 +363,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
     },
     "v5.1": {

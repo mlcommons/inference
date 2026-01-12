@@ -369,11 +369,11 @@ def phases_check(
 
         if duration_diff > 0.5:
             raise CheckerWarning(
-                f"Duration of the testing mode ({
+                f"Duration of the testing mode({
                     round(
                         test_duration,
                         2)}) is lower than that of "
-                f"ranging mode ({
+                f"ranging mode({
                     round(
                         range_duration,
                         2)}) by {

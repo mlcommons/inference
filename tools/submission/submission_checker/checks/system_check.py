@@ -72,7 +72,7 @@ class SystemCheck(BaseCheck):
             if expected_state_by_division[self.division] != is_network:
                 self.log.error(
                     f"{
-                        self.path} incorrect network mode (={is_network}) for division '{
+                        self.path} incorrect network mode(={is_network}) for division '{
                         self.division}'"
                 )
                 return False

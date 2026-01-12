@@ -13,7 +13,7 @@ import atexit
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 # Matplotlib imports - set backend early for headless environments
 try:
@@ -137,6 +137,28 @@ class BaseHarness:
         self.test_mode = test_mode
         self.server_config = server_config or {}
         self.api_server_url = api_server_url
+        # Support load balancing with multiple API server URLs
+        self.api_server_urls = api_server_urls or kwargs.get('api_server_urls', None)
+        # Support host specification from config or command line
+        self.host = kwargs.get('host', None)
+        self.hosts = kwargs.get('hosts', None)
+        # If hosts are specified but no URLs, construct URLs from hosts and port
+        if not self.api_server_urls and not self.api_server_url and (self.host or self.hosts):
+            port = self.server_config.get('port', 8000)
+            ports = self.server_config.get('ports', None)
+            if self.hosts:
+                if ports and isinstance(ports, list):
+                    if len(self.hosts) != len(ports):
+                        raise ValueError(f"Number of hosts ({len(self.hosts)}) must match number of ports ({len(ports)})")
+                    self.api_server_urls = [f"http://{h}:{p}" for h, p in zip(self.hosts, ports)]
+                else:
+                    self.api_server_urls = [f"http://{h}:{port}" for h in self.hosts]
+            elif self.host:
+                if ports and isinstance(ports, list):
+                    self.api_server_urls = [f"http://{self.host}:{p}" for p in ports]
+                else:
+                    # Single host, single port - update api_server_url if not already set
+                    self.api_server_url = f"http://{self.host}:{port}"
         self.batch_size = batch_size
         self.num_samples = num_samples
         self.output_dir = Path(output_dir)
@@ -473,7 +495,9 @@ class BaseHarness:
             self.server.start()
         
         self.server_started = True
-        self.api_server_url = f"http://localhost:{self.server.port}"
+        # Get host from config or default to localhost
+        server_host = self.server_config.get('host', 'localhost')
+        self.api_server_url = f"http://{server_host}:{self.server.port}"
         self.logger.info(f"Inference server started at: {self.api_server_url}")
     
     def stop_server(self):
@@ -524,6 +548,7 @@ class BaseHarness:
             dataset_path=self.dataset_path,
             test_mode=self.test_mode,
             api_server_url=self.api_server_url,
+            api_server_urls=getattr(self, 'api_server_urls', None),  # Support load balancing
             batch_size=self.batch_size,
             num_samples=self.num_samples,
             config=client_config

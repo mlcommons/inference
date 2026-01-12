@@ -13,10 +13,21 @@ import numpy as np
 import requests
 import json
 import array
+import base64
 import threading
 import queue
+import random
 from typing import List, Optional, Dict, Any
 from abc import ABC, abstractmethod
+from io import BytesIO
+
+# Try to import pandas for dataset operations
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+    pd = None
 
 # Add parent directories to path for imports
 harness_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -63,6 +74,7 @@ class LoadGenClient(BaseClient):
                  scenario: str = "Offline",
                  test_mode: str = "performance",
                  api_server_url: Optional[str] = None,
+                 api_server_urls: Optional[List[str]] = None,
                  batch_size: int = 13368,
                  num_samples: int = 13368,
                  config: Optional[Dict[str, Any]] = None):
@@ -74,7 +86,8 @@ class LoadGenClient(BaseClient):
             dataset_path: Path to dataset file
             scenario: LoadGen scenario ("Offline" or "Server")
             test_mode: Test mode ("performance" or "accuracy")
-            api_server_url: Optional API server URL (if using remote server)
+            api_server_url: Optional API server URL (if using remote server) - backward compatible
+            api_server_urls: Optional list of API server URLs for load balancing
             batch_size: Batch size for processing
             num_samples: Number of samples for testing
             config: Additional configuration
@@ -83,7 +96,25 @@ class LoadGenClient(BaseClient):
         
         self.scenario = scenario
         self.test_mode = test_mode
-        self.api_server_url = api_server_url
+        
+        # Handle load balancing: prefer api_server_urls, fall back to api_server_url
+        if api_server_urls:
+            self.api_server_urls = [url.rstrip('/') for url in api_server_urls]
+            self.api_server_url = self.api_server_urls[0]  # Primary URL for backward compatibility
+            self.load_balancing = True
+            self.load_balance_strategy = config.get('load_balance_strategy', 'round_robin') if config else 'round_robin'
+            self.current_server_index = 0
+            self.failed_servers = set()  # Track servers that have failed
+            self.max_retries_per_server = config.get('max_retries_per_server', 3) if config else 3
+            self.logger.info(f"Load balancing enabled with {len(self.api_server_urls)} servers: {self.api_server_urls}")
+            self.logger.info(f"Load balance strategy: {self.load_balance_strategy}")
+        else:
+            self.api_server_urls = None
+            self.api_server_url = api_server_url.rstrip('/') if api_server_url else None
+            self.load_balancing = False
+            self.current_server_index = 0
+            self.failed_servers = set()
+        
         self.batch_size = batch_size
         self.num_samples = num_samples
         
@@ -106,6 +137,28 @@ class LoadGenClient(BaseClient):
         self.max_tokens = self._determine_max_tokens(model_name, config)
         self.logger.info(f"Using max_tokens: {self.max_tokens} for model: {model_name}")
         
+        # Sampling parameters - can be different for accuracy vs performance
+        self.temperature = config.get('temperature', 0.0) if config else 0.0
+        self.top_k = config.get('top_k', 1) if config else 1
+        self.top_p = config.get('top_p', 1.0) if config else 1.0
+        
+        # Accuracy mode parameters (if specified, override for accuracy mode)
+        self.accuracy_temperature = config.get('accuracy_temperature', None) if config else None
+        self.accuracy_top_k = config.get('accuracy_top_k', None) if config else None
+        self.accuracy_top_p = config.get('accuracy_top_p', None) if config else None
+        
+        # SGLang-specific: use input_ids directly instead of text
+        self.use_input_ids = config.get('use_input_ids', False) if config else False
+        self.sglang_endpoint = config.get('sglang_endpoint', '/generate') if config else '/generate'
+        
+        # Multimodal-specific: use messages format directly (for qwen3vl)
+        self.use_messages = config.get('use_messages', False) if config else False
+        self.multimodal = config.get('multimodal', False) if config else False
+        self.use_guided_decoding = config.get('use_guided_decoding', False) if config else False
+        
+        # Offline scenario: send requests back-to-back instead of batching
+        self.offline_back_to_back = config.get('offline_back_to_back', False) if config else False
+        
         # Debug mode for accuracy mode
         self.debug_mode = config.get('debug_mode', False) if config else False
         
@@ -117,7 +170,14 @@ class LoadGenClient(BaseClient):
         self.ft_response_thread: Optional[threading.Thread] = None
         self.workers_started = False
         
-        if self.api_server_url:
+        # Initialize endpoints (for load balancing, use primary URL for endpoints)
+        if self.load_balancing:
+            # For load balancing, endpoints are constructed per-request
+            primary_url = self.api_server_urls[0]
+            self.completions_endpoint = f"{primary_url}/v1/completions"
+            self.chat_completions_endpoint = f"{primary_url}/v1/chat/completions"
+            self.health_endpoint = f"{primary_url}/health"
+        elif self.api_server_url:
             self.api_server_url = self.api_server_url.rstrip('/')
             self.completions_endpoint = f"{self.api_server_url}/v1/completions"
             self.chat_completions_endpoint = f"{self.api_server_url}/v1/chat/completions"
@@ -270,26 +330,139 @@ class LoadGenClient(BaseClient):
             self.logger.warning(f"Could not validate endpoint: {e}")
     
     def _wait_for_server_ready(self, timeout: int = 600):
-        """Wait for API server to become ready."""
-        if not self.api_server_url:
-            return
-        
-        self.logger.info(f"Waiting for API server at {self.api_server_url} (timeout: {timeout}s)")
-        
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                response = requests.get(self.health_endpoint, timeout=10)
-                if response.status_code == 200:
-                    self.logger.info("API server is ready!")
-                    self.server_ready = True
-                    return
-            except Exception as e:
-                self.logger.debug(f"API server not ready: {e}")
+        """Wait for API server(s) to become ready."""
+        if self.load_balancing:
+            # Wait for at least one server to be ready
+            self.logger.info(f"Waiting for at least one API server to be ready from {len(self.api_server_urls)} servers (timeout: {timeout}s)")
+            ready_servers = []
             
-            time.sleep(2)
+            for url in self.api_server_urls:
+                health_endpoint = f"{url}/health"
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    try:
+                        response = requests.get(health_endpoint, timeout=10)
+                        if response.status_code == 200:
+                            self.logger.info(f"API server at {url} is ready!")
+                            ready_servers.append(url)
+                            break
+                    except Exception as e:
+                        self.logger.debug(f"API server at {url} not ready: {e}")
+                    
+                    time.sleep(2)
+            
+            if ready_servers:
+                self.server_ready = True
+                self.logger.info(f"{len(ready_servers)}/{len(self.api_server_urls)} servers are ready")
+                # Remove failed servers from the list
+                self.api_server_urls = [url for url in self.api_server_urls if url in ready_servers]
+                if len(self.api_server_urls) != len(ready_servers):
+                    self.logger.warning(f"Some servers are not ready. Using {len(self.api_server_urls)} available servers")
+            else:
+                raise RuntimeError(f"No API servers became ready within {timeout} seconds")
+        elif self.api_server_url:
+            self.logger.info(f"Waiting for API server at {self.api_server_url} (timeout: {timeout}s)")
+            
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    response = requests.get(self.health_endpoint, timeout=10)
+                    if response.status_code == 200:
+                        self.logger.info("API server is ready!")
+                        self.server_ready = True
+                        return
+                except Exception as e:
+                    self.logger.debug(f"API server not ready: {e}")
+                
+                time.sleep(2)
+            
+            raise RuntimeError(f"API server at {self.api_server_url} did not become ready within {timeout} seconds")
+    
+    def _get_next_server_url(self) -> str:
+        """Get the next server URL using load balancing strategy."""
+        if not self.load_balancing or not self.api_server_urls:
+            return self.api_server_url
         
-        raise RuntimeError(f"API server at {self.api_server_url} did not become ready within {timeout} seconds")
+        # Filter out failed servers (if any are marked as permanently failed)
+        available_servers = [url for url in self.api_server_urls if url not in self.failed_servers]
+        if not available_servers:
+            # If all servers failed, reset and try all again
+            self.logger.warning("All servers marked as failed, resetting and trying all servers")
+            self.failed_servers.clear()
+            available_servers = self.api_server_urls
+        
+        if self.load_balance_strategy == 'round_robin':
+            # Round-robin: cycle through servers
+            url = available_servers[self.current_server_index % len(available_servers)]
+            self.current_server_index = (self.current_server_index + 1) % len(available_servers)
+            return url
+        elif self.load_balance_strategy == 'random':
+            # Random: pick a random server
+            return random.choice(available_servers)
+        else:
+            # Default to round-robin
+            url = available_servers[self.current_server_index % len(available_servers)]
+            self.current_server_index = (self.current_server_index + 1) % len(available_servers)
+            return url
+    
+    def _get_endpoints_for_url(self, base_url: str) -> Dict[str, str]:
+        """Get endpoint URLs for a given base URL."""
+        return {
+            'completions': f"{base_url}/v1/completions",
+            'chat_completions': f"{base_url}/v1/chat/completions",
+            'health': f"{base_url}/health",
+            'sglang': f"{base_url}{self.sglang_endpoint}"
+        }
+    
+    def _send_request_with_retry(self, endpoint: str, payload: Dict[str, Any], server_url: str, max_retries: int = 3) -> requests.Response:
+        """Send API request with retry logic and load balancing fallback."""
+        last_exception = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(endpoint, json=payload, timeout=None)
+                if response.status_code == 200:
+                    return response
+                else:
+                    # Non-200 status code - might be server error
+                    last_exception = RuntimeError(f"API request failed: {response.status_code} - {response.text}")
+                    if self.load_balancing and attempt < max_retries - 1:
+                        # Try next server
+                        self.logger.warning(f"Server {server_url} returned status {response.status_code}, trying next server...")
+                        server_url = self._get_next_server_url()
+                        endpoints = self._get_endpoints_for_url(server_url)
+                        # Update endpoint based on original endpoint type
+                        if '/chat/completions' in endpoint:
+                            endpoint = endpoints['chat_completions']
+                        elif '/completions' in endpoint:
+                            endpoint = endpoints['completions']
+                        elif '/generate' in endpoint:
+                            endpoint = endpoints['sglang']
+                        continue
+            except (requests.exceptions.RequestException, ConnectionError) as e:
+                last_exception = e
+                if self.load_balancing and attempt < max_retries - 1:
+                    # Try next server on connection error
+                    self.logger.warning(f"Connection error to {server_url}: {e}, trying next server...")
+                    server_url = self._get_next_server_url()
+                    endpoints = self._get_endpoints_for_url(server_url)
+                    # Update endpoint based on original endpoint type
+                    if '/chat/completions' in endpoint:
+                        endpoint = endpoints['chat_completions']
+                    elif '/completions' in endpoint:
+                        endpoint = endpoints['completions']
+                    elif '/generate' in endpoint:
+                        endpoint = endpoints['sglang']
+                    continue
+                else:
+                    # No more retries or not load balancing
+                    break
+        
+        # All retries exhausted
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError(f"API request failed after {max_retries} attempts")
     
     @abstractmethod
     def issue_query(self, query_samples: List['lg.QuerySample']) -> None:
@@ -385,49 +558,215 @@ class LoadGenOfflineClient(LoadGenClient):
     def issue_query(self, query_samples: List['lg.QuerySample']) -> None:
         """Process queries in batches for offline scenario."""
         total_samples = len(query_samples)
-        num_batches = (total_samples + self.batch_size - 1) // self.batch_size
         
-        self.logger.info("=" * 80)
-        self.logger.info(f"OFFLINE SCENARIO: Processing {total_samples} queries in {num_batches} batches")
-        self.logger.info(f"Batch size: {self.batch_size}, Total samples: {total_samples}")
-        self.logger.info("=" * 80)
+        # Determine sampling parameters based on test_mode
+        temperature, top_k, top_p = self._get_sampling_params()
         
-        processed_samples = 0
-        for batch_idx in range(num_batches):
-            start = batch_idx * self.batch_size
-            end = min((batch_idx + 1) * self.batch_size, total_samples)
-            batch = query_samples[start:end]
-            batch_size = len(batch)
+        if self.offline_back_to_back:
+            # Send requests back-to-back (one at a time)
+            self.logger.info("=" * 80)
+            self.logger.info(f"OFFLINE SCENARIO: Processing {total_samples} queries back-to-back")
+            self.logger.info(f"Total samples: {total_samples}")
+            self.logger.info("=" * 80)
             
-            self.logger.info(f"Processing batch {batch_idx + 1}/{num_batches} ({batch_size} samples)")
+            processed_samples = 0
+            for q_sample in query_samples:
+                try:
+                    if self.api_server_url:
+                        self._process_api_single(q_sample, temperature, top_k, top_p)
+                        processed_samples += 1
+                        if processed_samples % 100 == 0:
+                            self.logger.info(f"Processed {processed_samples}/{total_samples} samples")
+                    else:
+                        self.logger.warning("Local model processing not yet implemented")
+                        self._send_error_responses([q_sample])
+                        processed_samples += 1
+                except Exception as e:
+                    self.logger.error(f"Error processing query {q_sample.id}: {e}", exc_info=True)
+                    self._send_error_responses([q_sample])
+                    processed_samples += 1
             
-            try:
-                if self.api_server_url:
-                    self._process_api_batch(batch)
-                    processed_samples += batch_size
-                    self.logger.info(f"✓ Batch {batch_idx + 1}/{num_batches} completed ({processed_samples}/{total_samples} samples processed)")
-                else:
-                    self.logger.warning("Local model processing not yet implemented")
-                    # TODO: Implement local model processing
+            self.logger.info("=" * 80)
+            self.logger.info(f"All queries completed: {processed_samples}/{total_samples} samples processed")
+            self.logger.info("=" * 80)
+        else:
+            # Batch processing (original behavior)
+            num_batches = (total_samples + self.batch_size - 1) // self.batch_size
+            
+            self.logger.info("=" * 80)
+            self.logger.info(f"OFFLINE SCENARIO: Processing {total_samples} queries in {num_batches} batches")
+            self.logger.info(f"Batch size: {self.batch_size}, Total samples: {total_samples}")
+            self.logger.info("=" * 80)
+            
+            processed_samples = 0
+            for batch_idx in range(num_batches):
+                start = batch_idx * self.batch_size
+                end = min((batch_idx + 1) * self.batch_size, total_samples)
+                batch = query_samples[start:end]
+                batch_size = len(batch)
+                
+                self.logger.info(f"Processing batch {batch_idx + 1}/{num_batches} ({batch_size} samples)")
+                
+                try:
+                    if self.api_server_url:
+                        self._process_api_batch(batch, temperature, top_k, top_p)
+                        processed_samples += batch_size
+                        self.logger.info(f"✓ Batch {batch_idx + 1}/{num_batches} completed ({processed_samples}/{total_samples} samples processed)")
+                    else:
+                        self.logger.warning("Local model processing not yet implemented")
+                        # TODO: Implement local model processing
+                        self._send_error_responses(batch)
+                        processed_samples += batch_size
+                    
+                    self.batch_counter += 1
+                except Exception as e:
+                    self.logger.error(f"Error processing batch {batch_idx + 1}/{num_batches}: {e}", exc_info=True)
                     self._send_error_responses(batch)
                     processed_samples += batch_size
-                
-                self.batch_counter += 1
-            except Exception as e:
-                self.logger.error(f"Error processing batch {batch_idx + 1}/{num_batches}: {e}", exc_info=True)
-                self._send_error_responses(batch)
-                processed_samples += batch_size
-        
-        self.logger.info("=" * 80)
-        self.logger.info(f"All batches completed: {processed_samples}/{total_samples} samples processed")
-        self.logger.info("=" * 80)
+            
+            self.logger.info("=" * 80)
+            self.logger.info(f"All batches completed: {processed_samples}/{total_samples} samples processed")
+            self.logger.info("=" * 80)
     
-    def _process_api_batch(self, batch: List['lg.QuerySample']) -> None:
+    def _get_sampling_params(self):
+        """Get sampling parameters based on test_mode."""
+        if self.test_mode == "accuracy":
+            temperature = self.accuracy_temperature if self.accuracy_temperature is not None else self.temperature
+            top_k = self.accuracy_top_k if self.accuracy_top_k is not None else self.top_k
+            top_p = self.accuracy_top_p if self.accuracy_top_p is not None else self.top_p
+        else:
+            temperature = self.temperature
+            top_k = self.top_k
+            top_p = self.top_p
+        return temperature, top_k, top_p
+    
+    def _process_api_single(self, q_sample: 'lg.QuerySample', temperature: float, top_k: int, top_p: float) -> None:
+        """Process a single query via API (for back-to-back mode)."""
+        # Check if using multimodal messages format
+        if self.use_messages or self.multimodal:
+            # Get messages from dataset (multimodal format)
+            if hasattr(self.dataset, 'messages') and q_sample.index < len(self.dataset.messages):
+                messages = self.dataset.messages[q_sample.index]
+            elif hasattr(self.dataset, 'processed_data'):
+                # Try to extract messages from dataset
+                df = self.dataset.processed_data
+                if 'messages' in df.columns:
+                    messages = df.iloc[q_sample.index]['messages']
+                else:
+                    # Fallback: try to construct messages from available fields
+                    self.logger.warning(f"Dataset doesn't have 'messages' column, attempting to construct from fields")
+                    messages = self._construct_messages_from_dataset(q_sample.index)
+            else:
+                raise RuntimeError(f"Multimodal mode requires 'messages' in dataset, but not found for index {q_sample.index}")
+            
+            # Send multimodal request
+            self._process_multimodal_request(q_sample.id, q_sample.index, messages, temperature, top_k, top_p)
+            return
+        
+        # Get input IDs from dataset
+        input_ids = self.dataset.input_ids[q_sample.index]
+        
+        # Check if using SGLang with input_ids
+        if self.use_input_ids:
+            # SGLang format: send input_ids directly
+            endpoint = f"{self.api_server_url}{self.sglang_endpoint}"
+            api_payload = {
+                "input_ids": input_ids,
+                "sampling_params": {
+                    "max_new_tokens": self.max_tokens,
+                    "temperature": temperature,
+                    "top_k": top_k,
+                    "top_p": top_p,
+                }
+            }
+            
+            self.logger.debug(f"Sending SGLang request to {endpoint} for query {q_sample.id}")
+            response = self._send_request_with_retry(endpoint, api_payload, server_url)
+            
+            api_result = response.json()
+            output_ids = api_result.get("output_ids", [])
+            output_text = api_result.get("text", "")
+            
+            # Process response
+            self._process_sglang_response(q_sample.id, q_sample.index, output_ids, output_text)
+        else:
+            # Standard format: decode to text
+            if self.tokenizer:
+                try:
+                    text_prompt = self.tokenizer.decode(input_ids, skip_special_tokens=True)
+                except Exception as e:
+                    self.logger.warning(f"Error decoding tokens: {e}")
+                    text_prompt = " ".join([str(t) for t in input_ids])
+            else:
+                text_prompt = " ".join([str(t) for t in input_ids])
+            
+            # Determine endpoint based on endpoint_type
+            if self.endpoint_type == 'chat_completions':
+                endpoint = endpoints['chat_completions']
+                api_payload = {
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": text_prompt}],
+                    "max_tokens": self.max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "stream": False
+                }
+            else:
+                endpoint = endpoints['completions']
+                api_payload = {
+                    "model": self.model_name,
+                    "prompt": text_prompt,
+                    "max_tokens": self.max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "top_k": top_k,
+                    "stream": False
+                }
+            
+            self.logger.debug(f"Sending API request to {endpoint} for query {q_sample.id}")
+            response = self._send_request_with_retry(endpoint, api_payload, server_url)
+            
+            api_result = response.json()
+            
+            # Extract response
+            if self.endpoint_type == 'chat_completions':
+                text_response = api_result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            else:
+                text_response = api_result.get("choices", [{}])[0].get("text", "")
+            
+            # Convert to token IDs
+            if self.tokenizer:
+                try:
+                    token_ids = self.tokenizer.encode(text_response, add_special_tokens=False)
+                except Exception as e:
+                    self.logger.warning(f"Error encoding response: {e}")
+                    token_ids = []
+            else:
+                token_ids = []
+            
+            # Process response
+            self._process_single_response(q_sample.id, q_sample.index, token_ids, text_response, text_prompt)
+    
+    def _process_api_batch(self, batch: List['lg.QuerySample'], temperature: float, top_k: int, top_p: float) -> None:
         """Process a batch via API."""
         batch_size = len(batch)
         self.logger.debug(f"Processing API batch with {batch_size} samples")
         
-        # Prepare text prompts
+        # Check if using multimodal messages format
+        if self.use_messages or self.multimodal:
+            # Multimodal: send each request individually (messages format doesn't support batching easily)
+            for q_sample in batch:
+                self._process_api_single(q_sample, temperature, top_k, top_p)
+            return
+        
+        # Check if using SGLang with input_ids
+        if self.use_input_ids:
+            # SGLang format: send each request individually (SGLang handles batching internally)
+            for q_sample in batch:
+                self._process_api_single(q_sample, temperature, top_k, top_p)
+            return
+        
+        # Standard format: prepare text prompts
         text_prompts = []
         original_query_ids = []
         original_query_indexes = []
@@ -452,9 +791,13 @@ class LoadGenOfflineClient(LoadGenClient):
         
         self.logger.debug(f"Prepared {len(text_prompts)} prompts for API batch")
         
+        # Get server URL (with load balancing if enabled)
+        server_url = self._get_next_server_url()
+        endpoints = self._get_endpoints_for_url(server_url)
+        
         # Determine endpoint based on endpoint_type
         if self.endpoint_type == 'chat_completions':
-            endpoint = self.chat_completions_endpoint
+            endpoint = endpoints['chat_completions']
             # Format for chat completions API - handle batch requests
             # For chat completions, we need to send each prompt separately or use array format
             # Most APIs support array format for batch processing
@@ -464,8 +807,8 @@ class LoadGenOfflineClient(LoadGenClient):
                     "model": self.model_name,
                     "messages": [{"role": "user", "content": text_prompts[0]}],
                     "max_tokens": self.max_tokens,
-                    "temperature": 0.0,
-                    "top_p": 1.0,
+                    "temperature": temperature,
+                    "top_p": top_p,
                     "stream": False
                 }
             else:
@@ -475,27 +818,25 @@ class LoadGenOfflineClient(LoadGenClient):
                     "model": self.model_name,
                     "messages": [[{"role": "user", "content": prompt}] for prompt in text_prompts],
                     "max_tokens": self.max_tokens,
-                    "temperature": 0.0,
-                    "top_p": 1.0,
+                    "temperature": temperature,
+                    "top_p": top_p,
                     "stream": False
                 }
         else:
-            endpoint = self.completions_endpoint
+            endpoint = endpoints['completions']
             # Format for completions API
             api_payload = {
                 "model": self.model_name,
                 "prompt": text_prompts,
                 "max_tokens": self.max_tokens,
-                "temperature": 0.0,
-                "top_p": 1.0,
-                "top_k": 1,
+                "temperature": temperature,
+                "top_p": top_p,
+                "top_k": top_k,
                 "stream": False
             }
         
         self.logger.debug(f"Sending API batch request to {endpoint} with {len(text_prompts)} prompts")
-        response = requests.post(endpoint, json=api_payload, timeout=None)
-        if response.status_code != 200:
-            raise RuntimeError(f"API request failed: {response.status_code} - {response.text}")
+        response = self._send_request_with_retry(endpoint, api_payload, server_url)
         
         api_result = response.json()
         self.logger.debug(f"Received API response with {len(api_result.get('choices', []))} choices")
@@ -531,6 +872,191 @@ class LoadGenOfflineClient(LoadGenClient):
         
         # Process responses
         self._process_api_responses(choices, original_query_ids, original_query_indexes, text_prompts)
+    
+    def _process_sglang_response(self, query_id: int, query_index: int, output_ids: List[int], output_text: str) -> None:
+        """Process SGLang response (already has token IDs)."""
+        token_count = len(output_ids)
+        
+        # Debug mode: print query, text response and token count in accuracy mode
+        if self.debug_mode and self.test_mode == "accuracy":
+            text_preview = output_text[:200] + "..." if len(output_text) > 200 else output_text
+            self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+            self.logger.info(f"  Text Response: {text_preview}")
+            self.logger.info(f"  Total Tokens: {token_count}")
+        
+        # Create Loadgen response
+        token_array = np.array(output_ids, dtype=np.int32)
+        token_bytes = token_array.tobytes()
+        response_data = token_array.ctypes.data
+        response_size = len(token_bytes)
+        
+        response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
+        lg.QuerySamplesComplete([response])
+        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+    
+    def _process_single_response(self, query_id: int, query_index: int, token_ids: List[int], text_response: str, text_prompt: Optional[str] = None) -> None:
+        """Process a single response."""
+        token_count = len(token_ids)
+        
+        # Debug mode: print query, text response and token count in accuracy mode
+        if self.debug_mode and self.test_mode == "accuracy":
+            query_preview = text_prompt[:200] + "..." if text_prompt and len(text_prompt) > 200 else (text_prompt or "N/A")
+            text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
+            self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+            self.logger.info(f"  Query: {query_preview}")
+            self.logger.info(f"  Text Response: {text_preview}")
+            self.logger.info(f"  Total Tokens: {token_count}")
+        
+        # Create Loadgen response
+        token_array = np.array(token_ids, dtype=np.int32)
+        token_bytes = token_array.tobytes()
+        response_data = token_array.ctypes.data
+        response_size = len(token_bytes)
+        
+        response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
+        lg.QuerySamplesComplete([response])
+        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+    
+    def _construct_messages_from_dataset(self, index: int) -> List[Dict[str, Any]]:
+        """Construct messages format from dataset fields (fallback for multimodal)."""
+        # This is a fallback - ideally the dataset should already have 'messages' column
+        if not PANDAS_AVAILABLE or not hasattr(self.dataset, 'processed_data'):
+            raise RuntimeError("Pandas not available or dataset not processed")
+        
+        df = self.dataset.processed_data
+        row = df.iloc[index]
+        
+        # Try to construct messages from common fields
+        # This is a simplified version - actual implementation should match the task's formulate_loaded_sample
+        messages = []
+        
+        # Add system message if available
+        if 'system_message' in row:
+            messages.append({
+                "role": "system",
+                "content": str(row['system_message'])
+            })
+        elif 'system' in row:
+            messages.append({
+                "role": "system",
+                "content": str(row['system'])
+            })
+        
+        # Add user message with content
+        user_content = []
+        
+        # Add text content
+        text_fields = ['text', 'prompt', 'input', 'product_title', 'product_description']
+        text_content = ""
+        for field in text_fields:
+            if field in row and pd.notna(row[field]):
+                if text_content:
+                    text_content += "\n\n"
+                text_content += str(row[field])
+        
+        if text_content:
+            user_content.append({
+                "type": "text",
+                "text": text_content
+            })
+        
+        # Add image content if available
+        if 'product_image' in row and pd.notna(row['product_image']):
+            try:
+                from PIL import Image
+                image = row['product_image']
+                if isinstance(image, Image.Image):
+                    image_file = BytesIO()
+                    image_format = image.format or 'PNG'
+                    image.save(image_file, format=image_format)
+                    image_bytes = image_file.getvalue()
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    user_content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/{image_format.lower()};base64,{image_base64}"
+                        }
+                    })
+            except Exception as e:
+                self.logger.warning(f"Could not process image for index {index}: {e}")
+        
+        if user_content:
+            messages.append({
+                "role": "user",
+                "content": user_content if len(user_content) > 1 else user_content[0].get("text", "")
+            })
+        
+        return messages
+    
+    def _process_multimodal_request(self, query_id: int, query_index: int, messages: List[Dict[str, Any]], 
+                                   temperature: float, top_k: int, top_p: float) -> None:
+        """Process a multimodal request with messages format."""
+        # Get server URL (with load balancing if enabled)
+        server_url = self._get_next_server_url()
+        endpoints = self._get_endpoints_for_url(server_url)
+        endpoint = endpoints['chat_completions']
+        
+        # Build API payload
+        api_payload = {
+            "model": self.model_name,
+            "messages": messages,
+            "max_tokens": self.max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+            "stream": False
+        }
+        
+        # Add top_k if specified (via extra_body for vLLM)
+        if top_k is not None and top_k > 0:
+            api_payload["extra_body"] = {"top_k": top_k}
+        
+        # Add response_format if guided decoding is enabled
+        if self.use_guided_decoding:
+            # Note: response_format should be provided in the dataset or config
+            # For now, we'll skip it if not available
+            if hasattr(self, 'response_format') and self.response_format:
+                api_payload["response_format"] = self.response_format
+        
+        self.logger.debug(f"Sending multimodal request to {endpoint} for query {query_id}")
+        response = self._send_request_with_retry(endpoint, api_payload, server_url)
+        
+        api_result = response.json()
+        
+        # Extract text response
+        content = api_result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        if content is None:
+            content = ""
+        
+        # Get token count from usage if available
+        usage = api_result.get("usage", {})
+        token_count = usage.get("completion_tokens", 0)
+        
+        # If no token count, estimate from text length
+        if token_count == 0 and self.tokenizer:
+            try:
+                token_ids = self.tokenizer.encode(content, add_special_tokens=False)
+                token_count = len(token_ids)
+            except Exception as e:
+                self.logger.warning(f"Error encoding response for token count: {e}")
+                token_count = len(content.split())  # Fallback: word count
+        
+        # Debug mode
+        if self.debug_mode and self.test_mode == "accuracy":
+            messages_preview = json.dumps(messages, indent=2)[:200] + "..." if len(json.dumps(messages)) > 200 else json.dumps(messages)
+            text_preview = content[:200] + "..." if len(content) > 200 else content
+            self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+            self.logger.info(f"  Messages: {messages_preview}")
+            self.logger.info(f"  Text Response: {text_preview}")
+            self.logger.info(f"  Total Tokens: {token_count}")
+        
+        # Create Loadgen response (text content as bytes)
+        bytes_array = array.array("B", content.encode("utf-8"))
+        address, length = bytes_array.buffer_info()
+        size_in_bytes = length * bytes_array.itemsize
+        
+        response = lg.QuerySampleResponse(query_id, address, size_in_bytes, token_count)
+        lg.QuerySamplesComplete([response])
+        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
     
     def _process_api_responses(self, choices: List[Dict], query_ids: List[int], query_indexes: List[int], text_prompts: Optional[List[str]] = None) -> None:
         """Process API responses and send to Loadgen."""
@@ -734,9 +1260,13 @@ class LoadGenServerClient(LoadGenClient):
             'Content-Type': 'application/json',
         }
         
+        # Get server URL (with load balancing if enabled)
+        server_url = self._get_next_server_url()
+        endpoints = self._get_endpoints_for_url(server_url)
+        
         # Determine endpoint and payload based on endpoint_type
         if self.endpoint_type == 'chat_completions':
-            endpoint_url = self.chat_completions_endpoint
+            endpoint_url = endpoints['chat_completions']
             json_data = {
                 'model': self.model_name,
                 'messages': [{"role": "user", "content": input_text}],
@@ -747,7 +1277,7 @@ class LoadGenServerClient(LoadGenClient):
                 'seed': 42
             }
         else:
-            endpoint_url = self.completions_endpoint
+            endpoint_url = endpoints['completions']
             json_data = {
                 'model': self.model_name,
                 'prompt': input_text,

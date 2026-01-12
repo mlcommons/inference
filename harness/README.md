@@ -71,6 +71,14 @@ Converts to standardized format:
 
 ## Usage
 
+### New Model Support
+
+The harness now supports:
+- **GPT-OSS-120B**: Large language model with SGLang backend
+- **Qwen3VL**: Multimodal vision-language model with vLLM backend
+
+See [docs/gpt-oss-120b-and-qwen3vl-support.md](docs/gpt-oss-120b-and-qwen3vl-support.md) for detailed documentation and examples.
+
 ### Quick Start Examples
 
 #### Example 1: Basic Usage with Model-Specific Harness
@@ -815,6 +823,29 @@ class MyBackendServer(InferenceServer):
 See individual component directories for testing:
 - `backendserver/tests/` - Server tests
 - Test harness with sample datasets
+
+## Documentation
+
+Additional documentation is available in the `docs/` directory:
+
+- **GPT-OSS-120B and Qwen3VL Support**: `docs/gpt-oss-120b-and-qwen3vl-support.md`
+  - Complete guide for using GPT-OSS-120B and Qwen3VL models
+  - Command line examples and configuration
+  - Troubleshooting tips
+
+- **Load Balancing**: `docs/LOAD_BALANCING.md`
+  - Guide for using multiple API servers with load balancing
+  - Round-robin and random strategies
+  - Retry logic and fault tolerance
+
+- **Host Configuration**: `docs/HOST_CONFIGURATION.md`
+  - Configure API server hosts in YAML files
+  - Command line host overrides
+  - Integration with load balancing
+
+- **Changelog**: `docs/CHANGELOG-gpt-oss-qwen3vl.md`
+  - Detailed list of changes and new features
+  - Migration notes and known limitations
 
 ## Requirements
 

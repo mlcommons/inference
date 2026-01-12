@@ -34,7 +34,12 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
                        help="LoadGen scenario")
     parser.add_argument("--test-mode", type=str, default="performance", choices=["performance", "accuracy"],
                        help="Test mode")
-    parser.add_argument("--api-server-url", type=str, default=None, help="API server URL (if using existing server)")
+    parser.add_argument("--api-server-url", type=str, default=None, 
+                       help="API server URL (if using existing server). For load balancing, specify multiple URLs separated by commas or use --api-server-url multiple times")
+    parser.add_argument("--api-server-urls", type=str, nargs='+', default=None,
+                       help="Multiple API server URLs for load balancing (alternative to comma-separated --api-server-url)")
+    parser.add_argument("--host", type=str, default=None,
+                       help="API server host (overrides YAML config). Can specify multiple hosts separated by commas for load balancing")
     parser.add_argument("--batch-size", type=int, default=13368, help="Batch size")
     parser.add_argument("--num-samples", type=int, default=13368, help="Number of samples")
     parser.add_argument("--output-dir", type=str, default="./harness_output", help="Output directory")
@@ -80,6 +85,10 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
                        dest='server_target_qps',
                        help="Target queries per second for Server scenario (alias for --server-target-qps, Server only)")
     
+    # Offline scenario arguments
+    parser.add_argument("--offline-back-to-back", action="store_true",
+                       help="Send requests back-to-back instead of batching (Offline scenario only)")
+    
     # Debug arguments
     parser.add_argument("--debug-mode", action="store_true",
                        help="Enable debug mode: print text response and total tokens in accuracy mode")
@@ -114,10 +123,72 @@ def parse_common_harness_args(args):
     if args.endpoint_type:
         server_config['endpoint_type'] = args.endpoint_type
     
+    # Handle host specification (from YAML or command line)
+    # Command line overrides YAML config
+    host = None
+    hosts = None
+    if args.host:
+        # Command line host(s) override YAML config
+        host_list = [h.strip() for h in args.host.split(',')]
+        if len(host_list) == 1:
+            host = host_list[0]
+        else:
+            hosts = host_list
+    elif server_config.get('host'):
+        # Use host from YAML config
+        yaml_host = server_config.get('host')
+        if isinstance(yaml_host, list):
+            hosts = yaml_host
+        else:
+            host = yaml_host
+    
+    # Handle multiple API server URLs for load balancing
+    api_server_urls = None
+    if args.api_server_urls:
+        # Multiple URLs from --api-server-urls flag
+        api_server_urls = [url.rstrip('/') for url in args.api_server_urls]
+    elif args.api_server_url:
+        # Single URL or comma-separated URLs from --api-server-url
+        urls = [url.strip().rstrip('/') for url in args.api_server_url.split(',')]
+        if len(urls) > 1:
+            api_server_urls = urls
+        else:
+            # Single URL (backward compatible)
+            api_server_urls = None
+    elif host or hosts:
+        # Construct URLs from host(s) and port(s)
+        port = server_config.get('port', 8000)
+        ports = server_config.get('ports', None)  # Support multiple ports
+        
+        if hosts:
+            # Multiple hosts for load balancing
+            if ports and isinstance(ports, list):
+                # Multiple hosts and ports
+                if len(hosts) != len(ports):
+                    raise ValueError(f"Number of hosts ({len(hosts)}) must match number of ports ({len(ports)})")
+                api_server_urls = [f"http://{h}:{p}" for h, p in zip(hosts, ports)]
+            else:
+                # Multiple hosts, single port
+                api_server_urls = [f"http://{h}:{port}" for h in hosts]
+        elif host:
+            # Single host
+            if ports and isinstance(ports, list):
+                # Single host, multiple ports
+                api_server_urls = [f"http://{host}:{p}" for p in ports]
+            else:
+                # Single host, single port (no load balancing)
+                api_server_urls = None
+    
     # Add engine_args if provided
     engine_args = None
     if args.engine_args:
         engine_args = list(args.engine_args)
+    
+    # Add offline_back_to_back to server_config so client can use it
+    if hasattr(args, 'offline_back_to_back') and args.offline_back_to_back:
+        if 'config' not in server_config:
+            server_config['config'] = {}
+        server_config['config']['offline_back_to_back'] = True
     
     return {
         'model_name': args.model,
@@ -125,7 +196,10 @@ def parse_common_harness_args(args):
         'scenario': args.scenario,
         'test_mode': args.test_mode,
         'server_config': server_config,
-        'api_server_url': args.api_server_url,
+        'api_server_url': args.api_server_url if not api_server_urls else None,  # Backward compatible
+        'api_server_urls': api_server_urls,  # New: list of URLs for load balancing
+        'host': host,  # Single host (if specified)
+        'hosts': hosts,  # Multiple hosts for load balancing (if specified)
         'batch_size': args.batch_size,
         'num_samples': args.num_samples,
         'output_dir': args.output_dir,

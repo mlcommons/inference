@@ -7,8 +7,15 @@ backend: vllm
 # Model name or path
 model: RedHatAI/Meta-Llama-3.1-8B-FP8
 
+# Server host (default: localhost)
+# Can be a single host or a list of hosts for load balancing
+host: localhost
+# host: [host1.example.com, host2.example.com, host3.example.com]  # Multiple hosts for load balancing
+
 # Server port
+# Can be a single port or a list of ports (must match number of hosts if hosts is a list)
 port: 8000
+# ports: [8000, 8001, 8002]  # Multiple ports for load balancing
 
 # Output directory for server logs
 output_dir: ./test_dir

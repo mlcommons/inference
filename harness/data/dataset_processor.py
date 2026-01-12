@@ -104,6 +104,7 @@ class DatasetProcessor:
         self.input_ids: List[List[int]] = []
         self.input_lens: List[int] = []
         self.targets: List[Any] = []
+        self.messages: List[Any] = []  # For multimodal models (qwen3vl)
         
         # Load and process dataset
         self._load_dataset()
@@ -236,19 +237,29 @@ class DatasetProcessor:
             self.logger.info(f"Total rows: {len(df)}")
             self.logger.info("=" * 80)
             
-            # Extract input column
-            if self.input_column in df.columns:
-                self.input = df[self.input_column].tolist()
-            else:
-                self.logger.warning(f"Column '{self.input_column}' not found, using empty list")
+            # Extract messages column if available (for multimodal models like qwen3vl)
+            # Check this first as it takes precedence over input/input_ids for multimodal
+            if 'messages' in df.columns:
+                self.messages = df['messages'].tolist()
+                self.logger.info(f"Found 'messages' column with {len(self.messages)} multimodal samples")
+                # For multimodal, we may not need input_ids, but initialize empty lists
                 self.input = []
-            
-            # Extract input_ids column
-            if self.input_ids_column in df.columns:
-                self.input_ids = df[self.input_ids_column].tolist()
+                self.input_ids = []
             else:
-                self.logger.warning(f"Column '{self.input_ids_column}' not found, trying to tokenize")
-                self.input_ids = self._tokenize_inputs()
+                self.messages = []
+                # Extract input column
+                if self.input_column in df.columns:
+                    self.input = df[self.input_column].tolist()
+                else:
+                    self.logger.warning(f"Column '{self.input_column}' not found, using empty list")
+                    self.input = []
+                
+                # Extract input_ids column
+                if self.input_ids_column in df.columns:
+                    self.input_ids = df[self.input_ids_column].tolist()
+                else:
+                    self.logger.warning(f"Column '{self.input_ids_column}' not found, trying to tokenize")
+                    self.input_ids = self._tokenize_inputs()
             
             # Extract targets/output column
             if self.output_column in df.columns:

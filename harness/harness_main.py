@@ -42,6 +42,12 @@ def load_model_category_module(model_category: str):
         'llama270b': 'harness_llama2_70b',
         'deepseek-r1': 'harness_deepseek_r1',
         'deepseek_r1': 'harness_deepseek_r1',
+        'gpt-oss-120b': 'harness_gpt_oss_120b',
+        'gpt_oss_120b': 'harness_gpt_oss_120b',
+        'gptoss120b': 'harness_gpt_oss_120b',
+        'qwen3vl': 'harness_qwen3vl',
+        'qwen3-vl': 'harness_qwen3vl',
+        'qwen3_vl': 'harness_qwen3vl',
     }
     
     module_path = model_modules.get(model_category.lower())
@@ -251,6 +257,11 @@ Examples:
                 detected_category = 'llama2-70b'
         elif 'deepseek' in model_lower and 'r1' in model_lower:
             detected_category = 'deepseek-r1'
+        elif 'gpt-oss' in model_lower or 'gpt_oss' in model_lower:
+            if '120b' in model_lower or '120-b' in model_lower:
+                detected_category = 'gpt-oss-120b'
+        elif 'qwen3' in model_lower and ('vl' in model_lower or 'vision' in model_lower):
+            detected_category = 'qwen3vl'
         
         if detected_category:
             logger.info(f"Detected model category: {detected_category}")

@@ -6,8 +6,38 @@ import os
 
 
 class PerformanceCheck(BaseCheck):
+    """Validate performance-related submission artifacts and metrics.
+
+    The `PerformanceCheck` class performs a comprehensive set of validations
+    on submission performance outputs. It inspects the parsed MLPerf log,
+    system JSON, and configuration to ensure that performance runs meet
+    required constraints such as sample counts, latency limits, seed values,
+    minimum durations, and scenario-specific rules. It also handles result
+    inference for edge cases and validates network mode configurations.
+
+    Attributes:
+        submission_logs (SubmissionLogs): Holder for submission log paths
+            and parsed contents (performance logs, system JSON, loader data).
+        mlperf_log: Parsed MLPerf log object for inspecting run metadata and
+            results.
+        system_json (dict): Parsed system description JSON for hardware
+            validation.
+        config (Config): Configuration provider for targets, constraints,
+            and feature toggles.
+    """
+
     def __init__(self, log, path, config: Config,
                  submission_logs: SubmissionLogs):
+        """Initialize the performance checker.
+
+        Args:
+            log: Logger instance used to report messages.
+            path: Path to the submission being checked.
+            config (Config): Configuration provider for performance targets
+                and constraints.
+            submission_logs (SubmissionLogs): Parsed submission logs and
+                artifact paths (performance logs, system JSON, loader data).
+        """
         super().__init__(log, path)
         self.name = "performance checks"
         self.submission_logs = submission_logs
@@ -26,6 +56,11 @@ class PerformanceCheck(BaseCheck):
         self.setup_checks()
 
     def setup_checks(self):
+        """Register individual performance-related checks.
+
+        Adds the per-submission validation callables to `self.checks` in
+        the order they should be executed.
+        """
         self.checks.append(self.missing_check)
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.equal_issue_check)
@@ -40,12 +75,26 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.get_performance_metric_check)
 
     def missing_check(self):
+        """Ensure the performance log was provided.
+
+        Returns:
+            bool: True if `mlperf_log` is present, False otherwise.
+        """
         if self.mlperf_log is None:
             self.log.error("Performance log missing at %s", self.path)
             return False
         return True
 
     def loadgen_errors_check(self):
+        """Detect Loadgen errors reported in the MLPerf log.
+
+        If errors are present and not ignored by configuration, logs the
+        error messages and returns False to indicate failure.
+
+        Returns:
+            bool: True if no blocking Loadgen errors are present,
+                False otherwise.
+        """
         if self.mlperf_log.has_error():
             if self.config.ignore_uncommited:
                 has_other_errors = False
@@ -64,6 +113,15 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def equal_issue_check(self):
+        """Verify equal-issue mode is enabled for required models.
+
+        For models requiring equal-issue mode, checks that
+        `sample_concatenate_permutation` is True.
+
+        Returns:
+            bool: True if equal-issue mode is correctly set or not required,
+                False otherwise.
+        """
         if self.config.requires_equal_issue(
                 self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
             self.log.error(
@@ -73,6 +131,15 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def performance_sample_count_check(self):
+        """Ensure the performance run used sufficient samples.
+
+        Compares the effective performance sample count against the
+        configured minimum for the model.
+
+        Returns:
+            bool: True if the sample count meets or exceeds the requirement,
+                False otherwise.
+        """
         required_performance_sample_count = self.config.get_performance_sample_count(
             self.model)
         performance_sample_count = self.mlperf_log["effective_performance_sample_count"]
@@ -87,6 +154,14 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def seeds_check(self):
+        """Validate RNG seeds match the submission fixed values.
+
+        Checks that QSL, sample index, and schedule RNG seeds from the log
+        match the expected values from `config.seeds`.
+
+        Returns:
+            bool: True if all seeds match, False if any mismatch.
+        """
         config_seeds = self.config.seeds
         qsl_rng_seed = self.mlperf_log["effective_qsl_rng_seed"]
         sample_index_rng_seed = self.mlperf_log["effective_sample_index_rng_seed"]
@@ -119,6 +194,15 @@ class PerformanceCheck(BaseCheck):
         return is_valid
 
     def latency_check(self):
+        """Enforce latency constraints based on scenario and early stopping.
+
+        For scenarios using early stopping, verifies the condition was met
+        and target latency constraints. For others, checks 99th percentile
+        latency against configured limits.
+
+        Returns:
+            bool: True if latency constraints are satisfied, False otherwise.
+        """
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
         if uses_early_stopping:
             # check if early_stopping condition was met
@@ -173,6 +257,16 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def min_query_count_check(self):
+        """Verify minimum query counts and samples per query are met.
+
+        Checks minimum query count for non-early-stopping scenarios and
+        enforces minimum samples per query for Offline scenarios in closed
+        division.
+
+        Returns:
+            bool: True if all minimum requirements are satisfied,
+                False otherwise.
+        """
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
         min_query_count = self.mlperf_log["effective_min_query_count"]
         samples_per_query = self.mlperf_log["effective_samples_per_query"]
@@ -199,6 +293,14 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def min_duration_check(self):
+        """Ensure the test duration meets the minimum requirement.
+
+        Verifies that the effective minimum duration is at least
+        `TEST_DURATION_MS` (600 seconds).
+
+        Returns:
+            bool: True if duration meets the minimum, False otherwise.
+        """
         required_min_duration = TEST_DURATION_MS
         min_duration = self.mlperf_log["effective_min_duration_ms"]
         if min_duration < required_min_duration:
@@ -212,6 +314,14 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def network_check(self):
+        """Validate network mode settings and SUT naming.
+
+        Ensures the system JSON indicates the correct network mode for the
+        division and that SUT names comply with network mode requirements.
+
+        Returns:
+            bool: True if network mode and naming are valid, False otherwise.
+        """
         if self.system_json is None:
             self.log.error(
                 "%s system json file not found",
@@ -250,6 +360,15 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def llm_check(self):
+        """Perform LLM-specific latency validations for token latencies.
+
+        For LLM models, ensures token latencies are enabled and that TTFT
+        and TPOT metrics meet configured limits for applicable scenarios.
+
+        Returns:
+            bool: True if LLM checks pass or model is not an LLM,
+                False otherwise.
+        """
         if self.model in self.config.get_llm_models():
             if self.mlperf_log["requested_use_token_latencies"]:
                 if self.scenario not in ["Server", "Interactive"]:
@@ -281,6 +400,14 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def inferred_check(self):
+        """Validate rules for inferring results across scenarios.
+
+        Ensures that result inference is only allowed for edge systems and
+        specific scenario pairs, preventing invalid cross-scenario reuse.
+
+        Returns:
+            bool: True if inference is valid or not attempted, False otherwise.
+        """
         if self.scenario.lower() != self.scenario_fixed.lower() and (
                 self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
             if "edge" not in self.system_json["system_type"].lower():
@@ -307,6 +434,15 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def get_performance_metric_check(self):
+        """Extract and validate the primary performance metric.
+
+        Parses the performance result from the log, applies any benchmark-
+        specific overwrites, and handles inferred results. Records the
+        metric in `submission_logs.loader_data`.
+
+        Returns:
+            bool: True if the metric is valid, False otherwise.
+        """
         # Assumes new logging format
         is_valid = True
         version = self.config.version
@@ -336,7 +472,18 @@ class PerformanceCheck(BaseCheck):
         return is_valid
 
     def get_inferred_result(self, res):
+        """Compute inferred performance result for cross-scenario reuse.
 
+        Calculates the performance metric for the fixed scenario based on
+        the run scenario's results, applying scenario-specific formulas.
+
+        Args:
+            res (float): The raw performance result from the log.
+
+        Returns:
+            tuple: (inferred_result, is_valid) where is_valid indicates if
+                inference was successful.
+        """
         inferred = False
         is_valid = True
         # Check if current scenario (and version) uses early stopping

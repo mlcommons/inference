@@ -14,8 +14,26 @@ logging.basicConfig(
 
 
 class SubmissionLogs:
+    """Container for parsed submission log artifacts and metadata.
+
+    The `SubmissionLogs` class holds references to parsed log files and
+    associated metadata for a single submission. It serves as a data
+    transfer object passed between loading and validation phases.
+    """
+
     def __init__(self, performance_log=None, accuracy_log=None, accuracy_result=None,
                  accuracy_json=None, system_json=None, measurements_json=None, loader_data={}) -> None:
+        """Initialize the submission logs container.
+
+        Args:
+            performance_log: Parsed performance log object.
+            accuracy_log: Parsed accuracy log object.
+            accuracy_result (list[str]): Accuracy result file lines.
+            accuracy_json (str): Accuracy JSON file path.
+            system_json (dict): System description JSON contents.
+            measurements_json (dict): Measurements JSON contents.
+            loader_data (dict): Metadata dictionary with paths and info.
+        """
         self.performance_log = performance_log
         self.accuracy_log = accuracy_log
         self.accuracy_result = accuracy_result
@@ -26,7 +44,24 @@ class SubmissionLogs:
 
 
 class Loader:
+    """Loads and parses submission artifacts from the filesystem.
+
+    The `Loader` class traverses the submission directory structure,
+    identifies valid submissions, and parses their log files and metadata.
+    It yields `SubmissionLogs` objects for each valid submission found,
+    handling version-specific path formats and optional artifacts.
+    """
+
     def __init__(self, root, version) -> None:
+        """Initialize the submission loader.
+
+        Sets up path templates based on the MLPerf version and root
+        directory.
+
+        Args:
+            root (str): Root directory containing submissions.
+            version (str): MLPerf version for path resolution.
+        """
         self.root = root
         self.version = version
         self.logger = logging.getLogger("LoadgenParser")
@@ -78,6 +113,23 @@ class Loader:
 
     def get_measurement_path(self, path, division,
                              submitter, system, benchmark, scenario):
+        """Resolve the measurements JSON file path with dynamic filename.
+
+        For paths containing '{file}', searches the measurements directory
+        for JSON files matching the system and scenario, selecting the
+        appropriate one.
+
+        Args:
+            path (str): Template path that may contain '{file}'.
+            division (str): Submission division.
+            submitter (str): Submitter name.
+            system (str): System name.
+            benchmark (str): Benchmark name.
+            scenario (str): Scenario name.
+
+        Returns:
+            str: Resolved path to the measurements JSON file.
+        """
         measurements_file = None
         if "{file}" in path:
             files = list_files(
@@ -105,6 +157,20 @@ class Loader:
 
     def load_single_log(self, path, log_type: Literal["Performance", "Accuracy",
                         "AccuracyResult", "AccuracyJSON", "Test", "System", "Measurements"]):
+        """Load and parse a single log file based on its type.
+
+        Handles different log types with appropriate parsing: Loadgen logs
+        are parsed with LoadgenParser, JSON files are loaded as dicts,
+        accuracy results as line lists, etc.
+
+        Args:
+            path (str): Filesystem path to the log file.
+            log_type (str): Type of log to load, determining parsing method.
+
+        Returns:
+            Parsed log object (dict, list, LoadgenParser, or str) or None
+                if loading fails.
+        """
         log = None
         if os.path.exists(path):
             self.logger.info("Loading %s log from %s", log_type, path)
@@ -131,6 +197,16 @@ class Loader:
         return log
 
     def load(self) -> Generator[SubmissionLogs, None, None]:
+        """Traverse submissions directory and yield parsed log containers.
+
+        Iterates through the directory structure (division/submitter/results/
+        system/benchmark/scenario), formats paths for each submission,
+        loads all available logs, and yields a SubmissionLogs object.
+
+        Yields:
+            SubmissionLogs: Container with parsed logs and metadata for
+                each valid submission found.
+        """
         for division in list_dir(self.root):
             if division not in VALID_DIVISIONS:
                 continue

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 class BaseCheck(ABC):
     """
     A generic check class meant to be inherited by concrete check implementations.
-    Subclasses must implement the `run()` method.
+    Subclasses must register their check methods into `self.checks`.
     """
 
     def __init__(self, log, path):
@@ -16,9 +16,7 @@ class BaseCheck(ABC):
 
     def run_checks(self):
         """
-        Execute the check.
-        Must be implemented by subclasses.
-        Should return a CheckResult instance.
+        Execute all registered checks. Returns True if all checks pass, False otherwise.
         """
         valid = True
         errors = []
@@ -36,6 +34,7 @@ class BaseCheck(ABC):
         return valid
 
     def execute(self, check):
+        """Custom execution of a single check method."""
         return check()
 
     def __call__(self):

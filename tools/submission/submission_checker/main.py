@@ -23,7 +23,14 @@ log = logging.getLogger("main")
 
 
 def get_args():
-    """Parse commandline."""
+    """Parse command-line arguments for the submission checker.
+
+    Sets up an ArgumentParser with options for input directory, version,
+    filtering, output files, and various skip flags for different checks.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
@@ -111,6 +118,16 @@ def get_args():
 
 
 def main():
+    """Run the MLPerf submission checker on the provided directory.
+
+    Parses arguments, initializes configuration and loader, iterates
+    through all submissions, runs validation checks (performance,
+    accuracy, system, measurements, power), collects results, and
+    exports summaries. Logs pass/fail status and statistics.
+
+    Returns:
+        int: 0 if all submissions pass checks, 1 if any errors found.
+    """
     args = get_args()
 
     config = Config(

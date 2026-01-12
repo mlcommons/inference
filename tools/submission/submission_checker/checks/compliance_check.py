@@ -11,8 +11,32 @@ import os
 
 
 class ComplianceCheck(BaseCheck):
+    """Validate compliance test artifacts for a submission.
+
+    The `ComplianceCheck` class runs a set of validations against the
+    compliance directory produced with a submission. It verifies the
+    presence of required test subdirectories and files, runs delegated
+    performance and accuracy checks for compliance tests, and inspects
+    compliance-specific performance outputs.
+
+    The class delegates some checks to `PerformanceCheck` and
+    `AccuracyCheck` helpers when relevant. Results and file lists are
+    logged via the provided logger.
+    """
+
     def __init__(self, log, path, config: Config,
                  submission_logs: SubmissionLogs):
+        """Initialize the compliance checker.
+
+        Args:
+            log: Logger used to emit informational, warning, and error
+                messages about the compliance checks.
+            path: Filesystem path to the submission root being checked.
+            config (Config): Configuration provider for models and
+                compliance expectations.
+            submission_logs (SubmissionLogs): Parsed submission log
+                artifacts and loader metadata.
+        """
         super().__init__(log, path)
         self.submission_logs = submission_logs
         self.config = config
@@ -28,12 +52,30 @@ class ComplianceCheck(BaseCheck):
         self.setup_checks()
 
     def setup_checks(self):
+        """Register the sequence of compliance checks to run.
+
+        Appends the per-submission validation callables to `self.checks` in
+        the order they should be executed by the checking framework.
+        """
         self.checks.append(self.dir_exists_check)
         self.checks.append(self.performance_check)
         self.checks.append(self.accuracy_check)
         self.checks.append(self.compliance_performance_check)
 
     def get_test_list(self, model):
+        """Return the list of compliance tests applicable to `model`.
+
+        The mapping of models to tests is read from the configuration
+        (`self.config.base`) using the pre-defined keys
+        `models_TEST01`, `models_TEST04`, and `models_TEST06`.
+
+        Args:
+            model (str): MLPerf benchmark/model identifier.
+
+        Returns:
+            list[str]: Ordered list of compliance test names to execute.
+        """
+
         test_list = []
         if model in self.config.base["models_TEST01"]:
             test_list.append("TEST01")
@@ -44,6 +86,18 @@ class ComplianceCheck(BaseCheck):
         return test_list
 
     def dir_exists_check(self):
+        """Verify required compliance directories and files exist.
+
+        Skips checks for the 'open' division. For each test in
+        `self.test_list`, ensures the expected test directory exists and
+        that required verification files are present depending on the
+        test type (accuracy/performance files for specific tests).
+
+        Returns:
+            bool: True if all required files and directories are present,
+                False otherwise.
+        """
+
         if self.division.lower() == "open":
             self.log.info(
                 "Compliance tests not needed for open division. Skipping tests on %s",
@@ -86,6 +140,17 @@ class ComplianceCheck(BaseCheck):
         return is_valid
 
     def performance_check(self):
+        """Run performance compliance checks for applicable tests.
+
+        For each test that requires a performance check (TEST01 and
+        TEST04), construct a `SubmissionLogs` object pointing at the
+        test's performance log and delegate to `PerformanceCheck`.
+
+        Returns:
+            bool: True if all delegated performance checks pass, False
+                if any fail.
+        """
+
         if self.division.lower() == "open":
             self.log.info(
                 "Compliance tests not needed for open division. Skipping tests on %s",
@@ -108,6 +173,20 @@ class ComplianceCheck(BaseCheck):
         return is_valid
 
     def accuracy_check(self):
+        """Run accuracy compliance checks for applicable tests.
+
+        For TEST01, verifies deterministic-mode pass lines and checks the
+        `accuracy` directory contents and baseline/compliance accuracy
+        values against model-specific delta thresholds.
+
+        For TEST06, inspects the pre-parsed result lines for first-token,
+        EOS, and sample-length checks.
+
+        Returns:
+            bool: True if all required accuracy checks pass, False
+                otherwise.
+        """
+
         if self.division.lower() == "open":
             self.log.info(
                 "Compliance tests not needed for open division. Skipping tests on %s",
@@ -228,6 +307,17 @@ class ComplianceCheck(BaseCheck):
         return is_valid
 
     def compliance_performance_check(self):
+        """Inspect compliance performance verification outputs.
+
+        For TEST01 and TEST04, checks the `verify_performance.txt` file for
+        a passing indicator and ensures the `performance/run_1` directory
+        contains the expected files (with optional exclusions).
+
+        Returns:
+            bool: True if all compliance performance checks pass, False
+                if any check fails.
+        """
+
         if self.division.lower() == "open":
             self.log.info(
                 "Compliance tests not needed for open division. Skipping tests on %s",

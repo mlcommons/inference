@@ -10,8 +10,39 @@ import datetime
 
 
 class PowerCheck(BaseCheck):
+    """Validate power measurement artifacts and compute power metrics.
+
+    The `PowerCheck` class verifies the presence and correctness of power-
+    related files in submissions that include power measurements. It runs
+    external power validation scripts, ensures required files are present,
+    and computes power consumption metrics and efficiency ratios based on
+    performance logs and power data.
+
+    Attributes:
+        submission_logs (SubmissionLogs): Parsed submission logs and
+            metadata used to locate power and performance artifacts.
+        mlperf_log: Parsed MLPerf performance log for timestamps and
+            query counts.
+        power_path (str): Path to the power measurement directory.
+        testing_path (str): Path to the testing run directory.
+        ranging_path (str): Path to the ranging run directory.
+        has_power (bool): Whether power measurements are present in the
+            submission.
+        config (Config): Configuration provider for toggling power checks.
+    """
+
     def __init__(self, log, path, config: Config,
                  submission_logs: SubmissionLogs):
+        """Initialize the power checker.
+
+        Args:
+            log: Logger used to emit info/warning/error messages.
+            path: Path to the submission root being validated.
+            config (Config): Configuration helper containing feature
+                toggles for power checks.
+            submission_logs (SubmissionLogs): Parsed submission artifacts
+                and loader metadata.
+        """
         super().__init__(log, path)
         self.config = config
         self.submission_logs = submission_logs
@@ -29,11 +60,24 @@ class PowerCheck(BaseCheck):
         self.setup_checks()
 
     def setup_checks(self):
+        """Register per-submission power checks.
+
+        Appends the callable checks to `self.checks` in the order they
+        should be executed by the submission validation framework.
+        """
         self.checks.append(self.required_files_check)
         self.checks.append(self.external_power_check)
         self.checks.append(self.get_power_metric_check)
 
     def required_files_check(self):
+        """Verify required files exist in power-related directories.
+
+        Checks that testing, ranging, and power directories contain all
+        expected files, skipping if no power measurements are present.
+
+        Returns:
+            bool: True if all required files are present, False otherwise.
+        """
         if not self.has_power:
             return True
 
@@ -70,6 +114,15 @@ class PowerCheck(BaseCheck):
         return is_valid
 
     def external_power_check(self):
+        """Run external Power WG validation script.
+
+        Executes the power_checker.py script from the Power WG if power
+        checks are enabled and power data is present.
+
+        Returns:
+            bool: True if the external check passes or is skipped,
+                False otherwise.
+        """
         if not self.config.skip_power_check and self.has_power:
             self.log.info("Running external power checks for %s", self.path)
             python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -89,6 +142,16 @@ class PowerCheck(BaseCheck):
         return True
 
     def get_power_metric_check(self):
+        """Compute and validate power consumption metrics.
+
+        Parses power logs to extract samples within the measurement window,
+        calculates average power, and derives power metrics and efficiency
+        based on scenario and performance data. Stores results in loader data.
+
+        Returns:
+            bool: True if power metrics are successfully computed,
+                False otherwise.
+        """
         if not self.has_power:
             return True
         # parse the power logs

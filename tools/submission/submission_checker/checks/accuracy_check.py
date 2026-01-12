@@ -7,9 +7,49 @@ import os
 
 
 class AccuracyCheck(BaseCheck):
+    """Checks accuracy-related submission artifacts and reports issues.
+
+    The `AccuracyCheck` class performs a set of validations on submission
+    accuracy outputs. It inspects the parsed MLPerf log and accompanying
+    accuracy artifacts provided via `SubmissionLogs` and the test
+    `Config` to ensure that reported accuracy metrics meet configured
+    targets and limits, that the accuracy JSON exists and is properly
+    truncated, that Loadgen did not report blocking errors, and that the
+    accuracy run covered the expected dataset size.
+
+    Main check methods:
+    - `accuracy_result_check`: Parses `accuracy.txt` lines to validate
+        reported metrics against targets, upper limits, and hash presence.
+    - `accuracy_json_check`: Ensures the accuracy JSON file exists and is
+        within allowed size limits.
+    - `loadgen_errors_check`: Fails if Loadgen reported non-ignored errors.
+    - `dataset_check`: Verifies the reported sample count matches the
+        configured dataset size unless the check is skipped.
+
+    Attributes:
+            submission_logs (SubmissionLogs): Holder for submission log paths
+                    and parsed contents (accuracy logs, results, json, loader data).
+            mlperf_log: Parsed MLPerf log object used to inspect errors and
+                    run metadata.
+            accuracy_result (list[str]): Lines from `accuracy.txt` used to
+                    extract reported accuracy values.
+            accuracy_json (str): Path to the accuracy JSON file.
+            config (Config): Configuration helper providing target values and
+                    dataset sizes.
+    """
+
     def __init__(
         self, log, path, config: Config, submission_logs: SubmissionLogs
     ):
+        """Initialize the accuracy check helper.
+
+        Args:
+            log: Logger instance used to report messages.
+            path: Path to the submission being checked.
+            config (Config): Configuration provider for targets and limits.
+            submission_logs (SubmissionLogs): Parsed submission logs and
+                artifact paths (accuracy logs, results, json, loader data).
+        """
         super().__init__(log, path)
         self.name = "accuracy checks"
         self.submission_logs = submission_logs
@@ -29,12 +69,29 @@ class AccuracyCheck(BaseCheck):
         self.setup_checks()
 
     def setup_checks(self):
+        """Register individual accuracy-related checks.
+
+        Adds the per-submission validation callables to `self.checks` in
+        the order they should be executed.
+        """
         self.checks.append(self.accuracy_result_check)
         self.checks.append(self.accuracy_json_check)
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
 
     def accuracy_result_check(self):
+        """Validate reported accuracy metrics in `accuracy.txt`.
+
+        Parses lines from `self.accuracy_result` using configured patterns
+        and compares found values against targets and optional upper
+        limits. Also ensures a hash value is present and records the
+        observed accuracy metrics in `submission_logs.loader_data`.
+
+        Returns:
+            bool: True if accuracy checks passed (or division is 'open'),
+                False otherwise.
+        """
+
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
             self.model
         )
@@ -105,6 +162,12 @@ class AccuracyCheck(BaseCheck):
         return is_valid
 
     def accuracy_json_check(self):
+        """Check that the accuracy JSON exists and is within size limits.
+
+        Returns:
+            bool: True if the JSON file exists and its size does not
+                exceed `MAX_ACCURACY_LOG_SIZE`, False otherwise.
+        """
         if not os.path.exists(self.accuracy_json):
             self.log.error("%s is missing", self.accuracy_json)
             return False
@@ -115,6 +178,15 @@ class AccuracyCheck(BaseCheck):
         return True
 
     def loadgen_errors_check(self):
+        """Detect Loadgen errors reported in the MLPerf log.
+
+        If errors are present and not ignored by configuration, logs the
+        error messages and returns False to indicate failure.
+
+        Returns:
+            bool: True if no blocking Loadgen errors are present,
+                False otherwise.
+        """
         if self.mlperf_log.has_error():
             if self.config.ignore_uncommited:
                 has_other_errors = False
@@ -133,6 +205,17 @@ class AccuracyCheck(BaseCheck):
         return True
 
     def dataset_check(self):
+        """Verify the accuracy run covered the expected dataset size.
+
+        If `skip_dataset_size_check` is enabled in the configuration,
+        this check is skipped and returns True. Otherwise compares the
+        `qsl_reported_total_count` from the MLPerf log to the expected
+        dataset size for the model.
+
+        Returns:
+            bool: True if the dataset sizes match or the check is skipped,
+                False if the reported count differs from expected.
+        """
         if self.config.skip_dataset_size_check:
             self.log.info(
                 "%s Skipping dataset size check", self.path

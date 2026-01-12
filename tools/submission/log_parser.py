@@ -32,7 +32,8 @@ class MLPerfLog:
         """
         Helper class to parse the detail logs.
         log_path: path to the detail log.
-        strict: whether to ignore lines with :::MLLOG prefix but with invalid JSON format.
+        strict: whether to ignore lines with :::MLLOG or :::ENDPTS
+        prefix but with invalid JSON format.
         """
         self.loadgen_marker = ":::MLLOG"
         self.endpoints_marker = ":::ENDPTS"

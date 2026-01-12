@@ -305,6 +305,8 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 if not args.nomove_failed_to_open:
                     target_code_path = change_first_directory_to_open(
                         model_code_path)
+                    target_code_path = change_folder_name_in_path(
+                        log_path, "code", "src")
                     target_results_path = change_first_directory_to_open(
                         model_results_path)
                     target_measurements_path = change_first_directory_to_open(
@@ -543,9 +545,9 @@ def infer_scenario_results(args, config):
                                     shutil.copytree(high_accuracy_model_path,
                                                     low_accuracy_model_path)
                                 high_accuracy_model_code_path = os.path.join(log_path, "..",
-                                                                             "code", model)
+                                                                             "src", model)
                                 low_accuracy_model_code_path = os.path.join(log_path, "..",
-                                                                            "code", low_accuracy_model)
+                                                                            "src", low_accuracy_model)
                                 if not os.path.exists(
                                         low_accuracy_model_code_path):
                                     shutil.copytree(high_accuracy_model_code_path,

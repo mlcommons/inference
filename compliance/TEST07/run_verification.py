@@ -49,15 +49,15 @@ sys.path.append(os.getcwd())
 def parse_audit_config(config_path):
     """
     Parse audit.config file and extract TEST07-specific settings.
-    
+
     Returns:
         dict: Parsed configuration values
     """
     config = {}
-    
+
     if not os.path.isfile(config_path):
         return config
-    
+
     try:
         with open(config_path, 'r') as f:
             for line in f:
@@ -65,27 +65,29 @@ def parse_audit_config(config_path):
                 # Skip comments and empty lines
                 if not line or line.startswith('#'):
                     continue
-                
+
                 # Parse key = value
                 if '=' in line:
                     key, value = line.split('=', 1)
                     key = key.strip()
                     value = value.strip()
-                    
-                    # Extract the setting name (last part of key like *.*.setting_name)
+
+                    # Extract the setting name (last part of key like
+                    # *.*.setting_name)
                     parts = key.split('.')
                     if len(parts) >= 3:
                         setting_name = parts[-1]
-                        
+
                         # Parse test07_accuracy_threshold
                         if setting_name == 'test07_accuracy_threshold':
                             try:
                                 config['accuracy_threshold'] = float(value)
                             except ValueError:
-                                print(f"Warning: Invalid threshold value in audit.config: {value}")
+                                print(
+                                    f"Warning: Invalid threshold value in audit.config: {value}")
     except Exception as e:
         print(f"Warning: Error parsing audit.config: {e}")
-    
+
     return config
 
 
@@ -149,28 +151,29 @@ def main():
     # Determine accuracy threshold
     accuracy_threshold = args.accuracy_threshold
     audit_config_path = args.audit_config
-    
+
     # Try to read threshold from audit.config if provided
     if audit_config_path:
         print(f"Reading audit.config from: {audit_config_path}")
         audit_config = parse_audit_config(audit_config_path)
-        
+
         if 'accuracy_threshold' in audit_config:
             config_threshold = audit_config['accuracy_threshold']
             print(f"Found threshold in audit.config: {config_threshold}")
-            
+
             # CLI argument overrides config file
             if accuracy_threshold is None:
                 accuracy_threshold = config_threshold
             else:
-                print(f"CLI threshold ({accuracy_threshold}) overrides audit.config ({config_threshold})")
-    
+                print(
+                    f"CLI threshold ({accuracy_threshold}) overrides audit.config ({config_threshold})")
+
     # Validate we have a threshold
     if accuracy_threshold is None:
         print("Error: No accuracy threshold specified.")
         print("Provide --accuracy-threshold or --audit-config with test07_accuracy_threshold field.")
         sys.exit(1)
-    
+
     print(f"Using accuracy threshold: {accuracy_threshold}")
 
     # Build accuracy script command with placeholder substitution
@@ -264,19 +267,22 @@ def main():
     try:
         shutil.copy2(accuracy_file, output_accuracy_dir)
     except Exception:
-        print(f"Exception occurred trying to copy {accuracy_file} to {output_accuracy_dir}")
+        print(
+            f"Exception occurred trying to copy {accuracy_file} to {output_accuracy_dir}")
 
     try:
         if os.path.exists(summary_file):
             shutil.copy2(summary_file, output_performance_dir)
     except Exception:
-        print(f"Exception occurred trying to copy {summary_file} to {output_performance_dir}")
+        print(
+            f"Exception occurred trying to copy {summary_file} to {output_performance_dir}")
 
     try:
         if os.path.exists(detail_file):
             shutil.copy2(detail_file, output_performance_dir)
     except Exception:
-        print(f"Exception occurred trying to copy {detail_file} to {output_performance_dir}")
+        print(
+            f"Exception occurred trying to copy {detail_file} to {output_performance_dir}")
 
     print(f"\nAccuracy check pass: {accuracy_pass}")
     print("TEST07 verification complete")

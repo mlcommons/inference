@@ -23,10 +23,16 @@ class BaseCheck(ABC):
         valid = True
         errors = []
         for check in self.checks:
-            v = self.execute(check)
-            valid &= v
-            if not valid:
-                return False
+            try:
+                v = self.execute(check)
+                valid &= v
+            except BaseException:
+                valid &= False
+                self.log.error(
+                    "Execution occurred in running check %s. Running %s in %s",
+                    self.path,
+                    check.__name__,
+                    self.__class__.__name__)
         return valid
 
     def execute(self, check):

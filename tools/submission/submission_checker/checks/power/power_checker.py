@@ -651,10 +651,9 @@ def check_ptd_logs(
             if error:
                 if problem_line.group(0).strip() in COMMON_ERROR_TESTING:
                     raise CheckerWarning(
-                        f"{
-                            line.strip().replace(
-                                'ERROR',
-                                'Warning')!r} in ptd_log.txt during testing stage but it is accepted. Treated as WARNING"
+                        f"{line.strip().replace('ERROR','Warning')!r} in"
+                        f"ptd_log.txt during testing stage but it is accepted."
+                        "Treated as WARNING"
                     )
                 assert (
                     start_ranging_time < log_time < stop_ranging_time

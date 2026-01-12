@@ -232,9 +232,8 @@ class PerformanceCheck(BaseCheck):
             is_valid = expected_state_by_division[self.division] is is_network_system
         if not is_valid:
             self.log.error(
-                f"{
-                    self.path} incorrect network mode(={is_network_system}) for division '{
-                    self.division}'"
+                f"{self.path} incorrect network mode(={is_network_system}) "
+                f"for division {self.division}"
             )
             return False
 
@@ -298,7 +297,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                    ) not in list_inferred:
+                ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -362,12 +361,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (self.scenario_fixed in ["Offline"]
-                ) and self.scenario in ["MultiStream"]:
+            ) and self.scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (self.scenario_fixed in ["MultiStream"]
-                ) and self.scenario in ["SingleStream"]:
+            ) and self.scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -384,6 +383,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (self.scenario_fixed in ["Interactive"]
-                ) and self.scenario not in ["Server"]:
+            ) and self.scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

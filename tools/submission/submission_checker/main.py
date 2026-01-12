@@ -155,8 +155,6 @@ def main():
             log, logs.loader_data["system_path"], config, logs)
         measurements_checks = MeasurementsCheck(
             log, logs.loader_data["measurements_path"], config, logs)
-        measurements_checks = ComplianceCheck(
-            log, logs.loader_data["compliance_path"], config, logs)
         power_checks = PowerCheck(
             log, logs.loader_data["power_dir_path"], config, logs)
         # Run checks

@@ -9,16 +9,21 @@ from ..utils import *
 import re
 import os
 
+
 class ComplianceCheck(BaseCheck):
-    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
+    def __init__(self, log, path, config: Config,
+                 submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.submission_logs = submission_logs
         self.config = config
         self.model = self.submission_logs.loader_data.get("benchmark", "")
-        self.model_mapping = self.submission_logs.loader_data.get("model_mapping", {})
-        self.compliance_dir = self.submission_logs.loader_data.get("compliance_path", {})
+        self.model_mapping = self.submission_logs.loader_data.get(
+            "model_mapping", {})
+        self.compliance_dir = self.submission_logs.loader_data.get(
+            "compliance_path", {})
         self.division = self.submission_logs.loader_data.get("division", "")
-        self.model = self.config.get_mlperf_model(self.model, self.model_mapping)
+        self.model = self.config.get_mlperf_model(
+            self.model, self.model_mapping)
         self.test_list = self.get_test_list(self.model)
         self.setup_checks()
 
@@ -37,36 +42,54 @@ class ComplianceCheck(BaseCheck):
         if model in self.config.base["models_TEST06"]:
             test_list.append("TEST06")
         return test_list
-    
+
     def dir_exists_check(self):
         if self.division.lower() == "open":
-            self.log.info("Compliance tests not needed for open division. Skipping tests on %s", self.path)
+            self.log.info(
+                "Compliance tests not needed for open division. Skipping tests on %s",
+                self.path)
             return True
         is_valid = True
         for test in self.test_list:
             test_dir = os.path.join(self.compliance_dir, test)
-            acc_path = os.path.join(self.compliance_dir, test, "verify_accuracy.txt")
-            perf_comp_path = os.path.join(self.compliance_dir, test, "verify_performance.txt")
-            perf_path = os.path.join(self.compliance_dir, test, "performance", "run_1", "mlperf_log_detail.txt")
+            acc_path = os.path.join(
+                self.compliance_dir, test, "verify_accuracy.txt")
+            perf_comp_path = os.path.join(
+                self.compliance_dir, test, "verify_performance.txt")
+            perf_path = os.path.join(
+                self.compliance_dir,
+                test,
+                "performance",
+                "run_1",
+                "mlperf_log_detail.txt")
             if not os.path.exists(test_dir):
-                self.log.error("Missing %s in compliance dir %s", test, self.compliance_dir)
+                self.log.error(
+                    "Missing %s in compliance dir %s",
+                    test,
+                    self.compliance_dir)
                 is_valid = False
             if test in ["TEST01", "TEST06"]:
                 if not os.path.exists(acc_path):
-                    self.log.error("Missing accuracy file in compliance dir. Needs file %s", acc_path)
+                    self.log.error(
+                        "Missing accuracy file in compliance dir. Needs file %s", acc_path)
                     is_valid = False
             if test in ["TEST01", "TEST04"]:
                 if not os.path.exists(perf_comp_path):
-                    self.log.error("Missing performance file in compliance dir. Needs file %s", perf_comp_path)
+                    self.log.error(
+                        "Missing performance file in compliance dir. Needs file %s",
+                        perf_comp_path)
                     is_valid = False
                 if not os.path.exists(perf_path):
-                    self.log.error("Missing perfomance file in compliance dir. Needs file %s", perf_path)
+                    self.log.error(
+                        "Missing perfomance file in compliance dir. Needs file %s", perf_path)
                     is_valid = False
         return is_valid
-    
+
     def performance_check(self):
         if self.division.lower() == "open":
-            self.log.info("Compliance tests not needed for open division. Skipping tests on %s", self.path)
+            self.log.info(
+                "Compliance tests not needed for open division. Skipping tests on %s",
+                self.path)
             return True
         is_valid = True
         for test in self.test_list:
@@ -77,14 +100,18 @@ class ComplianceCheck(BaseCheck):
                     "scenario": self.submission_logs.loader_data.get("scenario", ""),
                     "model_mapping": self.submission_logs.loader_data.get("model_mapping", {})
                 }
-                test_logs = SubmissionLogs(self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)
-                perf_check = PerformanceCheck(self.log, os.path.join(self.compliance_dir, test), self.config, test_logs)
+                test_logs = SubmissionLogs(
+                    self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)
+                perf_check = PerformanceCheck(self.log, os.path.join(
+                    self.compliance_dir, test), self.config, test_logs)
                 is_valid &= perf_check()
         return is_valid
 
     def accuracy_check(self):
         if self.division.lower() == "open":
-            self.log.info("Compliance tests not needed for open division. Skipping tests on %s", self.path)
+            self.log.info(
+                "Compliance tests not needed for open division. Skipping tests on %s",
+                self.path)
             return True
         is_valid = True
         for test in self.test_list:
@@ -104,11 +131,13 @@ class ComplianceCheck(BaseCheck):
                     )
                     test_acc_path = os.path.join(test_dir, "accuracy")
                     if not os.path.exists(test_acc_path):
-                        self.log.error("%s has no accuracy directory", test_dir)
+                        self.log.error(
+                            "%s has no accuracy directory", test_dir)
                         is_valid = False
                     else:
                         diff = files_diff(
-                            list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES,
+                            list_files(
+                                test_acc_path), REQUIRED_TEST01_ACC_FILES,
                         )
                         if diff:
                             self.log.error(
@@ -117,30 +146,39 @@ class ComplianceCheck(BaseCheck):
                                 diff)
                             is_valid = False
                         else:
-                            target = self.config.get_accuracy_target(self.model)
-                            patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(self.model)
+                            target = self.config.get_accuracy_target(
+                                self.model)
+                            patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
+                                self.model)
                             acc_limit_check = True
 
                             acc_seen = [False for _ in acc_targets]
-                            acc_baseline = {acc_type: 0 for acc_type in acc_types}
-                            acc_compliance = {acc_type: 0 for acc_type in acc_types}
+                            acc_baseline = {
+                                acc_type: 0 for acc_type in acc_types}
+                            acc_compliance = {
+                                acc_type: 0 for acc_type in acc_types}
                             with open(
-                                os.path.join(test_acc_path, "baseline_accuracy.txt"),
+                                os.path.join(
+                                    test_acc_path, "baseline_accuracy.txt"),
                                 "r",
                                 encoding="utf-8",
                             ) as f:
                                 for line in f:
-                                    for acc_type, pattern in zip(acc_types, patterns):
+                                    for acc_type, pattern in zip(
+                                            acc_types, patterns):
                                         m = re.match(pattern, line)
                                         if m:
-                                            acc_baseline[acc_type] = float(m.group(1))
+                                            acc_baseline[acc_type] = float(
+                                                m.group(1))
                             with open(
-                                os.path.join(test_acc_path, "compliance_accuracy.txt"),
+                                os.path.join(
+                                    test_acc_path, "compliance_accuracy.txt"),
                                 "r",
                                 encoding="utf-8",
                             ) as f:
                                 for line in f:
-                                    for acc_type, pattern in zip(acc_types, patterns):
+                                    for acc_type, pattern in zip(
+                                            acc_types, patterns):
                                         m = re.match(pattern, line)
                                         if m:
                                             acc_compliance[acc_type] = float(
@@ -179,7 +217,8 @@ class ComplianceCheck(BaseCheck):
                 )
                 eos_pass = "EOS check pass: True" in lines
                 length_check_pass = "Sample length check pass: True" in lines
-                is_valid &= (first_token_pass and eos_pass and length_check_pass)
+                is_valid &= (
+                    first_token_pass and eos_pass and length_check_pass)
                 if not is_valid:
                     self.log.error(
                         f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}."
@@ -187,10 +226,12 @@ class ComplianceCheck(BaseCheck):
             else:
                 self.log.info(f"{test_dir} does not require accuracy check")
         return is_valid
-    
+
     def compliance_performance_check(self):
         if self.division.lower() == "open":
-            self.log.info("Compliance tests not needed for open division. Skipping tests on %s", self.path)
+            self.log.info(
+                "Compliance tests not needed for open division. Skipping tests on %s",
+                self.path)
             return True
         is_valid = True
         for test in self.test_list:
@@ -213,9 +254,11 @@ class ComplianceCheck(BaseCheck):
                             test_dir)
 
                     # Check performance dir
-                    test_perf_path = os.path.join(test_dir, "performance", "run_1")
+                    test_perf_path = os.path.join(
+                        test_dir, "performance", "run_1")
                     if not os.path.exists(test_perf_path):
-                        self.log.error("%s has no performance/run_1 directory", test_dir)
+                        self.log.error(
+                            "%s has no performance/run_1 directory", test_dir)
                         is_valid = False
                     else:
                         diff = files_diff(

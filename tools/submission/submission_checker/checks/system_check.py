@@ -4,8 +4,10 @@ from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 from ..utils import *
 
+
 class SystemCheck(BaseCheck):
-    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
+    def __init__(self, log, path, config: Config,
+                 submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.name = "system checks"
         self.submission_logs = submission_logs
@@ -23,7 +25,7 @@ class SystemCheck(BaseCheck):
         self.checks.append(self.required_fields_check)
         self.checks.append(self.submitter_check)
         self.checks.append(self.division_check)
-    
+
     def missing_check(self):
         if self.system_json is None:
             self.log.error(
@@ -32,7 +34,7 @@ class SystemCheck(BaseCheck):
             )
             return False
         return True
-    
+
     def availability_check(self):
         availability = self.system_json.get("status").lower()
         if availability not in VALID_AVAILABILITIES:
@@ -54,14 +56,14 @@ class SystemCheck(BaseCheck):
                 system_type,
             )
             return False
-        #Maybe add this line if needed
-        #self.config.set_type(system_type)
+        # Maybe add this line if needed
+        # self.config.set_type(system_type)
         return True
-    
+
     def network_check(self):
         is_network = self.system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
         is_network = (
-        is_network.lower() == "true"
+            is_network.lower() == "true"
             if is_network is not None
             else False
         )
@@ -69,11 +71,13 @@ class SystemCheck(BaseCheck):
         if self.division in expected_state_by_division:
             if expected_state_by_division[self.division] != is_network:
                 self.log.error(
-                    f"{self.path} incorrect network mode (={is_network}) for division '{self.division}'"
+                    f"{
+                        self.path} incorrect network mode (={is_network}) for division '{
+                        self.division}'"
                 )
                 return False
         return True
-    
+
     def required_fields_check(self):
         required_fields = SYSTEM_DESC_REQUIRED_FIELDS.copy()
         is_network = self.system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
@@ -104,7 +108,7 @@ class SystemCheck(BaseCheck):
                     "%s, field %s requires a numeric response but is empty", self.path, k
                 )
         return is_valid
-    
+
     def submitter_check(self):
         if self.system_json.get("submitter").lower() != self.submitter.lower():
             self.log.error(
@@ -115,7 +119,7 @@ class SystemCheck(BaseCheck):
             )
             return False
         return True
-    
+
     def division_check(self):
         if self.system_json.get("division").lower() != self.division.lower():
             self.log.error(

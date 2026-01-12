@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseCheck(ABC):
     """
     A generic check class meant to be inherited by concrete check implementations.
@@ -27,10 +28,10 @@ class BaseCheck(ABC):
             if not valid:
                 return False
         return valid
-            
+
     def execute(self, check):
         return check()
-    
+
     def __call__(self):
         """Allows the check instance to be called like a function."""
         self.log.info("Starting %s for: %s", self.name, self.path)
@@ -38,5 +39,8 @@ class BaseCheck(ABC):
         if valid:
             self.log.info("All %s checks passed for: %s", self.name, self.path)
         else:
-            self.log.error("Some %s Checks failed for: %s", self.name, self.path)
+            self.log.error(
+                "Some %s Checks failed for: %s",
+                self.name,
+                self.path)
         return valid

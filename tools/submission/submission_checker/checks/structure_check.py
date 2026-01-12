@@ -1,5 +1,6 @@
 from .base import BaseCheck
 
+
 class StructureCheck(BaseCheck):
     def __init__(self, log, path, parsed_log):
         super().__init__(log, path)

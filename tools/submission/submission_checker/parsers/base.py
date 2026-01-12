@@ -1,6 +1,7 @@
 
 from abc import ABC, abstractmethod
 
+
 class BaseParser:
     def __init__(self, log_path):
         """

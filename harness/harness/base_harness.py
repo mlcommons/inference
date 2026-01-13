@@ -85,6 +85,9 @@ class BaseHarness:
                  test_mode: str = "performance",
                  server_config: Optional[Dict[str, Any]] = None,
                  api_server_url: Optional[str] = None,
+                 api_server_urls: Optional[List[str]] = None,
+                 host: Optional[str] = None,
+                 hosts: Optional[List[str]] = None,
                  batch_size: int = 13368,
                  num_samples: int = 13368,
                  output_dir: str = "./harness_output",
@@ -113,6 +116,9 @@ class BaseHarness:
             test_mode: Test mode ("performance" or "accuracy")
             server_config: Server configuration (if starting server)
             api_server_url: API server URL (if using existing server)
+            api_server_urls: List of API server URLs for load balancing (alternative to api_server_url)
+            host: API server host (single host, for constructing URL)
+            hosts: List of API server hosts for load balancing (alternative to host)
             batch_size: Batch size for processing
             num_samples: Number of samples for testing
             output_dir: Output directory for logs and results
@@ -130,6 +136,7 @@ class BaseHarness:
             input_ids_column: Override input_ids column name
             output_column: Override output column name
             engine_args: List of engine arguments to override server config (e.g., ['--tensor-parallel-size', '2'])
+            debug_mode: Enable debug mode
         """
         self.model_name = model_name
         self.dataset_path = dataset_path
@@ -138,10 +145,10 @@ class BaseHarness:
         self.server_config = server_config or {}
         self.api_server_url = api_server_url
         # Support load balancing with multiple API server URLs
-        self.api_server_urls = api_server_urls or kwargs.get('api_server_urls', None)
+        self.api_server_urls = api_server_urls
         # Support host specification from config or command line
-        self.host = kwargs.get('host', None)
-        self.hosts = kwargs.get('hosts', None)
+        self.host = host
+        self.hosts = hosts
         # If hosts are specified but no URLs, construct URLs from hosts and port
         if not self.api_server_urls and not self.api_server_url and (self.host or self.hosts):
             port = self.server_config.get('port', 8000)

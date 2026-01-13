@@ -1317,6 +1317,11 @@ def get_args():
         help="skips the check that the calibration documentation should exist",
     )
     parser.add_argument(
+        "--skip-dataset-size-check",
+        action="store_true",
+        help="Skip dataset size validation check"
+    )
+    parser.add_argument(
         "--scenarios-to-skip",
         help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
         type=str,

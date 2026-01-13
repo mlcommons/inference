@@ -301,12 +301,10 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 model_compliance_path = model_results_path
                 model_code_path = os.path.join(
                     change_folder_name_in_path(
-                        log_path, "results", "code"), model)
+                        log_path, "results", "src"), model)
                 if not args.nomove_failed_to_open:
                     target_code_path = change_first_directory_to_open(
                         model_code_path)
-                    target_code_path = change_folder_name_in_path(
-                        log_path, "code", "src")
                     target_results_path = change_first_directory_to_open(
                         model_results_path)
                     target_measurements_path = change_first_directory_to_open(

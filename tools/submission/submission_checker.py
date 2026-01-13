@@ -48,6 +48,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "dlrm-v3",
+            "yolo-95",
+            "yolo-99",
         ],
         "required-scenarios-datacenter": {
             "retinanet": ["Server", "Offline"],
@@ -86,6 +88,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
             "whisper": ["Offline"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -208,8 +212,10 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "yolo-95": ("mAP", 53.4 * 0.95),
+            "yolo-99": ("mAP", 53.4 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -255,6 +261,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
+            "yolo-95": 5000,
+            "yolo-99": 5000,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -280,6 +288,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
+            "yolo-95": 1525,
+            "yolo-99": 1525,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -295,9 +305,9 @@ MODEL_CONFIG = {
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 1780908523862526354,
-            "sample_index_rng_seed": 14771362308971278857,
-            "schedule_rng_seed": 18209322760996052031,
+            "qsl_rng_seed": 2465351861681999779,
+            "sample_index_rng_seed": 14276810075590677512,
+            "schedule_rng_seed": 3936089224930324775,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -313,7 +323,7 @@ MODEL_CONFIG = {
             "llama3.1-405b": {"Server": 60000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 12000000000},
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -353,6 +363,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
     },
     "v5.1": {
@@ -676,18 +688,18 @@ REQUIRED_ACC_FILES = [
 ]
 REQUIRED_ACC_BENCHMARK = {
     "stable-diffusion-xl": {
-        "v5.0": {
+        "v6.0": {
             "images": [
-                "4459",
-                "4015",
-                "2705",
-                "1682",
-                "4048",
-                "4683",
-                "3757",
-                "1578",
-                "3319",
-                "95",
+                "1311",
+                "2476",
+                "3644",
+                "2188",
+                "4114",
+                "52",
+                "388",
+                "1195",
+                "3427",
+                "2289",
             ]
         },
         "v5.1": {
@@ -774,6 +786,12 @@ RESULT_FIELD_NEW = {
         "Server": "result_completed_samples_per_sec",
     },
     "v5.1": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
+    "v6.0": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
@@ -938,7 +956,8 @@ ACC_PATTERN = {
     "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
-    "exact_match": r".*'exact_match':\s([\d.]+).*"
+    "exact_match": r".*'exact_match':\s([\d.]+).*",
+    "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}'
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1298,6 +1317,11 @@ def get_args():
         help="skips the check that the calibration documentation should exist",
     )
     parser.add_argument(
+        "--skip-dataset-size-check",
+        action="store_true",
+        help="Skip dataset size validation check"
+    )
+    parser.add_argument(
         "--scenarios-to-skip",
         help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
         type=str,
@@ -1507,6 +1531,9 @@ def check_accuracy_dir(config, model, path, verbose):
         is_valid = False
     else:
         if os.stat(fname).st_size > MAX_ACCURACY_LOG_SIZE:
+            log.error(
+                "Max expected file size is: %s bytes",
+                MAX_ACCURACY_LOG_SIZE)
             log.error("%s is not truncated", fname)
             is_valid = False
 
@@ -3071,15 +3098,8 @@ def check_measurement_dir(
                 is_valid = False
 
     for i in files:
-        if i.startswith(system_desc) and i.endswith(
-                "_" + scenario + ".json"):
+        if i.lower() == "measurements.json":
             system_file = i
-            end = len("_" + scenario + ".json")
-            break
-        elif i.startswith(system_desc) and i.endswith(".json"):
-            system_file = i
-            end = len(".json")
-            break
 
     weight_data_types = None
     if system_file:
@@ -3095,7 +3115,7 @@ def check_measurement_dir(
                     log.error(
                         "%s, field %s is missing meaningful value", fname, k)
 
-        code_dir = os.path.join(root, "code", model)
+        code_dir = os.path.join(root, "src", model)
         if not os.path.exists(code_dir):
             # see if the code dir is per model
             if not os.path.exists(os.path.dirname(code_dir)):
@@ -3302,6 +3322,7 @@ def check_compliance_dir(
         "rgat",
         "deepseek-r1",
         "whisper",
+        "qwen3-vl-235b-a22b"
     ]:
         test_list.remove("TEST04")
 
@@ -3312,7 +3333,8 @@ def check_compliance_dir(
         "llama2-70b-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
-        "deepseek-r1"
+        "deepseek-r1",
+        "qwen3-vl-235b-a22b"
     ]:
         test_list.remove("TEST01")
 

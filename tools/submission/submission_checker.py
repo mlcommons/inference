@@ -305,9 +305,9 @@ MODEL_CONFIG = {
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 1780908523862526354,
-            "sample_index_rng_seed": 14771362308971278857,
-            "schedule_rng_seed": 18209322760996052031,
+            "qsl_rng_seed": 2465351861681999779,
+            "sample_index_rng_seed": 14276810075590677512,
+            "schedule_rng_seed": 3936089224930324775,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -688,18 +688,18 @@ REQUIRED_ACC_FILES = [
 ]
 REQUIRED_ACC_BENCHMARK = {
     "stable-diffusion-xl": {
-        "v5.0": {
+        "v6.0": {
             "images": [
-                "4459",
-                "4015",
-                "2705",
-                "1682",
-                "4048",
-                "4683",
-                "3757",
-                "1578",
-                "3319",
-                "95",
+                "1311",
+                "2476",
+                "3644",
+                "2188",
+                "4114",
+                "52",
+                "388",
+                "1195",
+                "3427",
+                "2289",
             ]
         },
         "v5.1": {
@@ -1320,6 +1320,11 @@ def get_args():
         "--skip-calibration-check",
         action="store_true",
         help="skips the check that the calibration documentation should exist",
+    )
+    parser.add_argument(
+        "--skip-dataset-size-check",
+        action="store_true",
+        help="Skip dataset size validation check"
     )
     parser.add_argument(
         "--scenarios-to-skip",

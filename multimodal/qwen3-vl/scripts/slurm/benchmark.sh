@@ -26,4 +26,5 @@ srun \
         --vllm.cli=--max-model-len=32768 \
         --vllm.cli=--limit-mm-per-prompt.video=0 \
         --vllm.cli=--tensor-parallel-size="${TENSOR_PARALLEL_SIZE}" \
+        --vllm.cli=--no-enable-prefix-caching \
         --settings.logging.log_output.outdir="${OUTPUT_CONTAINER_DIR}"/"${SLURM_JOB_ID}" 

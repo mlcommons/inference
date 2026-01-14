@@ -1,5 +1,5 @@
 # This workflow will test the submission generation using MLPerf Automation.
-# This test calls the test-mlperf-inference-submission-generation.yml file from automation repo
+# This test calls the test-mlperf-inference-submission-generation.yml file from automation repo.
 
 name: MLC based Submission Generation
 

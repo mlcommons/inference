@@ -78,7 +78,8 @@ docker run --gpus all \                                 # Use all the GPUs on th
     vllm/vllm-openai:nightly \                          # You can also use the `:latest` container or a specific release.
         --model Qwen/Qwen3-VL-235B-A22B-Instruct \      # Specifies the model for vLLM to deploy.
         --tensor-parallel-size 8 \                      # 8-way tensor-parallel inference across 8 GPUs.
-        --limit-mm-per-prompt.video 0                   # The input requests will contain images only (i.e., no videos).
+        --limit-mm-per-prompt.video 0 \                 # The input requests will contain images only (i.e., no videos).
+        --no-enable-prefix-caching                      # Disable cross-query prefix caching to satisfy MLPerf Inference rules.
 ```
 
 ### Run the benchmark for the Offline scenario
@@ -201,7 +202,8 @@ mlperf-inf-mm-q3vl benchmark vllm \
         ]
     }' \
     --vllm.cli=--limit-mm-per-prompt.video=0 \
-    --vllm.cli=--tensor-parallel-size=8 
+    --vllm.cli=--tensor-parallel-size=8 \
+    --vllm.cli=--no-enable-prefix-caching
 ```
 
 ## Slurm
@@ -231,6 +233,14 @@ bash submit.sh --help
 > first, get a good understanding of what those example scripts do, and adapt the 
 > example scripts to the specific settings for the Slurm cluster that you are going
 > to use, before you try to launch any jobs.
+
+## Prefix caching
+
+According to the [rules of MLPerf Inference](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#94-llm-benchmarks),
+cross-query prefix caching is disallowed, while PagedAttention or continuous batching
+are allowed. This means that, in:
+- in vLLM, you must explicitly set `--no-enable-prefix-caching`;
+- in SGLang, you must explicitly set `--disable-radix-cache`.
 
 ## Reference Implementation Specification
 
@@ -271,6 +281,7 @@ bash submit.sh --help
       the host memory, which takes ~6.39 GB). 
     - Testing duration $\ge$ 10 mins.
     - Sample concatenation permutation is enabled.
+    - You must explicitly set `--no-enable-prefix-caching` for vLLM.
 
 ## Plugin System for `mlperf-inf-mm-q3vl benchmark`
 

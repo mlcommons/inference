@@ -28,7 +28,7 @@ import mlperf_loadgen as lg
 import pandas as pd
 from tqdm import tqdm
 
-from backends import SGLangBackend
+from backends import SGLangBackend, VLLMBackend
 from mlperf import OfflineSUT, ServerSUT, QuerySampleLibrary
 from utils import load_tokenized_dataset, StandardTokenizer
 
@@ -127,7 +127,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--backend",
         type=str,
         default="sglang",
-        choices=["sglang"],
+        choices=["sglang", "vllm"],
         help="Backend to use for inference"
     )
 
@@ -135,7 +135,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--server-url",
         type=str,
         default="http://localhost:30000",
-        help="Server URL for backend (SGLang)"
+        help="Server URL for backend (SGLang: default 30000, vLLM: default 8000)"
     )
 
     # Generation configuration
@@ -174,6 +174,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=int,
         default=1200,
         help="Timeout for HTTP requests in seconds (default: 1200)"
+    )
+
+    parser.add_argument(
+        "--debug",
+        "--debug-mode",
+        action="store_true",
+        help="Enable debug mode to print detailed logs including sampling parameters for each request"
     )
 
     return parser
@@ -239,6 +246,11 @@ def main():
     """Main function."""
     parser = create_argument_parser()
     args = parser.parse_args()
+
+    # Set logging level based on debug mode
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.info("Debug mode enabled - detailed logs including sampling parameters will be printed")
 
     # Track resources for cleanup
     sut = None
@@ -318,14 +330,52 @@ def main():
         logger.info("=" * 80)
 
         # Load dataset
-        logger.debug("Loading tokenized dataset...")
+        logger.debug("Loading dataset...")
         with tqdm(total=1, desc="Loading dataset", unit="file") as pbar:
-            dataset_info = load_tokenized_dataset(
-                args.input_file,
-                max_samples=args.max_samples
-            )
-            prompts = dataset_info["prompts"]
-            df = dataset_info["dataframe"]
+            # For VLLM backend, we need text_input instead of tokenized prompts
+            if args.backend == "vllm":
+                # Load DataFrame to get text_input field
+                import pandas as pd
+                if args.input_file.endswith('.parquet'):
+                    df = pd.read_parquet(args.input_file)
+                elif args.input_file.endswith('.pkl') or args.input_file.endswith('.pickle'):
+                    df = pd.read_pickle(args.input_file)
+                else:
+                    try:
+                        df = pd.read_parquet(args.input_file)
+                    except Exception:
+                        df = pd.read_pickle(args.input_file)
+                
+                # Limit samples if specified
+                if args.max_samples is not None:
+                    df = df.head(args.max_samples)
+                
+                # Extract text_input field
+                if 'text_input' not in df.columns:
+                    raise ValueError(
+                        "Dataset must have 'text_input' column for vLLM backend. "
+                        "Available columns: " + ", ".join(df.columns.tolist())
+                    )
+                
+                # Verify text_input
+                failed_mask = df['text_input'].isna()
+                if failed_mask.any():
+                    failed_count = failed_mask.sum()
+                    logger.error(f"Found {failed_count} samples with missing text_input")
+                    raise ValueError(f"{failed_count} samples have invalid text_input")
+                
+                prompts = df['text_input'].tolist()
+                logger.info(f"Loaded {len(prompts)} text prompts from dataset for vLLM backend")
+            else:
+                # For SGLang backend, use tokenized prompts
+                dataset_info = load_tokenized_dataset(
+                    args.input_file,
+                    max_samples=args.max_samples
+                )
+                prompts = dataset_info["prompts"]
+                df = dataset_info["dataframe"]
+                logger.info(f"Loaded {len(prompts)} tokenized prompts from dataset")
+            
             pbar.update(1)
 
         logger.info(f"Loaded {len(prompts)} prompts from dataset")
@@ -364,6 +414,23 @@ def main():
                 server_url=args.server_url,
                 timeout=args.timeout,
                 max_pool_size=pool_size
+            )
+        elif args.backend == "vllm":
+            # Set pool size to match max_concurrency with small safety margin
+            pool_size = int(args.max_concurrency * 1.1)  # 10% safety margin
+            # Default vLLM server URL if not specified
+            vllm_url = args.server_url if args.server_url != "http://localhost:30000" else "http://localhost:8000"
+            
+            # Initialize tokenizer for vLLM backend (needed to convert output text to token IDs for accuracy logging)
+            logger.info("Initializing tokenizer for vLLM backend (required for accuracy logging)...")
+            tokenizer = StandardTokenizer()
+            tokenizer.load()
+            
+            backend = VLLMBackend(
+                server_url=vllm_url,
+                timeout=args.timeout,
+                max_pool_size=pool_size,
+                tokenizer=tokenizer
             )
         else:
             raise ValueError(f"Unknown backend: {args.backend}")
@@ -467,6 +534,146 @@ def main():
             pbar.update(1)
         logger.info(f"Retrieved {len(results)} results from SUT")
 
+        # Log response statistics and sample text inputs
+        logger.info("=" * 80)
+        logger.info("Response Statistics")
+        logger.info("=" * 80)
+        
+        total_tokens = 0
+        token_counts = []
+        sample_count = min(5, len(results))  # Show up to 5 sample queries
+        
+        # Get text inputs for logging
+        text_inputs = []
+        if args.backend == "vllm":
+            # For vLLM, prompts are already text strings
+            text_inputs = prompts
+        else:
+            # For SGLang, decode token IDs from prompts to show the actual input text
+            logger.debug("Decoding SGLang input tokens to text for logging...")
+            tokenizer = StandardTokenizer()
+            tokenizer.load()
+            text_inputs = []
+            for token_ids in prompts:
+                try:
+                    text = tokenizer.decode(token_ids, skip_special_tokens=False)
+                    text_inputs.append(text)
+                except Exception as e:
+                    logger.warning(f"Failed to decode prompt: {e}")
+                    text_inputs.append(f"[Failed to decode {len(token_ids)} tokens]")
+        
+        # Initialize tokenizer for vLLM if needed (for input token counting)
+        vllm_tokenizer = None
+        if args.backend == "vllm":
+            try:
+                vllm_tokenizer = StandardTokenizer()
+                vllm_tokenizer.load()
+            except Exception as e:
+                logger.warning(f"Failed to initialize tokenizer for input token counting: {e}")
+        
+        # Process results and collect statistics
+        sample_queries = []
+        input_token_counts = []  # Track input token counts for aggregate stats
+        sorted_query_ids = sorted(results.keys())
+        for idx, query_id in enumerate(sorted_query_ids):
+            result = results[query_id]
+            output_ids = result.get("output_ids", [])
+            num_tokens = len(output_ids)
+            total_tokens += num_tokens
+            token_counts.append(num_tokens)
+            
+            # Map query_id to dataset index
+            dataset_idx = query_id if query_id < len(text_inputs) else idx % len(text_inputs) if text_inputs else 0
+            
+            # Get input token count for this query
+            input_token_count = None
+            if args.backend == "sglang" and dataset_idx < len(prompts):
+                # For SGLang, use prompts directly (they are token IDs)
+                input_token_count = len(prompts[dataset_idx])
+                input_token_counts.append(input_token_count)
+            elif args.backend == "vllm" and dataset_idx < len(text_inputs) and vllm_tokenizer:
+                # For vLLM, tokenize the text input to get token count
+                try:
+                    input_token_count = len(vllm_tokenizer.encode(text_inputs[dataset_idx]))
+                    input_token_counts.append(input_token_count)
+                except Exception as e:
+                    logger.debug(f"Failed to tokenize input for query {query_id}: {e}")
+            
+            # Collect sample queries for detailed logging
+            if idx < sample_count and dataset_idx < len(text_inputs):
+                text_input = text_inputs[dataset_idx]
+                sample_data = {
+                    "query_id": query_id,
+                    "text_input": text_input,
+                    "num_tokens": num_tokens,  # Response token count
+                    "output_text_preview": result.get("output_text", "")[:100] if result.get("output_text") else ""
+                }
+                # Add input token information
+                if input_token_count is not None:
+                    sample_data["input_token_count"] = input_token_count
+                    if args.backend == "sglang" and dataset_idx < len(prompts):
+                        sample_data["input_tokens"] = prompts[dataset_idx]
+                sample_queries.append(sample_data)
+        
+        # Log aggregate statistics
+        logger.info("=" * 80)
+        logger.info("Token Count Statistics")
+        logger.info("=" * 80)
+        
+        # Response token statistics
+        if token_counts:
+            avg_tokens = total_tokens / len(token_counts)
+            min_tokens = min(token_counts)
+            max_tokens = max(token_counts)
+            logger.info(f"Total responses: {len(results)}")
+            logger.info("")
+            logger.info("Response Tokens (Output):")
+            logger.info(f"  Total tokens in all responses: {total_tokens:,}")
+            logger.info(f"  Average tokens per response: {avg_tokens:.2f}")
+            logger.info(f"  Min tokens per response: {min_tokens}")
+            logger.info(f"  Max tokens per response: {max_tokens}")
+        else:
+            logger.warning("No response token counts available in results")
+        
+        # Input token statistics
+        if input_token_counts:
+            total_input_tokens = sum(input_token_counts)
+            avg_input_tokens = total_input_tokens / len(input_token_counts)
+            min_input_tokens = min(input_token_counts)
+            max_input_tokens = max(input_token_counts)
+            logger.info("")
+            logger.info("Input Tokens:")
+            logger.info(f"  Total tokens in all inputs: {total_input_tokens:,}")
+            logger.info(f"  Average tokens per input: {avg_input_tokens:.2f}")
+            logger.info(f"  Min tokens per input: {min_input_tokens}")
+            logger.info(f"  Max tokens per input: {max_input_tokens}")
+        else:
+            logger.warning("No input token counts available")
+        
+        # Log sample queries with text input
+        if sample_queries:
+            logger.info("=" * 80)
+            logger.info(f"Sample Queries (showing {len(sample_queries)} of {len(results)})")
+            logger.info("=" * 80)
+            for sample in sample_queries:
+                logger.info(f"\nQuery ID: {sample['query_id']}")
+                
+                # Show input tokens and text
+                if 'input_token_count' in sample:
+                    logger.info(f"Input Token Count: {sample['input_token_count']}")
+                    if args.backend == "sglang" and 'input_tokens' in sample:
+                        logger.info(f"Input Tokens (first 50): {sample['input_tokens'][:50]}{'...' if len(sample['input_tokens']) > 50 else ''}")
+                    logger.info(f"Detokenized Input: {sample['text_input'][:200]}{'...' if len(sample['text_input']) > 200 else ''}")
+                else:
+                    # Fallback: just show text input
+                    logger.info(f"Text Input: {sample['text_input'][:200]}{'...' if len(sample['text_input']) > 200 else ''}")
+                
+                logger.info(f"Response Token Count: {sample['num_tokens']}")
+                if sample['output_text_preview']:
+                    logger.info(f"Output Preview: {sample['output_text_preview']}...")
+                logger.info("-" * 80)
+        
+        logger.info("=" * 80)
         logger.info(f"MLPerf results saved to: {log_dir}")
 
         # If in accuracy mode, prompt user to run evaluation

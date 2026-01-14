@@ -41,7 +41,7 @@ class ServerSUT(BaseSUT):
     def __init__(
         self,
         backend,
-        dataset: List[List[int]],
+        dataset: List,  # Can be List[List[int]] for token IDs or List[str] for text
         max_tokens: int = 32768,
         temperature: float = 0.001,
         top_k: int = 1,
@@ -54,7 +54,7 @@ class ServerSUT(BaseSUT):
 
         Args:
             backend: Backend instance for inference (must support streaming)
-            dataset: List of tokenized prompts
+            dataset: List of tokenized prompts (List[List[int]]) or text prompts (List[str])
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k sampling parameter
@@ -187,7 +187,19 @@ class ServerSUT(BaseSUT):
         """
         query_id = query_sample.id
         sample_idx = query_sample.index
-        input_ids = self.dataset[sample_idx]
+        input_data = self.dataset[sample_idx]
+
+        # Check if backend expects text input (VLLM) or token IDs (SGLang)
+        # Use class name to avoid import issues
+        backend_type = type(self.backend).__name__
+        if backend_type == "VLLMBackend":
+            # VLLM expects text string
+            input_prompt = input_data if isinstance(input_data, str) else str(input_data)
+            input_ids = []  # Not used for VLLM
+        else:
+            # SGLang expects token IDs
+            input_prompt = None
+            input_ids = input_data if isinstance(input_data, list) else [input_data]
 
         # Initialize streaming state
         state = StreamingQueryState(
@@ -207,13 +219,26 @@ class ServerSUT(BaseSUT):
 
         try:
             # Stream tokens from backend
-            async for chunk in self.backend.generate_stream(
-                input_ids=input_ids,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                top_k=self.top_k,
-                top_p=self.top_p
-            ):
+            if backend_type == "VLLMBackend":
+                # VLLM uses prompt (text string)
+                stream_gen = self.backend.generate_stream(
+                    prompt=input_prompt,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    top_k=self.top_k,
+                    top_p=self.top_p
+                )
+            else:
+                # SGLang uses input_ids
+                stream_gen = self.backend.generate_stream(
+                    input_ids=input_ids,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    top_k=self.top_k,
+                    top_p=self.top_p
+                )
+            
+            async for chunk in stream_gen:
                 # Update state
                 if chunk.get("delta_token_ids"):
                     state.accumulated_tokens.extend(chunk["delta_token_ids"])

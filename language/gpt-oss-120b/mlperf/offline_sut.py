@@ -23,7 +23,7 @@ class OfflineSUT(BaseSUT):
     def __init__(
         self,
         backend,
-        dataset: List[List[int]],
+        dataset: List,  # Can be List[List[int]] for token IDs or List[str] for text
         max_tokens: int = 32768,
         temperature: float = 0.001,
         top_k: int = 1,
@@ -36,7 +36,7 @@ class OfflineSUT(BaseSUT):
 
         Args:
             backend: Backend instance for inference
-            dataset: List of tokenized prompts
+            dataset: List of tokenized prompts (List[List[int]]) or text prompts (List[str])
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k sampling parameter
@@ -100,13 +100,23 @@ class OfflineSUT(BaseSUT):
                 return None, None, None
 
             query_id = query_sample.id
-            input_ids = self.dataset[query_sample.index]
+            input_data = self.dataset[query_sample.index]
+
+            # Check if backend expects text input (VLLM) or token IDs (SGLang)
+            # VLLMBackend.generate() accepts List[str], SGLangBackend.generate() accepts List[List[int]]
+            # Use class name to avoid import issues
+            backend_type = type(self.backend).__name__
+            if backend_type == "VLLMBackend":
+                # VLLM expects text strings
+                prompts = [input_data] if isinstance(input_data, str) else [str(input_data)]
+            else:
+                # SGLang expects token IDs
+                prompts = [input_data] if isinstance(input_data, list) else [[input_data]]
 
             # Call backend with single query
-            # SGLang will batch this with other concurrent requests
-            # automatically
+            # Backend will batch this with other concurrent requests automatically
             responses = self.backend.generate(
-                prompts=[input_ids],  # Single query as list
+                prompts=prompts,  # Single query as list
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 top_k=self.top_k,

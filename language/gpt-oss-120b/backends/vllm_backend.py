@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SGLang backend implementation for gpt-oss."""
+"""vLLM backend implementation for gpt-oss."""
 
 import asyncio
 import json
@@ -13,46 +13,51 @@ from .base_backend import BaseBackend
 logger = logging.getLogger(__name__)
 
 
-class SGLangBackend(BaseBackend):
-    """SGLang inference backend using HTTP API.
+class VLLMBackend(BaseBackend):
+    """vLLM inference backend using HTTP API (OpenAI-compatible).
 
-    Connects to an SGLang server running the gpt-oss model.
+    Connects to a vLLM server running the gpt-oss model.
+    Uses text_input field for input instead of token IDs.
     """
 
     def __init__(
         self,
-        server_url: str = "http://localhost:30000",
+        server_url: str = "http://localhost:8000",
         timeout: int = 1200,
         max_pool_size: int = 2000,  # Default pool size for high concurrency
+        tokenizer=None,  # Tokenizer for converting text to token IDs
         **kwargs
     ):
-        """Initialize SGLang backend.
+        """Initialize vLLM backend.
 
         Args:
-            server_url: URL of the SGLang server
+            server_url: URL of the vLLM server (default: http://localhost:8000)
             timeout: Request timeout in seconds
             max_pool_size: Maximum connection pool size (should be >= max_concurrency)
+            tokenizer: Tokenizer instance for converting output text to token IDs (required for accuracy mode)
             **kwargs: Additional configuration
         """
         config = {
             "server_url": server_url,
             "timeout": timeout,
             "max_pool_size": max_pool_size,
+            "tokenizer": tokenizer,
             **kwargs
         }
         super().__init__(config)
         self.server_url = server_url
         self.timeout = timeout
         self.max_pool_size = max_pool_size
+        self.tokenizer = tokenizer
         self.session = None
 
     def initialize(self) -> None:
-        """Initialize connection to SGLang server."""
+        """Initialize connection to vLLM server."""
         if self.initialized:
             logger.warning("Backend already initialized")
             return
 
-        logger.info(f"Connecting to SGLang server at {self.server_url}")
+        logger.info(f"Connecting to vLLM server at {self.server_url}")
         logger.info(
             f"Configuring connection pool with max_pool_size={self.max_pool_size}")
         # Create session with larger connection pool for high concurrency
@@ -77,34 +82,34 @@ class SGLangBackend(BaseBackend):
         # Test connection with a simple request
         try:
             test_response = self._send_request(
-                input_ids=[1, 2, 3],
+                prompt="test",
                 max_tokens=5,
-                temperature=0.001,
+                temperature=1.0,
                 top_k=1,
                 top_p=1.0
             )
             if "error" in test_response:
                 raise ConnectionError(
-                    f"Failed to connect to SGLang server: {test_response['error']}"
+                    f"Failed to connect to vLLM server: {test_response['error']}"
                 )
-            logger.info("Successfully connected to SGLang server")
+            logger.info("Successfully connected to vLLM server")
             self.initialized = True
         except Exception as e:
-            logger.error(f"Failed to initialize SGLang backend: {e}")
+            logger.error(f"Failed to initialize vLLM backend: {e}")
             raise
 
     def _send_request(
         self,
-        input_ids: List[int],
+        prompt: str,
         max_tokens: int,
         temperature: float,
         top_k: int,
         top_p: float
     ) -> Dict[str, Any]:
-        """Send a single request to the SGLang server.
+        """Send a single request to the vLLM server.
 
         Args:
-            input_ids: Token IDs for the prompt
+            prompt: Text prompt string
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k parameter
@@ -113,29 +118,30 @@ class SGLangBackend(BaseBackend):
         Returns:
             Response dictionary from the server
         """
+        # vLLM uses OpenAI-compatible API format
         payload = {
-            "input_ids": input_ids,
-            "sampling_params": {
-                "max_new_tokens": max_tokens,
-                "temperature": temperature,
-                "top_k": top_k,
-                "top_p": top_p,
-            }
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_k": top_k if top_k > 0 else -1,  # -1 means no top_k filtering
+            "top_p": top_p,
+            "stop": []  # No stop sequences by default
         }
 
         # Log sampling parameters before sending request (debug mode)
         logger.debug(
             f"Sending request with sampling parameters: "
-            f"max_new_tokens={max_tokens}, "
+            f"max_tokens={max_tokens}, "
             f"temperature={temperature}, "
-            f"top_k={top_k}, "
+            f"top_k={top_k if top_k > 0 else -1}, "
             f"top_p={top_p}, "
-            f"input_length={len(input_ids)} tokens"
+            f"prompt_length={len(prompt)} characters"
         )
 
         try:
+            # Try /v1/completions endpoint (OpenAI-compatible)
             response = self.session.post(
-                f"{self.server_url}/generate",
+                f"{self.server_url}/v1/completions",
                 json=payload,
                 timeout=self.timeout,
             )
@@ -152,17 +158,17 @@ class SGLangBackend(BaseBackend):
 
     def generate(
         self,
-        prompts: List[List[int]],
+        prompts: List[str],  # Changed from List[List[int]] to List[str] for text input
         max_tokens: int = 100,
         temperature: float = 0.001,
         top_k: int = 1,
         top_p: float = 1.0,
         **kwargs
     ) -> List[Dict[str, Any]]:
-        """Generate responses for a batch of prompts.
+        """Generate responses for a batch of text prompts.
 
         Args:
-            prompts: List of token ID sequences
+            prompts: List of text prompt strings (not token IDs)
             max_tokens: Maximum tokens to generate per prompt
             temperature: Sampling temperature
             top_k: Top-k sampling parameter
@@ -171,8 +177,8 @@ class SGLangBackend(BaseBackend):
 
         Returns:
             List of response dictionaries with keys:
-                - output_ids: List of generated token IDs
-                - output_text: Generated text (if available)
+                - output_ids: List of generated token IDs (empty for vLLM, as we don't get token IDs)
+                - output_text: Generated text
                 - metadata: Additional metadata (latencies, etc.)
         """
         if not self.initialized:
@@ -180,10 +186,10 @@ class SGLangBackend(BaseBackend):
                 "Backend not initialized. Call initialize() first.")
 
         results = []
-        for prompt_ids in prompts:
+        for prompt_text in prompts:
             start_time = time.time()
             response = self._send_request(
-                input_ids=prompt_ids,
+                prompt=prompt_text,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_k=top_k,
@@ -192,21 +198,46 @@ class SGLangBackend(BaseBackend):
             end_time = time.time()
             latency = end_time - start_time
 
-            # Extract output_ids from response
-            output_ids = []
+            # Extract output from OpenAI-compatible response format
             output_text = ""
+            output_ids = []  # Will be populated by tokenizing output_text
+            completion_tokens = 0
+            
             if "error" not in response:
-                output_ids = response.get("output_ids", [])
-                output_text = response.get("text", "")
+                # OpenAI-compatible format: {"choices": [{"text": "...", ...}], ...}
+                if "choices" in response and len(response["choices"]) > 0:
+                    choice = response["choices"][0]
+                    output_text = choice.get("text", "")
+                    
+                    # Extract usage info if available
+                    if "usage" in response:
+                        completion_tokens = response["usage"].get("completion_tokens", 0)
+                else:
+                    # Fallback: try direct "text" field
+                    output_text = response.get("text", "")
+                
+                # Tokenize output text to get token IDs (required for LoadGen accuracy logging)
+                if output_text and self.tokenizer is not None:
+                    try:
+                        output_ids = self.tokenizer.encode(output_text)
+                        logger.debug(f"Tokenized output text: {len(output_ids)} tokens")
+                    except Exception as e:
+                        logger.warning(f"Failed to tokenize output text: {e}")
+                        output_ids = []
+                elif output_text and self.tokenizer is None:
+                    logger.warning(
+                        "Tokenizer not provided to VLLMBackend. "
+                        "Output token IDs will be empty. "
+                        "This may cause issues with accuracy logging. "
+                        "Consider passing a tokenizer to the backend."
+                    )
 
             result = {
-                "output_ids": output_ids,
+                "output_ids": output_ids,  # Tokenized output for LoadGen accuracy logging
                 "output_text": output_text,
                 "metadata": {
                     "latency": latency,
-                    "completion_tokens": response.get("meta_info", {}).get(
-                        "completion_tokens", len(output_ids)
-                    ),
+                    "completion_tokens": completion_tokens if completion_tokens > 0 else len(output_ids) if output_ids else len(output_text.split()) if output_text else 0,
                     "error": response.get("error"),
                 }
             }
@@ -216,7 +247,7 @@ class SGLangBackend(BaseBackend):
 
     async def generate_stream(
         self,
-        input_ids: List[int],
+        prompt: str,  # Changed from input_ids to prompt string
         max_tokens: int = 100,
         temperature: float = 0.001,
         top_k: int = 1,
@@ -228,7 +259,7 @@ class SGLangBackend(BaseBackend):
         Yields incremental responses as tokens are generated.
 
         Args:
-            input_ids: Token IDs for the prompt
+            prompt: Text prompt string (not token IDs)
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k parameter
@@ -236,56 +267,51 @@ class SGLangBackend(BaseBackend):
 
         Yields:
             Dict with:
-                - delta_token_ids: List of new token IDs in this chunk
+                - delta_token_ids: List of new token IDs in this chunk (empty for vLLM)
                 - delta_text: New text in this chunk
                 - is_first_token: True if this is the first token
                 - is_finished: True if generation is complete
-                - accumulated_token_ids: All tokens generated so far
+                - accumulated_token_ids: All tokens generated so far (empty for vLLM)
                 - metadata: Additional info (TTFT, completion_tokens, etc.)
-
-        Note:
-            SGLang's streaming API behavior:
-            - Returns 'output_ids', 'text', and 'meta_info' in each chunk
-            - 'output_ids' can have retractions (length can decrease between chunks)
-            - 'meta_info.completion_tokens' is the RELIABLE cumulative token count
-            - 'finish_reason' in meta_info indicates completion (not a 'finished' flag)
-            - We use completion_tokens for accurate LoadGen token/sec metrics
         """
         if not self.initialized:
             raise RuntimeError(
                 "Backend not initialized. Call initialize() first.")
 
         payload = {
-            "input_ids": input_ids,
-            "sampling_params": {
-                "max_new_tokens": max_tokens,
-                "temperature": temperature,
-                "top_k": top_k,
-                "top_p": top_p,
-            },
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_k": top_k if top_k > 0 else -1,
+            "top_p": top_p,
+            "stop": [],
             "stream": True  # Enable streaming
         }
 
         # Log sampling parameters before sending streaming request (debug mode)
         logger.debug(
             f"Sending streaming request with sampling parameters: "
-            f"max_new_tokens={max_tokens}, "
+            f"max_tokens={max_tokens}, "
             f"temperature={temperature}, "
-            f"top_k={top_k}, "
+            f"top_k={top_k if top_k > 0 else -1}, "
             f"top_p={top_p}, "
-            f"input_length={len(input_ids)} tokens"
+            f"prompt_length={len(prompt)} characters"
         )
 
         start_time = time.time()
         first_token_time = None
-        accumulated_token_ids = []
         accumulated_text = ""
+        accumulated_token_ids = []
         is_first = True
+        
+        # Initialize streaming state tracking
+        if not hasattr(self, '_streaming_states'):
+            self._streaming_states = {}
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.server_url}/generate",
+                    f"{self.server_url}/v1/completions",
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=self.timeout)
                 ) as response:
@@ -304,12 +330,12 @@ class SGLangBackend(BaseBackend):
                         }
                         return
 
-                    # Read streaming response
+                    # Read streaming response (SSE format)
                     async for line in response.content:
                         if not line:
                             continue
 
-                        # SGLang sends data as "data: {...}\n\n"
+                        # OpenAI-compatible streaming format: "data: {...}\n\n"
                         line_str = line.decode('utf-8').strip()
                         if not line_str.startswith('data:'):
                             continue
@@ -322,87 +348,62 @@ class SGLangBackend(BaseBackend):
 
                             chunk = json.loads(json_str)
 
-                            # Extract text delta
-                            delta_text = chunk.get("text", "")
-
-                            # Check if this is the final chunk
-                            # SGLang uses 'finish_reason' in meta_info, not
-                            # 'finished' flag
-                            meta_info = chunk.get("meta_info", {})
-                            finish_reason = meta_info.get("finish_reason")
-                            is_finished = (
-                                finish_reason is not None and finish_reason != "null") or chunk.get(
-                                "finished", False)
-
-                            # Extract token information from chunk
-                            # SGLang's output_ids can have retractions, so use meta_info.completion_tokens
-                            # which is the reliable cumulative count
-                            chunk_output_ids = chunk.get("output_ids", [])
-                            completion_tokens = meta_info.get(
-                                "completion_tokens", 0)
-
-                            if completion_tokens > 0:
-                                # Use completion_tokens as the authoritative
-                                # count
-                                previous_count = len(accumulated_token_ids)
-
-                                if completion_tokens > previous_count:
-                                    # New tokens generated
-                                    num_new_tokens = completion_tokens - previous_count
-
-                                    if chunk_output_ids and len(
-                                            chunk_output_ids) >= num_new_tokens:
-                                        # Use actual token IDs from chunk
-                                        delta_token_ids = chunk_output_ids[-num_new_tokens:] if num_new_tokens > 0 else [
-                                        ]
-                                    else:
-                                        # Fallback: create placeholder tokens
-                                        # for counting
-                                        delta_token_ids = list(
-                                            range(previous_count, completion_tokens))
-
-                                    accumulated_token_ids.extend(
-                                        delta_token_ids)
-                                else:
-                                    delta_token_ids = []
-
+                            # Extract text delta from OpenAI-compatible format
+                            delta_text = ""
+                            if "choices" in chunk and len(chunk["choices"]) > 0:
+                                choice = chunk["choices"][0]
+                                delta_text = choice.get("delta", {}).get("text", "")
+                                
+                                # Check if finished
+                                finish_reason = choice.get("finish_reason")
+                                is_finished = finish_reason is not None
                             else:
-                                # No completion_tokens - fallback to output_ids
-                                # or text estimation
-                                if chunk_output_ids:
-                                    delta_token_ids = chunk_output_ids
-                                    accumulated_token_ids.extend(
-                                        delta_token_ids)
-                                elif delta_text:
-                                    # Estimate from text length
-                                    estimated_tokens = max(
-                                        1, len(delta_text) // 4)
-                                    delta_token_ids = [0] * estimated_tokens
-                                    accumulated_token_ids.extend(
-                                        delta_token_ids)
-                                else:
-                                    delta_token_ids = []
+                                # Fallback format
+                                delta_text = chunk.get("text", "")
+                                is_finished = chunk.get("finished", False)
 
                             # Accumulate text
                             if delta_text:
                                 accumulated_text += delta_text
 
                             # Mark first token timing
-                            if is_first and (delta_token_ids or delta_text):
+                            if is_first and delta_text:
                                 first_token_time = time.time()
                                 is_first = False
+
+                            # Tokenize accumulated text to get token IDs (for LoadGen accuracy logging)
+                            # We tokenize the full accumulated text to ensure correctness
+                            # (tokenizing substrings can give different results)
+                            if accumulated_text and self.tokenizer is not None:
+                                try:
+                                    # Tokenize the full accumulated text
+                                    new_accumulated_token_ids = self.tokenizer.encode(accumulated_text)
+                                    
+                                    # Calculate delta: new tokens since last update
+                                    prev_count = len(accumulated_token_ids)
+                                    if len(new_accumulated_token_ids) > prev_count:
+                                        delta_token_ids = new_accumulated_token_ids[prev_count:]
+                                    else:
+                                        delta_token_ids = []
+                                    
+                                    accumulated_token_ids = new_accumulated_token_ids
+                                except Exception as e:
+                                    logger.warning(f"Failed to tokenize accumulated text: {e}")
+                                    delta_token_ids = []
+                            else:
+                                delta_token_ids = []
 
                             yield {
                                 "delta_token_ids": delta_token_ids,
                                 "delta_text": delta_text,
-                                "is_first_token": (first_token_time is not None and is_first is False and len(accumulated_token_ids) <= len(delta_token_ids)),
+                                "is_first_token": (first_token_time is not None and is_first is False and len(accumulated_text) == len(delta_text)),
                                 "is_finished": is_finished,
-                                "accumulated_token_ids": accumulated_token_ids.copy(),
+                                "accumulated_token_ids": accumulated_token_ids,
                                 "accumulated_text": accumulated_text,
                                 "metadata": {
                                     "ttft_ms": (first_token_time - start_time) * 1000 if first_token_time else None,
                                     "latency_ms": (time.time() - start_time) * 1000,
-                                    **chunk.get("meta_info", {})
+                                    "estimated_tokens": len(accumulated_token_ids) if accumulated_token_ids else max(1, len(accumulated_text) // 4) if accumulated_text else 0,
                                 }
                             }
 
@@ -421,7 +422,7 @@ class SGLangBackend(BaseBackend):
                 "delta_text": "",
                 "is_first_token": False,
                 "is_finished": True,
-                "accumulated_token_ids": accumulated_token_ids,
+                "accumulated_token_ids": [],
                 "error": "Timeout",
                 "metadata": {}
             }
@@ -432,7 +433,7 @@ class SGLangBackend(BaseBackend):
                 "delta_text": "",
                 "is_first_token": False,
                 "is_finished": True,
-                "accumulated_token_ids": accumulated_token_ids,
+                "accumulated_token_ids": [],
                 "error": str(e),
                 "metadata": {}
             }
@@ -443,4 +444,4 @@ class SGLangBackend(BaseBackend):
             self.session.close()
             self.session = None
         self.initialized = False
-        logger.info("SGLang backend cleaned up")
+        logger.info("vLLM backend cleaned up")

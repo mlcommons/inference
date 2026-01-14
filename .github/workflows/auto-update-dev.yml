@@ -1,5 +1,4 @@
 name: Auto-Update Dev Branches from Master
-
 on:
   push:
     branches:

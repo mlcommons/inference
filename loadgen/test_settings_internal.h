@@ -65,6 +65,7 @@ struct TestSettingsInternal {
   // duration at the end of the run.
   std::chrono::milliseconds min_duration{0};
   std::chrono::milliseconds max_duration{0};
+  bool enforce_max_duration;
   uint64_t min_query_count;
   uint64_t max_query_count;
   uint64_t min_sample_count;  // Offline only.

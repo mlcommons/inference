@@ -1669,6 +1669,9 @@ def check_performance_dir(
     min_query_count = mlperf_log["effective_min_query_count"]
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
+    enforce_max_duration = mlperf_log.get(
+        "effective_enforce_max_duration", True)
+    min_queries_met = mlperf_log["result_min_queries_met"]
     equal_issue_used_check = (
         mlperf_log["effective_sample_concatenate_permutation"] == True
     )
@@ -1819,6 +1822,13 @@ def check_performance_dir(
             min_duration,
         )
         is_valid = False
+
+    if not min_queries_met and not enforce_max_duration:
+        log.error(
+            "%s Loadgen needs to enforce max duration for official submissions. Enforced %s",
+            fname,
+            enforce_max_duration,
+        )
 
     inferred = False
     if scenario_fixed != scenario:

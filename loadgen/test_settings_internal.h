@@ -42,7 +42,8 @@ std::string ToString(TestMode mode);
 /// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings &requested_settings,
-                                size_t qsl_performance_sample_count);
+                                size_t qsl_performance_sample_count,
+                                size_t qsl_total_sample_count);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
   void LogSummary(AsyncSummary &summary) const;

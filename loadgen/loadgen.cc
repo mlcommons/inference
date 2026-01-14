@@ -1271,7 +1271,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   }
 
   loadgen::TestSettingsInternal sanitized_settings(
-      test_settings, qsl->PerformanceSampleCount());
+      test_settings, qsl->PerformanceSampleCount(), qsl->TotalSampleCount());
   sanitized_settings.LogAllSettings();
 
   auto run_funcs = loadgen::RunFunctions::Get(sanitized_settings.scenario);

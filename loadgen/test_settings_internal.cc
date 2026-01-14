@@ -25,7 +25,8 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, size_t qsl_performance_sample_count)
+    const TestSettings &requested_settings, size_t qsl_performance_sample_count,
+    size_t qsl_total_sample_count)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -124,9 +125,9 @@ TestSettingsInternal::TestSettingsInternal(
                                  ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
 
-  // Accuracy Sample Count: Override -> performance_sample_count (default)
+  // Accuracy Sample Count: Override -> qsl_total_sample_count (default)
   accuracy_sample_count = (requested.accuracy_sample_count_override == 0)
-                              ? performance_sample_count
+                              ? qsl_total_sample_count
                               : requested.accuracy_sample_count_override;
 
   // Sample by concatentating several permutations of the dataset

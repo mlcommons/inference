@@ -21,11 +21,9 @@ from typing import Optional, Tuple
 import torch
 import torch.nn.functional as F
 
-
 try:
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops")
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops_cpu")
-except OSError:
+    import fbgemm_gpu  # noqa: F401
+except ImportError:
     pass
 
 

@@ -115,6 +115,12 @@ def main():
         default="user.conf",
         help="user config for user LoadGen settings such as target QPS",
     )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        required=False,
+        default="yolo-v11"
+    )
 
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)

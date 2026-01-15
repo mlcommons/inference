@@ -1,9 +1,9 @@
 import argparse
 import logging
 import os
+import sys
 
 if __name__ == "__main__" and __package__ is None:
-    import sys
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     __package__ = "submission_checker"
 

@@ -110,11 +110,17 @@ def main():
         default=None,
         help="Number of samples to run")
     parser.add_argument("--output", type=str, help="Directory for MLPerf logs")
+    parser.add_argument(
+        "--user_conf",
+        default="user.conf",
+        help="user config for user LoadGen settings such as target QPS",
+    )
 
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--AccuracyOnly", action="store_true")
     mode_group.add_argument("--PerformanceOnly", action="store_true")
+    
 
     # scenario selection
     parser.add_argument(
@@ -151,6 +157,13 @@ def main():
                           lambda x: None, lambda x: None)
 
     settings = lg.TestSettings()
+
+    # Load user configuration
+    user_conf = os.path.abspath(args.user_conf)
+    if not os.path.exists(user_conf):
+        print("{} not found".format(user_conf))
+        sys.exit(1)
+    settings.FromConfig(user_conf, args.model_name, args.scenario)
 
     # scenario configurations
     scenario_map = {

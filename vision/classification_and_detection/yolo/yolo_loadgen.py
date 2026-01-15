@@ -126,7 +126,6 @@ def main():
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--AccuracyOnly", action="store_true")
     mode_group.add_argument("--PerformanceOnly", action="store_true")
-    
 
     # scenario selection
     parser.add_argument(

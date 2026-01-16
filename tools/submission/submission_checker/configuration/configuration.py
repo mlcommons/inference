@@ -150,7 +150,7 @@ class Config:
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
-    
+
     def get_accuracy_sample_count(self, model):
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:

@@ -221,7 +221,8 @@ class AccuracyCheck(BaseCheck):
                 "%s Skipping dataset size check", self.path
             )
             return True
-        expected_qsl_total_count = self.config.get_accuracy_sample_count(self.model)
+        expected_qsl_total_count = self.config.get_accuracy_sample_count(
+            self.model)
         if "effective_accuracy_sample_count" in self.mlperf_log.get_keys():
             qsl_total_count = self.mlperf_log["effective_accuracy_sample_count"]
         else:

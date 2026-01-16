@@ -221,8 +221,12 @@ class AccuracyCheck(BaseCheck):
                 "%s Skipping dataset size check", self.path
             )
             return True
-        qsl_total_count = self.mlperf_log["qsl_reported_total_count"]
-        expected_qsl_total_count = self.config.get_dataset_size(self.model)
+        expected_qsl_total_count = self.config.get_accuracy_sample_count(self.model)
+        if "effective_accuracy_sample_count" in self.mlperf_log.get_keys():
+            qsl_total_count = self.mlperf_log["effective_accuracy_sample_count"]
+        else:
+            qsl_total_count = self.mlperf_log["qsl_reported_total_count"]
+
         if qsl_total_count != expected_qsl_total_count:
             self.log.error(
                 "%s accurcy run does not cover all dataset, accuracy samples: %s, dataset size: %s", self.path, qsl_total_count, expected_qsl_total_count

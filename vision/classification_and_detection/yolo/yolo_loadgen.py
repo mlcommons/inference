@@ -1,4 +1,8 @@
-"""
+parser.add_argument(
+        "--enable-log-trace",
+        action="store_true",
+        help="Enable log tracing. This file can become quite large",
+    )"""
 YOLOv11 LoadGen MLPerf
 """
 import argparse
@@ -121,6 +125,11 @@ def main():
         required=False,
         default="yolo"
     )
+    parser.add_argument(
+        "--enable-log-trace",
+        action="store_true",
+        help="Enable log tracing. This file can become quite large",
+    )
 
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)
@@ -197,9 +206,12 @@ def main():
         # ...
 
     # configure logs
+    log_output_settings = lg.LogOutputSettings()
+    log_output_settings.outdir = log_path
+    log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
-    log_settings.log_output.outdir = log_path
-    log_settings.log_output.copy_summary_to_stdout = True
+    log_settings.log_output = log_output_settings
+    log_settings.enable_trace = args.enable_log_trace
 
     print(f"Starting MLPerf run")
     print(f"Scenario: {args.scenario}")
@@ -207,7 +219,7 @@ def main():
     print(f"Log directory: {log_path}")
 
     try:
-        lg.StartTestWithLogSettings(sut, qsl, settings, lg.LogSettings())
+        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
         print(f"MLPerf run complete - cleaning up")
     except Exception as e:
         print(f"An error occured during StartTest: {e}")

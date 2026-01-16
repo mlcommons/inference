@@ -1,22 +1,22 @@
+from ultralytics import YOLO
+import mlperf_loadgen as lg
+import numpy as np
+from pathlib import Path
+from datetime import datetime
+import time
+import struct
+import sys
+import os
+import json
+import array
+import argparse
 parser.add_argument(
-        "--enable-log-trace",
-        action="store_true",
-        help="Enable log tracing. This file can become quite large",
-    )"""
+    "--enable-log-trace",
+    action="store_true",
+    help="Enable log tracing. This file can become quite large",
+)"""
 YOLOv11 LoadGen MLPerf
 """
-import argparse
-import array
-import json
-import os
-import sys
-import struct
-import time
-from datetime import datetime
-from pathlib import Path
-import numpy as np
-import mlperf_loadgen as lg
-from ultralytics import YOLO
 
 
 # Standard YOLO (80 classes) to COCO (91 classes) mapping

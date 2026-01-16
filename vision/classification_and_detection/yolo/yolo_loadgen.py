@@ -119,7 +119,7 @@ def main():
         "--model-name",
         type=str,
         required=False,
-        default="yolo-v11"
+        default="yolo"
     )
 
     # mode flags

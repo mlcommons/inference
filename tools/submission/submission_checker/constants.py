@@ -184,6 +184,8 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "yolo-95": ("mAP", 53.4 * 0.95),
+            "yolo-99": ("mAP", 53.4 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (

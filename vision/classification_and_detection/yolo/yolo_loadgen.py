@@ -127,11 +127,6 @@ def main():
         action="store_true",
         help="Enable log tracing. This file can become quite large",
     )
-    parser.add_argument(
-        "--enable-log-trace",
-        action="store_true",
-        help="Enable log tracing. This file can become quite large",
-    )
 
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)

@@ -7,9 +7,16 @@ python run_mlperf.py --backend vllm --scenario offline --input-file data/accurac
 ```
 
 ## Specify custom vLLM server URL
+
+### Run accuracy 
 ```
 python run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario server --input-file data/accuracy_eval_tokenized.pkl
 ```
+### Run performance 
+```
+python run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario offline --input-file perf_eval_ref.parquet --mlperf-conf mlperf_gptoss.conf --max-new-tokens 10240 --max-concurrency 6396
+```
+
 ## For evaluating accuracy . 
 
 [!ALERT] Best to create this in an environment 

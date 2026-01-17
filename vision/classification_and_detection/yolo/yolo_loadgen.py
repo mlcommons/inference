@@ -10,11 +10,8 @@ import os
 import json
 import array
 import argparse
-parser.add_argument(
-    "--enable-log-trace",
-    action="store_true",
-    help="Enable log tracing. This file can become quite large",
-)"""
+
+"""
 YOLOv11 LoadGen MLPerf
 """
 
@@ -124,6 +121,11 @@ def main():
         type=str,
         required=False,
         default="yolo"
+    )
+    parser.add_argument(
+        "--enable-log-trace",
+        action="store_true",
+        help="Enable log tracing. This file can become quite large",
     )
     parser.add_argument(
         "--enable-log-trace",

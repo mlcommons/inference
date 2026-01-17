@@ -220,10 +220,12 @@ class VLLMBackend(BaseBackend):
                 if output_text and self.tokenizer is not None:
                     try:
                         output_ids = self.tokenizer.encode(output_text)
-                        logger.debug(f"Tokenized output text: {len(output_ids)} tokens")
+                        response_token_count = len(output_ids)
+                        logger.debug(f"Tokenized output text: {response_token_count} tokens")
                     except Exception as e:
                         logger.warning(f"Failed to tokenize output text: {e}")
                         output_ids = []
+                        response_token_count = 0
                 elif output_text and self.tokenizer is None:
                     logger.warning(
                         "Tokenizer not provided to VLLMBackend. "
@@ -231,13 +233,21 @@ class VLLMBackend(BaseBackend):
                         "This may cause issues with accuracy logging. "
                         "Consider passing a tokenizer to the backend."
                     )
+                    response_token_count = completion_tokens if completion_tokens > 0 else len(output_text.split()) if output_text else 0
+                else:
+                    response_token_count = 0
+            else:
+                response_token_count = 0
+
+            logger.debug(f"Response token count: {response_token_count} tokens")
 
             result = {
                 "output_ids": output_ids,  # Tokenized output for LoadGen accuracy logging
                 "output_text": output_text,
                 "metadata": {
                     "latency": latency,
-                    "completion_tokens": completion_tokens if completion_tokens > 0 else len(output_ids) if output_ids else len(output_text.split()) if output_text else 0,
+                    "completion_tokens": completion_tokens if completion_tokens > 0 else response_token_count if response_token_count > 0 else len(output_text.split()) if output_text else 0,
+                    "response_token_count": response_token_count,
                     "error": response.get("error"),
                 }
             }

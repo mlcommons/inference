@@ -199,14 +199,18 @@ class SGLangBackend(BaseBackend):
                 output_ids = response.get("output_ids", [])
                 output_text = response.get("text", "")
 
+            response_token_count = len(output_ids)
+            logger.debug(f"Response token count: {response_token_count} tokens")
+
             result = {
                 "output_ids": output_ids,
                 "output_text": output_text,
                 "metadata": {
                     "latency": latency,
                     "completion_tokens": response.get("meta_info", {}).get(
-                        "completion_tokens", len(output_ids)
+                        "completion_tokens", response_token_count
                     ),
+                    "response_token_count": response_token_count,
                     "error": response.get("error"),
                 }
             }

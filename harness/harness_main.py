@@ -114,9 +114,14 @@ def load_model_category_module(model_category: str):
 
 def main():
     """Main entry point for harness."""
+    # Use ArgumentDefaultsHelpFormatter to show default values and format groups nicely
+    class CategoryHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+        """Custom formatter that shows defaults and formats groups nicely."""
+        pass
+    
     parser = argparse.ArgumentParser(
         description="MLPerf Inference Harness - Main Entry Point",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=CategoryHelpFormatter,
         epilog="""
 Examples:
   # Run with model category and model name
@@ -328,6 +333,12 @@ Examples:
             'llama270b': 'llama2_70b',
             'deepseek-r1': 'deepseek_r1',
             'deepseek_r1': 'deepseek_r1',
+            'gpt-oss-120b': 'gpt_oss_120b',
+            'gpt_oss_120b': 'gpt_oss_120b',
+            'gptoss120b': 'gpt_oss_120b',
+            'qwen3vl': 'qwen3_vl',
+            'qwen3_vl': 'qwen3_vl',
+            'qwen3vl-vision': 'qwen3_vl',
         }
         
         # Try to get from model category first

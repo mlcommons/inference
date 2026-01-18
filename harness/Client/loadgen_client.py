@@ -318,8 +318,21 @@ class LoadGenClient(BaseClient):
             
             # For vLLM: if we have input_ids but no text, detokenize them
             # This must happen before waiting for server, as we need text for vLLM API calls
+            # Exception: For gpt-oss-120b, check if text_input column exists (it should for vLLM)
             if not self.use_input_ids and self.tokenizer and self.dataset:
-                if len(self.dataset.input_ids) > 0 and len(self.dataset.input) == 0:
+                # Check if dataset has text_input column (for gpt-oss-120b)
+                has_text_input = False
+                if hasattr(self.dataset, 'processed_data') and PANDAS_AVAILABLE:
+                    df = self.dataset.processed_data
+                    if 'text_input' in df.columns and len(self.dataset.input) == 0:
+                        # Extract text_input column if it exists
+                        self.dataset.input = df['text_input'].tolist()
+                        has_text_input = len(self.dataset.input) > 0
+                        if has_text_input:
+                            self.logger.info(f"Using 'text_input' column directly for vLLM (no detokenization needed)")
+                
+                # Only detokenize if we still don't have text
+                if len(self.dataset.input_ids) > 0 and len(self.dataset.input) == 0 and not has_text_input:
                     self.logger.info("Detokenizing input_ids to text for vLLM (dataset has no text field)")
                     self._detokenize_dataset()
             
@@ -673,28 +686,15 @@ class LoadGenClient(BaseClient):
         if not self.dataset:
             raise RuntimeError("Dataset not initialized. Call initialize() first.")
         
-        # total_count should be the actual number of samples loaded in the dataset
-        # This may be limited by config's total_sample_count or by what was passed to DatasetProcessor
-        actual_dataset_size = len(self.dataset.input_ids)
-        
-        # If dataset config specified total_sample_count, use that for total_count
-        # Otherwise use actual dataset size
-        if hasattr(self.dataset, 'dataset_config') and self.dataset.dataset_config:
-            config_total = self.dataset.dataset_config.total_sample_count
-            if config_total is not None:
-                # Use config's total_sample_count, but don't exceed actual dataset size
-                total_count = min(config_total, actual_dataset_size)
-                self.logger.info(f"Using dataset config total_sample_count={config_total} for QSL total_count (actual dataset size: {actual_dataset_size})")
-            else:
-                total_count = actual_dataset_size
-        else:
-            total_count = actual_dataset_size
+        # Use whatever dataset size is available (whatever loadgen sends down)
+        # Use the actual number of samples loaded in the dataset
+        total_count = len(self.dataset.input_ids)
         
         # performance_count should be the number of samples to use for testing
         # This is self.num_samples (which may have been updated from config)
         performance_count = min(self.num_samples, total_count)
         
-        self.logger.info(f"Constructing QSL: total_count={total_count}, performance_count={performance_count}, num_samples={self.num_samples}, actual_dataset_size={actual_dataset_size}")
+        self.logger.info(f"Constructing QSL: total_count={total_count}, performance_count={performance_count}, num_samples={self.num_samples}")
         
         return lg.ConstructQSL(
             total_count,
@@ -877,8 +877,14 @@ class LoadGenOfflineClient(LoadGenClient):
             # Process response
             self._process_sglang_response(q_sample.id, q_sample.index, output_ids, output_text)
         else:
-            # Standard format: decode to text
-            if self.tokenizer:
+            # Standard format: use text_input directly if available (e.g., for gpt-oss-120b with vLLM)
+            # Otherwise decode from input_ids
+            if (hasattr(self.dataset, 'input') and 
+                len(self.dataset.input) > q_sample.index and 
+                self.dataset.input[q_sample.index]):
+                # Use text_input directly (no detokenization needed)
+                text_prompt = self.dataset.input[q_sample.index]
+            elif self.tokenizer:
                 try:
                     text_prompt = self.tokenizer.decode(input_ids, skip_special_tokens=True)
                 except Exception as e:
@@ -965,8 +971,14 @@ class LoadGenOfflineClient(LoadGenClient):
             # Get input IDs from dataset
             input_ids = self.dataset.input_ids[q_sample.index]
             
-            # Decode to text if tokenizer available
-            if self.tokenizer:
+            # Use text_input directly if available (e.g., for gpt-oss-120b with vLLM)
+            # Otherwise decode from input_ids
+            if (hasattr(self.dataset, 'input') and 
+                len(self.dataset.input) > q_sample.index and 
+                self.dataset.input[q_sample.index]):
+                # Use text_input directly (no detokenization needed)
+                text_prompts.append(self.dataset.input[q_sample.index])
+            elif self.tokenizer:
                 try:
                     text_prompt = self.tokenizer.decode(input_ids, skip_special_tokens=True)
                     text_prompts.append(text_prompt)

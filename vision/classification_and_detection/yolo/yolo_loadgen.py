@@ -196,7 +196,6 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
         # NOTE MLPerf requirement: minimum 10 minute run for performance
         settings.min_duration_ms = 600000
-        settings.min_query_count = 100
 
         # NOTE: user configs can override this in submission, this is the reference implementation so purposely left barebones
         # settings.target_qps = ...

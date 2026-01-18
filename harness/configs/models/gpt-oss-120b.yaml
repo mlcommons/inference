@@ -1,0 +1,28 @@
+# ============================================================================
+# GPT-OSS-120B Model Configuration
+# ============================================================================
+
+name: gpt-oss-120b
+description: "Model configuration for GPT-OSS-120B"
+
+model_specific:
+  default_model_name: "openai/gpt-oss-120b"
+  # Note: GPT-OSS-120B uses different datasets for performance and accuracy evaluation
+  # Performance dataset: perf_eval_ref.parquet (6396 samples)
+  # Accuracy dataset: acc_eval_ref.parquet (4395 samples)
+  # Both datasets have:
+  #   - input_tokens: tokenized input IDs (used by SGLang)
+  #   - text_input: text input (used by vLLM, no detokenization needed)
+  #   - ref_output: reference output for evaluation
+  
+  # Generation parameters (same for both performance and accuracy modes)
+  temperature: 1.0
+  top_k: -1
+  top_p: 1.0
+  
+  # Max tokens (test_mode-dependent)
+  # Performance mode: 10240
+  # Accuracy mode: 32768
+
+# Model-specific settings can be added here
+# Example: custom tokenizer settings, generation parameters, etc.

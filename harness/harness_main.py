@@ -130,6 +130,15 @@ Examples:
   
   # Use model-specific harness class
   python harness_main.py --model-harness-class Llama31_8BHarness --model meta-llama/Llama-3.1-8B-Instruct --dataset-path ./dataset.pkl
+  
+  # GPT-OSS-120B: Performance mode (auto-detects dataset name from path)
+  python harness_main.py --model-category gpt-oss-120b --model openai/gpt-oss-120b --dataset-path ./perf_eval_ref.parquet --test-mode performance
+  
+  # GPT-OSS-120B: Accuracy mode (auto-detects dataset name from path)
+  python harness_main.py --model-category gpt-oss-120b --model openai/gpt-oss-120b --dataset-path ./acc_eval_ref.parquet --test-mode accuracy
+  
+  # GPT-OSS-120B: Explicit dataset name (if auto-detection doesn't work)
+  python harness_main.py --model-category gpt-oss-120b --model openai/gpt-oss-120b --dataset-path ./perf_eval_ref.parquet --dataset-name perf_eval_ref --test-mode performance
         """
     )
     
@@ -199,16 +208,26 @@ Examples:
     # Validate model_category if provided
     valid_categories = ['llama3.1-8b', 'llama3_1-8b', 'llama31_8b', 
                        'llama2-70b', 'llama2_70b', 'llama270b',
-                       'deepseek-r1', 'deepseek_r1']
+                       'deepseek-r1', 'deepseek_r1',
+                       'gpt-oss-120b', 'gpt_oss_120b', 'gptoss120b']
     if args.model_category and args.model_category.lower() not in [c.lower() for c in valid_categories]:
         logger.warning(f"Unknown model category: {args.model_category}. Will try to load anyway.")
     
     # Parse common arguments
     harness_config = parse_common_harness_args(args)
     
-    # Add dataset_name to config
+    # Add dataset_name to config (with auto-detection from path if not provided)
     if args.dataset_name:
         harness_config['dataset_name'] = args.dataset_name
+        logger.info(f"Using provided dataset name: {args.dataset_name}")
+    elif args.dataset_path:
+        # Auto-detect from dataset path (filename without extension)
+        from pathlib import Path
+        dataset_name_from_path = Path(args.dataset_path).stem
+        harness_config['dataset_name'] = dataset_name_from_path
+        logger.info(f"Auto-detected dataset name from path: '{args.dataset_path}' -> '{dataset_name_from_path}'")
+    # Note: If neither dataset_name nor dataset_path is provided, dataset_name will be None
+    # and will be auto-detected later in DatasetProcessor
     
     # Determine which harness class to use
     harness_class = BaseHarness
@@ -274,9 +293,8 @@ Examples:
         else:
             logger.info(f"Could not auto-detect model category from '{args.model}', using BaseHarness")
         
-        # Auto-detect dataset name if not provided
-        if not args.dataset_name and args.model:
-            harness_config['dataset_name'] = args.model.lower()
+        # Note: dataset_name is already set above from dataset_path if not explicitly provided
+        # This section is for backward compatibility only
     
     # Create and run harness
     logger.info("=" * 80)

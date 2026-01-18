@@ -37,6 +37,11 @@ sys.path.insert(0, harness_root)
 try:
     from Client.base_client import BaseClient
     from data.dataset_processor import DatasetProcessor
+    # Try to import config availability flag
+    try:
+        from data.dataset_processor import CONFIG_AVAILABLE
+    except ImportError:
+        CONFIG_AVAILABLE = False
 except ImportError:
     # Try relative imports if absolute fails
     from .base_client import BaseClient
@@ -44,6 +49,10 @@ except ImportError:
     import os
     sys.path.insert(0, os.path.dirname(harness_root))
     from harness.data.dataset_processor import DatasetProcessor
+    try:
+        from harness.data.dataset_processor import CONFIG_AVAILABLE
+    except ImportError:
+        CONFIG_AVAILABLE = False
 
 # Import MLPerf Loadgen
 try:
@@ -133,22 +142,47 @@ class LoadGenClient(BaseClient):
         if self.endpoint_type not in ['completions', 'chat_completions']:
             raise ValueError(f"Invalid endpoint_type: {self.endpoint_type}. Must be 'completions' or 'chat_completions'")
         
-        # Max tokens configuration - determine from model name or use config/default
-        self.max_tokens = self._determine_max_tokens(model_name, config)
-        self.logger.info(f"Using max_tokens: {self.max_tokens} for model: {model_name}")
+        # Max tokens configuration - will be updated after dataset is loaded if dataset config has it
+        self.max_tokens = self._determine_max_tokens(model_name, config, test_mode)
+        self.logger.info(f"Initial max_tokens: {self.max_tokens} for model: {model_name} (test_mode: {test_mode})")
         
         # Sampling parameters - can be different for accuracy vs performance
-        self.temperature = config.get('temperature', 0.0) if config else 0.0
-        self.top_k = config.get('top_k', 1) if config else 1
-        self.top_p = config.get('top_p', 1.0) if config else 1.0
+        # For gpt-oss-120b, use same parameters for both modes: temperature=1.0, top_k=-1, top_p=1.0
+        model_lower = model_name.lower()
+        is_gpt_oss = 'gpt-oss' in model_lower or 'gpt_oss' in model_lower or 'gptoss' in model_lower
         
-        # Accuracy mode parameters (if specified, override for accuracy mode)
-        self.accuracy_temperature = config.get('accuracy_temperature', None) if config else None
-        self.accuracy_top_k = config.get('accuracy_top_k', None) if config else None
-        self.accuracy_top_p = config.get('accuracy_top_p', None) if config else None
+        if is_gpt_oss:
+            # gpt-oss-120b uses same sampling params for both perf and accuracy
+            self.temperature = config.get('temperature', 1.0) if config else 1.0
+            self.top_k = config.get('top_k', -1) if config else -1
+            self.top_p = config.get('top_p', 1.0) if config else 1.0
+            # Set accuracy params to same values
+            self.accuracy_temperature = config.get('accuracy_temperature', 1.0) if config else 1.0
+            self.accuracy_top_k = config.get('accuracy_top_k', -1) if config else -1
+            self.accuracy_top_p = config.get('accuracy_top_p', 1.0) if config else 1.0
+        else:
+            # Default behavior for other models
+            self.temperature = config.get('temperature', 0.0) if config else 0.0
+            self.top_k = config.get('top_k', 1) if config else 1
+            self.top_p = config.get('top_p', 1.0) if config else 1.0
+            # Accuracy mode parameters (if specified, override for accuracy mode)
+            self.accuracy_temperature = config.get('accuracy_temperature', None) if config else None
+            self.accuracy_top_k = config.get('accuracy_top_k', None) if config else None
+            self.accuracy_top_p = config.get('accuracy_top_p', None) if config else None
         
         # SGLang-specific: use input_ids directly instead of text
+        # Auto-detect SGLang backend from server_config
+        backend = None
+        if config and 'server_config' in config:
+            backend = config['server_config'].get('backend', 'vllm')
+        
+        # Set use_input_ids if backend is SGLang or explicitly set in config
         self.use_input_ids = config.get('use_input_ids', False) if config else False
+        if backend and backend.lower() == 'sglang' and not self.use_input_ids:
+            # Auto-enable input_ids mode for SGLang backend
+            self.use_input_ids = True
+            self.logger.info("Auto-detected SGLang backend, enabling input_ids mode")
+        
         self.sglang_endpoint = config.get('sglang_endpoint', '/generate') if config else '/generate'
         
         # Multimodal-specific: use messages format directly (for qwen3vl)
@@ -200,16 +234,72 @@ class LoadGenClient(BaseClient):
         output_column = self.config.get('output_column')
         config_dir = self.config.get('config_dir')
         
+        # Determine total_sample_count to pass to DatasetProcessor
+        # If dataset config exists and has total_sample_count, use None to let config handle it
+        # Otherwise, use self.num_samples
+        # We'll check for config first by trying to load it
+        total_sample_count_for_loader = self.num_samples
+        try:
+            if CONFIG_AVAILABLE and dataset_name:
+                from data.dataset_config import DatasetConfigLoader
+                config_loader = DatasetConfigLoader(config_dir=config_dir)
+                dataset_config = config_loader.load_dataset_config(dataset_name, self.model_name)
+                if dataset_config and dataset_config.total_sample_count is not None:
+                    # Config has total_sample_count - pass None to let DatasetProcessor use config value
+                    # This ensures we load all samples from file, then limit based on config
+                    total_sample_count_for_loader = None
+                    self.logger.info(f"Dataset config specifies total_sample_count={dataset_config.total_sample_count}, will load all samples and use config value")
+        except Exception as e:
+            # If config loading fails, fall back to using self.num_samples
+            self.logger.debug(f"Could not pre-check dataset config: {e}, using num_samples={self.num_samples}")
+        
         self.dataset = DatasetProcessor(
             dataset_path=self.dataset_path,
             model_name=self.model_name,
-            total_sample_count=self.num_samples,
+            total_sample_count=total_sample_count_for_loader,
             dataset_name=dataset_name,
             input_column=input_column,
             input_ids_column=input_ids_column,
             output_column=output_column,
             config_dir=config_dir
         )
+        
+        # Update max_tokens from dataset config if available
+        # Note: For gpt-oss-120b, max_tokens may be test_mode-dependent
+        if hasattr(self.dataset, 'dataset_config') and self.dataset.dataset_config:
+            dataset_max_tokens = self.dataset.dataset_config.model_specific.get('max_tokens')
+            if dataset_max_tokens is not None:
+                # Check if this is a test_mode-specific value or should override
+                # For gpt-oss-120b, dataset configs have different max_tokens for perf vs accuracy
+                # The dataset name itself indicates which mode (perf_eval_ref vs acc_eval_ref)
+                self.max_tokens = int(dataset_max_tokens)
+                self.logger.info(f"Updated max_tokens from dataset config: {self.max_tokens}")
+        
+        # Update num_samples from dataset config if available
+        # This ensures we use the correct sample count from config (e.g., 6396 for perf_eval_ref, 4395 for acc_eval_ref)
+        # The dataset.total_sample_count may have been set from config, so we should use it
+        if hasattr(self.dataset, 'dataset_config') and self.dataset.dataset_config:
+            config_total = self.dataset.dataset_config.total_sample_count
+            if config_total is not None:
+                # Dataset config specified a total_sample_count - use it
+                # Limit to actual dataset size
+                actual_dataset_size = len(self.dataset.input_ids)
+                new_num_samples = min(config_total, actual_dataset_size)
+                if new_num_samples != self.num_samples:
+                    old_num_samples = self.num_samples
+                    self.num_samples = new_num_samples
+                    self.logger.info(f"Updated num_samples from dataset config: {old_num_samples} -> {self.num_samples} (config: {config_total}, actual: {actual_dataset_size})")
+                else:
+                    self.logger.info(f"Using num_samples: {self.num_samples} (matches dataset config: {config_total})")
+        elif self.dataset.total_sample_count is not None and self.dataset.total_sample_count != self.num_samples:
+            # Fallback: use dataset's total_sample_count if it differs from our num_samples
+            # This handles cases where dataset was limited during loading
+            actual_dataset_size = len(self.dataset.input_ids)
+            new_num_samples = min(self.dataset.total_sample_count, actual_dataset_size)
+            if new_num_samples != self.num_samples:
+                old_num_samples = self.num_samples
+                self.num_samples = new_num_samples
+                self.logger.info(f"Updated num_samples to match dataset: {old_num_samples} -> {self.num_samples} (dataset total: {self.dataset.total_sample_count}, actual: {actual_dataset_size})")
         
         # Print dataset statistics
         stats = self.dataset.get_statistics()
@@ -219,10 +309,20 @@ class LoadGenClient(BaseClient):
         for key, value in stats.items():
             self.logger.info(f"{key}: {value}")
         self.logger.info("=" * 60)
+        self.logger.info(f"Final max_tokens: {self.max_tokens}")
+        self.logger.info("=" * 60)
         
-        # Initialize tokenizer if using API mode
+        # Initialize tokenizer if using API mode (needed for vLLM detokenization)
         if self.api_server_url:
             self._initialize_tokenizer()
+            
+            # For vLLM: if we have input_ids but no text, detokenize them
+            # This must happen before waiting for server, as we need text for vLLM API calls
+            if not self.use_input_ids and self.tokenizer and self.dataset:
+                if len(self.dataset.input_ids) > 0 and len(self.dataset.input) == 0:
+                    self.logger.info("Detokenizing input_ids to text for vLLM (dataset has no text field)")
+                    self._detokenize_dataset()
+            
             self._wait_for_server_ready()
         
         # Initialize server scenario components if needed
@@ -272,24 +372,94 @@ class LoadGenClient(BaseClient):
             self.logger.warning(f"Could not initialize tokenizer: {e}")
             self.tokenizer = None
     
-    def _determine_max_tokens(self, model_name: str, config: Optional[Dict[str, Any]]) -> int:
+    def _detokenize_dataset(self):
+        """Detokenize input_ids to text for vLLM when dataset has no text field."""
+        if not self.tokenizer or not self.dataset:
+            return
+        
+        if len(self.dataset.input_ids) == 0:
+            return
+        
+        if len(self.dataset.input) > 0:
+            # Already has text, no need to detokenize
+            return
+        
+        self.logger.info(f"Detokenizing {len(self.dataset.input_ids)} samples...")
+        self.dataset.input = []
+        
+        for i, input_ids in enumerate(self.dataset.input_ids):
+            try:
+                text = self.tokenizer.decode(input_ids, skip_special_tokens=True)
+                self.dataset.input.append(text)
+            except Exception as e:
+                self.logger.warning(f"Error detokenizing sample {i}: {e}")
+                # Fallback: convert to string representation
+                self.dataset.input.append(" ".join([str(t) for t in input_ids]))
+        
+        self.logger.info(f"Successfully detokenized {len(self.dataset.input)} samples")
+    
+    def _determine_max_tokens(self, model_name: str, config: Optional[Dict[str, Any]], test_mode: str = "performance") -> int:
         """
-        Determine max_tokens based on model name or config.
+        Determine max_tokens based on config, server_config, dataset_config, or model name.
+        
+        Priority order:
+        1. config['max_tokens'] (explicit client config)
+        2. config['server_config']['config']['max_tokens'] (server config)
+        3. config['server_config']['config']['api_server_args'] with --max-model-len or --max-num-seqs
+        4. dataset_config.model_specific.get('max_tokens')
+        5. Model name-based defaults (test_mode-aware for gpt-oss-120b)
+        6. Default: 1024
         
         Defaults:
         - deepseek-r1: 20000
-        - llama3.1-8b: 1024
+        - llama3.1-8b: 128
         - llama2-70b: 1024
+        - gpt-oss-120b: 10240 (performance), 32768 (accuracy)
         - default: 1024
         """
-        # Check if explicitly set in config
+        # Priority 1: Check if explicitly set in config
         if config and 'max_tokens' in config:
             return int(config['max_tokens'])
         
-        # Determine from model name
+        # Priority 2: Check server_config
+        if config and 'server_config' in config:
+            server_config = config['server_config']
+            # Check in server config dict directly
+            if 'max_tokens' in server_config:
+                return int(server_config['max_tokens'])
+            # Check in server config['config'] dict
+            if 'config' in server_config and isinstance(server_config['config'], dict):
+                server_config_dict = server_config['config']
+                if 'max_tokens' in server_config_dict:
+                    return int(server_config_dict['max_tokens'])
+                # Check for max_new_tokens (alternative name)
+                if 'max_new_tokens' in server_config_dict:
+                    return int(server_config_dict['max_new_tokens'])
+                # Check api_server_args for --max-model-len or --max-num-seqs
+                if 'api_server_args' in server_config_dict:
+                    args = server_config_dict['api_server_args']
+                    if isinstance(args, list):
+                        for i, arg in enumerate(args):
+                            if arg in ['--max-model-len', '--max-num-seqs'] and i + 1 < len(args):
+                                try:
+                                    return int(args[i + 1])
+                                except (ValueError, IndexError):
+                                    pass
+        
+        # Priority 3: Check dataset_config (will be available after initialize)
+        # This is checked later in initialize() method after dataset is loaded
+        
+        # Priority 4: Determine from model name (test_mode-aware for gpt-oss-120b)
         model_lower = model_name.lower()
         if 'deepseek' in model_lower and 'r1' in model_lower:
             return 20000
+        elif 'gpt-oss' in model_lower or 'gpt_oss' in model_lower or 'gptoss' in model_lower:
+            if '120b' in model_lower or '120-b' in model_lower:
+                # gpt-oss-120b has different max_tokens for perf vs accuracy
+                if test_mode == "accuracy":
+                    return 32768
+                else:  # performance
+                    return 10240
         elif 'llama3.1' in model_lower or 'llama-3.1' in model_lower or 'llama3_1' in model_lower:
             if '8b' in model_lower or '8-b' in model_lower:
                 return 128
@@ -503,13 +673,28 @@ class LoadGenClient(BaseClient):
         if not self.dataset:
             raise RuntimeError("Dataset not initialized. Call initialize() first.")
         
-        total_count = self.dataset.total_sample_count
-        # Use num_samples as performance_count to ensure all samples are processed
-        # In offline scenario, LoadGen will create queries based on samples_per_query
-        # but we want to ensure all num_samples are available
+        # total_count should be the actual number of samples loaded in the dataset
+        # This may be limited by config's total_sample_count or by what was passed to DatasetProcessor
+        actual_dataset_size = len(self.dataset.input_ids)
+        
+        # If dataset config specified total_sample_count, use that for total_count
+        # Otherwise use actual dataset size
+        if hasattr(self.dataset, 'dataset_config') and self.dataset.dataset_config:
+            config_total = self.dataset.dataset_config.total_sample_count
+            if config_total is not None:
+                # Use config's total_sample_count, but don't exceed actual dataset size
+                total_count = min(config_total, actual_dataset_size)
+                self.logger.info(f"Using dataset config total_sample_count={config_total} for QSL total_count (actual dataset size: {actual_dataset_size})")
+            else:
+                total_count = actual_dataset_size
+        else:
+            total_count = actual_dataset_size
+        
+        # performance_count should be the number of samples to use for testing
+        # This is self.num_samples (which may have been updated from config)
         performance_count = min(self.num_samples, total_count)
         
-        self.logger.info(f"Constructing QSL: total_count={total_count}, performance_count={performance_count}, num_samples={self.num_samples}")
+        self.logger.info(f"Constructing QSL: total_count={total_count}, performance_count={performance_count}, num_samples={self.num_samples}, actual_dataset_size={actual_dataset_size}")
         
         return lg.ConstructQSL(
             total_count,
@@ -669,7 +854,9 @@ class LoadGenOfflineClient(LoadGenClient):
         # Check if using SGLang with input_ids
         if self.use_input_ids:
             # SGLang format: send input_ids directly
-            endpoint = f"{self.api_server_url}{self.sglang_endpoint}"
+            # Get server URL (with load balancing if enabled)
+            server_url = self._get_next_server_url()
+            endpoint = f"{server_url}{self.sglang_endpoint}"
             api_payload = {
                 "input_ids": input_ids,
                 "sampling_params": {
@@ -879,8 +1066,22 @@ class LoadGenOfflineClient(LoadGenClient):
         
         # Debug mode: print query, text response and token count in accuracy mode
         if self.debug_mode and self.test_mode == "accuracy":
+            # Get prompt text if available
+            prompt_text = None
+            if hasattr(self, 'dataset') and self.dataset:
+                if query_index < len(self.dataset.input) and self.dataset.input[query_index]:
+                    prompt_text = self.dataset.input[query_index]
+                elif self.tokenizer and query_index < len(self.dataset.input_ids):
+                    try:
+                        prompt_text = self.tokenizer.decode(self.dataset.input_ids[query_index], skip_special_tokens=True)
+                    except:
+                        prompt_text = f"[Token IDs: {self.dataset.input_ids[query_index][:50]}...]"
+            
             text_preview = output_text[:200] + "..." if len(output_text) > 200 else output_text
+            prompt_preview = prompt_text[:200] + "..." if prompt_text and len(prompt_text) > 200 else (prompt_text or "N/A")
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+            if prompt_text:
+                self.logger.info(f"  Prompt: {prompt_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
             self.logger.info(f"  Total Tokens: {token_count}")
         
@@ -903,7 +1104,7 @@ class LoadGenOfflineClient(LoadGenClient):
             query_preview = text_prompt[:200] + "..." if text_prompt and len(text_prompt) > 200 else (text_prompt or "N/A")
             text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
-            self.logger.info(f"  Query: {query_preview}")
+            self.logger.info(f"  Prompt: {query_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
             self.logger.info(f"  Total Tokens: {token_count}")
         
@@ -1040,12 +1241,13 @@ class LoadGenOfflineClient(LoadGenClient):
                 self.logger.warning(f"Error encoding response for token count: {e}")
                 token_count = len(content.split())  # Fallback: word count
         
-        # Debug mode
+        # Debug mode: print prompt (messages), text response and token count in accuracy mode
         if self.debug_mode and self.test_mode == "accuracy":
-            messages_preview = json.dumps(messages, indent=2)[:200] + "..." if len(json.dumps(messages)) > 200 else json.dumps(messages)
+            messages_str = json.dumps(messages, indent=2)
+            messages_preview = messages_str[:200] + "..." if len(messages_str) > 200 else messages_str
             text_preview = content[:200] + "..." if len(content) > 200 else content
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
-            self.logger.info(f"  Messages: {messages_preview}")
+            self.logger.info(f"  Prompt (Messages): {messages_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
             self.logger.info(f"  Total Tokens: {token_count}")
         

@@ -1087,7 +1087,17 @@ class BaseHarness:
             self.logger.info(f"Dataset: {self.dataset_path}")
             self.logger.info(f"Batch size: {self.batch_size}")
             self.logger.info(f"Number of samples: {self.num_samples}")
-            self.logger.info(f"Total dataset samples: {self.client.dataset.total_sample_count if self.client.dataset else 'N/A'}")
+            if self.client and self.client.dataset:
+                actual_size = len(self.client.dataset.input_ids)
+                config_total = None
+                if hasattr(self.client.dataset, 'dataset_config') and self.client.dataset.dataset_config:
+                    config_total = self.client.dataset.dataset_config.total_sample_count
+                if config_total is not None:
+                    self.logger.info(f"Total dataset samples: {actual_size} (config specifies {config_total})")
+                else:
+                    self.logger.info(f"Total dataset samples: {actual_size}")
+            else:
+                self.logger.info(f"Total dataset samples: N/A")
             self.logger.info("=" * 80)
             
             # Configure LoadGen logging to use mlperf subdirectory

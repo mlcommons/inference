@@ -14,9 +14,13 @@ from pathlib import Path
 
 try:
     import pandas as pd
+    import numpy as np
     PANDAS_AVAILABLE = True
+    NUMPY_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
+    NUMPY_AVAILABLE = False
+    np = None
     logging.warning("pandas not available. Some dataset operations may fail.")
 
 # Import dataset configuration
@@ -38,6 +42,7 @@ class DatasetProcessor:
     - Pickle files (DataFrame or dict)
     - Pandas DataFrame objects
     - CSV files (via pandas)
+    - Parquet files (via pandas)
     """
     
     def __init__(self, 
@@ -53,7 +58,7 @@ class DatasetProcessor:
         Initialize dataset processor.
         
         Args:
-            dataset_path: Path to dataset file (JSON, pickle, or CSV)
+            dataset_path: Path to dataset file (JSON, pickle, CSV, or Parquet)
             model_name: Optional model name for logging and config lookup
             input_column: Column name for input text (overrides config if provided)
             input_ids_column: Column name for tokenized input IDs (overrides config if provided)
@@ -79,6 +84,9 @@ class DatasetProcessor:
                 self.logger.info(f"Loaded dataset config for '{dataset_name}'")
             except Exception as e:
                 self.logger.warning(f"Could not load dataset config: {e}. Using defaults.")
+        
+        # Store dataset_config for later access
+        self.dataset_config = dataset_config
         
         # Use config values if available, otherwise use provided or default values
         if dataset_config:
@@ -126,7 +134,8 @@ class DatasetProcessor:
                 'json': self._load_json,
                 'pickle': self._load_pickle,
                 'pkl': self._load_pickle,
-                'csv': self._load_csv
+                'csv': self._load_csv,
+                'parquet': self._load_parquet
             }
             loader = format_map.get(self.file_format.lower())
             if loader:
@@ -141,16 +150,21 @@ class DatasetProcessor:
                 self._load_pickle()
             elif ext == '.csv':
                 self._load_csv()
+            elif ext == '.parquet':
+                self._load_parquet()
             else:
                 # Try to auto-detect format
                 self.logger.warning(f"Unknown extension {ext}, attempting auto-detection")
                 try:
-                    self._load_json()
+                    self._load_parquet()
                 except:
                     try:
-                        self._load_pickle()
+                        self._load_json()
                     except:
-                        raise ValueError(f"Could not auto-detect format for {self.dataset_path}")
+                        try:
+                            self._load_pickle()
+                        except:
+                            raise ValueError(f"Could not auto-detect format for {self.dataset_path}")
         
         # Process and standardize data
         self._process_data()
@@ -197,6 +211,8 @@ class DatasetProcessor:
         
         if PANDAS_AVAILABLE and isinstance(data, pd.DataFrame):
             self.processed_data = data
+            # Convert numpy arrays to native Python types (like gpt-oss-120b does)
+            self._convert_numpy_arrays()
         elif isinstance(data, dict):
             if PANDAS_AVAILABLE:
                 # Try to convert to DataFrame
@@ -204,15 +220,46 @@ class DatasetProcessor:
                     self.processed_data = pd.DataFrame(data)
                 else:
                     self.processed_data = pd.DataFrame([data])
+                # Convert numpy arrays to native Python types
+                self._convert_numpy_arrays()
             else:
                 self.raw_data = data
         elif isinstance(data, list):
             if PANDAS_AVAILABLE:
                 self.processed_data = pd.DataFrame(data)
+                # Convert numpy arrays to native Python types
+                self._convert_numpy_arrays()
             else:
                 self.raw_data = data
         else:
             raise ValueError(f"Unexpected pickle data type: {type(data)}")
+    
+    def _convert_numpy_arrays(self):
+        """Convert numpy arrays in DataFrame columns to native Python lists (like gpt-oss-120b)."""
+        if not PANDAS_AVAILABLE or not hasattr(self, 'processed_data'):
+            return
+        
+        df = self.processed_data
+        converted_cols = []
+        
+        for col in df.columns:
+            # Check if column contains numpy arrays
+            if df[col].dtype == object:
+                # Check if any values are numpy arrays
+                has_numpy = False
+                for val in df[col].head(10):  # Sample first 10 to check
+                    if NUMPY_AVAILABLE and isinstance(val, np.ndarray):
+                        has_numpy = True
+                        break
+                
+                if has_numpy:
+                    df[col] = df[col].apply(
+                        lambda x: x.tolist() if (NUMPY_AVAILABLE and isinstance(x, np.ndarray)) else x
+                    )
+                    converted_cols.append(col)
+        
+        if converted_cols:
+            self.logger.info(f"Converted numpy arrays to lists in columns: {converted_cols}")
     
     def _load_csv(self):
         """Load data from CSV file."""
@@ -221,18 +268,47 @@ class DatasetProcessor:
         
         self.processed_data = pd.read_csv(self.dataset_path)
     
+    def _load_parquet(self):
+        """Load data from Parquet file."""
+        if not PANDAS_AVAILABLE:
+            raise ImportError("pandas required for Parquet files")
+        
+        try:
+            self.processed_data = pd.read_parquet(self.dataset_path)
+            self.logger.info(f"Successfully loaded Parquet file: {self.dataset_path}")
+            # Convert numpy arrays to native Python types (like gpt-oss-120b does)
+            self._convert_numpy_arrays()
+        except Exception as e:
+            raise ValueError(f"Failed to load Parquet file {self.dataset_path}: {e}")
+    
     def _process_data(self):
         """Process loaded data into standardized format."""
         # If we have a pandas DataFrame, extract columns
         if hasattr(self, 'processed_data') and PANDAS_AVAILABLE:
             df = self.processed_data
             
-            # Print dataset column names and types
+            # Print dataset column names and types with detailed information
             self.logger.info("=" * 80)
             self.logger.info("DATASET COLUMNS AND TYPES")
             self.logger.info("=" * 80)
             for col_name, col_type in df.dtypes.items():
-                self.logger.info(f"  {col_name}: {col_type}")
+                # Get sample value and null count
+                null_count = df[col_name].isna().sum()
+                sample_info = ""
+                if len(df) > 0:
+                    sample_val = df[col_name].iloc[0]
+                    if isinstance(sample_val, list):
+                        sample_info = f" (sample: list[{len(sample_val)} items])"
+                    elif isinstance(sample_val, str):
+                        sample_preview = sample_val[:50] + "..." if len(sample_val) > 50 else sample_val
+                        sample_info = f" (sample: '{sample_preview}')"
+                    elif NUMPY_AVAILABLE and isinstance(sample_val, np.ndarray):
+                        sample_info = f" (sample: numpy array[{sample_val.shape}])"
+                    else:
+                        sample_info = f" (sample: {type(sample_val).__name__})"
+                
+                null_info = f", nulls: {null_count}" if null_count > 0 else ""
+                self.logger.info(f"  {col_name}: {col_type}{sample_info}{null_info}")
             self.logger.info(f"Total columns: {len(df.columns)}")
             self.logger.info(f"Total rows: {len(df)}")
             self.logger.info("=" * 80)
@@ -247,19 +323,35 @@ class DatasetProcessor:
                 self.input_ids = []
             else:
                 self.messages = []
-                # Extract input column
+                # Extract input column (text)
                 if self.input_column in df.columns:
                     self.input = df[self.input_column].tolist()
                 else:
-                    self.logger.warning(f"Column '{self.input_column}' not found, using empty list")
+                    # If no text column but we have input_ids, we'll detokenize later if needed
+                    self.logger.info(f"Column '{self.input_column}' not found - will detokenize from input_ids if needed for vLLM")
                     self.input = []
                 
-                # Extract input_ids column
+                # Extract input_ids column - support both 'tok_input' and 'input_tokens' (like gpt-oss-120b)
                 if self.input_ids_column in df.columns:
                     self.input_ids = df[self.input_ids_column].tolist()
+                elif 'tok_input' in df.columns:
+                    # Fallback to 'tok_input' (pre-v4.0 format)
+                    self.logger.info("Using 'tok_input' column for input_ids (pre-v4.0 format)")
+                    self.input_ids = df['tok_input'].tolist()
+                elif 'input_tokens' in df.columns:
+                    # Fallback to 'input_tokens' (v4.0+ format)
+                    self.logger.info("Using 'input_tokens' column for input_ids (v4.0+ format)")
+                    self.input_ids = df['input_tokens'].tolist()
                 else:
-                    self.logger.warning(f"Column '{self.input_ids_column}' not found, trying to tokenize")
+                    self.logger.warning(f"Column '{self.input_ids_column}' (or 'tok_input'/'input_tokens') not found, trying to tokenize")
                     self.input_ids = self._tokenize_inputs()
+                
+                # Validate tokenization (like gpt-oss-120b does)
+                if self.input_ids:
+                    failed_mask = pd.Series([ids is None or (isinstance(ids, list) and len(ids) == 0) for ids in self.input_ids])
+                    if failed_mask.any():
+                        failed_count = failed_mask.sum()
+                        self.logger.warning(f"Found {failed_count} samples with invalid or empty tokenization")
             
             # Extract targets/output column
             if self.output_column in df.columns:

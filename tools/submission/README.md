@@ -29,7 +29,7 @@ Output directory with submission with truncated `mlperf_log_accuracy.json` files
 ### Summary
 The input submission directory is modified with empty directories removed and low accuracy results inferred. Multistream and offline scenario results are also wherever possible. The original input directory is saved in a timestamped directory.
 
-## `submission_checker.py` (Mandatory)
+## `submission_checker/main.py` (Mandatory)
 ### Inputs
 **input**: Path to the directory containing one or several submissions.<br>
 **version**: Checker version. E.g v1.1, v2.0, v2.1, v3.0, v3.1. <br>
@@ -50,16 +50,72 @@ The below input fields are off by default since v3.1 and are mandatory but can b
 **skip-check-power-measure-files**: Flag to avoid checking if the required power measurement files are present
 
 ### Summary
-Checks a directory that contains one or several submissions. This script can be used by running the following command:
+Checks a directory that contains one or several submissions. This script can be used by running the following command (outside the inference repository):
 ```
-python3 submission_checker.py --input <path-to-folder> 
+python3 -m inference.tools.submission.submission_checker.main 
+    --input <path-to-folder> 
     [--version <version>]
     [--submitter <submitter-name>]
     [--csv <path-to-output>]
     [--skip_compliance]
     [--extra-model-benchmark-map <extra-mapping-string>]
     [--submission-exceptions]
+    [--skip-power-check]
+    [--skip-meaningful-fields-emptiness-check]
+    [--skip-check-power-measure-files]
+    [--skip-empty-files-check]
+    [--skip-extra-files-in-root-check]
+    [--skip-extra-accuracy-files-check]
+    [--scenarios-to-skip]
+    [--skip-all-systems-have-results-check]
+    [--skip-calibration-check]
 ```
+
+### implemented checks
+**performance:**
+- Check performance detailed log exists
+- Check for loadgen errors
+- Check for equal issue mode when it is required
+- Check the performance sample count used for running the benchmark
+- Check loadgen seeds are correct
+- Check latency constrain is met
+- Check minimun query count is met
+- Check minimun duration is met
+- Check network requirements
+- Check LLM latencies are met (if applies)
+- Check loadgen scenario matches with submission scenario or that result can be inferred
+
+**accuracy**
+- Check the accuracy metric is correct and over the expected threshold (or within a range if applies)
+- Check accuracy json exists and is truncated
+- Check for loadgen error
+- Check full dataset is used for the accuracy run
+
+**compliance**
+- Check compliance directory exists
+- Run performance checks for compliance run
+- Check accuracy test passes
+- Check performance test passes
+
+**measurements**
+- Check measurements files exist
+- Check the required files are there
+- Check the required fields are there
+
+**power**
+- Check the required power files are there (if the submission has power)
+- Run the external power checks
+- Check power metric can be calculated
+
+**system**
+- Check system json exists
+- Check availability is valid
+- Check system type is valid
+- Check network fields
+- Check required fields are include in system json file
+- Check submitter is correct
+- Check division is correct
+
 
 ### Outputs
 - CSV file containing all the valid results in the directory.

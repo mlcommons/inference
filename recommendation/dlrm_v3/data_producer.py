@@ -99,7 +99,16 @@ class SingleThreadDataProducer:
             result = self.ds.get_samples(content_ids)
             dt_batching: float = time.time() - t0_batching
 
-            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
+            if isinstance(result, Samples):
+                query = QueryItem(
+                    query_ids=query_ids,
+                    samples=result,
+                    start=t0,
+                    dt_queue=dt_queue,
+                    dt_batching=dt_batching,
+                )
+                self.run_one_item(query)
+            else:
                 start_idx = 0
                 for sample, ts_idx, q_idx in result:
                     batch_size: int = sample.batch_size()
@@ -111,28 +120,6 @@ class SingleThreadDataProducer:
                         dt_batching=dt_batching,
                         ts_idx=ts_idx,
                         query_idx=q_idx,
-                    )
-                    start_idx += batch_size
-                    self.run_one_item(query)
-            elif isinstance(result, Samples):
-                query = QueryItem(
-                    query_ids=query_ids,
-                    samples=result,
-                    start=t0,
-                    dt_queue=dt_queue,
-                    dt_batching=dt_batching,
-                )
-                self.run_one_item(query)
-            else:
-                start_idx = 0
-                for sample in result:
-                    batch_size: int = sample.batch_size()
-                    query = QueryItem(
-                        query_ids=query_ids[start_idx: start_idx + batch_size],
-                        samples=sample,
-                        start=t0,
-                        dt_queue=dt_queue,
-                        dt_batching=dt_batching,
                     )
                     start_idx += batch_size
                     self.run_one_item(query)
@@ -199,23 +186,7 @@ class MultiThreadDataProducer:
             result = self.ds.get_samples(content_ids)
             dt_batching: float = time.time() - t0_batching
 
-            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
-                start_idx = 0
-                for sample, ts_idx, q_idx in result:
-                    batch_size: int = sample.batch_size()
-                    qitem = QueryItem(
-                        query_ids=query_ids[start_idx: start_idx + batch_size],
-                        samples=sample,
-                        start=t0,
-                        dt_queue=dt_queue,
-                        dt_batching=dt_batching,
-                        ts_idx=ts_idx,
-                        query_idx=q_idx,
-                    )
-                    start_idx += batch_size
-                    with torch.inference_mode(), torch.cuda.stream(stream):
-                        self.run_one_item(qitem)
-            elif isinstance(result, Samples):
+            if isinstance(result, Samples):
                 qitem = QueryItem(
                     query_ids=query_ids,
                     samples=result,
@@ -227,7 +198,7 @@ class MultiThreadDataProducer:
                     self.run_one_item(qitem)
             else:
                 start_idx = 0
-                for sample in result:
+                for sample, ts_idx, q_idx in result:
                     batch_size: int = sample.batch_size()
                     qitem = QueryItem(
                         query_ids=query_ids[start_idx: start_idx + batch_size],
@@ -235,6 +206,8 @@ class MultiThreadDataProducer:
                         start=t0,
                         dt_queue=dt_queue,
                         dt_batching=dt_batching,
+                        ts_idx=ts_idx,
+                        query_idx=q_idx,
                     )
                     start_idx += batch_size
                     with torch.inference_mode(), torch.cuda.stream(stream):

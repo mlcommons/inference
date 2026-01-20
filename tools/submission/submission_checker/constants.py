@@ -232,6 +232,9 @@ MODEL_CONFIG = {
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
         },
+        "accuracy-sample-count": {
+            "gpt-oss-120b": 4395,
+        },
         "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,
@@ -577,6 +580,7 @@ MODEL_CONFIG = {
             "rgat": 788379,
             "pointpainting": 1024,
         },
+        "accuracy-sample-count": {},
         "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,
@@ -903,6 +907,7 @@ MODEL_CONFIG = {
             "deepseek-r1": 4388,
             "whisper": 1633,
         },
+        "accuracy-sample-count": {},
         "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,

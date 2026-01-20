@@ -48,6 +48,7 @@ class Config:
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
+        self.accuracy_sample_count = self.base["accuracy-sample-count"]
         self.dataset_size = self.base["dataset-size"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -149,6 +150,12 @@ class Config:
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
+
+    def get_accuracy_sample_count(self, model):
+        model = self.get_mlperf_model(model)
+        if model not in self.accuracy_sample_count:
+            return self.get_dataset_size(model)
+        return self.accuracy_sample_count[model]
 
     def ignore_errors(self, line):
         for error in self.base["ignore_errors"]:

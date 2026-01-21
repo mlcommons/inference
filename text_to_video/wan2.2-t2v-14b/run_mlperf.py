@@ -1,15 +1,17 @@
 
-from diffusers import WanPipeline, AutoencoderKLWan
 import argparse
-import yaml
+import array
 import json
 import logging
 import os
-import torch
-import array
-import numpy as np
-import mlperf_loadgen as lg
 from pathlib import Path
+
+import mlperf_loadgen as lg
+import numpy as np
+import torch
+import yaml
+from diffusers import AutoencoderKLWan, WanPipeline
+from diffusers.utils import export_to_video
 
 SCENARIO_MAP = {
     "SingleStream": lg.TestScenario.SingleStream,
@@ -47,8 +49,9 @@ def load_prompts(dataset_path):
 
 class Model:
     def __init__(
-        self, model_path, device, config, prompts, fixed_latent=None, rank=0
+        self, model_path, video_output_path, device, config, prompts, fixed_latent=None, rank=0
     ):
+        self.video_output_path = video_output_path
         self.device = device
         self.rank = rank
         self.height = config['height']
@@ -96,8 +99,18 @@ class Model:
                 if self.fixed_latent is not None:
                     pipeline_kwargs["latents"] = self.fixed_latent
                 output = self.pipe(**pipeline_kwargs).frames[0]
+                output = output.detach().numpy()
+                
+                # Save to video to reduce mlperf_log_accuracy.json size
+                output_path = Path(self.video_output_path, f"{self.prompts[i]}-0.mp4")
+                logging.info(f"Saving {q} to {output_path}")
+                export_to_video(output[0], str(output_path), fps=16)
+                
+                with open(output_path, "rb") as f:
+                    resp = f.read()
+
                 response_array = array.array(
-                    "B", output.cpu().detach().numpy().tobytes()
+                    "B", resp
                 )
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(q, bi[0], bi[1]))
@@ -211,6 +224,12 @@ def get_args():
         action="store_true",
         help="enable accuracy pass"
     )
+    parser.add_argument(
+        "--video_output_path",
+        type=str,
+        default="./videos",
+        help="path to store output videos"
+    )
     # Dont overwrite these for official submission
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -235,7 +254,6 @@ def run_mlperf(args, config):
 
     # Load model parameters
     # Parallelism parameters
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
     rank = int(os.environ.get("RANK", 0))
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
 
@@ -254,12 +272,12 @@ def run_mlperf(args, config):
         fixed_latent = torch.load(args.fixed_latent)
         logging.info(
             f"Loaded fixed latent from {args.fixed_latent} with shape: {fixed_latent.shape}")
-        logging.info(f"This latent will be reused for all generations")
+        logging.info("This latent will be reused for all generations")
     else:
         logging.info("No fixed latent provided - using random initial latents")
 
     # Loading model
-    model = Model(args.model_path, device, config, dataset, fixed_latent, rank)
+    model = Model(args.model_path, args.video_output_path, device, config, dataset, fixed_latent, rank)
     # model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
     logging.info("Model loaded successfully!")
 

@@ -26,7 +26,7 @@ mlcr get-dataset-mlperf-inference-gpt-oss,_mlc,_r2-downloader --outdirname=<path
 #### TODO: Replace this with mlc download link when available
 
 * Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
-* Dataset: Please request access at [this link](https://drive.google.com/drive/folders/1DCfEXHqe69okrqKbSyV-8VUw413JqpPY?usp=drive_link) - **this is a tentative dataset**
+* Dataset: You can find the dataset at [inference.mlcommons-storage.org](https://inference.mlcommons-storage.org/index.html)
 
 Datasets are now provided in **Parquet format** (recommended) for better performance and smaller file size (50% smaller than pickle). Pickle format is still supported for backward compatibility.
 

@@ -10,11 +10,8 @@ import os
 import json
 import array
 import argparse
-parser.add_argument(
-    "--enable-log-trace",
-    action="store_true",
-    help="Enable log tracing. This file can become quite large",
-)"""
+
+"""
 YOLOv11 LoadGen MLPerf
 """
 
@@ -199,7 +196,6 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
         # NOTE MLPerf requirement: minimum 10 minute run for performance
         settings.min_duration_ms = 600000
-        settings.min_query_count = 100
 
         # NOTE: user configs can override this in submission, this is the reference implementation so purposely left barebones
         # settings.target_qps = ...

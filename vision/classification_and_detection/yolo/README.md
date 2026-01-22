@@ -1,5 +1,11 @@
 # YOLO README - a working design doc
 
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site(WIP)]() for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 ## What does it take to get YOLO fully working?
 - Perf comparison local to Ultralyrics
 - Perf and accuracy to run with LoadGen
@@ -46,8 +52,18 @@ python create_safe_annotations.py
 ```
 This will create the correct associated annotations file, needed for the mAP accuracy score calcuations.
 
-The dataset has been uploaded the MLC S3 bucket, instructions for how to pull the safe dataset can be found at this website: https://inference.mlcommons-storage.org/index.html. This is what your dataset path should look like:
-## UPDATES TO THE MLC LINK TO REFELECT BELOW DIR STRUCTURE TO COME
+### Download filtered dataset through MLCFlow Automation
+
+```
+mlcr get,dataset,mlperf-inference,yolo-coco2017-filtered,_mlc,_r2-downloader --outdirname=<path_to_download> -j
+```
+
+### Download filtered dataset through native method
+
+The dataset has been uploaded the MLC S3 bucket, instructions for how to pull the safe dataset can be found at this website: https://inference.mlcommons-storage.org/index.html. 
+
+This is what your dataset path should look like:
+
 coco_safe/\
 ├── val2017_safe/\
     &nbsp;&nbsp;&nbsp;&nbsp;1525 images\
@@ -56,8 +72,16 @@ coco_safe/\
 coco_safe.checksums
 
 ## Model download
+
+### Download model through MLCFlow Automation
+
+```
+mlcr get-ml-model-yolov11,_mlc,_r2-downloader --outdirname=<Download path> -j
+```
+
+### Download model through native method
+
 Instructions for how to download the model can be found at this website: https://inference.mlcommons-storage.org/index.html
-## UPDATES TO THE MLC LINK TO REFELECT ABOVE STATEMENT TO COME
 
 ## How to run yolo_loadgen.py
 Perf run  
@@ -83,8 +107,17 @@ Arguments:
 
 Example output is under inference/vision/classification_and_detection/yolo_result_10232025/ for YOLOv11[N, S, M, L, X]
 
-## How to get mAP accuracy results with accuracy-coco.py looking at mlperf_log_accuracy.json
-### RECOMMENDED APPROACH for accuracy results
+## Evaluate accuracy
+
+### Evaluate the accuracy using MLCFlow
+You can also evaulate the accuracy from the generated accuracy log by using the following MLC command
+
+```
+mlcr run,accuracy,mlperf,_yolo-coco2017-filtered --result_dir=<Path to directory where files are generated after the benchmark run> 
+```
+
+### Native method: How to get mAP accuracy results with accuracy-coco.py looking at mlperf_log_accuracy.json
+#### RECOMMENDED APPROACH for accuracy results
 ```bash
 python /inference/vision/classification_and_detection/tools/accuracy-coco.py --mlperf-accuracy-file {PATH TO mlperf_log_accuracy.json} --coco-dir {DATASET_PATH} --verbose
 ```

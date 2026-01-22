@@ -1,7 +1,27 @@
 # MLPerf Inference reference implementation for GPT-OSS-120B
 This is the reference implementation for GPT-OSS-120B. This is a proposal and is a WIP. 
 
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site(WIP)]() for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 ## Model and Dataset download
+
+### Download model through MLCFlow Automation
+
+```
+mlcr get-ml-model-gpt-oss,_mlc,_r2-downloader --outdirname=<Download path> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+**Validation**
+
+```
+mlcr get-dataset-mlperf-inference-gpt-oss,_mlc,_r2-downloader --outdirname=<path_to_download> -j
+```
 
 #### TODO: Replace this with mlc download link when available
 

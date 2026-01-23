@@ -195,7 +195,11 @@ class LoadGenClient(BaseClient):
         
         # Debug mode for accuracy mode
         self.debug_mode = config.get('debug_mode', False) if config else False
-        
+
+        # CRITICAL FIX: Storage for response arrays to prevent garbage collection
+        # LoadGen stores pointers to these arrays and reads them later when writing accuracy JSON
+        self.response_arrays = {}  # {query_id: numpy_array or array.array}
+
         # Accuracy results storage (matching offline_sut.py format)
         # Store results in format: {query_id: {"output_ids": [], "output_text": "", "metadata": {}}}
         self.results = {} if self.test_mode == "accuracy" else None
@@ -731,6 +735,10 @@ class LoadGenClient(BaseClient):
     
     def cleanup(self) -> None:
         """Cleanup resources."""
+        # Clear stored response arrays after LoadGen is done
+        if hasattr(self, 'response_arrays'):
+            self.logger.debug(f"Clearing {len(self.response_arrays)} stored response arrays")
+            self.response_arrays.clear()
         self.logger.info("Cleaning up LoadGen client")
         self.is_running = False
 
@@ -1131,6 +1139,8 @@ class LoadGenOfflineClient(LoadGenClient):
         # LoadGen expects int32 token IDs as a contiguous array
         if output_ids:
             token_array = np.ascontiguousarray(output_ids, dtype=np.int32)
+            # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
+            self.response_arrays[query_id] = token_array
             output_data_ptr = token_array.ctypes.data
             output_data_size = token_array.nbytes
             n_tokens = len(output_ids)
@@ -1194,6 +1204,8 @@ class LoadGenOfflineClient(LoadGenClient):
         # LoadGen expects int32 token IDs as a contiguous array
         if token_ids:
             token_array = np.ascontiguousarray(token_ids, dtype=np.int32)
+            # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
+            self.response_arrays[query_id] = token_array
             output_data_ptr = token_array.ctypes.data
             output_data_size = token_array.nbytes
             n_tokens = len(token_ids)
@@ -1353,6 +1365,8 @@ class LoadGenOfflineClient(LoadGenClient):
         
         # Create Loadgen response (text content as bytes)
         bytes_array = array.array("B", content.encode("utf-8"))
+        # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
+        self.response_arrays[query_id] = bytes_array
         address, length = bytes_array.buffer_info()
         size_in_bytes = length * bytes_array.itemsize
         
@@ -1429,6 +1443,8 @@ class LoadGenOfflineClient(LoadGenClient):
             # LoadGen expects int32 token IDs as a contiguous array
             if token_ids:
                 token_array = np.ascontiguousarray(token_ids, dtype=np.int32)
+                # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
+                self.response_arrays[query_id] = token_array
                 output_data_ptr = token_array.ctypes.data
                 output_data_size = token_array.nbytes
                 n_tokens = len(token_ids)
@@ -1575,6 +1591,8 @@ class LoadGenServerClient(LoadGenClient):
             
             # Create final response
             response_array = array.array("B", np.array(output_tokens, dtype=np.int32).tobytes())
+            # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
+            self.response_arrays[query_id] = response_array
             bi = response_array.buffer_info()
             response = [lg.QuerySampleResponse(query_id, bi[0], bi[1], n_tokens)]
             lg.QuerySamplesComplete(response)
@@ -1788,6 +1806,10 @@ class LoadGenServerClient(LoadGenClient):
     
     def cleanup(self) -> None:
         """Cleanup resources including worker threads."""
+        # Clear stored response arrays before stopping workers
+        if hasattr(self, 'response_arrays'):
+            self.logger.debug(f"Clearing {len(self.response_arrays)} stored response arrays")
+            self.response_arrays.clear()
         self.stop_workers()
         super().cleanup()
 

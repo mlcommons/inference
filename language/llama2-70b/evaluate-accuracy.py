@@ -3,6 +3,7 @@ from transformers import AutoTokenizer
 import nltk
 import evaluate
 import numpy as np
+import pandas as pd
 import json
 from multiprocessing import Pool, cpu_count
 
@@ -35,8 +36,6 @@ def get_args():
 
 
 def get_groundtruth(processed_dataset_file):
-    import pandas as pd
-
     data = pd.read_pickle(processed_dataset_file)
     ground_truths = data["output"]
     return ground_truths

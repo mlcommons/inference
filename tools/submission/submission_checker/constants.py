@@ -1192,6 +1192,9 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        }
     },
     "v5.1": {
         "llama2-70b-99": {
@@ -1222,6 +1225,11 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        }
+    },
+    "v6.0": {
         "whisper": {
             "Offline": "result_tokens_per_second",
         }

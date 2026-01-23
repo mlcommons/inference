@@ -58,6 +58,11 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
     parser.add_argument("--output-column", type=str, default=None,
                        help="Override output column name (overrides config)")
     
+    # Backend configuration arguments
+    parser.add_argument("--backend", type=str, default=None,
+                       choices=["vllm", "sglang"],
+                       help="Backend type to use (vllm or sglang). When using --api-server-url, defaults to vllm if not specified.")
+    
     # API endpoint arguments
     parser.add_argument("--endpoint-type", type=str, default="completions",
                        choices=["completions", "chat_completions"],
@@ -118,6 +123,10 @@ def parse_common_harness_args(args):
     mlflow_tracking_uri = None
     if args.mlflow_experiment_name:
         mlflow_tracking_uri = f"http://{args.mlflow_host}:{args.mlflow_port}"
+    
+    # Add backend to server_config if specified (command line overrides YAML config)
+    if args.backend:
+        server_config['backend'] = args.backend
     
     # Add endpoint_type to server_config so client can use it
     if args.endpoint_type:

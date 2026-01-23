@@ -67,18 +67,26 @@ class GPTOSS120BHarness(BaseHarness):
         if 'dataset_name' not in kwargs:
             kwargs['dataset_name'] = 'gpt-oss-120b'
         
-        # Ensure backend is SGLang
+        # Ensure backend is set (default to SGLang if not specified, but don't override if already set)
         if 'server_config' not in kwargs:
             kwargs['server_config'] = {}
-        if 'backend' not in kwargs['server_config']:
+        backend_set = 'backend' in kwargs['server_config']
+        backend_value = kwargs['server_config'].get('backend', 'sglang')
+        if not backend_set:
             kwargs['server_config']['backend'] = 'sglang'
         
         # Ensure endpoint_type is completions (SGLang uses completions)
         if 'endpoint_type' not in kwargs['server_config']:
             kwargs['server_config']['endpoint_type'] = 'completions'
         
-        # Call parent constructor
+        # Call parent constructor (this initializes self.logger)
         super().__init__(**kwargs)
+        
+        # Log backend information after logger is initialized
+        if not backend_set:
+            self.logger.info("GPT-OSS-120B: defaulting backend to sglang (use --backend to override)")
+        else:
+            self.logger.info(f"GPT-OSS-120B: using backend: {backend_value}")
         
         # Load generation config
         self.generation_config_path = generation_config_path
@@ -138,9 +146,20 @@ class GPTOSS120BHarness(BaseHarness):
         if 'config' not in self.server_config:
             self.server_config['config'] = {}
         
-        # Set SGLang endpoint and use_input_ids flag
-        self.server_config['config']['use_input_ids'] = True
-        self.server_config['config']['sglang_endpoint'] = '/generate'
+        # Determine backend (default to sglang if not specified)
+        backend = self.server_config.get('backend', 'sglang')
+        
+        # For vllm backend with gpt-oss-120b, default field should be text_input
+        if backend == 'vllm':
+            # Set input_column to text_input for vllm (vllm expects text input)
+            if 'input_column' not in self.server_config:
+                self.server_config['input_column'] = 'text_input'
+            self.logger.info("Using vllm backend: defaulting input_column to 'text_input'")
+        
+        # Set SGLang endpoint and use_input_ids flag (only for SGLang)
+        if backend == 'sglang':
+            self.server_config['config']['use_input_ids'] = True
+            self.server_config['config']['sglang_endpoint'] = '/generate'
         
         # Store sampling parameters for both modes
         self.server_config['config']['temperature'] = self.performance_temperature

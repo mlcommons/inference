@@ -138,6 +138,9 @@ class BaseHarness:
             engine_args: List of engine arguments to override server config (e.g., ['--tensor-parallel-size', '2'])
             debug_mode: Enable debug mode
         """
+        # Setup logging early so we can use it in initialization
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
         self.model_name = model_name
         self.dataset_path = dataset_path
         self.scenario = scenario
@@ -146,6 +149,13 @@ class BaseHarness:
         self.api_server_url = api_server_url
         # Support load balancing with multiple API server URLs
         self.api_server_urls = api_server_urls
+        
+        # When using --api-server-url, default backend should be vllm (unless explicitly specified)
+        if (self.api_server_url or self.api_server_urls) and 'backend' not in self.server_config:
+            self.server_config['backend'] = 'vllm'
+            self.logger.info("Using --api-server-url: defaulting backend to vllm (use --backend to override)")
+        elif (self.api_server_url or self.api_server_urls) and 'backend' in self.server_config:
+            self.logger.info(f"Using --api-server-url with backend: {self.server_config['backend']}")
         # Support host specification from config or command line
         self.host = host
         self.hosts = hosts
@@ -194,8 +204,7 @@ class BaseHarness:
         self.mlflow_description = mlflow_description
         self.mlflow_client = None
         
-        # Setup logging
-        self.logger = logging.getLogger(self.__class__.__name__)
+        # Note: logging was already set up at the beginning of __init__
         
         # Create output directory structure
         self._setup_output_directories()

@@ -196,6 +196,10 @@ class LoadGenClient(BaseClient):
         # Debug mode for accuracy mode
         self.debug_mode = config.get('debug_mode', False) if config else False
         
+        # Accuracy results storage (matching offline_sut.py format)
+        # Store results in format: {query_id: {"output_ids": [], "output_text": "", "metadata": {}}}
+        self.results = {} if self.test_mode == "accuracy" else None
+        
         # Server scenario specific components (for async processing)
         self.num_workers = config.get('num_workers', 1) if config else 1
         self.worker_threads: List[Optional[threading.Thread]] = []
@@ -893,6 +897,10 @@ class LoadGenOfflineClient(LoadGenClient):
             else:
                 text_prompt = " ".join([str(t) for t in input_ids])
             
+            # Get server URL (with load balancing if enabled)
+            server_url = self._get_next_server_url()
+            endpoints = self._get_endpoints_for_url(server_url)
+            
             # Determine endpoint based on endpoint_type
             if self.endpoint_type == 'chat_completions':
                 endpoint = endpoints['chat_completions']
@@ -1076,7 +1084,23 @@ class LoadGenOfflineClient(LoadGenClient):
         """Process SGLang response (already has token IDs)."""
         token_count = len(output_ids)
         
-        # Debug mode: print query, text response and token count in accuracy mode
+        # Get input token count for logging
+        input_token_count = 0
+        if hasattr(self, 'dataset') and self.dataset and query_index < len(self.dataset.input_ids):
+            input_token_count = len(self.dataset.input_ids[query_index])
+        
+        # Store results in accuracy mode (matching offline_sut.py format)
+        if self.test_mode == "accuracy" and self.results is not None:
+            # Get metadata from response if available
+            metadata = {}
+            # Store in same format as offline_sut.py: process_single_query
+            self.results[query_id] = {
+                "output_ids": output_ids,
+                "output_text": output_text,
+                "metadata": metadata
+            }
+        
+        # Debug mode: print query, text response, token counts and ratio
         if self.debug_mode and self.test_mode == "accuracy":
             # Get prompt text if available
             prompt_text = None
@@ -1091,44 +1115,108 @@ class LoadGenOfflineClient(LoadGenClient):
             
             text_preview = output_text[:200] + "..." if len(output_text) > 200 else output_text
             prompt_preview = prompt_text[:200] + "..." if prompt_text and len(prompt_text) > 200 else (prompt_text or "N/A")
+            
+            # Calculate token ratio
+            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+            
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
             if prompt_text:
                 self.logger.info(f"  Prompt: {prompt_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
-            self.logger.info(f"  Total Tokens: {token_count}")
+            self.logger.info(f"  Input Tokens: {input_token_count}")
+            self.logger.info(f"  Output Tokens: {token_count}")
+            self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
         
-        # Create Loadgen response
-        token_array = np.array(output_ids, dtype=np.int32)
-        token_bytes = token_array.tobytes()
-        response_data = token_array.ctypes.data
-        response_size = len(token_bytes)
+        # Convert output_ids to numpy array for LoadGen
+        # LoadGen expects int32 token IDs as a contiguous array
+        if output_ids:
+            token_array = np.ascontiguousarray(output_ids, dtype=np.int32)
+            output_data_ptr = token_array.ctypes.data
+            output_data_size = token_array.nbytes
+            n_tokens = len(output_ids)
+        else:
+            # Empty response
+            token_array = np.array([], dtype=np.int32)
+            output_data_ptr = 0
+            output_data_size = 0
+            n_tokens = 0
         
-        response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
-        lg.QuerySamplesComplete([response])
-        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+        # Create response for LoadGen with token count
+        response_array = [
+            lg.QuerySampleResponse(
+                query_id,
+                output_data_ptr,
+                output_data_size,
+                n_tokens  # Number of output tokens for tokens/sec metric
+            )
+        ]
+        
+        # Report completion to LoadGen
+        lg.QuerySamplesComplete(response_array)
+        self.logger.debug(f"Query {query_id} (index {query_index}): {n_tokens} tokens")
     
     def _process_single_response(self, query_id: int, query_index: int, token_ids: List[int], text_response: str, text_prompt: Optional[str] = None) -> None:
         """Process a single response."""
         token_count = len(token_ids)
         
-        # Debug mode: print query, text response and token count in accuracy mode
+        # Get input token count for logging
+        input_token_count = 0
+        if hasattr(self, 'dataset') and self.dataset and query_index < len(self.dataset.input_ids):
+            input_token_count = len(self.dataset.input_ids[query_index])
+        
+        # Store results in accuracy mode (matching offline_sut.py format)
+        if self.test_mode == "accuracy" and self.results is not None:
+            # Get metadata from response if available
+            metadata = {}
+            # Store in same format as offline_sut.py: process_single_query
+            self.results[query_id] = {
+                "output_ids": token_ids,
+                "output_text": text_response,
+                "metadata": metadata
+            }
+        
+        # Debug mode: print query, text response, token counts and ratio
         if self.debug_mode and self.test_mode == "accuracy":
             query_preview = text_prompt[:200] + "..." if text_prompt and len(text_prompt) > 200 else (text_prompt or "N/A")
             text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
+            
+            # Calculate token ratio
+            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+            
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
             self.logger.info(f"  Prompt: {query_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
-            self.logger.info(f"  Total Tokens: {token_count}")
+            self.logger.info(f"  Input Tokens: {input_token_count}")
+            self.logger.info(f"  Output Tokens: {token_count}")
+            self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
         
-        # Create Loadgen response
-        token_array = np.array(token_ids, dtype=np.int32)
-        token_bytes = token_array.tobytes()
-        response_data = token_array.ctypes.data
-        response_size = len(token_bytes)
+        # Convert token_ids to numpy array for LoadGen
+        # LoadGen expects int32 token IDs as a contiguous array
+        if token_ids:
+            token_array = np.ascontiguousarray(token_ids, dtype=np.int32)
+            output_data_ptr = token_array.ctypes.data
+            output_data_size = token_array.nbytes
+            n_tokens = len(token_ids)
+        else:
+            # Empty response
+            token_array = np.array([], dtype=np.int32)
+            output_data_ptr = 0
+            output_data_size = 0
+            n_tokens = 0
         
-        response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
-        lg.QuerySamplesComplete([response])
-        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+        # Create response for LoadGen with token count
+        response_array = [
+            lg.QuerySampleResponse(
+                query_id,
+                output_data_ptr,
+                output_data_size,
+                n_tokens  # Number of output tokens for tokens/sec metric
+            )
+        ]
+        
+        # Report completion to LoadGen
+        lg.QuerySamplesComplete(response_array)
+        self.logger.debug(f"Query {query_id} (index {query_index}): {n_tokens} tokens")
     
     def _construct_messages_from_dataset(self, index: int) -> List[Dict[str, Any]]:
         """Construct messages format from dataset fields (fallback for multimodal)."""
@@ -1305,25 +1393,61 @@ class LoadGenOfflineClient(LoadGenClient):
             
             token_count = len(token_ids)
             
-            # Debug mode: print query, text response and token count in accuracy mode
+            # Get input token count for logging
+            input_token_count = 0
+            if hasattr(self, 'dataset') and self.dataset and query_index < len(self.dataset.input_ids):
+                input_token_count = len(self.dataset.input_ids[query_index])
+            
+            # Store results in accuracy mode (matching offline_sut.py format)
+            if self.test_mode == "accuracy" and self.results is not None:
+                # Get metadata from response if available
+                metadata = {}
+                # Store in same format as offline_sut.py: process_single_query
+                self.results[query_id] = {
+                    "output_ids": token_ids,
+                    "output_text": text_response,
+                    "metadata": metadata
+                }
+            
+            # Debug mode: print query, text response, token counts and ratio
             if self.debug_mode and self.test_mode == "accuracy":
                 # Truncate text for display (first 200 chars)
                 query_preview = query_prompt[:200] + "..." if query_prompt and len(query_prompt) > 200 else (query_prompt or "N/A")
                 text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
+                
+                # Calculate token ratio
+                token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+                
                 self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
                 self.logger.info(f"  Query: {query_preview}")
                 self.logger.info(f"  Text Response: {text_preview}")
-                self.logger.info(f"  Total Tokens: {token_count}")
+                self.logger.info(f"  Input Tokens: {input_token_count}")
+                self.logger.info(f"  Output Tokens: {token_count}")
+                self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
             
-            # Create Loadgen response
-            token_array = np.array(token_ids, dtype=np.int32)
-            token_bytes = token_array.tobytes()
-            response_data = token_array.ctypes.data
-            response_size = len(token_bytes)
+            # Convert token_ids to numpy array for LoadGen
+            # LoadGen expects int32 token IDs as a contiguous array
+            if token_ids:
+                token_array = np.ascontiguousarray(token_ids, dtype=np.int32)
+                output_data_ptr = token_array.ctypes.data
+                output_data_size = token_array.nbytes
+                n_tokens = len(token_ids)
+            else:
+                # Empty response
+                token_array = np.array([], dtype=np.int32)
+                output_data_ptr = 0
+                output_data_size = 0
+                n_tokens = 0
             
-            response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
+            # Create response for LoadGen with token count
+            response = lg.QuerySampleResponse(
+                query_id,
+                output_data_ptr,
+                output_data_size,
+                n_tokens  # Number of output tokens for tokens/sec metric
+            )
             responses.append(response)
-            self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+            self.logger.debug(f"Query {query_id} (index {query_index}): {n_tokens} tokens")
         
         # Send all responses to LoadGen
         if responses:
@@ -1533,12 +1657,10 @@ class LoadGenServerClient(LoadGenClient):
                                     stop_reason = data["choices"][0].get("stop_reason")
                                     
                                     if (finish_reason is not None) or (stop_reason is not None):
-                                        if finish_reason == "length":
-                                            # Add EOS token
-                                            if self.tokenizer and hasattr(self.tokenizer, 'eos_token'):
-                                                token_s = self.tokenizer.eos_token
-                                                token_s_cache.append(token_s)
-                                        else:
+                                        # Don't add EOS token - backend should handle this
+                                        # If finish_reason is "length", the backend already stopped at max_tokens
+                                        # Adding an EOS token here would add an unwanted token
+                                        if finish_reason != "length":
                                             self.logger.warning(
                                                 f"Sequence finished: finish_reason={finish_reason}, "
                                                 f"stop_reason={stop_reason}"

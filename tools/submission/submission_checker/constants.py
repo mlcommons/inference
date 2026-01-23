@@ -32,7 +32,6 @@ MODEL_CONFIG = {
             "llama3.1-8b": ["Offline"],
             "llama2-70b-99": ["Offline"],
             "llama2-70b-99.9": ["Offline"],
-            "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
@@ -40,7 +39,6 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
-            "dlrm-v3": ["Server", "Offline"],
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -52,7 +50,6 @@ MODEL_CONFIG = {
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
             "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],

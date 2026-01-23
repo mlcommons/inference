@@ -275,6 +275,15 @@ class SUT:
         )
         print("Loaded model")
 
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        if num_gpus > 1:
+            print(f"Using {num_gpus} GPUs via DataParallel")
+            self.model = torch.nn.DataParallel(self.model)
+        self.model.to("cuda")
+    else:
+        self.model.to(self.device)
+
         self.device = torch.device(self.device)
         if self.device == "cpu":
             self.model = self.model.to(

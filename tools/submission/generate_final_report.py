@@ -167,6 +167,11 @@ def main():
     if args.version == "6.0":
         filter_scenarios = {
             "datacenter": {
+                "resnet": [],
+                "bert-99": [],
+                "bert-99.9": [],
+                "stable-diffusion-xl": [],
+                "pointpainting": [],
                 "dlrm-v3": ["Server", "Offline"],
                 "3d-unet-99": ["Offline"],
                 "3d-unet-99.9": ["Offline"],

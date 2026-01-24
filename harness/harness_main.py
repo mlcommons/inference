@@ -39,9 +39,6 @@ MODEL_MODULES = {
     'gpt-oss-120b': 'harness_gpt_oss_120b',
     'gpt_oss_120b': 'harness_gpt_oss_120b',
     'gptoss120b': 'harness_gpt_oss_120b',
-    'qwen3vl': 'harness_qwen3vl',
-    'qwen3-vl': 'harness_qwen3vl',
-    'qwen3_vl': 'harness_qwen3vl',
 }
 
 # Map model categories to LoadGen model names
@@ -57,9 +54,6 @@ MODEL_CATEGORY_TO_LG_NAME = {
     'gpt-oss-120b': 'gpt_oss_120b',
     'gpt_oss_120b': 'gpt_oss_120b',
     'gptoss120b': 'gpt_oss_120b',
-    'qwen3vl': 'qwen3_vl',
-    'qwen3_vl': 'qwen3_vl',
-    'qwen3vl-vision': 'qwen3_vl',
 }
 
 # Valid model categories (derived from MODEL_MODULES keys)
@@ -97,8 +91,6 @@ def detect_model_category_from_name(name: str) -> str:
     elif 'gpt-oss' in name_lower or 'gpt_oss' in name_lower:
         if '120b' in name_lower or '120-b' in name_lower:
             return 'gpt-oss-120b'
-    elif 'qwen3' in name_lower and ('vl' in name_lower or 'vision' in name_lower):
-        return 'qwen3vl'
     
     return None
 

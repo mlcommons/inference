@@ -105,7 +105,9 @@ class BaseHarness:
                  input_ids_column: Optional[str] = None,
                  output_column: Optional[str] = None,
                  engine_args: Optional[list] = None,
-                 debug_mode: bool = False):
+                 debug_mode: bool = False,
+                 print_token_stats: bool = False,
+                 audit_config: Optional[str] = None):
         """
         Initialize base harness.
         
@@ -137,6 +139,8 @@ class BaseHarness:
             output_column: Override output column name
             engine_args: List of engine arguments to override server config (e.g., ['--tensor-parallel-size', '2'])
             debug_mode: Enable debug mode
+            print_token_stats: Print token statistics and generate histograms
+            audit_config: Path to audit configuration file for LoadGen
         """
         # Setup logging early so we can use it in initialization
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -196,6 +200,12 @@ class BaseHarness:
         
         # Debug mode
         self.debug_mode = debug_mode
+        
+        # Token statistics
+        self.print_token_stats = print_token_stats
+        
+        # Audit config
+        self.audit_config = audit_config
         
         # MLflow configuration
         self.mlflow_tracking_uri = mlflow_tracking_uri
@@ -558,6 +568,10 @@ class BaseHarness:
         if hasattr(self, 'debug_mode') and self.debug_mode:
             client_config['debug_mode'] = True
         
+        # Add print_token_stats to client config if available
+        if hasattr(self, 'print_token_stats') and self.print_token_stats:
+            client_config['print_token_stats'] = True
+        
         self.client = create_loadgen_client(
             scenario=self.scenario,
             model_name=self.model_name,
@@ -650,9 +664,19 @@ class BaseHarness:
         """
         Setup LoadGen TestSettings.
         
+        LoadGen configuration flow:
+        1. mlperf.conf: Base/reference configuration (internal to LoadGen library)
+        2. user.conf: User-specific overrides and model configurations
+        3. lg_model_name: Model name used to look up model-specific settings in both configs
+        
+        The settings.FromConfig() method:
+        - Loads base settings from mlperf.conf (internal LoadGen config)
+        - Applies user-specific overrides from user.conf
+        - Uses lg_model_name to find model-specific sections (e.g., "gpt_oss_120b", "llama3_1-8b")
+        
         Args:
-            user_conf: User configuration file for LoadGen
-            lg_model_name: Model name for LoadGen
+            user_conf: User configuration file path (e.g., "user.conf")
+            lg_model_name: Model name for LoadGen config lookup (e.g., "gpt_oss_120b", "llama3_1-8b")
         
         Returns:
             Configured TestSettings object
@@ -664,6 +688,7 @@ class BaseHarness:
         self.logger.info(f"LoadGen model name: {lg_model_name}")
         self.logger.info(f"Scenario: {self.scenario}")
         self.logger.info(f"Test mode: {self.test_mode}")
+        self.logger.info(f"Note: LoadGen uses mlperf.conf (base) + {user_conf} (overrides) with model '{lg_model_name}'")
         
         settings = lg.TestSettings()
         
@@ -682,6 +707,7 @@ class BaseHarness:
         settings.use_token_latencies = True
         
         self.logger.info(f"Loading LoadGen settings from config: {user_conf}, model: {lg_model_name}")
+        # FromConfig loads: mlperf.conf (base) + user.conf (overrides) for model lg_model_name
         settings.FromConfig(user_conf, lg_model_name, self.scenario, 1)
         self.logger.info("LoadGen settings loaded successfully")
         self.logger.info("=" * 80)
@@ -1130,9 +1156,21 @@ class BaseHarness:
             test_start_time = time.time()
             
             try:
-                lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+                # Pass audit_config as last argument if provided
+                if self.audit_config:
+                    self.logger.info(f"Using audit config: {self.audit_config}")
+                    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, self.audit_config)
+                else:
+                    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
                 test_duration = time.time() - test_start_time
                 self.logger.info(f"LoadGen test completed in {test_duration:.2f} seconds")
+                
+                # Print token statistics if enabled (either print_token_stats or debug_mode)
+                if (hasattr(self, 'print_token_stats') and self.print_token_stats) or \
+                   (hasattr(self, 'debug_mode') and self.debug_mode):
+                    if hasattr(self.client, '_print_token_histograms'):
+                        self.logger.info("Generating token statistics and histograms...")
+                        self.client._print_token_histograms()
             except Exception as e:
                 test_duration = time.time() - test_start_time
                 self.logger.error(f"LoadGen test failed after {test_duration:.2f} seconds: {e}", exc_info=True)

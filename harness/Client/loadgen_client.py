@@ -185,9 +185,6 @@ class LoadGenClient(BaseClient):
         
         self.sglang_endpoint = config.get('sglang_endpoint', '/generate') if config else '/generate'
         
-        # Multimodal-specific: use messages format directly (for qwen3vl)
-        self.use_messages = config.get('use_messages', False) if config else False
-        self.multimodal = config.get('multimodal', False) if config else False
         self.use_guided_decoding = config.get('use_guided_decoding', False) if config else False
         
         # Offline scenario: send requests back-to-back instead of batching
@@ -195,6 +192,13 @@ class LoadGenClient(BaseClient):
         
         # Debug mode for accuracy mode
         self.debug_mode = config.get('debug_mode', False) if config else False
+        
+        # Token statistics tracking for histograms and summary
+        # Enable if either debug_mode or print_token_stats is True
+        self.print_token_stats = config.get('print_token_stats', False) if config else False
+        self.input_token_counts = []
+        self.output_token_counts = []
+        self.token_ratios = []
 
         # CRITICAL FIX: Storage for response arrays to prevent garbage collection
         # LoadGen stores pointers to these arrays and reads them later when writing accuracy JSON
@@ -316,8 +320,9 @@ class LoadGenClient(BaseClient):
         self.logger.info("=" * 60)
         for key, value in stats.items():
             self.logger.info(f"{key}: {value}")
-        self.logger.info("=" * 60)
-        self.logger.info(f"Final max_tokens: {self.max_tokens}")
+        # Print final sampling parameters and max_tokens summary
+        self._print_sampling_summary()
+        
         self.logger.info("=" * 60)
         
         # Initialize tokenizer if using API mode (needed for vLLM detokenization)
@@ -735,12 +740,121 @@ class LoadGenClient(BaseClient):
     
     def cleanup(self) -> None:
         """Cleanup resources."""
+        # Print token statistics if enabled (before cleanup)
+        # Note: This is a fallback - main printing happens in base_harness after test completes
+        if (hasattr(self, 'print_token_stats') and self.print_token_stats) or \
+           (hasattr(self, 'debug_mode') and self.debug_mode):
+            if hasattr(self, 'input_token_counts') and self.input_token_counts:
+                self.logger.info("Offline scenario: Generating token statistics and histograms before cleanup...")
+                self._print_token_histograms()
+        
         # Clear stored response arrays after LoadGen is done
         if hasattr(self, 'response_arrays'):
             self.logger.debug(f"Clearing {len(self.response_arrays)} stored response arrays")
             self.response_arrays.clear()
         self.logger.info("Cleaning up LoadGen client")
         self.is_running = False
+    
+    def _get_sampling_params(self):
+        """Get sampling parameters based on test_mode."""
+        if self.test_mode == "accuracy":
+            temperature = self.accuracy_temperature if self.accuracy_temperature is not None else self.temperature
+            top_k = self.accuracy_top_k if self.accuracy_top_k is not None else self.top_k
+            top_p = self.accuracy_top_p if self.accuracy_top_p is not None else self.top_p
+        else:
+            temperature = self.temperature
+            top_k = self.top_k
+            top_p = self.top_p
+        return temperature, top_k, top_p
+    
+    def _print_sampling_summary(self):
+        """Print final summary of sampling parameters and max_tokens."""
+        temperature, top_k, top_p = self._get_sampling_params()
+        self.logger.info("=" * 60)
+        self.logger.info("Sampling Parameters Summary")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Test Mode: {self.test_mode}")
+        self.logger.info(f"Max Tokens: {self.max_tokens}")
+        self.logger.info(f"Temperature: {temperature}")
+        self.logger.info(f"Top-K: {top_k}")
+        self.logger.info(f"Top-P: {top_p}")
+        self.logger.info("=" * 60)
+    
+    def _track_token_stats(self, input_token_count: int, output_token_count: int):
+        """Track token statistics for histograms."""
+        if input_token_count > 0:
+            self.input_token_counts.append(input_token_count)
+            self.output_token_counts.append(output_token_count)
+            ratio = output_token_count / input_token_count if input_token_count > 0 else 0.0
+            self.token_ratios.append(ratio)
+    
+    def _print_token_histograms(self):
+        """Print histograms of input tokens, output tokens, and token ratios."""
+        # Enable if either debug_mode or print_token_stats is True
+        if not self.input_token_counts:
+            self.logger.warning(f"No token statistics collected. input_token_counts is empty. "
+                              f"debug_mode={self.debug_mode}, print_token_stats={self.print_token_stats}")
+            return
+        
+        if not self.debug_mode and not self.print_token_stats:
+            return
+        
+        self.logger.info(f"Printing token histograms: collected {len(self.input_token_counts)} samples, "
+                        f"debug_mode={self.debug_mode}, print_token_stats={self.print_token_stats}")
+        
+        try:
+            import matplotlib.pyplot as plt
+            import numpy as np
+            from pathlib import Path
+            
+            # Create output directory if it doesn't exist
+            output_dir = Path(self.config.get('output_dir', './harness_output')) if self.config else Path('./harness_output')
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+            
+            # Input token histogram
+            axes[0].hist(self.input_token_counts, bins=50, edgecolor='black', alpha=0.7)
+            axes[0].set_xlabel('Input Tokens')
+            axes[0].set_ylabel('Frequency')
+            axes[0].set_title(f'Input Token Distribution\n(Mean: {np.mean(self.input_token_counts):.1f}, Median: {np.median(self.input_token_counts):.1f})')
+            axes[0].grid(True, alpha=0.3)
+            
+            # Output token histogram
+            axes[1].hist(self.output_token_counts, bins=50, edgecolor='black', alpha=0.7, color='green')
+            axes[1].set_xlabel('Output Tokens')
+            axes[1].set_ylabel('Frequency')
+            axes[1].set_title(f'Output Token Distribution\n(Mean: {np.mean(self.output_token_counts):.1f}, Median: {np.median(self.output_token_counts):.1f})')
+            axes[1].grid(True, alpha=0.3)
+            
+            # Token ratio histogram
+            axes[2].hist(self.token_ratios, bins=50, edgecolor='black', alpha=0.7, color='orange')
+            axes[2].set_xlabel('Output/Input Token Ratio')
+            axes[2].set_ylabel('Frequency')
+            axes[2].set_title(f'Token Ratio Distribution\n(Mean: {np.mean(self.token_ratios):.4f}, Median: {np.median(self.token_ratios):.4f})')
+            axes[2].grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            histogram_path = output_dir / 'token_statistics_histograms.png'
+            plt.savefig(histogram_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            self.logger.info("=" * 60)
+            self.logger.info("Token Statistics Summary")
+            self.logger.info("=" * 60)
+            self.logger.info(f"Total Queries: {len(self.input_token_counts)}")
+            self.logger.info(f"Input Tokens - Mean: {np.mean(self.input_token_counts):.1f}, Median: {np.median(self.input_token_counts):.1f}, "
+                           f"Min: {np.min(self.input_token_counts)}, Max: {np.max(self.input_token_counts)}")
+            self.logger.info(f"Output Tokens - Mean: {np.mean(self.output_token_counts):.1f}, Median: {np.median(self.output_token_counts):.1f}, "
+                           f"Min: {np.min(self.output_token_counts)}, Max: {np.max(self.output_token_counts)}")
+            self.logger.info(f"Token Ratio (output/input) - Mean: {np.mean(self.token_ratios):.4f}, Median: {np.median(self.token_ratios):.4f}, "
+                           f"Min: {np.min(self.token_ratios):.4f}, Max: {np.max(self.token_ratios):.4f}")
+            self.logger.info(f"Histograms saved to: {histogram_path}")
+            self.logger.info("=" * 60)
+        except ImportError:
+            self.logger.warning("Matplotlib not available, skipping histogram generation")
+        except Exception as e:
+            self.logger.warning(f"Error generating histograms: {e}")
 
 
 class LoadGenOfflineClient(LoadGenClient):
@@ -760,20 +874,23 @@ class LoadGenOfflineClient(LoadGenClient):
         temperature, top_k, top_p = self._get_sampling_params()
         
         if self.offline_back_to_back:
-            # Send requests back-to-back (one at a time)
+            # Send requests back-to-back (one at a time, each as a separate API request)
             self.logger.info("=" * 80)
             self.logger.info(f"OFFLINE SCENARIO: Processing {total_samples} queries back-to-back")
+            self.logger.info(f"Mode: Individual API requests (one prompt per request, no batching)")
             self.logger.info(f"Total samples: {total_samples}")
             self.logger.info("=" * 80)
             
             processed_samples = 0
             for q_sample in query_samples:
                 try:
-                    if self.api_server_url:
+                    if self.api_server_url or self.api_server_urls:
+                        # Send each query as a completely separate API request
+                        # This ensures no batching occurs on the client side
                         self._process_api_single(q_sample, temperature, top_k, top_p)
                         processed_samples += 1
                         if processed_samples % 100 == 0:
-                            self.logger.info(f"Processed {processed_samples}/{total_samples} samples")
+                            self.logger.info(f"Processed {processed_samples}/{total_samples} samples (individual requests)")
                     else:
                         self.logger.warning("Local model processing not yet implemented")
                         self._send_error_responses([q_sample])
@@ -786,6 +903,10 @@ class LoadGenOfflineClient(LoadGenClient):
             self.logger.info("=" * 80)
             self.logger.info(f"All queries completed: {processed_samples}/{total_samples} samples processed")
             self.logger.info("=" * 80)
+            
+            # Print token histograms if enabled
+            if self.print_token_stats or self.debug_mode:
+                self._print_token_histograms()
         else:
             # Batch processing (original behavior)
             num_batches = (total_samples + self.batch_size - 1) // self.batch_size
@@ -824,42 +945,18 @@ class LoadGenOfflineClient(LoadGenClient):
             self.logger.info("=" * 80)
             self.logger.info(f"All batches completed: {processed_samples}/{total_samples} samples processed")
             self.logger.info("=" * 80)
-    
-    def _get_sampling_params(self):
-        """Get sampling parameters based on test_mode."""
-        if self.test_mode == "accuracy":
-            temperature = self.accuracy_temperature if self.accuracy_temperature is not None else self.temperature
-            top_k = self.accuracy_top_k if self.accuracy_top_k is not None else self.top_k
-            top_p = self.accuracy_top_p if self.accuracy_top_p is not None else self.top_p
-        else:
-            temperature = self.temperature
-            top_k = self.top_k
-            top_p = self.top_p
-        return temperature, top_k, top_p
+            
+            # Print token histograms if enabled
+            if self.print_token_stats or self.debug_mode:
+                self._print_token_histograms()
     
     def _process_api_single(self, q_sample: 'lg.QuerySample', temperature: float, top_k: int, top_p: float) -> None:
-        """Process a single query via API (for back-to-back mode)."""
-        # Check if using multimodal messages format
-        if self.use_messages or self.multimodal:
-            # Get messages from dataset (multimodal format)
-            if hasattr(self.dataset, 'messages') and q_sample.index < len(self.dataset.messages):
-                messages = self.dataset.messages[q_sample.index]
-            elif hasattr(self.dataset, 'processed_data'):
-                # Try to extract messages from dataset
-                df = self.dataset.processed_data
-                if 'messages' in df.columns:
-                    messages = df.iloc[q_sample.index]['messages']
-                else:
-                    # Fallback: try to construct messages from available fields
-                    self.logger.warning(f"Dataset doesn't have 'messages' column, attempting to construct from fields")
-                    messages = self._construct_messages_from_dataset(q_sample.index)
-            else:
-                raise RuntimeError(f"Multimodal mode requires 'messages' in dataset, but not found for index {q_sample.index}")
-            
-            # Send multimodal request
-            self._process_multimodal_request(q_sample.id, q_sample.index, messages, temperature, top_k, top_p)
-            return
+        """
+        Process a single query via API (for back-to-back mode).
         
+        This method sends ONE prompt in ONE API request - no batching.
+        Each call to this method results in a separate HTTP request to the API server.
+        """
         # Get input IDs from dataset
         input_ids = self.dataset.input_ids[q_sample.index]
         
@@ -960,13 +1057,6 @@ class LoadGenOfflineClient(LoadGenClient):
         """Process a batch via API."""
         batch_size = len(batch)
         self.logger.debug(f"Processing API batch with {batch_size} samples")
-        
-        # Check if using multimodal messages format
-        if self.use_messages or self.multimodal:
-            # Multimodal: send each request individually (messages format doesn't support batching easily)
-            for q_sample in batch:
-                self._process_api_single(q_sample, temperature, top_k, top_p)
-            return
         
         # Check if using SGLang with input_ids
         if self.use_input_ids:
@@ -1127,13 +1217,19 @@ class LoadGenOfflineClient(LoadGenClient):
             # Calculate token ratio
             token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
             
-            self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
-            if prompt_text:
-                self.logger.info(f"  Prompt: {prompt_preview}")
-            self.logger.info(f"  Text Response: {text_preview}")
-            self.logger.info(f"  Input Tokens: {input_token_count}")
-            self.logger.info(f"  Output Tokens: {token_count}")
-            self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
+            # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
+            if self.print_token_stats or self.debug_mode:
+                self._track_token_stats(input_token_count, token_count)
+            
+            # Debug mode: print query, text response, token counts and ratio
+            if self.debug_mode and self.test_mode == "accuracy":
+                self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
+                if prompt_text:
+                    self.logger.info(f"  Prompt: {prompt_preview}")
+                self.logger.info(f"  Text Response: {text_preview}")
+                self.logger.info(f"  Input Tokens: {input_token_count}")
+                self.logger.info(f"  Output Tokens: {token_count}")
+                self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
         
         # Convert output_ids to numpy array for LoadGen
         # LoadGen expects int32 token IDs as a contiguous array
@@ -1185,6 +1281,11 @@ class LoadGenOfflineClient(LoadGenClient):
                 "metadata": metadata
             }
         
+        # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
+        if self.print_token_stats or self.debug_mode:
+            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+            self._track_token_stats(input_token_count, token_count)
+        
         # Debug mode: print query, text response, token counts and ratio
         if self.debug_mode and self.test_mode == "accuracy":
             query_preview = text_prompt[:200] + "..." if text_prompt and len(text_prompt) > 200 else (text_prompt or "N/A")
@@ -1229,150 +1330,6 @@ class LoadGenOfflineClient(LoadGenClient):
         # Report completion to LoadGen
         lg.QuerySamplesComplete(response_array)
         self.logger.debug(f"Query {query_id} (index {query_index}): {n_tokens} tokens")
-    
-    def _construct_messages_from_dataset(self, index: int) -> List[Dict[str, Any]]:
-        """Construct messages format from dataset fields (fallback for multimodal)."""
-        # This is a fallback - ideally the dataset should already have 'messages' column
-        if not PANDAS_AVAILABLE or not hasattr(self.dataset, 'processed_data'):
-            raise RuntimeError("Pandas not available or dataset not processed")
-        
-        df = self.dataset.processed_data
-        row = df.iloc[index]
-        
-        # Try to construct messages from common fields
-        # This is a simplified version - actual implementation should match the task's formulate_loaded_sample
-        messages = []
-        
-        # Add system message if available
-        if 'system_message' in row:
-            messages.append({
-                "role": "system",
-                "content": str(row['system_message'])
-            })
-        elif 'system' in row:
-            messages.append({
-                "role": "system",
-                "content": str(row['system'])
-            })
-        
-        # Add user message with content
-        user_content = []
-        
-        # Add text content
-        text_fields = ['text', 'prompt', 'input', 'product_title', 'product_description']
-        text_content = ""
-        for field in text_fields:
-            if field in row and pd.notna(row[field]):
-                if text_content:
-                    text_content += "\n\n"
-                text_content += str(row[field])
-        
-        if text_content:
-            user_content.append({
-                "type": "text",
-                "text": text_content
-            })
-        
-        # Add image content if available
-        if 'product_image' in row and pd.notna(row['product_image']):
-            try:
-                from PIL import Image
-                image = row['product_image']
-                if isinstance(image, Image.Image):
-                    image_file = BytesIO()
-                    image_format = image.format or 'PNG'
-                    image.save(image_file, format=image_format)
-                    image_bytes = image_file.getvalue()
-                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                    user_content.append({
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/{image_format.lower()};base64,{image_base64}"
-                        }
-                    })
-            except Exception as e:
-                self.logger.warning(f"Could not process image for index {index}: {e}")
-        
-        if user_content:
-            messages.append({
-                "role": "user",
-                "content": user_content if len(user_content) > 1 else user_content[0].get("text", "")
-            })
-        
-        return messages
-    
-    def _process_multimodal_request(self, query_id: int, query_index: int, messages: List[Dict[str, Any]], 
-                                   temperature: float, top_k: int, top_p: float) -> None:
-        """Process a multimodal request with messages format."""
-        # Get server URL (with load balancing if enabled)
-        server_url = self._get_next_server_url()
-        endpoints = self._get_endpoints_for_url(server_url)
-        endpoint = endpoints['chat_completions']
-        
-        # Build API payload
-        api_payload = {
-            "model": self.model_name,
-            "messages": messages,
-            "max_tokens": self.max_tokens,
-            "temperature": temperature,
-            "top_p": top_p,
-            "stream": False
-        }
-        
-        # Add top_k if specified (via extra_body for vLLM)
-        if top_k is not None and top_k > 0:
-            api_payload["extra_body"] = {"top_k": top_k}
-        
-        # Add response_format if guided decoding is enabled
-        if self.use_guided_decoding:
-            # Note: response_format should be provided in the dataset or config
-            # For now, we'll skip it if not available
-            if hasattr(self, 'response_format') and self.response_format:
-                api_payload["response_format"] = self.response_format
-        
-        self.logger.debug(f"Sending multimodal request to {endpoint} for query {query_id}")
-        response = self._send_request_with_retry(endpoint, api_payload, server_url)
-        
-        api_result = response.json()
-        
-        # Extract text response
-        content = api_result.get("choices", [{}])[0].get("message", {}).get("content", "")
-        if content is None:
-            content = ""
-        
-        # Get token count from usage if available
-        usage = api_result.get("usage", {})
-        token_count = usage.get("completion_tokens", 0)
-        
-        # If no token count, estimate from text length
-        if token_count == 0 and self.tokenizer:
-            try:
-                token_ids = self.tokenizer.encode(content, add_special_tokens=False)
-                token_count = len(token_ids)
-            except Exception as e:
-                self.logger.warning(f"Error encoding response for token count: {e}")
-                token_count = len(content.split())  # Fallback: word count
-        
-        # Debug mode: print prompt (messages), text response and token count in accuracy mode
-        if self.debug_mode and self.test_mode == "accuracy":
-            messages_str = json.dumps(messages, indent=2)
-            messages_preview = messages_str[:200] + "..." if len(messages_str) > 200 else messages_str
-            text_preview = content[:200] + "..." if len(content) > 200 else content
-            self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
-            self.logger.info(f"  Prompt (Messages): {messages_preview}")
-            self.logger.info(f"  Text Response: {text_preview}")
-            self.logger.info(f"  Total Tokens: {token_count}")
-        
-        # Create Loadgen response (text content as bytes)
-        bytes_array = array.array("B", content.encode("utf-8"))
-        # CRITICAL: Keep array alive to prevent garbage collection before LoadGen reads it
-        self.response_arrays[query_id] = bytes_array
-        address, length = bytes_array.buffer_info()
-        size_in_bytes = length * bytes_array.itemsize
-        
-        response = lg.QuerySampleResponse(query_id, address, size_in_bytes, token_count)
-        lg.QuerySamplesComplete([response])
-        self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
     
     def _process_api_responses(self, choices: List[Dict], query_ids: List[int], query_indexes: List[int], text_prompts: Optional[List[str]] = None) -> None:
         """Process API responses and send to Loadgen."""
@@ -1422,6 +1379,11 @@ class LoadGenOfflineClient(LoadGenClient):
                     "output_text": text_response,
                     "metadata": metadata
                 }
+            
+            # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
+            if self.print_token_stats or self.debug_mode:
+                token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+                self._track_token_stats(input_token_count, token_count)
             
             # Debug mode: print query, text response, token counts and ratio
             if self.debug_mode and self.test_mode == "accuracy":
@@ -1573,6 +1535,9 @@ class LoadGenServerClient(LoadGenClient):
     def _async_process_query(self, input_ids_tensor: List[int], query_id: int):
         """Process a single query asynchronously via streaming API."""
         try:
+            # Get input token count for tracking
+            input_token_count = len(input_ids_tensor)
+            
             # Decode input IDs to text
             if self.tokenizer:
                 decoded = self.tokenizer.decode(input_ids_tensor, skip_special_tokens=True)
@@ -1585,6 +1550,10 @@ class LoadGenServerClient(LoadGenClient):
             
             n_tokens = len(output_tokens)
             self.logger.debug(f"Query {query_id}: {n_tokens} tokens")
+            
+            # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
+            if self.print_token_stats or self.debug_mode:
+                self._track_token_stats(input_token_count, n_tokens)
             
             if n_tokens <= 1:
                 self.logger.warning(f"Low token count for query {query_id}: {n_tokens}")
@@ -1806,6 +1775,14 @@ class LoadGenServerClient(LoadGenClient):
     
     def cleanup(self) -> None:
         """Cleanup resources including worker threads."""
+        # Print token statistics if enabled (before cleanup)
+        # Note: This is a fallback - main printing happens in base_harness after test completes
+        if (hasattr(self, 'print_token_stats') and self.print_token_stats) or \
+           (hasattr(self, 'debug_mode') and self.debug_mode):
+            if hasattr(self, 'input_token_counts') and self.input_token_counts:
+                self.logger.info("Server scenario: Generating token statistics and histograms before cleanup...")
+                self._print_token_histograms()
+        
         # Clear stored response arrays before stopping workers
         if hasattr(self, 'response_arrays'):
             self.logger.debug(f"Clearing {len(self.response_arrays)} stored response arrays")

@@ -99,8 +99,8 @@ class GPTOSS120BHarness(BaseHarness):
         self.performance_top_p = top_p or self.generation_config.get('top_p', 1.0)
         
         # Accuracy mode parameters (default to deterministic)
-        self.accuracy_temperature = accuracy_temperature if accuracy_temperature is not None else 0.001
-        self.accuracy_top_k = accuracy_top_k if accuracy_top_k is not None else 1
+        self.accuracy_temperature = accuracy_temperature if accuracy_temperature is not None else 1.0
+        self.accuracy_top_k = accuracy_top_k if accuracy_top_k is not None else -1
         self.accuracy_top_p = accuracy_top_p if accuracy_top_p is not None else 1.0
         
         self.logger.info("GPT-OSS-120B harness initialized")

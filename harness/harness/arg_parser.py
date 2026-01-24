@@ -97,6 +97,12 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
     # Debug arguments
     parser.add_argument("--debug-mode", action="store_true",
                        help="Enable debug mode: print text response and total tokens in accuracy mode")
+    parser.add_argument("--print-token-stats", action="store_true",
+                       help="Print token statistics (input/output token counts, ratios) and generate histograms")
+    
+    # LoadGen audit config
+    parser.add_argument("--audit-config", type=str, default=None,
+                       help="Path to audit configuration file for LoadGen (passed to StartTestWithLogSettings)")
     
     # Note: --engine-args is NOT added here because it must be added last (after all other arguments)
     # when using argparse.REMAINDER. It should be added in harness_main.py after all other arguments.
@@ -224,6 +230,8 @@ def parse_common_harness_args(args):
         'input_ids_column': args.input_ids_column,
         'output_column': args.output_column,
         'engine_args': engine_args,
-        'debug_mode': args.debug_mode if hasattr(args, 'debug_mode') else False
+        'debug_mode': args.debug_mode if hasattr(args, 'debug_mode') else False,
+        'print_token_stats': args.print_token_stats if hasattr(args, 'print_token_stats') else False,
+        'audit_config': args.audit_config if hasattr(args, 'audit_config') else None
     }
 

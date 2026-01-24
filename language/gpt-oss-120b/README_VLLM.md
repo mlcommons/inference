@@ -1,20 +1,16 @@
 # Instructions and documentation on VLLM Backend 
 
-
 ## Run with VLLM backend
-```
-python run_mlperf.py --backend vllm --scenario offline --input-file data/accuracy_eval_tokenized.pkl
-```
 
 ## Specify custom vLLM server URL
 
 ### Run accuracy 
 ```
-python run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario server --input-file data/accuracy_eval_tokenized.pkl
+python3  run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario offline  --input-file acc_eval_ref.parquet --mlperf-conf mlperf_gptoss.conf --accuracy --max-concurrency 4395 --timeout 7200 &
 ```
 ### Run performance 
 ```
-python run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario offline --input-file perf_eval_ref.parquet --mlperf-conf mlperf_gptoss.conf --max-new-tokens 10240 --max-concurrency 6396
+python run_mlperf.py --backend vllm --server-url http://localhost:8000 --scenario offline --input-file perf_eval_ref.parquet --mlperf-conf mlperf_gptoss.conf --max-new-tokens 10240 --max-concurrency 6396 --timeout 7200
 ```
 
 ## For evaluating accuracy . 

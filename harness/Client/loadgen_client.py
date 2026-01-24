@@ -932,7 +932,7 @@ class LoadGenOfflineClient(LoadGenClient):
                     "stream": False
                 }
             
-            self.logger.debug(f"Sending API request to {endpoint} for query {q_sample.id}")
+            self.logger.debug(f"Sending API request to {endpoint} for query {q_sample.id} and temperture {temperature}, top_k {top_k}, top_p {top_p}")
             response = self._send_request_with_retry(endpoint, api_payload, server_url)
             
             api_result = response.json()
@@ -1050,7 +1050,7 @@ class LoadGenOfflineClient(LoadGenClient):
                 "stream": False
             }
         
-        self.logger.debug(f"Sending API batch request to {endpoint} with {len(text_prompts)} prompts")
+        self.logger.debug(f"Sending API batch request to {endpoint} with {len(text_prompts)} prompts, max tokens {self.max_tokens}, temperature {temperature}, top_k {top_k}, top_p {top_p}")
         response = self._send_request_with_retry(endpoint, api_payload, server_url)
         
         api_result = response.json()

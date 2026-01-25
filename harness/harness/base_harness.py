@@ -572,6 +572,10 @@ class BaseHarness:
         if hasattr(self, 'print_token_stats') and self.print_token_stats:
             client_config['print_token_stats'] = True
         
+        # Add visualizations_output_dir to client config so histograms can be saved there
+        if hasattr(self, 'visualizations_output_dir'):
+            client_config['visualizations_output_dir'] = str(self.visualizations_output_dir)
+        
         self.client = create_loadgen_client(
             scenario=self.scenario,
             model_name=self.model_name,

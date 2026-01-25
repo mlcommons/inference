@@ -807,8 +807,14 @@ class LoadGenClient(BaseClient):
             import numpy as np
             from pathlib import Path
             
-            # Create output directory if it doesn't exist
-            output_dir = Path(self.config.get('output_dir', './harness_output')) if self.config else Path('./harness_output')
+            # Use visualizations_output_dir if available, otherwise construct from output_dir
+            if self.config and 'visualizations_output_dir' in self.config:
+                output_dir = Path(self.config['visualizations_output_dir'])
+            else:
+                # Fallback: construct visualizations directory from output_dir
+                base_output_dir = Path(self.config.get('output_dir', './harness_output')) if self.config else Path('./harness_output')
+                output_dir = base_output_dir / 'visualizations'
+            
             output_dir.mkdir(parents=True, exist_ok=True)
             
             fig, axes = plt.subplots(1, 3, figsize=(18, 5))

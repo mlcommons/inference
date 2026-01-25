@@ -785,7 +785,7 @@ class LoadGenClient(BaseClient):
         if input_token_count > 0:
             self.input_token_counts.append(input_token_count)
             self.output_token_counts.append(output_token_count)
-            ratio = output_token_count / input_token_count if input_token_count > 0 else 0.0
+            ratio = input_token_count / output_token_count if output_token_count > 0 else 0.0
             self.token_ratios.append(ratio)
     
     def _print_token_histograms(self):
@@ -829,7 +829,7 @@ class LoadGenClient(BaseClient):
             
             # Token ratio histogram
             axes[2].hist(self.token_ratios, bins=50, edgecolor='black', alpha=0.7, color='orange')
-            axes[2].set_xlabel('Output/Input Token Ratio')
+            axes[2].set_xlabel('Input/Output Token Ratio')
             axes[2].set_ylabel('Frequency')
             axes[2].set_title(f'Token Ratio Distribution\n(Mean: {np.mean(self.token_ratios):.4f}, Median: {np.median(self.token_ratios):.4f})')
             axes[2].grid(True, alpha=0.3)
@@ -847,7 +847,7 @@ class LoadGenClient(BaseClient):
                            f"Min: {np.min(self.input_token_counts)}, Max: {np.max(self.input_token_counts)}")
             self.logger.info(f"Output Tokens - Mean: {np.mean(self.output_token_counts):.1f}, Median: {np.median(self.output_token_counts):.1f}, "
                            f"Min: {np.min(self.output_token_counts)}, Max: {np.max(self.output_token_counts)}")
-            self.logger.info(f"Token Ratio (output/input) - Mean: {np.mean(self.token_ratios):.4f}, Median: {np.median(self.token_ratios):.4f}, "
+            self.logger.info(f"Token Ratio (input/output) - Mean: {np.mean(self.token_ratios):.4f}, Median: {np.median(self.token_ratios):.4f}, "
                            f"Min: {np.min(self.token_ratios):.4f}, Max: {np.max(self.token_ratios):.4f}")
             self.logger.info(f"Histograms saved to: {histogram_path}")
             self.logger.info("=" * 60)
@@ -1214,8 +1214,8 @@ class LoadGenOfflineClient(LoadGenClient):
             text_preview = output_text[:200] + "..." if len(output_text) > 200 else output_text
             prompt_preview = prompt_text[:200] + "..." if prompt_text and len(prompt_text) > 200 else (prompt_text or "N/A")
             
-            # Calculate token ratio
-            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+            # Calculate token ratio (input/output)
+            token_ratio = (input_token_count / token_count) if token_count > 0 else 0.0
             
             # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
             if self.print_token_stats or self.debug_mode:
@@ -1229,7 +1229,7 @@ class LoadGenOfflineClient(LoadGenClient):
                 self.logger.info(f"  Text Response: {text_preview}")
                 self.logger.info(f"  Input Tokens: {input_token_count}")
                 self.logger.info(f"  Output Tokens: {token_count}")
-                self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
+                self.logger.info(f"  Token Ratio (input/output): {token_ratio:.4f}")
         
         # Convert output_ids to numpy array for LoadGen
         # LoadGen expects int32 token IDs as a contiguous array
@@ -1283,7 +1283,6 @@ class LoadGenOfflineClient(LoadGenClient):
         
         # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
         if self.print_token_stats or self.debug_mode:
-            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
             self._track_token_stats(input_token_count, token_count)
         
         # Debug mode: print query, text response, token counts and ratio
@@ -1291,15 +1290,15 @@ class LoadGenOfflineClient(LoadGenClient):
             query_preview = text_prompt[:200] + "..." if text_prompt and len(text_prompt) > 200 else (text_prompt or "N/A")
             text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
             
-            # Calculate token ratio
-            token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+            # Calculate token ratio (input/output)
+            token_ratio = (input_token_count / token_count) if token_count > 0 else 0.0
             
             self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
             self.logger.info(f"  Prompt: {query_preview}")
             self.logger.info(f"  Text Response: {text_preview}")
             self.logger.info(f"  Input Tokens: {input_token_count}")
             self.logger.info(f"  Output Tokens: {token_count}")
-            self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
+            self.logger.info(f"  Token Ratio (input/output): {token_ratio:.4f}")
         
         # Convert token_ids to numpy array for LoadGen
         # LoadGen expects int32 token IDs as a contiguous array
@@ -1382,7 +1381,6 @@ class LoadGenOfflineClient(LoadGenClient):
             
             # Track token statistics (always track if print_token_stats is enabled, or in debug mode)
             if self.print_token_stats or self.debug_mode:
-                token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
                 self._track_token_stats(input_token_count, token_count)
             
             # Debug mode: print query, text response, token counts and ratio
@@ -1391,15 +1389,15 @@ class LoadGenOfflineClient(LoadGenClient):
                 query_preview = query_prompt[:200] + "..." if query_prompt and len(query_prompt) > 200 else (query_prompt or "N/A")
                 text_preview = text_response[:200] + "..." if len(text_response) > 200 else text_response
                 
-                # Calculate token ratio
-                token_ratio = (token_count / input_token_count) if input_token_count > 0 else 0.0
+                # Calculate token ratio (input/output)
+                token_ratio = (input_token_count / token_count) if token_count > 0 else 0.0
                 
                 self.logger.info(f"[DEBUG] Query {query_id} (index {query_index}):")
                 self.logger.info(f"  Query: {query_preview}")
                 self.logger.info(f"  Text Response: {text_preview}")
                 self.logger.info(f"  Input Tokens: {input_token_count}")
                 self.logger.info(f"  Output Tokens: {token_count}")
-                self.logger.info(f"  Token Ratio (output/input): {token_ratio:.4f}")
+                self.logger.info(f"  Token Ratio (input/output): {token_ratio:.4f}")
             
             # Convert token_ids to numpy array for LoadGen
             # LoadGen expects int32 token IDs as a contiguous array

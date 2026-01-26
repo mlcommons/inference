@@ -104,7 +104,7 @@ class Model:
                 # Save to video to reduce mlperf_log_accuracy.json size
                 output_path = Path(self.video_output_path, f"{self.prompts[i]}-0.mp4")
                 logging.info(f"Saving {q} to {output_path}")
-                export_to_video(output[0], str(output_path), fps=16)
+                export_to_video(output[0], str(output_path), fps=self.fps)
                 
                 with open(output_path, "rb") as f:
                     resp = f.read()

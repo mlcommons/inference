@@ -99,8 +99,7 @@ class Model:
                 if self.fixed_latent is not None:
                     pipeline_kwargs["latents"] = self.fixed_latent
                 output = self.pipe(**pipeline_kwargs).frames[0]
-                output = output.detach().numpy()
-                
+
                 # Save to video to reduce mlperf_log_accuracy.json size
                 output_path = Path(self.video_output_path, f"{self.prompts[i]}-0.mp4")
                 logging.info(f"Saving {q} to {output_path}")

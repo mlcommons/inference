@@ -216,7 +216,7 @@ def get_args():
         "--performance-sample-count",
         type=int,
         help="performance sample count",
-        default=5000,
+        default=248,
     )
     parser.add_argument(
         "--accuracy",
@@ -320,7 +320,8 @@ def run_mlperf(args, config):
         if args.count:
             settings.min_query_count = count
             settings.max_query_count = count
-        count = len(dataset)
+        if not count_override:
+            count = len(dataset)
 
         if args.samples_per_query:
             settings.multi_stream_samples_per_query = args.samples_per_query

@@ -654,7 +654,13 @@ def define_env(env):
 
         if implementation == "reference" and not extra_variation_tags:
             if not model.endswith("-99"):
-                model_base_name = model.replace("-99.9", "").replace("-99", "").replace("-95", "")
+                model_base_name = model.replace(
+                    "-99.9",
+                    "").replace(
+                    "-99",
+                    "").replace(
+                    "-95",
+                    "")
                 readme_suffix += f"{pre_space}* If you want to download the official MLPerf model and dataset for {model} you can follow [this README](get-{model_base_name}-data.md).\n"
             if model == "resnet50":
                 readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."

@@ -1,5 +1,11 @@
 # MLPerf Inference reference implementation for DLRMv3
 
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site(WIP)]() for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 ## Install dependencies and build loadgen
 
 The reference implementation has been tested on a single host, with x86_64 CPUs and 8 NVIDIA H100/B200 GPUs. Dependencies can be installed below,
@@ -17,10 +23,29 @@ The generated dataset has 2TB size, and contains 5 million users interacting wit
 
 Only 1% of the dataset is used in the inference benchmark. The sampled DLRMv3 dataset and trained checkpoint are available at https://inference.mlcommons-storage.org/.
 
+### Download dataset through MLCFlow Automation
+
+```
+mlcr get-dataset-mlperf-inference-dlrmv3-synthetic-streaming,_mlc,_r2-downloader --outdirname=<path_to_download> -j
+```
+
+### Download dataset through Native method
+
 Script to download the sampled dataset used in inference benchmark:
 ```
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/dlrm-v3-dataset.uri
 ```
+
+## Model download
+
+### Download model through MLCFlow Automation
+
+```
+mlcr get-ml-model-dlrm-v3,_mlc,_r2-downloader --outdirname=<path_to_download> -j
+```
+
+### Download model through Native method
+
 Script to download the 1TB trained checkpoint:
 ```
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/dlrm-v3-checkpoint.uri
@@ -82,7 +107,7 @@ Set `run.compute_eval` will run the accuracy test and dump prediction outputs in
 ```
 python accuracy.py --path path/to/mlperf_log_accuracy.json
 ```
-We use normalized entropy (NE), accuracy, and AUC as the metrics to evaluate the model quality. For accepted submissions, all three metrics (NE, Accuracy, AUC) must be within 99% of the reference implementation values. The accuracy for the reference implementation evaluated on 34,996 requests across 10 inference timestamps are listed below:
+We use normalized entropy (NE), accuracy, and AUC as the metrics to evaluate the model quality. For accepted submissions, all three metrics (NE, Accuracy, AUC) must be within 99.9% of the reference implementation values. The accuracy for the reference implementation evaluated on 34,996 requests across 10 inference timestamps are listed below:
 ```
 NE: 86.687%
 Accuracy: 69.651%

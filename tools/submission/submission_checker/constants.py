@@ -184,6 +184,8 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "yolo-95": ("mAP", 53.4 * 0.95),
+            "yolo-99": ("mAP", 53.4 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -229,6 +231,9 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "dlrm-v3": 34996,
+        },
+        "accuracy-sample-count": {
+            "gpt-oss-120b": 4395,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -575,6 +580,7 @@ MODEL_CONFIG = {
             "rgat": 788379,
             "pointpainting": 1024,
         },
+        "accuracy-sample-count": {},
         "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,
@@ -901,6 +907,7 @@ MODEL_CONFIG = {
             "deepseek-r1": 4388,
             "whisper": 1633,
         },
+        "accuracy-sample-count": {},
         "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,

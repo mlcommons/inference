@@ -227,8 +227,10 @@ class Runner:
                         .float()
                         .numpy()
                     )
-                    ts_idx_val = float(qitem.ts_idx) if qitem.ts_idx is not None else -1.0
-                    query_idx_val = float(qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
+                    ts_idx_val = float(
+                        qitem.ts_idx) if qitem.ts_idx is not None else -1.0
+                    query_idx_val = float(
+                        qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
                     np_array = np.concatenate(
                         [
                             np.array([ts_idx_val]).astype(np.float32),
@@ -269,8 +271,10 @@ class Runner:
                         .float()
                         .numpy()
                     )
-                    ts_idx_val = float(qitem.ts_idx) if qitem.ts_idx is not None else -1.0
-                    query_idx_val = float(qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
+                    ts_idx_val = float(
+                        qitem.ts_idx) if qitem.ts_idx is not None else -1.0
+                    query_idx_val = float(
+                        qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
                     np_array = np.concatenate(
                         [
                             np.array([ts_idx_val]).astype(np.float32),
@@ -731,7 +735,8 @@ def run(
             if is_streaming:
                 ds.init_sut()  # pyre-ignore [16]
             result = ds.get_samples(warmup_ids)
-            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
+            if isinstance(result, list) and len(
+                    result) > 0 and isinstance(result[0], tuple):
                 for sample, _, _ in result:
                     model_family.predict(sample)
             elif isinstance(result, Samples):

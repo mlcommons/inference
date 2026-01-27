@@ -38,7 +38,7 @@ cd inference/text_to_video
 # Run inference (supports data parallel)
 ./launch.sh python -m torch.distributed.run --nproc_per_node=8 run_inference.py
 
-# Evaluate
+# Evaluate (set GPU_COUNT to 0 when running the compliance test)
 ./launch.sh python run_evaluation.py
 ```
 

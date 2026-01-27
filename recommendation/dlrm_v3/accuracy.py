@@ -64,7 +64,8 @@ def main() -> None:
     logger.warning(f"results have {len(results)} entries")
     for result in results:
         data = np.frombuffer(bytes.fromhex(result["data"]), np.float32)
-        # Format: [ts_idx, query_idx, predictions..., labels..., weights..., candidate_size]
+        # Format: [ts_idx, query_idx, predictions..., labels..., weights...,
+        # candidate_size]
         num_candidates = data[-1].astype(int)
         assert len(data) == 3 + num_candidates * 3
         mt_target_preds = torch.from_numpy(data[2:2 + num_candidates])

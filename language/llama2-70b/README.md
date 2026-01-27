@@ -24,7 +24,7 @@ conda activate llama2-70b
 
 # Install packages
 conda install pybind11==2.10.4 -c conda-forge -y
-python -m pip install torch==2.2.0.dev20231006+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+python -m pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 pip install transformers==4.31.0 nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0
 
 export CUR_DIR=${PWD}

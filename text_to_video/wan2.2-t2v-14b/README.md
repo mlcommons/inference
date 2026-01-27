@@ -2,6 +2,26 @@
 
 Text-to-video generation using Wan2.2 T2V-A14B-Diffusers model and VBench evaluation.
 
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site(WIP)]() for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
+## Model and Dataset download
+
+### Download model through MLCFlow Automation
+
+```
+mlcr get-ml-model-wan2,_mlc,_r2-downloader,_wan2_2_t2v_a14b --outdirname=<Download path> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+```
+mlcr get-dataset-mlperf-inference-text-to-video,_mlc,_r2-downloader --outdirname=<path_to_download> -j
+```
+
 ## Quick Start
 
 ```bash

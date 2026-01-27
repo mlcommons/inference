@@ -164,7 +164,52 @@ def main():
         ],
     ]
 
-    if args.version == "5.0":
+    if args.version == "6.0":
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": [],
+                "bert-99": [],
+                "bert-99.9": [],
+                "stable-diffusion-xl": [],
+                "pointpainting": [],
+                "dlrm-v3": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "llama2-70b-99": ["Server", "Offline", "Interactive"],
+                "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
+                "mixtral-8x7b": ["Server", "Offline"],
+                "rgat": ["Offline"],
+                "llama3.1-8b": ["Server", "Offline", "Interactive"],
+                "llama3.1-405b": ["Offline", "Server"],
+                "deepseek-r1": ["Server", "Offline", "Interactive"],
+                "whisper": ["Offline"],
+                "gpt-oss-120b": ["Offline", "Interactive", "Server"],
+                "qwen3-vl-235b-a22b": ["Server", "Offline", "Interactive"],
+                "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": ["SingleStream", "Offline"],
+                "dlrm-v2-99": [],
+                "dlrm-v2-99.9": [],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "llama2-70b-interactive-99": [],
+                "llama2-70b-interactive-99.9": [],
+                "llama3.1-405b": [],
+                "llama3.1-8b-edge": ["SingleStream", "Offline"],
+                "rgat": [],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
+                "whisper": ["Offline"],
+                "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+                "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+            },
+        }
+    elif args.version == "5.0":
         filter_scenarios = {
             "datacenter": {
                 "resnet": ["Server", "Offline"],
@@ -185,7 +230,11 @@ def main():
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
                 "llama3.1-405b": ["Offline", "Server"],
-                "pointpainting": []
+                "rgat": ["Offline"],
+                "pointpainting": [],
+                "gpt-oss-120b": ["Offline"],
+                "qwen3-vl-235b-a22b": ["Server", "Offline"],
+                "dlrm-v3": ["Server", "Offline"],
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],

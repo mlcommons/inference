@@ -5,7 +5,7 @@ name: Test for MLPerf inference retinanet submission generation using MLC script
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master-off", "dev-off" ]
     paths:
       - vision/classification_and_detection/**
       - tools/submission/**

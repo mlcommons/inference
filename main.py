@@ -43,7 +43,9 @@ def define_env(env):
             # Tip
             if model not in ["rnnt", "gptj-99", "gptj-99.9"]:
                 code_version = "r5.1-dev"
-            if "99.9" not in model and implementation_tips:
+            if model in ["yolo-95", "yolo-99"]:
+                code_version = "r6.0-dev"
+            if "99.9" not in model and "yolo-99" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
                 if model.lower() in ["sdxl"]:
@@ -155,7 +157,7 @@ def define_env(env):
             if category == "Edge":
                 scenarios = ["Offline", "SingleStream"]
                 if model.lower() in [
-                        "resnet50", "retinanet"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
+                        "resnet50", "retinanet", "yolo-95", "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")
@@ -588,7 +590,7 @@ def define_env(env):
         if implementation.lower() == "reference" and model.lower() not in [
                 "pointpainting", "llama3_1-8b", "llama3_1-8b-edge", "deepseek-r1", "whisper"]:
 
-            info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
+            info += f"{pre_space}    - `_r5.1-dev` could also be given instead of `_r6.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.MLC_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
             info += f"{pre_space}    - Add `--env.MLC_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
@@ -652,7 +654,7 @@ def define_env(env):
 
         if implementation == "reference" and not extra_variation_tags:
             if not model.endswith("-99"):
-                model_base_name = model.replace("-99.9", "").replace("-99", "")
+                model_base_name = model.replace("-99.9", "").replace("-99", "").replace("-95", "")
                 readme_suffix += f"{pre_space}* If you want to download the official MLPerf model and dataset for {model} you can follow [this README](get-{model_base_name}-data.md).\n"
             if model == "resnet50":
                 readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."

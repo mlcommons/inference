@@ -38,7 +38,7 @@ from generative_recommenders.common import set_dev_mode, set_verbose_level
 import torch
 import numpy as np
 import mlperf_loadgen as lg  # @manual
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import time
 import sys
 import os
@@ -227,8 +227,16 @@ class Runner:
                         .float()
                         .numpy()
                     )
-                    response_array = array.array(
-                        "B", query_mt_target_preds.tobytes())
+                    ts_idx_val = float(qitem.ts_idx) if qitem.ts_idx is not None else -1.0
+                    query_idx_val = float(qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
+                    np_array = np.concatenate(
+                        [
+                            np.array([ts_idx_val]).astype(np.float32),
+                            np.array([query_idx_val]).astype(np.float32),
+                            query_mt_target_preds,
+                        ]
+                    )
+                    response_array = array.array("B", np_array.tobytes())
                     bi = response_array.buffer_info()
                     # since we send buffer to loadgen, needs `response_array`
                     # in memory during send
@@ -261,8 +269,12 @@ class Runner:
                         .float()
                         .numpy()
                     )
+                    ts_idx_val = float(qitem.ts_idx) if qitem.ts_idx is not None else -1.0
+                    query_idx_val = float(qitem.query_idx[i]) if qitem.query_idx is not None else -1.0
                     np_array = np.concatenate(
                         [
+                            np.array([ts_idx_val]).astype(np.float32),
+                            np.array([query_idx_val]).astype(np.float32),
                             query_mt_target_preds,
                             query_mt_target_labels,
                             query_mt_target_weights,
@@ -534,7 +546,9 @@ class StreamingQuerySampler:
         """
         self.ds.unload_query_samples(sample_list)
 
-    def get_samples(self, id_list: List[int]) -> List[Samples]:
+    def get_samples(
+        self, id_list: List[int]
+    ) -> List[Tuple[Samples, int, List[int]]]:
         """
         Get samples for a batch of queries, handling timestamp boundaries.
 
@@ -542,7 +556,10 @@ class StreamingQuerySampler:
             id_list: List of query identifiers.
 
         Returns:
-            List of Samples objects, potentially spanning multiple timestamps.
+            List of tuples, each containing:
+                - Samples object for the batch.
+                - ts_idx: The timestamp index for this batch.
+                - query_idx: List of query indices for this batch.
         """
         batch_size: int = len(id_list)
         with self._lock:
@@ -562,35 +579,39 @@ class StreamingQuerySampler:
             else:
                 self.ts_processed_cnt = begin_query_idx + batch_size
         # requests of current ts
-        outputs: List[Samples] = []
+        outputs: List[Tuple[Samples, int, List[int]]] = []
         if end_request_idx > begin_request_idx:
+            query_idx_list: List[int] = self.run_order[curr_ts_idx][begin_request_idx:end_request_idx]
             output: Samples = self.ds.get_samples_with_ts(
-                self.run_order[curr_ts_idx][begin_request_idx:end_request_idx],
+                query_idx_list,
                 curr_ts_idx + self.start_ts,
             )
-            outputs.append(output)
+            outputs.append((output, curr_ts_idx, query_idx_list))
         else:
             if begin_request_idx < curr_ts_unique_requests:
+                query_idx_list: List[int] = self.run_order[curr_ts_idx][begin_request_idx:]
                 output: Samples = self.ds.get_samples_with_ts(
-                    self.run_order[curr_ts_idx][begin_request_idx:],
+                    query_idx_list,
                     curr_ts_idx + self.start_ts,
                 )
-                outputs.append(output)
+                outputs.append((output, curr_ts_idx, query_idx_list))
             if end_request_idx > 0:
+                query_idx_list = self.run_order[curr_ts_idx][0:end_request_idx]
                 output = self.ds.get_samples_with_ts(
-                    self.run_order[curr_ts_idx][0:end_request_idx],
+                    query_idx_list,
                     curr_ts_idx + self.start_ts,
                 )
-                outputs.append(output)
+                outputs.append((output, curr_ts_idx, query_idx_list))
         # requests of next ts
         if begin_query_idx + batch_size > curr_ts_queries:
+            query_idx_list = self.run_order[curr_ts_idx + 1][
+                : begin_query_idx + batch_size - curr_ts_queries
+            ]
             output: Samples = self.ds.get_samples_with_ts(
-                self.run_order[curr_ts_idx + 1][
-                    : begin_query_idx + batch_size - curr_ts_queries
-                ],
+                query_idx_list,
                 curr_ts_idx + 1 + self.start_ts,
             )
-            outputs.append(output)
+            outputs.append((output, curr_ts_idx + 1, query_idx_list))
         return outputs
 
     def get_item_count(self) -> int:
@@ -709,11 +730,14 @@ def run(
         for _ in range(4 * int(os.environ.get("WORLD_SIZE", 1))):
             if is_streaming:
                 ds.init_sut()  # pyre-ignore [16]
-            sample: Union[Samples, List[Samples]] = ds.get_samples(warmup_ids)
-            if isinstance(sample, Samples):
-                model_family.predict(sample)
+            result = ds.get_samples(warmup_ids)
+            if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
+                for sample, _, _ in result:
+                    model_family.predict(sample)
+            elif isinstance(result, Samples):
+                model_family.predict(result)
             else:
-                for s in sample:
+                for s in result:
                     model_family.predict(s)
         ds.unload_query_samples(None)
     for h in logger.handlers:

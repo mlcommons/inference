@@ -17,9 +17,35 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 
 Please see [here](https://docs.mlcommons.org/inference/benchmarks/) for the MLPerf inference documentation website which includes automated commands to run MLPerf inference benchmarks using different implementations.
 
+## MLPerf Inference v6.0 (submission deadline February 13, 2025)
+
+For submissions, please use the master branch and any commit since the [6.0 seed release](https://github.com/mlcommons/inference/commit/f131a0d29ccae9a967d93ffe96f66b1be3537d3b) although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
+
+For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/power) (needs special access) and any commit of the power-dev repository after the [code-freeze](https://github.com/mlcommons/power-dev/commit/c4b3ad8202fbd8ac28d77149e5e7aeadb725bbf2)
+
+
+| model | reference app | framework | dataset | category
+| ---- | ---- | ---- | ---- | ---- |
+| resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | tensorflow, onnx, tvm, ncnn | imagenet2012 | edge |
+| yolo v11 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection/yolo) | pytorch, onnx | COCO safe subset | edge |
+| bert | [language/bert](https://github.com/mlcommons/inference/tree/master/language/bert) | tensorflow, pytorch, onnx | squad-1.1 | edge |
+| dlrm-v3 | [recommendation/dlrm_v3](https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v3/pytorch) | pytorch | Synthetic dataset | datacenter |
+| 3d-unet | [vision/medical_imaging/3d-unet-kits19](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19) | pytorch, tensorflow, onnx | KiTS19 | edge |
+| Wan2.2-T2V-A14B-Diffusers | [text_to_video](https://github.com/mlcommons/inference/tree/master/text_to_video) | pytorch | COCO 2014 | datacenter |
+| llama2-70b | [language/llama2-70b](https://github.com/mlcommons/inference/tree/master/language/llama2-70b) | pytorch | OpenOrca | datacenter |
+| llama3.1-405b | [language/llama3-405b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-405b) | pytorch | LongBench, LongDataCollections, Ruler, GovReport | datacenter |
+| mixtral-8x7b | [language/mixtral-8x7b](https://github.com/mlcommons/inference/tree/master/language/mixtral-8x7b) | pytorch | OpenOrca, MBXP, GSM8K | datacenter |
+| rgat | [graph/rgat](https://github.com/mlcommons/inference/tree/master/graph/R-GAT) | pytorch | IGBH | datacenter |
+| pointpainting | [automotive/3d-object-detection](https://github.com/mlcommons/inference/tree/master/automotive/3d-object-detection) | pytorch, onnx | Waymo Open Dataset | edge |
+| llama3.1-8b | [language/llama3.1-8b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-8b)| pytorch | CNN-Daily Mail | edge,datacenter |
+| deepseek-r1 | [language/deepseek-r1](https://github.com/mlcommons/inference/tree/master/language/deepseek-r1)| pytorch | AIME, MATH500, gpqa, MMLU-Pro, livecodebench(code_generation_lite) | datacenter |
+| whisper | [speech2text](https://github.com/mlcommons/inference/tree/master/speech2text)| pytorch | LibriSpeech | edge,datacenter |
+| GPT–OSS | [language/gpt-oss-120b](https://github.com/mlcommons/inference/tree/master/language/gpt-oss-120b)| pytorch | mlperf_gpt_oss_performance, mlperf_gpt_oss_accuracy | datacenter |
+| VLM | [language/VLM](https://github.com/mlcommons/inference/tree/master/multimodal/qwen3-vl)| pytorch | Shopify-product-catalogue | datacenter |
+
 ## MLPerf Inference v5.1 (submission deadline August 1, 2025)
 
-For submissions, please use the master branch and any commit since the [5.1 seed release (soon to be released)]() although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
+For submissions, please use the master branch and any commit since the [5.1 seed release]() although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
 
 For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/power) (needs special access) and any commit of the power-dev repository after the [code-freeze](https://github.com/mlcommons/power-dev/commit/c4b3ad8202fbd8ac28d77149e5e7aeadb725bbf2)
 

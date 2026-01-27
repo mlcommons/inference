@@ -1,9 +1,7 @@
 """A checker for MLPerf Inference submissions from v5.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import division, print_function, unicode_literals
 
 import argparse
 import datetime
@@ -12,7 +10,6 @@ import logging
 import os
 import re
 import sys
-
 from glob import glob
 
 from log_parser import MLPerfLog
@@ -67,7 +64,7 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
-            "dlrm-v3": ["Server", "Offline"],
+            "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -216,6 +213,7 @@ MODEL_CONFIG = {
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -260,6 +258,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
             "yolo-95": 5000,
             "yolo-99": 5000,
@@ -287,6 +286,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
             "yolo-95": 1525,
             "yolo-99": 1525,
@@ -365,6 +365,7 @@ MODEL_CONFIG = {
             "dlrm-v3": {"Server": 270336, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1}
         },
     },
     "v5.1": {

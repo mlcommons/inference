@@ -39,7 +39,7 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
-            "dlrm-v3": ["Server", "Offline"],
+            "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -186,6 +186,7 @@ MODEL_CONFIG = {
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -230,6 +231,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
         },
         "dataset-size": {
@@ -255,6 +257,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
         },
         # model_mapping.json is expected in the root directory of the
@@ -329,6 +332,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1}
         },
         "models_TEST01": [
             "resnet",
@@ -343,11 +347,13 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "whisper",
+            "wan-2.2-t2v-a14b"
         ],
         "models_TEST04": [
             "resnet",
             "stable-diffusion-xl",
             "pointpainting",
+            "wan-2.2-t2v-a14b"
         ],
         "models_TEST06": [
             "llama2-70b-99",

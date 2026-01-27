@@ -186,7 +186,7 @@ MODEL_CONFIG = {
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
-            "wan-2.2-t2v-a14b": ("vbench", 70.48 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -1305,7 +1305,8 @@ ACC_PATTERN = {
     "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
-    "exact_match": r".*'exact_match':\s([\d.]+).*"
+    "exact_match": r".*'exact_match':\s([\d.]+).*",
+    "vbench_score": r".*'vbench_score':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

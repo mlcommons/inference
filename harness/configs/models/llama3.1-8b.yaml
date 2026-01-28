@@ -1,0 +1,14 @@
+# ============================================================================
+# Llama 3.1 8B Model Configuration
+# ============================================================================
+
+name: llama3.1-8b
+description: "Model configuration for Llama 3.1 8B"
+
+model_specific:
+  default_model_name: "meta-llama/Llama-3.1-8B-Instruct"
+  default_dataset: "llama3.1-8b"
+
+# Model-specific settings can be added here
+# Example: custom tokenizer settings, generation parameters, etc.
+

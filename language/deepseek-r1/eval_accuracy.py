@@ -912,7 +912,7 @@ def main():
                 "Please specify dataset file when input-file is mlperf_accuracy_log.json")
 
         # Use default checkpoint path from run_mlperf.py
-        checkpoint_path = "deepseek-ai/DeepSeek-R1"
+        checkpoint_path = "deepseek-ai/DeepSeek-R1-0528"
         logger.info(f"Using default checkpoint path: {checkpoint_path}")
 
         # Process MLPerf log

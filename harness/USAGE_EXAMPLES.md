@@ -1,0 +1,602 @@
+# Comprehensive Usage Examples
+
+This document provides detailed examples for using the MLPerf Inference Harness with various configurations and options.
+
+## Table of Contents
+
+1. [Basic Usage](#basic-usage)
+2. [Model Configuration](#model-configuration)
+3. [Dataset Configuration](#dataset-configuration)
+4. [Endpoint Configuration](#endpoint-configuration)
+5. [Backend Configuration](#backend-configuration)
+6. [Scenario Examples](#scenario-examples)
+7. [Advanced Examples](#advanced-examples)
+
+### Sample command for Server
+```bash
+ python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path cnn_eval.json --dataset-name llama3.1-8b --server-config backendserver/simple.yaml --scenario Server --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SERVER --lg-model-name llama3_1-8b --server-target-qps 40
+ ```
+
+### Sample command for sglang
+```bash
+ python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path /mnt/data/datasets/llama3.1-8b/cnn_eval.json  --dataset-name llama3.1-8b --server-config backendserver/sglang.yaml --scenario Offline --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SGLANG --lg-model-name llama3_1-8b --enable-metrics
+ ```
+
+### Sample command for Deepseek
+```bash
+ python harness_main.py --model-category deepseek-r1 --model deepseek-ai/DeepSeek-R1-0528 --dataset-path mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl --dataset-name deepseek-r1 --scenario Offline --test-mode performance --batch-size 4388 --num-samples 4388 --output-dir <output_dir> --lg-model-name deepseek-r1 --server-config backendserver/deepseek.yaml --mlflow-experiment-name testing-stuff --mlflow-host ip --enable-metrics
+ ```
+
+### Sample command with MLflow auto-upload
+```bash
+ python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path cnn_eval.json --dataset-name llama3.1-8b --server-config backendserver/simple.yaml --scenario Server --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SERVER-2 --lg-model-name llama3_1-8b --server-target-qps 40 --mlflow-experiment-name testing-stuff --mlflow-host 150.239.115.202
+ ```
+
+**Note:** When `--mlflow-experiment-name` and `--mlflow-host` are provided, results are automatically uploaded to MLflow after the test completes successfully. No separate upload step is needed.
+
+## Basic Usage
+
+### Example 1: Simplest Case - Using Model Name Auto-Detection
+
+```bash
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json
+```
+
+**What happens:**
+- Auto-detects dataset name from path (`cnn_eval`)
+- Falls back to model name if dataset config not found
+- Uses default settings (Offline scenario, performance mode)
+- Defaults to completions endpoint
+
+### Example 2: Explicit Model and Dataset
+
+```bash
+python harness/harness_main.py \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --dataset-path ./cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --scenario Offline \
+    --test-mode performance
+```
+
+### Example 3: Using Model-Specific Harness
+
+```bash
+python harness/harness_llama3.1_8b.py \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --dataset-path ./cnn_eval.json
+```
+
+**Benefits:**
+- Automatically sets `dataset_name="llama3.1-8b"`
+- Can add model-specific customizations
+- Cleaner command line
+
+## Model Configuration
+
+### Example 4: Different Model Names
+
+```bash
+# HuggingFace model name
+python harness/harness_main.py \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --dataset-path ./cnn_eval.json
+
+# Local model path
+python harness/harness_main.py \
+    --model /path/to/local/model \
+    --dataset-path ./cnn_eval.json
+
+# Short model identifier
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json
+```
+
+### Example 5: DeepSeek R1 Model
+
+```bash
+model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type completions
+```
+
+### Example 12: Using Chat Completions Endpoint
+
+```bash
+# Use chat completions endpoint
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type chat_completions
+```
+
+### Example 13: Endpoint Validation Error
+
+If you try to use an endpoint that doesn't exist for the backend:
+
+```bash
+# This will fail if backend only supports completions
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type chat_completions \
+    --server-config backend=my-backend-only-completions
+```
+
+**Error:**
+```
+ValueError: Endpoint 'chat_completions' is not available for backend 'my-backend-only-completions'. 
+Available endpoints: ['completions']
+```
+
+## Backend Configuration
+
+### Example 14: Using vLLM Backend
+
+```bash
+# vLLM supports both endpoints
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type chat_completions \
+    --server-config backend=vllm
+```
+
+### Example 15: Using SGLang Backend
+
+```bash
+# SGLang also supports both endpoints
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type completions \
+    --server-config backend=sglang
+```
+
+### Example 16: Backend-Specific Config File
+
+Create `configs/backends/my-backend.yaml`:
+
+```yaml
+name: my-backend
+description: "My custom backend"
+
+endpoints:
+  - completions
+  # Only completions available
+
+default_endpoint: completions
+```
+
+Then use it:
+
+```bash
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type completions \
+    --server-config backend=my-backend
+```
+
+## Scenario Examples
+
+### Example 17: Offline Scenario (Throughput)
+
+```bash
+# Offline scenario - batch processing
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --scenario Offline \
+    --test-mode performance \
+    --batch-size 13368 \
+    --num-samples 13368 \
+    --api-server-url http://localhost:8000
+```
+
+### Example 18: Server Scenario (Latency)
+
+```bash
+# Server scenario - real-time queries
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --scenario Server \
+    --test-mode performance \
+    --api-server-url http://localhost:8000 \
+    --server-target-qps 100.0 \
+    --server-coalesce-queries true
+```
+
+### Example 19: Accuracy Testing
+
+```bash
+# Accuracy mode - both scenarios
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --scenario Offline \
+    --test-mode accuracy \
+    --api-server-url http://localhost:8000
+```
+
+## Advanced Examples
+
+### Example 20: Full Configuration with All Options
+
+```bash
+python harness/harness_main.py \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --dataset-path ./cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --dataset-config-file configs/datasets/llama3.1-8b.yaml \
+    --input-column input \
+    --input-ids-column tok_input \
+    --output-column output \
+    --scenario Offline \
+    --test-mode performance \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type completions \
+    --server-config backendserver/example_server_config.yaml \
+    --batch-size 13368 \
+    --num-samples 13368 \
+    --enable-metrics \
+    --mlflow-experiment-name llama3.1-8b-experiment \
+    --mlflow-host localhost \
+    --mlflow-port 5000 \
+    --output-dir ./harness_output \
+    --user-conf user.conf \
+    --log-level INFO
+```
+
+### Example 21: Python API with All Features
+
+```python
+from harness.base_harness import BaseHarness
+
+harness = BaseHarness(
+    # Model configuration
+    model_name="meta-llama/Llama-3.1-8B-Instruct",
+    
+    # Dataset configuration
+    dataset_path="./cnn_eval.json",
+    dataset_name="llama3.1-8b",
+    dataset_config_file="configs/datasets/llama3.1-8b.yaml",  # Optional
+    input_column="input",  # Optional override
+    input_ids_column="tok_input",  # Optional override
+    output_column="output",  # Optional override
+    
+    # Scenario configuration
+    scenario="Offline",
+    test_mode="performance",
+    
+    # Server configuration
+    api_server_url="http://localhost:8000",
+    server_config={
+        'backend': 'vllm',
+        'endpoint_type': 'completions',  # or 'chat_completions'
+    },
+    
+    # Performance configuration
+    batch_size=13368,
+    num_samples=13368,
+    
+    # Metrics and MLflow
+    enable_metrics=True,
+    metrics_interval=15,
+    mlflow_tracking_uri="http://localhost:5000",
+    mlflow_experiment_name="my-experiment",
+    
+    # Output configuration
+    output_dir="./harness_output",
+)
+
+results = harness.run(
+    user_conf="user.conf",
+    lg_model_name="llama3_1-8b"
+)
+
+print(f"Test status: {results['status']}")
+print(f"Duration: {results['duration']} seconds")
+```
+
+### Example 22: Server Scenario with Custom Settings
+
+```bash
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --scenario Server \
+    --test-mode performance \
+    --api-server-url http://localhost:8000 \
+    --endpoint-type chat_completions \
+    --server-target-qps 50.0 \
+    --server-coalesce-queries true \
+    --enable-metrics \
+    --mlflow-experiment-name server-test
+```
+
+### Example 23: Using Different Backends
+
+```bash
+# vLLM backend
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --server-config backend=vllm
+
+# SGLang backend
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --server-config backend=sglang
+```
+
+### Example 24: Local vs Remote Server
+
+```bash
+# Let harness start server automatically
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --server-config backendserver/example_server_config.yaml
+
+# Use existing remote server
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://remote-server:8000
+```
+
+### Example 25: Custom Output Directory
+
+```bash
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --output-dir ./my_custom_output \
+    --enable-metrics
+```
+
+**Output structure:**
+```
+my_custom_output/
+├── harness_output/
+├── server/
+├── metrics/
+├── visualizations/
+├── mlperf/
+└── environment/
+```
+
+## Configuration Priority
+
+The system loads configurations in this order (highest priority first):
+
+1. **Command-line arguments** (e.g., `--input-column`) - Highest priority
+2. **Explicit config file** (`--dataset-config-file`)
+3. **Model-specific dataset config** (`models/{model}/{dataset}.yaml`)
+4. **Model config** (`models/{model}.yaml`)
+5. **Dataset config** (`datasets/{dataset}.yaml`)
+6. **Defaults** - Lowest priority
+
+### Example 26: Understanding Priority
+
+```bash
+# This command:
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --dataset-config-file configs/datasets/llama3.1-8b.yaml \
+    --input-column custom_input
+
+# Loads config from llama3.1-8b.yaml BUT overrides input_column with "custom_input"
+```
+
+## Troubleshooting Examples
+
+### Example 27: Dataset Config Not Found
+
+```bash
+# If config not found, system uses defaults
+python harness/harness_main.py \
+    --model my-model \
+    --dataset-path ./my_dataset.pkl \
+    --dataset-name my-dataset
+    # Warning: No config found, using defaults
+    # Defaults: input_column="input", input_ids_column="tok_input", output_column="output"
+```
+
+### Example 28: Invalid Endpoint Type
+
+```bash
+# This will fail
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --endpoint-type invalid_endpoint
+    # Error: Invalid endpoint_type: invalid_endpoint. Must be 'completions' or 'chat_completions'
+```
+
+### Example 29: Endpoint Not Available for Backend
+
+```bash
+# If backend only supports completions
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --endpoint-type chat_completions \
+    --server-config backend=completions-only-backend
+    # Error: Endpoint 'chat_completions' is not available for backend 'completions-only-backend'
+```
+
+## Best Practices
+
+### Example 30: Recommended Workflow
+
+```bash
+# 1. Create dataset config
+# Edit configs/datasets/my-dataset.yaml
+
+# 2. Test with defaults
+python harness/harness_main.py \
+    --model my-model \
+    --dataset-path ./my_dataset.pkl \
+    --dataset-name my-dataset
+
+# 3. Add customizations if needed
+python harness/harness_main.py \
+    --model my-model \
+    --dataset-path ./my_dataset.pkl \
+    --dataset-name my-dataset \
+    --input-column custom_column
+
+# 4. Add metrics for monitoring
+python harness/harness_main.py \
+    --model my-model \
+    --dataset-path ./my_dataset.pkl \
+    --dataset-name my-dataset \
+    --enable-metrics \
+    --mlflow-experiment-name my-experiment
+```
+
+### Example 31: Testing Different Configurations
+
+```bash
+# Test with completions endpoint
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --endpoint-type completions \
+    --output-dir ./results_completions
+
+# Test with chat_completions endpoint
+python harness/harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --endpoint-type chat_completions \
+    --output-dir ./results_chat_completions
+
+# Compare results
+```
+
+## Engine Arguments
+
+### Example 32: Overriding Engine Arguments from Command Line
+
+The `--engine-args` option allows you to override engine arguments specified in the server config file. This is useful for quick testing or when you want to override specific settings without modifying the config file.
+
+```bash
+# Override tensor parallel size and GPU memory utilization
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Offline \
+    --test-mode performance \
+    --batch-size 13368 \
+    --num-samples 13368 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.8
+```
+
+**What happens:**
+- The engine arguments (`--tensor-parallel-size 2 --gpu-memory-utilization 0.8`) override any corresponding values in the server config file
+- For vLLM backend, these are passed as `api_server_args`
+- For SGLang backend, these are passed as `server_args`
+
+### Example 33: Overriding Multiple Engine Arguments
+
+```bash
+# Override multiple vLLM engine arguments
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Server \
+    --test-mode performance \
+    --engine-args --tensor-parallel-size 4 --gpu-memory-utilization 0.9 --max-model-len 8192
+```
+
+### Example 34: Overriding SGLang Engine Arguments
+
+```bash
+# Override SGLang server arguments
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/sglang.yaml \
+    --scenario Offline \
+    --test-mode performance \
+    --engine-args --tp 2 --mem-fraction-static 0.9
+```
+
+### Example 35: Using Engine Arguments Without Config File
+
+You can also use `--engine-args` when not using a server config file. In this case, the engine arguments are passed directly to the server:
+
+```bash
+python harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.8
+```
+
+**Note:** When using `--api-server-url`, engine arguments are ignored since the server is already running externally.
+
+### Example 36: Engine Arguments with Server Scenario
+
+```bash
+# Override engine arguments for Server scenario
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Server \
+    --test-mode performance \
+    --server-target-qps 50 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.85
+```
+
+## Quick Reference
+
+### Common Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--model` | Model name or path | Required |
+| `--dataset-path` | Path to dataset file | Required |
+| `--dataset-name` | Dataset name for config lookup | Auto-detected |
+| `--dataset-config-file` | Path to specific config YAML | Auto-detected |
+| `--input-column` | Override input column name | From config |
+| `--input-ids-column` | Override input_ids column name | From config |
+| `--output-column` | Override output column name | From config |
+| `--scenario` | Offline or Server | Offline |
+| `--test-mode` | performance or accuracy | performance |
+| `--endpoint-type` | completions or chat_completions | completions |
+| `--api-server-url` | API server URL | None (start server) |
+| `--batch-size` | Batch size | 13368 |
+| `--num-samples` | Number of samples | 13368 |
+| `--enable-metrics` | Enable metrics collection | False |
+| `--mlflow-experiment-name` | MLflow experiment name | None |
+| `--engine-args` | Engine arguments to override server config | None |
+

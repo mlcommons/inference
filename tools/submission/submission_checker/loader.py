@@ -104,6 +104,12 @@ class Loader:
         self.test06_acc_path = os.path.join(
             self.root, TEST06_ACC_PATH.get(
                 version, TEST06_ACC_PATH["default"]))
+        self.test07_acc_path = os.path.join(
+            self.root, TEST07_ACC_PATH.get(
+                version, TEST07_ACC_PATH["default"]))
+        self.test09_acc_path = os.path.join(
+            self.root, TEST09_ACC_PATH.get(
+                version, TEST09_ACC_PATH["default"]))
         self.power_dir_path = os.path.join(
             self.root, POWER_DIR_PATH.get(
                 version, POWER_DIR_PATH["default"]))
@@ -304,6 +310,18 @@ class Loader:
                                 system=system,
                                 benchmark=benchmark,
                                 scenario=scenario)
+                            test07_acc_path = self.test07_acc_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            test09_acc_path = self.test09_acc_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
                             src_path = self.src_path.format(
                                 division=division, submitter=submitter)
 
@@ -330,6 +348,10 @@ class Loader:
                                 test04_acc_path, "AccuracyResult")
                             test06_acc_result = self.load_single_log(
                                 test06_acc_path, "AccuracyResult")
+                            test07_acc_result = self.load_single_log(
+                                test07_acc_path, "AccuracyResult")
+                            test09_acc_result = self.load_single_log(
+                                test09_acc_path, "AccuracyResult")
 
                             loader_data = {
                                 # Submission info
@@ -354,11 +376,15 @@ class Loader:
                                 "TEST04_perf_path": test04_perf_path,
                                 "TEST04_acc_path": test04_acc_path,
                                 "TEST06_acc_path": test06_acc_path,
+                                "TEST07_acc_path": test07_acc_path,
+                                "TEST09_acc_path": test09_acc_path,
                                 # Test logs
                                 "TEST01_perf_log": test01_perf_log,
                                 "TEST01_acc_result": test01_acc_result,
                                 "TEST04_perf_log": test04_perf_log,
                                 "TEST04_acc_result": test04_acc_result,
                                 "TEST06_acc_result": test06_acc_result,
+                                "TEST07_acc_result": test07_acc_result,
+                                "TEST09_acc_result": test09_acc_result,
                             }
                             yield SubmissionLogs(perf_log, acc_log, acc_result, acc_json, system_json, measurements_json, loader_data)

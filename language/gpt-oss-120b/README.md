@@ -1,5 +1,5 @@
 # MLPerf Inference reference implementation for GPT-OSS-120B
-This is the reference implementation for GPT-OSS-120B. This is a proposal and is a WIP. 
+This is the reference implementation for GPT-OSS-120B.
 
 ## Automated command to run the benchmark via MLCFlow
 
@@ -23,8 +23,6 @@ mlcr get-ml-model-gpt-oss,_mlc,_r2-downloader --outdirname=<Download path> -j
 mlcr get-dataset-mlperf-inference-gpt-oss,_mlc,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
-#### TODO: Replace this with mlc download link when available
-
 * Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
 * Dataset: You can find the dataset at [inference.mlcommons-storage.org](https://inference.mlcommons-storage.org/index.html)
 
@@ -33,7 +31,7 @@ Datasets are now provided in **Parquet format** (recommended) for better perform
 ## Environment setup
 Work on reference implementation is done using the sglang containers at [https://hub.docker.com/r/lmsysorg/sglang/tags](https://hub.docker.com/r/lmsysorg/sglang/tags). For enroot setup, a script is provided under [`setup_enroot.sh`](./setup_enroot.sh). For all sections below, we shall assume this environment is instantiated.
 
-Once in the environment, install additional requirements using [`setup.sh`](./setup.sh): 
+Once in the environment, install additional requirements using [`setup.sh`](./setup.sh):
 ```bash
 ./setup.sh
 ```
@@ -49,7 +47,7 @@ Use [`./sglang/run_server.sh`](./sglang/run_server.sh) to launch an SGLang serve
   --stream_interval 100 \
   --eagle_path optional/path/to/eagle/head
 ```
-The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified. 
+The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified.
 
 You may also use docker:
 ```bash
@@ -172,3 +170,9 @@ options:
   --verbose             Verbose logging
 
 ```
+
+## Accuracy Target
+
+The accuracy target is 99% of the reference score on the accuracy dataset:
+- Reference score: 83.13%
+- Target threshold: 82.30% (99% of 83.13%)

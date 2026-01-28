@@ -1,19 +1,11 @@
 # Copyright (c) 2025 Intel Corporation
 # Copyright (c) 2020, Cerebras Systems, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#           http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed under the Apache License, Version 2.0
 
+# =========================
 # Standard packages
+# =========================
 import sys
 import os
 import array
@@ -24,19 +16,27 @@ import time
 import logging
 import threading
 
+# =========================
 # Common math packages
+# =========================
 import numpy as np
 from tqdm import tqdm
 
+# =========================
 # Framework packages
+# =========================
 import torch
 import torch.multiprocessing as mp
 from vllm import LLM, SamplingParams
 
+# =========================
 # Optimization packages
-#from numa import schedule, memory
+# =========================
+from numa import schedule, memory
 
+# =========================
 # Local python packages
+# =========================
 from QSL import AudioQSL, AudioQSLInMemory
 import mlperf_loadgen as lg
 
@@ -52,8 +52,7 @@ def get_start_cores(start_cores="0"):
 
 cores_per_inst = int(os.environ.get("CORES_PER_INST", "1"))
 num_numa_nodes = int(os.environ.get("NUM_NUMA_NODES", "1"))
-nodes_per_inst = int(os.environ["NUM_NUMA_NODES"]
-                     ) / int(os.environ["NUM_INSTS"])
+nodes_per_inst = int(os.environ["NUM_NUMA_NODES"]) / int(os.environ["NUM_INSTS"])
 insts_per_node = int(os.environ["INSTS_PER_NODE"])
 start_cores = os.environ["START_CORES"]
 
@@ -63,48 +62,10 @@ sample_rate = 16000
 model_path = "openai/whisper-large-v3"
 
 labels = [
-    " ",
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-    "'",
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "$",
-    "%",
-    "+",
-    "-"]
+    " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+    "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'",
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "$", "%", "+", "-"
+]
 
 labels_dict = {}
 for i in range(len(labels)):
@@ -128,7 +89,7 @@ class Instance(mp.Process):
         output_queue=None,
         cond_var=None,
         alive_counter=None,
-        sample_counter=None
+        sample_counter=None,
     ):
         mp.Process.__init__(self)
         self.model_path = model_path
@@ -154,24 +115,24 @@ class Instance(mp.Process):
         self.finished = False
 
     def run(self):
+        gpu_id = self.rank % torch.cuda.device_count()
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        print(f"Worker rank {self.rank} ASSIGNED TO GPU {gpu_id}")
+
         node_list = tuple([math.floor(node) for node in self.node_list])
-        #memory.set_membind_nodes(*node_list)
-        #schedule.run_on_cpus(os.getpid(), *self.core_list)
-        #print(f"Binding rank {self.rank} to nodes {node_list}")
-        #print(f"Binding rank {self.rank} to cores {self.core_list}")
+        memory.set_membind_nodes(*node_list)
+        schedule.run_on_cpus(os.getpid(), *self.core_list)
 
         dataset_vocab = labels
-
         self.qsl = AudioQSLInMemory(
             self.dataset_path,
             self.manifest_filepath,
             dataset_vocab,
             sample_rate,
-            self.total_sample_count
+            self.total_sample_count,
         )
 
         dtype = "bfloat16"
-        print(f"Precision: {dtype}")
         model = LLM(
             model=self.model_path,
             dtype=dtype,
@@ -180,11 +141,12 @@ class Instance(mp.Process):
             tensor_parallel_size=1,
             max_num_seqs=256,
             max_model_len=448,
-            max_num_batched_tokens=8194,
+            max_num_batched_tokens=32000,
             gpu_memory_utilization=0.95,
-            kv_cache_dtype="fp8",
+            disable_log_stats=True,
             limit_mm_per_prompt={"audio": 1},
         )
+
         sampling_params = SamplingParams(
             temperature=0,
             top_p=1.0,
@@ -193,6 +155,7 @@ class Instance(mp.Process):
 
         self.model = model
         self.sampling_params = sampling_params
+
         with self.cond_var:
             self.alive_counter.value += 1
             self.cond_var.notify()
@@ -218,26 +181,24 @@ class Instance(mp.Process):
             self.qid_mapping.append(qitem.id)
             self.req_counter += 1
 
-        results = []
-        query_ids = []
-        qid = []
-
         start_time = time.time()
         outputs = self.model.generate(prompt_list, self.sampling_params)
-        print(
-            f"Sample number: {self.num_samples} Prompt: {len(prompt_list)} | Step time {time.time()-start_time:.3f}s")
+        step_time = time.time() - start_time
 
-        for output in outputs:
+        total_tokens = sum(len(o.outputs[0].token_ids) for o in outputs)
+
+        results = []
+        qid = []
+
+        for idx, output in enumerate(outputs):
             request_id = int(output.request_id)
             vllm_text = output.outputs[0].text
             results.append((vllm_text, len(output.outputs[0].token_ids)))
-            query_ids.append(self.query_idx_mapping[request_id])
             qid.append(self.qid_mapping[request_id])
 
         self.num_samples += len(results)
 
         for i, result_tuple in enumerate(results):
-            # Whisper outputs space in the front and capitalizes things
             result, n_tokens = result_tuple
             result = result.lower().strip()
             transcript = []
@@ -246,17 +207,22 @@ class Instance(mp.Process):
                     transcript.append(labels_dict[s])
             transcript = [transcript]
 
-            assert len(transcript) == 1
-            response_array = array.array('q', transcript[0])
-
+            response_array = array.array("q", transcript[0])
             self.output_queue.put((qid[i], n_tokens, response_array))
-            print(f"Finished {qid[i]}")
+
         return True
 
 
 class vllmSUT:
-    def __init__(self, dataset_dir,
-                 manifest_filepath, perf_count, model_path="openai/whisper-large-v3", num_workers=1, device="cpu"):
+    def __init__(
+        self,
+        dataset_dir,
+        manifest_filepath,
+        perf_count,
+        model_path="openai/whisper-large-v3",
+        num_workers=1,
+        device="cpu",
+    ):
         self.model_path = model_path
         self.dataset_path = dataset_dir
         self.manifest_filepath = manifest_filepath
@@ -268,15 +234,15 @@ class vllmSUT:
 
         dataset_vocab = labels
 
-        self.device = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
-        print(f"Device:{self.device}")
-
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
-        self.qsl = AudioQSL(dataset_dir,
-                            manifest_filepath,
-                            dataset_vocab,
-                            sample_rate,
-                            perf_count)
+        self.qsl = AudioQSL(
+            dataset_dir,
+            manifest_filepath,
+            dataset_vocab,
+            sample_rate,
+            perf_count,
+        )
+
         self.query_queue = mp.JoinableQueue()
         self.output_queue = mp.Queue()
         self.alive_counter = mp.Value("i", 0)
@@ -286,24 +252,20 @@ class vllmSUT:
     def start(self):
         node_start_cores = get_start_cores(start_cores)
         core_lists = []
+
         if insts_per_node > 0:
             for i in range(num_numa_nodes):
                 for j in range(insts_per_node):
                     core_lists.append(
                         list(
                             range(
-                                node_start_cores[i] +
-                                j *
-                                cores_per_inst,
-                                node_start_cores[i] +
-                                (
-                                    j +
-                                    1) *
-                                cores_per_inst)))
+                                node_start_cores[i] + j * cores_per_inst,
+                                node_start_cores[i] + (j + 1) * cores_per_inst,
+                            )
+                        )
+                    )
 
         for j in range(self.num_workers):
-            core_list = core_lists[j]
-
             worker = Instance(
                 model_path=self.model_path,
                 dataset_path=self.dataset_path,
@@ -313,35 +275,32 @@ class vllmSUT:
                 total_sample_count=self.total_sample_count,
                 rank=j,
                 dtype=precision,
-                core_list=tuple(core_list),
+                core_list=tuple(core_lists[j]),
                 node_list=tuple([math.floor(j * nodes_per_inst)]),
                 input_queue=self.query_queue,
                 output_queue=self.output_queue,
                 cond_var=self.cond_var,
                 alive_counter=self.alive_counter,
-                sample_counter=self.sample_counter
+                sample_counter=self.sample_counter,
             )
             worker.start()
             self.worker_threads[j] = worker
 
         with self.cond_var:
             self.cond_var.wait_for(
-                lambda: self.alive_counter.value == self.num_workers)
+                lambda: self.alive_counter.value == self.num_workers
+            )
 
-        log.info(f"Starting Loadgen response thread")
         response_thread = threading.Thread(target=self.response_loadgen)
         response_thread.daemon = True
         response_thread.start()
 
     def issue_queries(self, query_samples):
-        print(f"Issued queries: {len(query_samples)}\n\n")
-        query_sample_list = [ query_sample for query_sample in query_samples]
-        self.query_queue.put(query_sample_list)
-        #for query_sample in query_samples:
-            # Continuous batching
-        #    self.query_queue.put([query_sample])
-        if len(query_sample_list) > 0:
-            self.query_queue.put(query_sample_list)
+        query_list = list(query_samples)
+        chunk_size = max(1, len(query_list) // self.num_workers)
+
+        for i in range(0, len(query_list), chunk_size):
+            self.query_queue.put(query_list[i : i + chunk_size])
 
     def flush_queries(self):
         pass
@@ -350,21 +309,20 @@ class vllmSUT:
         keep_alive = True
         while keep_alive:
             qid, n_tokens, response_array = self.output_queue.get()
-            print(f"Response: {qid}, {n_tokens}")
             if qid is None:
                 keep_alive = False
             else:
                 bi = response_array.buffer_info()
-                response = lg.QuerySampleResponse(qid, bi[0],
-                                                  bi[1] * response_array.itemsize, n_tokens)
+                response = lg.QuerySampleResponse(
+                    qid, bi[0], bi[1] * response_array.itemsize, n_tokens
+                )
                 lg.QuerySamplesComplete([response])
 
     def stop(self):
-        for i in range(self.num_workers):
+        for _ in range(self.num_workers):
             self.query_queue.put(None)
         for worker in self.worker_threads:
             worker.kill()
 
     def __del__(self):
         lg.DestroySUT(self.sut)
-        print("Finished destroying SUT.")

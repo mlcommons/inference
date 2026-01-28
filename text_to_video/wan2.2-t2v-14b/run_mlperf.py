@@ -101,10 +101,12 @@ class Model:
                 output = self.pipe(**pipeline_kwargs).frames[0]
 
                 # Save to video to reduce mlperf_log_accuracy.json size
-                output_path = Path(self.video_output_path, f"{self.prompts[i]}-0.mp4")
+                output_path = Path(
+                    self.video_output_path,
+                    f"{self.prompts[i]}-0.mp4")
                 logging.info(f"Saving {q} to {output_path}")
                 export_to_video(output[0], str(output_path), fps=self.fps)
-                
+
                 with open(output_path, "rb") as f:
                     resp = f.read()
 
@@ -276,7 +278,14 @@ def run_mlperf(args, config):
         logging.info("No fixed latent provided - using random initial latents")
 
     # Loading model
-    model = Model(args.model_path, args.video_output_path, device, config, dataset, fixed_latent, rank)
+    model = Model(
+        args.model_path,
+        args.video_output_path,
+        device,
+        config,
+        dataset,
+        fixed_latent,
+        rank)
     # model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
     logging.info("Model loaded successfully!")
 

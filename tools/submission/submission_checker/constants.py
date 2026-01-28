@@ -39,6 +39,7 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
+            "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -188,6 +189,7 @@ MODEL_CONFIG = {
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -232,6 +234,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
             "yolo-95": 5000,
             "yolo-99": 5000,
@@ -262,6 +265,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
             "yolo-95": 1525,
             "yolo-99": 1525,
@@ -338,6 +342,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
@@ -354,6 +359,7 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "whisper",
+            "wan-2.2-t2v-a14b",
             "yolo-99",
             "yolo-95",
         ],
@@ -361,6 +367,7 @@ MODEL_CONFIG = {
             "resnet",
             "stable-diffusion-xl",
             "pointpainting",
+            "wan-2.2-t2v-a14b"
         ],
         "models_TEST06": [
             "llama2-70b-99",
@@ -1378,7 +1385,8 @@ ACC_PATTERN = {
     "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
-    "exact_match": r".*'exact_match':\s([\d.]+).*"
+    "exact_match": r".*'exact_match':\s([\d.]+).*",
+    "vbench_score": r".*'vbench_score':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

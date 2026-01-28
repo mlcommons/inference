@@ -1095,6 +1095,20 @@ REQUIRED_ACC_BENCHMARK = {
                 "4532",
             ]
         },
+        "v6.0": {
+            "images": [
+                "1311",
+                "2476",
+                "3644",
+                "2188",
+                "4114",
+                "52",
+                "388",
+                "1195",
+                "3427",
+                "2289",
+            ]
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
@@ -1245,6 +1259,43 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
         }
     },
+    "v6.0": {
+        "gpt-oss-120b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b-edge": {
+            "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
+        },
+        "mixtral-8x7b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-405b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "deepseek-r1": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        }
+    },
 }
 
 LLM_LATENCY_LIMITS = {
@@ -1299,6 +1350,17 @@ LLM_LATENCY_LIMITS = {
     "deepseek-r1": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 1500 * 1000000, "tpot": 15 * 1000000
+        }
+    },
+    "gpt-oss-120b": {
+        "Server": {
+            "ttft": 3000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 2000 * 1000000, "tpot": 15 * 1000000
         }
     }
 

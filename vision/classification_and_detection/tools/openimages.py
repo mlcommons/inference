@@ -156,7 +156,7 @@ def export_to_coco(
     )
     annotations = annotations.merge(class_map, on="LabelName", how="inner")
     annotations = annotations.sort_values(by=["ImageID"])
-    annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
+    annotations["image_id"] = pd.factorize(annotations["ImageID"])[0]
     # Images
     images_ = []
     for i, row in annotations.groupby(

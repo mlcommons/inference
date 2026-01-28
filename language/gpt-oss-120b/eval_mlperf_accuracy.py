@@ -645,7 +645,7 @@ def main():
     print("=" * 80)
 
     print("\n\nPrinting for submission_checker:")
-    print(f"\n'exact_match': {final_score}")
+    print(f"\n'exact_match': {final_score_percentage:.3f}")
 
     # Save detokenized outputs to pickle if requested
     if args.save_outputs:

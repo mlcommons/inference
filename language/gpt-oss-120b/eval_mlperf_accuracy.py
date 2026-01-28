@@ -459,8 +459,9 @@ def main():
             logger.info(
                 f"Created ProcessPoolExecutor with {max_workers} workers for LiveCodeBench")
         except Exception as e:
-            logger.warning(f"Failed to pre-load LiveCodeBench benchmark: {e}")
-            logger.warning("LiveCodeBench evaluation may be slower")
+            logger.error(f"Failed to pre-load LiveCodeBench benchmark: {e}")
+            logger.error(f"Please make sure LiveCodeBench submodule is initalized at submodules/LiveCodeBench")
+            raise RuntimeError(f"LiveCodeBench benchmark failed to load: {e}.")
 
     # Process each dataset separately with its own progress bar
     logger.info("\nProcessing MLPerf log entries by dataset...")

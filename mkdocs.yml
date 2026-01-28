@@ -35,6 +35,7 @@ nav:
               - SCC24 Guide: benchmarks/text_to_image/reproducibility/scc24.md
       - 2D Object Detection:
           - RetinaNet: benchmarks/object_detection/retinanet.md
+          - Yolo: benchmarks/object_detection/yolo.md
       - Automotive:
           - 3D Object Detection:
               - PointPainting: benchmarks/automotive/3d_object_detection/pointpainting.md

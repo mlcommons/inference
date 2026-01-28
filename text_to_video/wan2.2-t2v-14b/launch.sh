@@ -7,7 +7,7 @@ set -e
 IMAGE_NAME=${IMAGE_NAME:-text2video-mlperf}
 IMAGE_TAG=${IMAGE_TAG:-latest}
 CONTAINER_NAME=${CONTAINER_NAME:-text2video}
-GPU_COUNT=${GPU_COUNT:-all}
+GPU_IDS=${GPU_IDS:-all}
 WORK_DIR=$(dirname "$(realpath "$0")")
 INFERENCE_ROOT=$(dirname "$WORK_DIR")
 
@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --gpu-count)
-            GPU_COUNT="$2"
+            GPU_IDS="$2"
             shift 2
             ;;
         --help)
@@ -100,10 +100,10 @@ if ! docker image inspect "$FULL_IMAGE" >/dev/null 2>&1; then
 fi
 
 # Prepare GPU options
-if [ "$GPU_COUNT" = "all" ]; then
+if [ "$GPU_IDS" = "all" ]; then
     GPU_OPTS="--gpus=all"
 else
-    GPU_OPTS="--gpus=$GPU_COUNT"
+    GPU_OPTS="--gpus=$GPU_IDS"
 fi
 
 # Run container

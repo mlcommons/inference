@@ -185,7 +185,7 @@ MODEL_CONFIG = {
             # TODO: Placeholder for now
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
             "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
@@ -1153,6 +1153,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "pointpainting": 6636,
     "yolo-99": 1525,
     "yolo-95": 1525,
+    "qwen3-vl-235b-a22b": 48289 
 }
 
 SCENARIO_MAPPING = {
@@ -1387,6 +1388,7 @@ ACC_PATTERN = {
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
     "exact_match": r".*'exact_match':\s([\d.]+).*",
     "vbench_score": r".*'vbench_score':\s([\d.]+).*",
+    "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}',
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

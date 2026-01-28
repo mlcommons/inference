@@ -250,15 +250,15 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
 
     """Random number generation settings"""
 
-    qsl_rng_seed: int = 0
+    qsl_rng_seed: int = 2465351861681999779
     """Affects which subset of samples from the QSL are chosen for
     the performance sample set and accuracy sample sets."""
 
-    sample_index_rng_seed: int = 0
+    sample_index_rng_seed: int = 14276810075590677512
     """Affects the order in which samples from the performance set will
     be included in queries."""
 
-    schedule_rng_seed: int = 0
+    schedule_rng_seed: int = 3936089224930324775
     """Affects the poisson arrival process of the Server scenario.
     Different seeds will appear to "jitter" the queries
     differently in time, but should not affect the average issued QPS.

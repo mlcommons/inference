@@ -46,5 +46,5 @@ The `run_verification.py` found in each test directory will copy the test files 
 | PointPainting | [TEST01](./TEST01/) [TEST04](./TEST04/) |
 | DeepSeek-r1 | [TEST06](./TEST06/) |
 | Whisper | [TEST01](./TEST01/) |
-| gpt-oss-120b | [TEST07](./TEST07/) |
+| gpt-oss-120b | [TEST07](./TEST07/), [TEST09](./TEST09/) |
 | wan2.2-t2v-14b | [TEST01](./TEST01/), [TEST04](./TEST04/) |

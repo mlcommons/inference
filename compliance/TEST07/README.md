@@ -3,6 +3,7 @@
 This repository provides the config files and scripts to run and verify TEST07 - Verify accuracy in performance mode for workloads that require logging all samples and checking against an accuracy threshold.
 
 # Table of Contents
+
 1. [Applicable Benchmarks](#applicable-benchmarks)
 2. [Introduction](#introduction)
 3. [Prerequisites](#prerequisites)
@@ -13,20 +14,11 @@ This repository provides the config files and scripts to run and verify TEST07 -
 
 | Model | Accuracy Threshold | Score Pattern | Dataset Size |
 |-------|-------------------|---------------|--------------|
-| gpt-oss-120b | 60.698 | `'exact_match': <score>` | 4395 |
+| gpt-oss-120b | 60.698 | `'exact_match': <score>` | 990 |
 
 ## Introduction
 
 The purpose of this test is to ensure that valid inferences are being performed in performance mode for workloads where accuracy must be verified by logging **all** samples and computing the accuracy score against a compliance threshold.
-
-**Key Differences from TEST01:**
-
-| Aspect | TEST01 | TEST07 |
-|--------|--------|--------|
-| Samples logged | Subset (sampled) | All samples |
-| Verification method | Compare results against accuracy run | Compute accuracy score against threshold |
-| Pass criteria | Results match + perf within 10% | Accuracy ≥ threshold |
-
 The compliance threshold is defined in the benchmark's `audit.config` file via the `test07_accuracy_threshold` field.
 
 ## Prerequisites
@@ -49,10 +41,10 @@ cp compliance/TEST07/gpt-oss-120b/audit.config /path/to/benchmark/working/dir/
 The `audit.config` contains both LoadGen settings and the compliance threshold:
 
 ```
-# LoadGen settings
+# LoadGen settings example for gpt-oss-120b
 *.*.mode = 2
 *.*.accuracy_log_sampling_target = 10000
-*.*.min_query_count = 4395
+*.*.min_query_count = 990
 ...
 
 # TEST07 Compliance Threshold (read by run_verification.py)
@@ -84,16 +76,16 @@ python3 run_verification.py \
 
 **Arguments:**
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `-c`, `--compliance_dir` | Yes | Path to compliance test logs (contains `mlperf_log_accuracy.json`) |
-| `-o`, `--output_dir` | Yes | Output directory for submission artifacts |
-| `--accuracy-script` | Yes | Command to run accuracy evaluation. Use `{accuracy_log}` as placeholder |
-| `--audit-config` | No* | Path to audit.config containing `test07_accuracy_threshold` |
-| `--accuracy-threshold` | No* | Override threshold (CLI takes precedence over audit.config) |
-| `--score-pattern` | No | Regex to extract score (default: `'exact_match':\s*([\d.]+)`) |
+| Argument                 | Required | Description                                                             |
+| ------------------------ | -------- | ----------------------------------------------------------------------- |
+| `-c`, `--compliance_dir` | Yes      | Path to compliance test logs (contains `mlperf_log_accuracy.json`)      |
+| `-o`, `--output_dir`     | Yes      | Output directory for submission artifacts                               |
+| `--accuracy-script`      | Yes      | Command to run accuracy evaluation. Use `{accuracy_log}` as placeholder |
+| `--audit-config`         | No\*     | Path to audit.config containing `test07_accuracy_threshold`             |
+| `--accuracy-threshold`   | No\*     | Override threshold (CLI takes precedence over audit.config)             |
+| `--score-pattern`        | No       | Regex to extract score (default: `'exact_match':\s*([\d.]+)`)           |
 
-*At least one of `--audit-config` or `--accuracy-threshold` must be provided.
+\*At least one of `--audit-config` or `--accuracy-threshold` must be provided.
 
 ### Example: gpt-oss-120b
 
@@ -168,6 +160,7 @@ Create `compliance/TEST07/<benchmark>/audit.config`:
 ### 2. Update this README
 
 Add the benchmark to the "Applicable Benchmarks" table with:
+
 - Model name
 - Accuracy threshold
 - Score pattern (regex to extract accuracy from script output)
@@ -176,6 +169,7 @@ Add the benchmark to the "Applicable Benchmarks" table with:
 ### 3. Ensure accuracy script compatibility
 
 The benchmark's accuracy evaluation script must:
+
 - Accept `mlperf_log_accuracy.json` as input
 - Output the accuracy score in a parseable format (e.g., `'exact_match': 62.15`)
 

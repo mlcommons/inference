@@ -89,6 +89,10 @@ class ComplianceCheck(BaseCheck):
             test_list.append("TEST09")
         if model in self.config.base.get("models_TEST08", []):
             test_list.append("TEST08")
+        if model in self.config.base.get("models_TEST07", []):
+            test_list.append("TEST07")
+        if model in self.config.base.get("models_TEST09", []):
+            test_list.append("TEST09")
         return test_list
 
     def dir_exists_check(self):
@@ -376,6 +380,42 @@ class ComplianceCheck(BaseCheck):
                             test_dir,
                         )
                         is_valid = False
+            elif test == "TEST07":
+                # TEST07: Verify accuracy in performance mode
+                # Check verify_accuracy.txt for TEST PASS
+                acc_path = os.path.join(test_dir, "verify_accuracy.txt")
+                if os.path.exists(acc_path):
+                    with open(acc_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    if "TEST PASS" in content:
+                        self.log.info(
+                            "TEST07 accuracy check in %s passed", test_dir)
+                    else:
+                        self.log.error(
+                            "TEST07 accuracy check in %s failed", test_dir)
+                        is_valid = False
+                else:
+                    self.log.error(
+                        "TEST07 verify_accuracy.txt missing in %s", test_dir)
+                    is_valid = False
+            elif test == "TEST09":
+                # TEST09: Verify output token length in performance mode
+                # Check verify_output_len.txt for TEST PASS
+                output_len_path = os.path.join(test_dir, "verify_output_len.txt")
+                if os.path.exists(output_len_path):
+                    with open(output_len_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    if "TEST PASS" in content:
+                        self.log.info(
+                            "TEST09 output length check in %s passed", test_dir)
+                    else:
+                        self.log.error(
+                            "TEST09 output length check in %s failed", test_dir)
+                        is_valid = False
+                else:
+                    self.log.error(
+                        "TEST09 verify_output_len.txt missing in %s", test_dir)
+                    is_valid = False
             else:
                 self.log.info(f"{test_dir} does not require accuracy check")
         return is_valid

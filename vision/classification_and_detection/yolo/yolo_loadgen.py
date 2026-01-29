@@ -220,7 +220,8 @@ def main():
     print(f"Log directory: {log_path}")
 
     try:
-        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, args.audit_conf)
+        lg.StartTestWithLogSettings(
+            sut, qsl, settings, log_settings, args.audit_conf)
         print(f"MLPerf run complete - cleaning up")
     except Exception as e:
         print(f"An error occured during StartTest: {e}")

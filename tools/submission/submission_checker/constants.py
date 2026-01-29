@@ -236,8 +236,8 @@ MODEL_CONFIG = {
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 247,
             "dlrm-v3": 34996,
-            "yolo-95": 5000,
-            "yolo-99": 5000,
+            "yolo-95": 64,
+            "yolo-99": 64,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,

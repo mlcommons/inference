@@ -360,8 +360,10 @@ class ComplianceCheck(BaseCheck):
                     is_valid = False
             elif test == "TEST08":
                 # TEST08 is used for dlrm-v3 streaming dataset compliance
-                # It verifies that NE values match between accuracy and performance runs
-                lines = self.submission_logs.loader_data.get(f"{test}_acc_result")
+                # It verifies that NE values match between accuracy and
+                # performance runs
+                lines = self.submission_logs.loader_data.get(
+                    f"{test}_acc_result")
                 if lines is None:
                     self.log.error(
                         "TEST08 accuracy result file not found for %s", test_dir)
@@ -401,7 +403,8 @@ class ComplianceCheck(BaseCheck):
             elif test == "TEST09":
                 # TEST09: Verify output token length in performance mode
                 # Check verify_output_len.txt for TEST PASS
-                output_len_path = os.path.join(test_dir, "verify_output_len.txt")
+                output_len_path = os.path.join(
+                    test_dir, "verify_output_len.txt")
                 if os.path.exists(output_len_path):
                     with open(output_len_path, "r", encoding="utf-8") as f:
                         content = f.read()

@@ -182,7 +182,6 @@ MODEL_CONFIG = {
             "pointpainting": ("mAP", 0.5425 * 0.999),
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
-            # TODO: Placeholder for now
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
             "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
@@ -380,7 +379,13 @@ MODEL_CONFIG = {
             "llama3.1-405b-interactive",
             "mixtral-8x7b",
             "deepseek-r1",
-        ]
+        ],
+        "models_TEST07": [
+            "gpt-oss-120b",
+        ],
+        "models_TEST09": [
+            "gpt-oss-120b",
+        ],
     },
     "v5.0": {
         "models": [
@@ -712,7 +717,7 @@ MODEL_CONFIG = {
             "gptj-99",
             "gptj-99.9",
             "mixtral-8x7b",
-        ]
+        ],
     },
     "v5.1": {
         "models": [
@@ -1043,7 +1048,7 @@ MODEL_CONFIG = {
             "llama3.1-405b-interactive",
             "mixtral-8x7b",
             "deepseek-r1",
-        ]
+        ],
     },
 }
 
@@ -1652,6 +1657,16 @@ TEST06_ACC_PATH = {
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+}
+
+TEST07_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+}
+
+TEST09_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
 }
 
 COMPLIANCE_PATH = {

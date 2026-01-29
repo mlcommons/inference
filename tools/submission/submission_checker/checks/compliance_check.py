@@ -67,7 +67,7 @@ class ComplianceCheck(BaseCheck):
 
         The mapping of models to tests is read from the configuration
         (`self.config.base`) using the pre-defined keys
-        `models_TEST01`, `models_TEST04`, and `models_TEST06`.
+        `models_TEST01`, `models_TEST04`, `models_TEST06`, and `models_TEST08`.
 
         Args:
             model (str): MLPerf benchmark/model identifier.
@@ -77,16 +77,18 @@ class ComplianceCheck(BaseCheck):
         """
 
         test_list = []
-        if model in self.config.base["models_TEST01"]:
+        if model in self.config.base.get("models_TEST01", []):
             test_list.append("TEST01")
-        if model in self.config.base["models_TEST04"]:
+        if model in self.config.base.get("models_TEST04", []):
             test_list.append("TEST04")
-        if model in self.config.base["models_TEST06"]:
+        if model in self.config.base.get("models_TEST06", []):
             test_list.append("TEST06")
         if model in self.config.base.get("models_TEST07", []):
             test_list.append("TEST07")
         if model in self.config.base.get("models_TEST09", []):
             test_list.append("TEST09")
+        if model in self.config.base.get("models_TEST08", []):
+            test_list.append("TEST08")
         return test_list
 
     def dir_exists_check(self):
@@ -126,7 +128,8 @@ class ComplianceCheck(BaseCheck):
                     test,
                     self.compliance_dir)
                 is_valid = False
-            if test in ["TEST01", "TEST06", "TEST07"]:
+            # TEST01, TEST06, TEST07 and TEST08 require verify_accuracy.txt
+            if test in ["TEST01", "TEST06", "TEST07", "TEST08"]:
                 if not os.path.exists(acc_path):
                     self.log.error(
                         "Missing accuracy file in compliance dir. Needs file %s", acc_path)
@@ -351,6 +354,28 @@ class ComplianceCheck(BaseCheck):
                     self.log.error(
                         "TEST09 verify_output_len.txt missing in %s", test_dir)
                     is_valid = False
+            elif test == "TEST08":
+                # TEST08 is used for dlrm-v3 streaming dataset compliance
+                # It verifies that NE values match between accuracy and performance runs
+                lines = self.submission_logs.loader_data.get(f"{test}_acc_result")
+                if lines is None:
+                    self.log.error(
+                        "TEST08 accuracy result file not found for %s", test_dir)
+                    is_valid = False
+                else:
+                    lines = [line.strip() for line in lines]
+                    if "TEST PASS" in lines:
+                        self.log.info(
+                            "Compliance test TEST08 accuracy check in %s passed",
+                            test_dir,
+                        )
+                    else:
+                        self.log.error(
+                            "Compliance test TEST08 accuracy check in %s failed. "
+                            "Expected 'TEST PASS' in verify_accuracy.txt",
+                            test_dir,
+                        )
+                        is_valid = False
             else:
                 self.log.info(f"{test_dir} does not require accuracy check")
         return is_valid

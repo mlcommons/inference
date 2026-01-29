@@ -387,12 +387,18 @@ MODEL_CONFIG = {
             "mixtral-8x7b",
             "deepseek-r1",
         ],
+<<<<<<< HEAD
         "models_TEST07": [
             "gpt-oss-120b",
         ],
         "models_TEST09": [
             "gpt-oss-120b",
         ],
+=======
+        "models_TEST08": [
+            "dlrm-v3",
+        ]
+>>>>>>> 37a6823d (add test08 for dlrmv3 specially)
     },
     "v5.0": {
         "models": [
@@ -1679,6 +1685,11 @@ TEST07_ACC_PATH = {
 TEST09_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+}
+
+TEST08_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
 }
 
 COMPLIANCE_PATH = {

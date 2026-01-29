@@ -127,7 +127,12 @@ def main():
         action="store_true",
         help="Enable log tracing. This file can become quite large",
     )
-
+    parser.add_argument(
+        "--audit-conf",
+        type=str,
+        default="audit.conf",
+        help="audit config for LoadGen settings during compliance runs",
+    )
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--AccuracyOnly", action="store_true")
@@ -215,7 +220,7 @@ def main():
     print(f"Log directory: {log_path}")
 
     try:
-        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, args.audit_conf)
         print(f"MLPerf run complete - cleaning up")
     except Exception as e:
         print(f"An error occured during StartTest: {e}")

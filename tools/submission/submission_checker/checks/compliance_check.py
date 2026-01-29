@@ -335,7 +335,8 @@ class ComplianceCheck(BaseCheck):
             elif test == "TEST09":
                 # TEST09: Verify output token length in performance mode
                 # Check verify_output_len.txt for TEST PASS
-                output_len_path = os.path.join(test_dir, "verify_output_len.txt")
+                output_len_path = os.path.join(
+                    test_dir, "verify_output_len.txt")
                 if os.path.exists(output_len_path):
                     with open(output_len_path, "r", encoding="utf-8") as f:
                         content = f.read()

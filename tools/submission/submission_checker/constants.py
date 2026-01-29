@@ -387,6 +387,9 @@ MODEL_CONFIG = {
             "llama3.1-405b-interactive",
             "mixtral-8x7b",
             "deepseek-r1",
+        ],
+        "models_TEST08": [
+            "dlrm-v3",
         ]
     },
     "v5.0": {
@@ -1664,6 +1667,11 @@ TEST06_ACC_PATH = {
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+}
+
+TEST08_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
 }
 
 COMPLIANCE_PATH = {

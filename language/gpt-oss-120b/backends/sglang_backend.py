@@ -123,6 +123,16 @@ class SGLangBackend(BaseBackend):
             }
         }
 
+        # Log sampling parameters before sending request (debug mode)
+        logger.debug(
+            f"Sending request with sampling parameters: "
+            f"max_new_tokens={max_tokens}, "
+            f"temperature={temperature}, "
+            f"top_k={top_k}, "
+            f"top_p={top_p}, "
+            f"input_length={len(input_ids)} tokens"
+        )
+
         try:
             response = self.session.post(
                 f"{self.server_url}/generate",
@@ -189,14 +199,18 @@ class SGLangBackend(BaseBackend):
                 output_ids = response.get("output_ids", [])
                 output_text = response.get("text", "")
 
+            response_token_count = len(output_ids)
+            logger.debug(f"Response token count: {response_token_count} tokens")
+
             result = {
                 "output_ids": output_ids,
                 "output_text": output_text,
                 "metadata": {
                     "latency": latency,
                     "completion_tokens": response.get("meta_info", {}).get(
-                        "completion_tokens", len(output_ids)
+                        "completion_tokens", response_token_count
                     ),
+                    "response_token_count": response_token_count,
                     "error": response.get("error"),
                 }
             }
@@ -255,6 +269,16 @@ class SGLangBackend(BaseBackend):
             },
             "stream": True  # Enable streaming
         }
+
+        # Log sampling parameters before sending streaming request (debug mode)
+        logger.debug(
+            f"Sending streaming request with sampling parameters: "
+            f"max_new_tokens={max_tokens}, "
+            f"temperature={temperature}, "
+            f"top_k={top_k}, "
+            f"top_p={top_p}, "
+            f"input_length={len(input_ids)} tokens"
+        )
 
         start_time = time.time()
         first_token_time = None

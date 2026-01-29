@@ -1,0 +1,260 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0# HELP python_gc_objects_collected_total Objects collected during gc
+# TYPE python_gc_objects_collected_total counter
+python_gc_objects_collected_total{generation="0"} 11611.0
+python_gc_objects_collected_total{generation="1"} 1457.0
+python_gc_objects_collected_total{generation="2"} 211.0
+# HELP python_gc_objects_uncollectable_total Uncollectable objects found during GC
+# TYPE python_gc_objects_uncollectable_total counter
+python_gc_objects_uncollectable_total{generation="0"} 0.0
+python_gc_objects_uncollectable_total{generation="1"} 0.0
+python_gc_objects_uncollectable_total{generation="2"} 0.0
+# HELP python_gc_collections_total Number of times this generation was collected
+# TYPE python_gc_collections_total counter
+python_gc_collections_total{generation="0"} 1794.0
+python_gc_collections_total{generation="1"} 162.0
+python_gc_collections_total{generation="2"} 11.0
+# HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation="CPython",major="3",minor="10",patchlevel="19",version="3.10.19"} 1.0
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 1.1615625216e+010
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 1.050169344e+09
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.76201886708e+09
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 21.830000000000002
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 70.0
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 524288.0
+# HELP vllm:num_requests_running Number of requests in model execution batches.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:num_requests_waiting Number of requests waiting to be processed.
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:kv_cache_usage_perc KV-cache usage. 1 means 100 percent usage.
+# TYPE vllm:kv_cache_usage_perc gauge
+vllm:kv_cache_usage_perc{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:prefix_cache_queries_total Prefix cache queries, in terms of number of queried tokens.
+# TYPE vllm:prefix_cache_queries_total counter
+vllm:prefix_cache_queries_total{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:prefix_cache_queries_created Prefix cache queries, in terms of number of queried tokens.
+# TYPE vllm:prefix_cache_queries_created gauge
+vllm:prefix_cache_queries_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995334008e+09
+# HELP vllm:prefix_cache_hits_total Prefix cache hits, in terms of number of cached tokens.
+# TYPE vllm:prefix_cache_hits_total counter
+vllm:prefix_cache_hits_total{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:prefix_cache_hits_created Prefix cache hits, in terms of number of cached tokens.
+# TYPE vllm:prefix_cache_hits_created gauge
+vllm:prefix_cache_hits_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995334167e+09
+# HELP vllm:num_preemptions_total Cumulative number of preemption from the engine.
+# TYPE vllm:num_preemptions_total counter
+vllm:num_preemptions_total{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:num_preemptions_created Cumulative number of preemption from the engine.
+# TYPE vllm:num_preemptions_created gauge
+vllm:num_preemptions_created{engine="0",model_name="facebook/opt-125m"} 1.76201889953343e+09
+# HELP vllm:prompt_tokens_total Number of prefill tokens processed.
+# TYPE vllm:prompt_tokens_total counter
+vllm:prompt_tokens_total{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:prompt_tokens_created Number of prefill tokens processed.
+# TYPE vllm:prompt_tokens_created gauge
+vllm:prompt_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995334413e+09
+# HELP vllm:generation_tokens_total Number of generation tokens processed.
+# TYPE vllm:generation_tokens_total counter
+vllm:generation_tokens_total{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:generation_tokens_created Number of generation tokens processed.
+# TYPE vllm:generation_tokens_created gauge
+vllm:generation_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.762018899533454e+09
+# HELP vllm:request_success_total Count of successfully processed requests.
+# TYPE vllm:request_success_total counter
+vllm:request_success_total{engine="0",finished_reason="stop",model_name="facebook/opt-125m"} 0.0
+vllm:request_success_total{engine="0",finished_reason="length",model_name="facebook/opt-125m"} 0.0
+vllm:request_success_total{engine="0",finished_reason="abort",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_success_created Count of successfully processed requests.
+# TYPE vllm:request_success_created gauge
+vllm:request_success_created{engine="0",finished_reason="stop",model_name="facebook/opt-125m"} 1.7620188995336163e+09
+vllm:request_success_created{engine="0",finished_reason="length",model_name="facebook/opt-125m"} 1.7620188995336266e+09
+vllm:request_success_created{engine="0",finished_reason="abort",model_name="facebook/opt-125m"} 1.7620188995336332e+09
+# HELP vllm:request_prompt_tokens Number of prefill tokens processed.
+# TYPE vllm:request_prompt_tokens histogram
+vllm:request_prompt_tokens_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="2.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="50.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="100.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="200.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="500.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="1000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="2000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:request_prompt_tokens_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_prompt_tokens_created Number of prefill tokens processed.
+# TYPE vllm:request_prompt_tokens_created gauge
+vllm:request_prompt_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995336757e+09
+# HELP vllm:request_generation_tokens Number of generation tokens processed.
+# TYPE vllm:request_generation_tokens histogram
+vllm:request_generation_tokens_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="2.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="50.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="100.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="200.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="500.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="1000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="2000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:request_generation_tokens_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_generation_tokens_created Number of generation tokens processed.
+# TYPE vllm:request_generation_tokens_created gauge
+vllm:request_generation_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995337234e+09
+# HELP vllm:iteration_tokens_total Histogram of number of tokens per engine_step.
+# TYPE vllm:iteration_tokens_total histogram
+vllm:iteration_tokens_total_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="8.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="16.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="32.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="64.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="128.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="256.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="512.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="1024.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="2048.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="4096.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="8192.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="16384.0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:iteration_tokens_total_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:iteration_tokens_total_created Histogram of number of tokens per engine_step.
+# TYPE vllm:iteration_tokens_total_created gauge
+vllm:iteration_tokens_total_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995337565e+09
+# HELP vllm:request_max_num_generation_tokens Histogram of maximum number of requested generation tokens.
+# TYPE vllm:request_max_num_generation_tokens histogram
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="2.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="50.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="100.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="200.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="500.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="1000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="2000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:request_max_num_generation_tokens_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_max_num_generation_tokens_created Histogram of maximum number of requested generation tokens.
+# TYPE vllm:request_max_num_generation_tokens_created gauge
+vllm:request_max_num_generation_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.762018899533791e+09
+# HELP vllm:request_params_n Histogram of the n request parameter.
+# TYPE vllm:request_params_n histogram
+vllm:request_params_n_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_bucket{engine="0",le="2.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_n_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_params_n_created Histogram of the n request parameter.
+# TYPE vllm:request_params_n_created gauge
+vllm:request_params_n_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995338187e+09
+# HELP vllm:request_params_max_tokens Histogram of the max_tokens request parameter.
+# TYPE vllm:request_params_max_tokens histogram
+vllm:request_params_max_tokens_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="2.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="50.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="100.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="200.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="500.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="1000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="2000.0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:request_params_max_tokens_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:request_params_max_tokens_created Histogram of the max_tokens request parameter.
+# TYPE vllm:request_params_max_tokens_created gauge
+vllm:request_params_max_tokens_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995338433e+09
+# HELP vllm:time_to_first_token_seconds Histogram of time to first token in seconds.
+# TYPE vllm:time_to_first_token_seconds histogram
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.001",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.005",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.01",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.02",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.04",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.06",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.08",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.1",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.25",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="0.75",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="2.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="7.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="40.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="80.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="160.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="640.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="2560.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:time_to_first_token_seconds_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:time_to_first_token_seconds_created Histogram of time to first token in seconds.
+# TYPE vllm:time_to_first_token_seconds_created gauge
+vllm:time_to_first_token_seconds_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995338695e+09
+# HELP vllm:time_per_output_token_seconds Histogram of time per output token in seconds.DEPRECATED: Use vllm:inter_token_latency_seconds instead.
+# TYPE vllm:time_per_output_token_seconds histogram
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.01",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.025",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.05",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.075",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.1",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.15",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.2",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.3",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.4",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="0.75",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="1.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="2.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="5.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="7.5",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="10.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="20.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="40.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="80.0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_bucket{engine="0",le="+Inf",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_count{engine="0",model_name="facebook/opt-125m"} 0.0
+vllm:time_per_output_token_seconds_sum{engine="0",model_name="facebook/opt-125m"} 0.0
+# HELP vllm:time_per_output_token_seconds_created Histogram of time per output token in seconds.DEPRECATED: Use vllm:inter_token_latency_seconds instead.
+# TYPE vllm:time_per_output_token_seconds_created gauge
+vllm:time_per_output_token_seconds_created{engine="0",model_name="facebook/opt-125m"} 1.7620188995339074e+09
+# HELP vllm:inter_token_latency_seconds Histogram of inter-token latency in seconds.
+# TYPE vllm:inter_token_latency_seconds histogram
+vllm:inter_token_latency_seconds_bucket{engine="0",le="0.01",model_name="facebook/opt-125m"} 0.0
+vllm:inter_token_latency_seconds_bucket{engine="0",le="0.025",model_name="facebook/opt-125m"} 0.0
+vllm:inter_token_latency_seconds_bucket{engine="0",legal format or missing URL

@@ -1,0 +1,24 @@
+# ============================================================================
+# GPT-OSS-120B Accuracy Evaluation Dataset Configuration
+# ============================================================================
+
+name: acc_eval_ref
+description: "Configuration for GPT-OSS-120B accuracy evaluation dataset (acc_eval_ref.parquet)"
+
+fields:
+  input_column: "text_input"
+  input_ids_column: "input_tokens"
+  output_column: "ref_output"
+  # input_lens_column: null  # Will be calculated from input_tokens
+
+file_format: "parquet"  # Dataset file is acc_eval_ref.parquet
+
+total_sample_count: 4395
+
+model_specific:
+  # Model-specific settings
+  default_model_name: "openai/gpt-oss-120b"
+  # Note: This dataset has both input_tokens (for SGLang) and text_input (for vLLM)
+  # vLLM can use text_input directly without detokenizing
+  # SGLang uses input_tokens directly
+  max_tokens: 32768  # Accuracy mode max_tokens

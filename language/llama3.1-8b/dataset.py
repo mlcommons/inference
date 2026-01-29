@@ -3,7 +3,6 @@ import os
 import time
 import numpy as np
 import torch
-from datasets import load_dataset, load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from torch.nn.functional import pad
 from torch.utils.data import DataLoader

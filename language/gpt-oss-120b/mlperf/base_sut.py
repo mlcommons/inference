@@ -20,12 +20,12 @@ class BaseSUT(abc.ABC):
     """
 
     def __init__(
-            self, backend, dataset: List[List[int]], name: str = "BaseSUT", progress_bar=None):
+            self, backend, dataset: List, name: str = "BaseSUT", progress_bar=None):
         """Initialize the base SUT.
 
         Args:
             backend: Backend instance for inference
-            dataset: List of tokenized prompts
+            dataset: List of tokenized prompts (List[List[int]]) or text prompts (List[str])
             name: Name of the SUT for logging purposes
             progress_bar: Optional tqdm progress bar for real-time updates
         """

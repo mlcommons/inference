@@ -122,24 +122,16 @@ def parse_mlperf_log(log_path: str) -> List[Dict[str, Any]]:
                         parsed_count += 1
                     except json.JSONDecodeError:
                         if parsed_count == 0:
-<<<<<<< HEAD
                             print(
                                 f"Warning: Line {line_num}: Could not parse JSON")
-=======
-                            print(f"Warning: Line {line_num}: Could not parse JSON")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
                         break
 
     print(f"Loaded {len(entries)} entries from MLPerf log")
     return entries
 
 
-<<<<<<< HEAD
 def compute_output_token_lengths(
         entries: List[Dict[str, Any]]) -> Tuple[List[int], float, int, int]:
-=======
-def compute_output_token_lengths(entries: List[Dict[str, Any]]) -> Tuple[List[int], float, int, int]:
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
     """Compute output token lengths from MLPerf log entries.
 
     Args:
@@ -157,12 +149,8 @@ def compute_output_token_lengths(entries: List[Dict[str, Any]]) -> Tuple[List[in
                 token_ids = decode_hex_to_tokens(hex_data)
                 token_lengths.append(len(token_ids))
             except Exception as e:
-<<<<<<< HEAD
                 print(
                     f"Warning: Error decoding entry {entry.get('qsl_idx')}: {e}")
-=======
-                print(f"Warning: Error decoding entry {entry.get('qsl_idx')}: {e}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
                 token_lengths.append(0)
         else:
             token_lengths.append(0)
@@ -209,23 +197,15 @@ def parse_audit_config(config_path: str) -> Dict[str, Any]:
                             try:
                                 config['min_output_tokens'] = float(value)
                             except ValueError:
-<<<<<<< HEAD
                                 print(
                                     f"Warning: Invalid min_output_tokens value: {value}")
-=======
-                                print(f"Warning: Invalid min_output_tokens value: {value}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
                         elif setting_name == 'test09_max_output_tokens':
                             try:
                                 config['max_output_tokens'] = float(value)
                             except ValueError:
-<<<<<<< HEAD
                                 print(
                                     f"Warning: Invalid max_output_tokens value: {value}")
-=======
-                                print(f"Warning: Invalid max_output_tokens value: {value}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     except Exception as e:
         print(f"Warning: Error parsing audit.config: {e}")
@@ -300,12 +280,8 @@ def main():
             if min_output_tokens is None:
                 min_output_tokens = config_min
             else:
-<<<<<<< HEAD
                 print(
                     f"CLI min ({min_output_tokens}) overrides audit.config ({config_min})")
-=======
-                print(f"CLI min ({min_output_tokens}) overrides audit.config ({config_min})")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
         if 'max_output_tokens' in audit_config:
             config_max = audit_config['max_output_tokens']
@@ -313,12 +289,8 @@ def main():
             if max_output_tokens is None:
                 max_output_tokens = config_max
             else:
-<<<<<<< HEAD
                 print(
                     f"CLI max ({max_output_tokens}) overrides audit.config ({config_max})")
-=======
-                print(f"CLI max ({max_output_tokens}) overrides audit.config ({config_max})")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     # Validate we have thresholds
     if min_output_tokens is None or max_output_tokens is None:
@@ -344,12 +316,8 @@ def main():
         sys.exit(1)
 
     print(f"\nComputing output token lengths for {len(entries)} samples...")
-<<<<<<< HEAD
     token_lengths, mean_length, min_length, max_length = compute_output_token_lengths(
         entries)
-=======
-    token_lengths, mean_length, min_length, max_length = compute_output_token_lengths(entries)
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     # Print statistics
     print("\n" + "=" * 80)
@@ -362,12 +330,8 @@ def main():
 
     # Compute standard deviation
     if token_lengths:
-<<<<<<< HEAD
         variance = sum((x - mean_length) **
                        2 for x in token_lengths) / len(token_lengths)
-=======
-        variance = sum((x - mean_length) ** 2 for x in token_lengths) / len(token_lengths)
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
         std_dev = variance ** 0.5
         print(f"Std deviation: {std_dev:.2f}")
 
@@ -381,15 +345,10 @@ def main():
     overall_pass = min_check_pass and max_check_pass
 
     print(f"Mean output tokens: {mean_length:.2f}")
-<<<<<<< HEAD
     print(
         f"Min threshold: {min_output_tokens} -> {'PASS' if min_check_pass else 'FAIL'}")
     print(
         f"Max threshold: {max_output_tokens} -> {'PASS' if max_check_pass else 'FAIL'}")
-=======
-    print(f"Min threshold: {min_output_tokens} -> {'PASS' if min_check_pass else 'FAIL'}")
-    print(f"Max threshold: {max_output_tokens} -> {'PASS' if max_check_pass else 'FAIL'}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
     print(f"\nOverall: {'TEST PASS' if overall_pass else 'TEST FAIL'}")
 
     # Write verification results
@@ -443,34 +402,22 @@ def main():
     try:
         shutil.copy2(accuracy_file, output_accuracy_dir)
     except Exception:
-<<<<<<< HEAD
         print(
             f"Exception occurred trying to copy {accuracy_file} to {output_accuracy_dir}")
-=======
-        print(f"Exception occurred trying to copy {accuracy_file} to {output_accuracy_dir}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     try:
         if os.path.exists(summary_file):
             shutil.copy2(summary_file, output_performance_dir)
     except Exception:
-<<<<<<< HEAD
         print(
             f"Exception occurred trying to copy {summary_file} to {output_performance_dir}")
-=======
-        print(f"Exception occurred trying to copy {summary_file} to {output_performance_dir}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     try:
         if os.path.exists(detail_file):
             shutil.copy2(detail_file, output_performance_dir)
     except Exception:
-<<<<<<< HEAD
         print(
             f"Exception occurred trying to copy {detail_file} to {output_performance_dir}")
-=======
-        print(f"Exception occurred trying to copy {detail_file} to {output_performance_dir}")
->>>>>>> ead4f5a8 (submission checker updates for gpt-0ss (#2454))
 
     print("\n" + "=" * 80)
     print("TEST09 verification complete")

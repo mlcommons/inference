@@ -185,7 +185,14 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
             "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
-            "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "dlrm-v3": (
+                "DLRM_NE",
+                0.86687 * 0.999,
+                "DLRM_ACC",
+                0.69651 * 0.999,
+                "DLRM_AUC",
+                0.78663 * 0.999,
+            ),
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
@@ -234,7 +241,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 247,
-            "dlrm-v3": 34996,
+            "dlrm-v3": 349823,
             "yolo-95": 5000,
             "yolo-99": 5000,
         },
@@ -265,7 +272,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 247,
-            "dlrm-v3": 34996,
+            "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
         },
@@ -386,6 +393,9 @@ MODEL_CONFIG = {
         "models_TEST09": [
             "gpt-oss-120b",
         ],
+        "models_TEST08": [
+            "dlrm-v3",
+        ]
     },
     "v5.0": {
         "models": [
@@ -1158,6 +1168,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "pointpainting": 6636,
     "yolo-99": 1525,
     "yolo-95": 1525,
+    "dlrm-v3": 349823,
 }
 
 SCENARIO_MAPPING = {
@@ -1375,6 +1386,10 @@ ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "meanAcc": r".*'mean-accuracy':\s+'?([\d.]+)'?.*",
     "AUC": r"^AUC=([\d\.]+).*",
+    # dlrm-v3 patterns for parsing metric/lifetime_*/rating format
+    "DLRM_NE": r".*metric/lifetime_ne/rating:\s*([\d\.]+).*",
+    "DLRM_ACC": r".*metric/lifetime_accuracy/rating:\s*([\d\.]+).*",
+    "DLRM_AUC": r".*metric/lifetime_gauc/rating:\s*([\d\.]+).*",
     "mAP": r".*(?:mAP=|'Total':)\s*([\d.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
@@ -1659,6 +1674,20 @@ TEST06_ACC_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
 }
 
+TEST07_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+}
+
+TEST09_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+}
+
+TEST08_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+}
 TEST07_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",

@@ -67,7 +67,7 @@ class Model:
         self.vae = AutoencoderKLWan.from_pretrained(
             model_path,
             subfolder="vae",
-            torch_dtype=torch.float32
+            torch_dtype=torch.bfloat16
         )
         self.pipe = WanPipeline.from_pretrained(
             model_path,

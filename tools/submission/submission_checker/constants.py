@@ -184,7 +184,7 @@ MODEL_CONFIG = {
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
             "dlrm-v3": (
                 "DLRM_NE",
                 0.86687 * 0.999,
@@ -1169,6 +1169,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "yolo-99": 1525,
     "yolo-95": 1525,
     "dlrm-v3": 349823,
+    "qwen3-vl-235b-a22b": 48289
 }
 
 SCENARIO_MAPPING = {
@@ -1407,6 +1408,7 @@ ACC_PATTERN = {
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
     "exact_match": r".*'exact_match':\s([\d.]+).*",
     "vbench_score": r".*'vbench_score':\s([\d.]+).*",
+    "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}',
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

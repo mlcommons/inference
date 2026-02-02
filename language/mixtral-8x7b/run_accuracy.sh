@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 CHECKPOINT_PATH="${CHECKPOINT_PATH:mistralai/Mixtral-8x7B-Instruct-v0.1}"
 DATASET_PATH="${DATASET_PATH:dataset/2024_06_06_mixtral_15k_v4.pkl}"
 

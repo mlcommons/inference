@@ -13,7 +13,7 @@ This repository provides the config files and scripts to run and verify TEST09 -
 
 | Model | Min Output Tokens | Max Output Tokens | Dataset Size | Notes |
 |-------|-------------------|-------------------|--------------|-------|
-| gpt-oss-120b | 1150.38 | 1406.02 | 4395 | ±10% of 1278.20 reference mean |
+| gpt-oss-120b | 1150.38 | 1406.02 | 6396 | ±10% of 1278.20 reference mean |
 
 ## Introduction
 
@@ -51,7 +51,7 @@ The `audit.config` contains both LoadGen settings and the compliance thresholds:
 # LoadGen settings
 *.*.mode = 2
 *.*.accuracy_log_sampling_target = 10000
-*.*.min_query_count = 4395
+*.*.min_query_count = 6396
 ...
 
 # TEST09 Compliance Thresholds (read by run_verification.py)
@@ -118,14 +118,14 @@ Using thresholds:
 ================================================================================
 
 Parsing MLPerf accuracy log...
-Loaded 4395 entries as JSON array
+Loaded 6396 entries as JSON array
 
-Computing output token lengths for 4395 samples...
+Computing output token lengths for 6396 samples...
 
 ================================================================================
 Output Token Length Statistics
 ================================================================================
-Total samples: 4395
+Total samples: 6396
 Mean output tokens: 1278.20
 Min output tokens: 518
 Max output tokens: 3154

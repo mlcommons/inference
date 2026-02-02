@@ -1,4 +1,5 @@
 # MLPerf Inference reference implementation for GPT-OSS-120B
+
 This is the reference implementation for GPT-OSS-120B.
 
 ## Automated command to run the benchmark via MLCFlow
@@ -23,23 +24,27 @@ mlcr get-ml-model-gpt-oss,_mlc,_r2-downloader --outdirname=<Download path> -j
 mlcr get-dataset-mlperf-inference-gpt-oss,_mlc,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
-* Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
-* Dataset: You can find the dataset at [inference.mlcommons-storage.org](https://inference.mlcommons-storage.org/index.html)
+- Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
+- Dataset: You can find the dataset at [inference.mlcommons-storage.org](https://inference.mlcommons-storage.org/index.html)
 
 Datasets are now provided in **Parquet format** (recommended) for better performance and smaller file size (50% smaller than pickle). Pickle format is still supported for backward compatibility.
 
 ## Environment setup
+
 Work on reference implementation is done using the sglang containers at [https://hub.docker.com/r/lmsysorg/sglang/tags](https://hub.docker.com/r/lmsysorg/sglang/tags). For enroot setup, a script is provided under [`setup_enroot.sh`](./setup_enroot.sh). For all sections below, we shall assume this environment is instantiated.
 
 Once in the environment, install additional requirements using [`setup.sh`](./setup.sh):
+
 ```bash
 ./setup.sh
 ```
 
 ## Running the reference implementation: SGLang
+
 Use [`./sglang/run_server.sh`](./sglang/run_server.sh) to launch an SGLang server hosting `gpt-oss-120b`.
 
 ### Run the server
+
 ```bash
 ./run_server.sh \
   --model_path path/to/gpt-oss-120b/model \
@@ -47,9 +52,11 @@ Use [`./sglang/run_server.sh`](./sglang/run_server.sh) to launch an SGLang serve
   --stream_interval 100 \
   --eagle_path optional/path/to/eagle/head
 ```
+
 The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified.
 
 You may also use docker:
+
 ```bash
 docker run --runtime nvidia --gpus all --net host  \
     -v ${HF_HOME}:/root/.cache/huggingface \
@@ -62,15 +69,18 @@ docker run --runtime nvidia --gpus all --net host  \
 ```
 
 Then, run a benchmark script that uses the client to send/recv requests.
+
 ### Run the inference
 
 **Note:** All scripts now support both Parquet (`.parquet`) and Pickle (`.pkl`) formats for dataset files. Parquet is recommended as it offers:
+
 - 50% smaller file size
 - Faster loading times
 - Cross-language compatibility
 - Type-safe schema preservation
 
 Example usage:
+
 ```bash
 # first, install loadgen
 pip install $(git rev-parse --show-toplevel)/loadgen
@@ -89,6 +99,7 @@ python3 run_mlperf.py \
 ```
 
 Full command-line options:
+
 ```bash
 python3 run_mlperf.py --help
 usage: run_mlperf.py [-h] [--scenario {offline,server}] --input-file INPUT_FILE [--max-samples MAX_SAMPLES] [--mlperf-conf MLPERF_CONF]
@@ -128,9 +139,11 @@ options:
 ```
 
 ### Evaluate the accuracy
+
 Run `run_mlperf.py` with `--accuracy`, and then use the generated `mlperf_log_accuracy.json` to evaluate the accuracy of the run.
 
 Example usage:
+
 ```bash
 # Using Parquet format (recommended)
 python3 eval_mlperf_accuracy.py \
@@ -146,6 +159,7 @@ python3 eval_mlperf_accuracy.py \
 ```
 
 Full command-line options:
+
 ```bash
 python3 eval_mlperf_accuracy.py --help
 usage: eval_mlperf_accuracy.py [-h] --mlperf-log MLPERF_LOG --reference-data REFERENCE_DATA [--tokenizer TOKENIZER] [--output-file OUTPUT_FILE]
@@ -171,8 +185,44 @@ options:
 
 ```
 
+## Generation Configuration
+
+Performance runs and accuracy runs use different generation parameters:
+
+**Common parameters:**
+| Parameter           | Value |
+| ------------------- | ----- |
+| temperature         | 1.0   |
+| top_p               | 1.0   |
+| top_k               | 0     |
+| streaming           | true  |
+| skip_special_tokens | false |
+
+**Different parameters:**
+| Parameter        | Accuracy | Performance |
+| ---------------- | -------- | ----------- |
+| max_output_len   | 32768    | 10240       |
+| reasoning_effort | high     | low         |
+
+Use `--generation-config` to specify a config file, or `--max-new-tokens` to override the max output sequence length directly.
+
 ## Accuracy Target
 
 The accuracy target is 99% of the reference score on the accuracy dataset:
+
 - Reference score: 83.13%
 - Target threshold: 82.30% (99% of 83.13%)
+
+## Compliance Testing
+
+For compliance testing, the following datasets and configurations are required:
+
+| Test   | Dataset                                | Generation Config                                        | Description                                                                       |
+| ------ | -------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| TEST07 | `acc/acc_eval_compliance_gpqa.parquet` | perf config (max_output_len=10240, reasoning_effort=low) | Verifies accuracy in performance mode against GPQA compliance threshold (60.698%) |
+| TEST09 | `perf/perf_eval_ref.parquet`           | perf config (max_output_len=10240, reasoning_effort=low) | Verifies mean output sequence length is within ±10% of reference (1278.20 tokens) |
+
+These datasets are included in the main dataset download. For compliance test configuration details, see the audit.config files:
+
+- [TEST07 audit.config](../../compliance/TEST07/gpt-oss-120b/audit.config)
+- [TEST09 audit.config](../../compliance/TEST09/gpt-oss-120b/audit.config)

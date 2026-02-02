@@ -3,6 +3,7 @@
 This repository provides the config files and scripts to run and verify TEST09 - Verify output token length in performance mode for LLM workloads.
 
 # Table of Contents
+
 1. [Applicable Benchmarks](#applicable-benchmarks)
 2. [Introduction](#introduction)
 3. [Prerequisites](#prerequisites)
@@ -11,9 +12,9 @@ This repository provides the config files and scripts to run and verify TEST09 -
 
 ## Applicable Benchmarks
 
-| Model | Min Output Tokens | Max Output Tokens | Dataset Size | Notes |
-|-------|-------------------|-------------------|--------------|-------|
-| gpt-oss-120b | 1150.38 | 1406.02 | 6396 | ±10% of 1278.20 reference mean |
+| Model        | Min Output Tokens | Max Output Tokens | Dataset Size | Notes                          |
+| ------------ | ----------------- | ----------------- | ------------ | ------------------------------ |
+| gpt-oss-120b | 1150.38           | 1406.02           | 6396         | ±10% of 1278.20 reference mean |
 
 ## Introduction
 
@@ -21,11 +22,11 @@ The purpose of this test is to ensure that models are generating outputs of expe
 
 **Key Verification:**
 
-| Metric | Description |
-|--------|-------------|
-| Mean output tokens | Average number of output tokens across all samples |
-| Min threshold | Benchmark-specific minimum - ensures outputs are not truncated |
-| Max threshold | Benchmark-specific maximum - ensures outputs are not artificially padded |
+| Metric             | Description                                                              |
+| ------------------ | ------------------------------------------------------------------------ |
+| Mean output tokens | Average number of output tokens across all samples                       |
+| Min threshold      | Benchmark-specific minimum - ensures outputs are not truncated           |
+| Max threshold      | Benchmark-specific maximum - ensures outputs are not artificially padded |
 
 The compliance thresholds are defined in the benchmark's `audit.config` file via the `test09_min_output_tokens` and `test09_max_output_tokens` fields. Each benchmark defines its own bounds based on the reference implementation.
 
@@ -83,17 +84,21 @@ python3 run_verification.py \
 
 **Arguments:**
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `-c`, `--compliance_dir` | Yes | Path to compliance test logs (contains `mlperf_log_accuracy.json`) |
-| `-o`, `--output_dir` | Yes | Output directory for submission artifacts |
-| `--audit-config` | No* | Path to audit.config containing thresholds |
-| `--min-output-tokens` | No* | Override minimum threshold (CLI takes precedence) |
-| `--max-output-tokens` | No* | Override maximum threshold (CLI takes precedence) |
+| Argument                 | Required | Description                                                        |
+| ------------------------ | -------- | ------------------------------------------------------------------ |
+| `-c`, `--compliance_dir` | Yes      | Path to compliance test logs (contains `mlperf_log_accuracy.json`) |
+| `-o`, `--output_dir`     | Yes      | Output directory for submission artifacts                          |
+| `--audit-config`         | No\*     | Path to audit.config containing thresholds                         |
+| `--min-output-tokens`    | No\*     | Override minimum threshold (CLI takes precedence)                  |
+| `--max-output-tokens`    | No\*     | Override maximum threshold (CLI takes precedence)                  |
 
-*At least one of `--audit-config` or both `--min-output-tokens` and `--max-output-tokens` must be provided.
+\*At least one of `--audit-config` or both `--min-output-tokens` and `--max-output-tokens` must be provided.
 
 ### Example: gpt-oss-120b
+
+**Dataset:** Use `perf/perf_eval_ref.parquet` (the performance dataset) from the gpt-oss dataset download for TEST09 compliance runs.
+
+**Generation Config:** Use performance generation config as-is (`max_output_len=10240`, `reasoning_effort=low`). This test verifies mean output sequence length is within ±10% of reference (1278.20 tokens).
 
 ```bash
 python3 compliance/TEST09/run_verification.py \
@@ -183,6 +188,7 @@ Create `compliance/TEST09/<benchmark>/audit.config`:
 ### 2. Update this README
 
 Add the benchmark to the "Applicable Benchmarks" table with:
+
 - Model name
 - Min output tokens threshold
 - Max output tokens threshold

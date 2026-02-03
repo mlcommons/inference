@@ -31,9 +31,8 @@ from generative_recommenders.ops.utils import is_sm100
 from triton.runtime.autotuner import Autotuner
 
 try:
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops")
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops_cpu")
-except OSError:
+    import fbgemm_gpu  # noqa: F401
+except ImportError:
     pass
 
 try:

@@ -74,6 +74,7 @@ def download_img(args):
     else:
         urllib.request.urlretrieve(img_url, target_folder + file_name)
 
+
 def download_file(url: str, output_dir: str, filename: str | None = None):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -98,6 +99,7 @@ def download_file(url: str, output_dir: str, filename: str | None = None):
                     pbar.update(len(chunk))
 
     return output_path
+
 
 if __name__ == "__main__":
     args = get_args()
@@ -134,7 +136,7 @@ if __name__ == "__main__":
             download_file(
                 url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
                 output_dir=f"{dataset_dir}/download_aux",
-                )
+            )
 
             # Unzip file
             with zipfile.ZipFile(
@@ -144,7 +146,9 @@ if __name__ == "__main__":
 
         # Move captions to target folder
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        shutil.move(f"{dataset_dir}/captions/captions_val2014.json", f"{dataset_dir}/captions/captions_val2014.json")
+        shutil.move(
+            f"{dataset_dir}/captions/captions_val2014.json",
+            f"{dataset_dir}/captions/captions_val2014.json")
         if not args.keep_raw:
             shutil.rmtree(f"{dataset_dir}/raw")
         shutil.rmtree(f"{dataset_dir}/download_aux")
@@ -202,9 +206,13 @@ if __name__ == "__main__":
     if os.path.exists(args.latents_path_torch):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
         latents_fname = os.path.basename(args.latents_path_torch)
-        shutil.copyfile(args.latents_path_torch, f"{dataset_dir}/latents/{latents_fname}")
-        
+        shutil.copyfile(
+            args.latents_path_torch,
+            f"{dataset_dir}/latents/{latents_fname}")
+
     if os.path.exists(args.latents_path_numpy):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
         latents_fname = os.path.basename(args.latents_path_numpy)
-        shutil.copyfile(args.latents_path_numpy, f"{dataset_dir}/latents/{latents_fname}")
+        shutil.copyfile(
+            args.latents_path_numpy,
+            f"{dataset_dir}/latents/{latents_fname}")

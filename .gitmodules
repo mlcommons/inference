@@ -11,5 +11,5 @@
 	path = language/deepseek-r1/submodules/LiveCodeBench
 	url = https://github.com/LiveCodeBench/LiveCodeBench
 [submodule "text_to_video/wan2.2-t2v-14b/submodules/VBench"]
-	path = text_to_video/wan2.2-t2v-14b/submodules/VBench
+	path = text_to_video/wan-2.2-t2v-a14b/submodules/VBench
 	url = https://github.com/Vchitect/VBench

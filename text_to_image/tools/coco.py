@@ -5,8 +5,10 @@ from multiprocessing import Pool
 import pandas as pd
 import os
 import tqdm
+import requests
 import urllib.request
 import zipfile
+import shutil
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
@@ -72,6 +74,30 @@ def download_img(args):
     else:
         urllib.request.urlretrieve(img_url, target_folder + file_name)
 
+def download_file(url: str, output_dir: str, filename: str | None = None):
+    os.makedirs(output_dir, exist_ok=True)
+
+    if filename is None:
+        filename = os.path.basename(url)
+
+    output_path = os.path.join(output_dir, filename)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        total_size = int(r.headers.get("Content-Length", 0))
+
+        with open(output_path, "wb") as f, tqdm(
+            total=total_size,
+            unit="B",
+            unit_scale=True,
+            desc=filename,
+        ) as pbar:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    pbar.update(len(chunk))
+
+    return output_path
 
 if __name__ == "__main__":
     args = get_args()
@@ -84,8 +110,9 @@ if __name__ == "__main__":
         df_annotations = df_annotations.iloc[: args.max_images]
     elif os.path.exists(f"{dataset_dir}/../captions_source.tsv"):
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(
-            f"cp {dataset_dir}/../captions_source.tsv {dataset_dir}/captions/")
+        shutil.copyfile(
+            f"{dataset_dir}/../captions_source.tsv", f"{dataset_dir}/captions/captions_source.tsv"
+        )
         df_annotations = pd.read_csv(
             f"{dataset_dir}/captions/captions_source.tsv", sep="\t"
         )
@@ -93,7 +120,7 @@ if __name__ == "__main__":
     elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
         file_name = args.tsv_path.split("/")[-1]
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(f"cp {args.tsv_path} {dataset_dir}/captions/")
+        shutil.copyfile(args.tsv_path, f"{dataset_dir}/captions/{file_name}")
         df_annotations = pd.read_csv(
             f"{dataset_dir}/captions/{file_name}", sep="\t")
         df_annotations = df_annotations.iloc[: args.max_images]
@@ -104,10 +131,10 @@ if __name__ == "__main__":
             # Download annotations
             os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
             os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
-            os.system(
-                f"cd {dataset_dir}/download_aux/ && \
-                    wget http://images.cocodataset.org/annotations/annotations_trainval2014.zip --show-progress"
-            )
+            download_file(
+                url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
+                output_dir=f"{dataset_dir}/download_aux",
+                )
 
             # Unzip file
             with zipfile.ZipFile(
@@ -117,12 +144,11 @@ if __name__ == "__main__":
 
         # Move captions to target folder
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(
-            f"mv {dataset_dir}/raw/annotations/captions_val2014.json {dataset_dir}/captions/"
-        )
+        shutil.move(f"{dataset_dir}/captions/captions_val2014.json", f"{dataset_dir}/captions/captions_val2014.json")
         if not args.keep_raw:
-            os.system(f"rm -rf {dataset_dir}/raw")
-        os.system(f"rm -rf {dataset_dir}/download_aux")
+            shutil.rmtree(f"{dataset_dir}/raw")
+        shutil.rmtree(f"{dataset_dir}/download_aux")
+        
         # Convert to dataframe format and extract the relevant fields
         with open(f"{dataset_dir}/captions/captions_val2014.json") as f:
             captions = json.load(f)
@@ -175,8 +201,8 @@ if __name__ == "__main__":
 
     if os.path.exists(args.latents_path_torch):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        os.system(f"cp {args.latents_path_torch} {dataset_dir}/latents/")
-
+        shutil.copytree(args.latents_path_torch, f"{dataset_dir}/latents/", dirs_exist_ok=True)
+        
     if os.path.exists(args.latents_path_numpy):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        os.system(f"cp {args.latents_path_numpy} {dataset_dir}/latents/")
+        shutil.copyfile(args.latents_path_numpy, f"{dataset_dir}/latents/", dirs_exist_ok=True)

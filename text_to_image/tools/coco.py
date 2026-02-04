@@ -148,7 +148,7 @@ if __name__ == "__main__":
         if not args.keep_raw:
             shutil.rmtree(f"{dataset_dir}/raw")
         shutil.rmtree(f"{dataset_dir}/download_aux")
-        
+
         # Convert to dataframe format and extract the relevant fields
         with open(f"{dataset_dir}/captions/captions_val2014.json") as f:
             captions = json.load(f)
@@ -201,8 +201,10 @@ if __name__ == "__main__":
 
     if os.path.exists(args.latents_path_torch):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        shutil.copytree(args.latents_path_torch, f"{dataset_dir}/latents/", dirs_exist_ok=True)
+        latents_fname = os.path.basename(args.latents_path_torch)
+        shutil.copyfile(args.latents_path_torch, f"{dataset_dir}/latents/{latents_fname}")
         
     if os.path.exists(args.latents_path_numpy):
         os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        shutil.copyfile(args.latents_path_numpy, f"{dataset_dir}/latents/", dirs_exist_ok=True)
+        latents_fname = os.path.basename(args.latents_path_numpy)
+        shutil.copyfile(args.latents_path_numpy, f"{dataset_dir}/latents/{latents_fname}")

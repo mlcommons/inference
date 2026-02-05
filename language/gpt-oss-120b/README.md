@@ -219,8 +219,8 @@ For compliance testing, the following datasets and configurations are required:
 
 | Test   | Dataset                                | Generation Config                                        | Description                                                                       |
 | ------ | -------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| TEST07 | `acc/acc_eval_compliance_gpqa.parquet` | perf config (max_output_len=10240, reasoning_effort=low) | Verifies accuracy in performance mode against GPQA compliance threshold (60.698%) |
-| TEST09 | `perf/perf_eval_ref.parquet`           | perf config (max_output_len=10240, reasoning_effort=low) | Verifies mean output sequence length is within ±10% of reference (1278.20 tokens) |
+| TEST07 | `acc/acc_eval_compliance_gpqa.parquet` | perf config (max_output_len=10240), **reasoning_effort=high**) | Verifies accuracy in performance mode against GPQA compliance threshold (60.698%) |
+| TEST09 | `perf/perf_eval_ref.parquet`           | perf config (max_output_len=10240), **reasoning_effort=low**) | Verifies mean output sequence length is within ±10% of reference (1278.20 tokens) |
 
 These datasets are included in the main dataset download. For compliance test configuration details, see the audit.config files:
 

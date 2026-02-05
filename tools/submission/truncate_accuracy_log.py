@@ -160,12 +160,14 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                             ):
 
                                 # TEST01, TEST07, and TEST09 have accuracy logs
-                                # TEST07 and TEST09 are used for gpt-oss-120b compliance
+                                # TEST07 and TEST09 are used for gpt-oss-120b
+                                # compliance
                                 if str(test).startswith(
                                         "TEST") and test not in ["TEST01", "TEST07", "TEST09"]:
                                     continue
 
-                                # For compliance tests, include the test directory in the path
+                                # For compliance tests, include the test
+                                # directory in the path
                                 if str(test).startswith("TEST"):
                                     name = os.path.join(
                                         log_path, system_desc, model, scenario, test
@@ -186,9 +188,11 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                     log.error("%s missing", acc_log)
                                     continue
 
-                                # TEST07 and TEST09 don't have accuracy.txt, only verification logs
+                                # TEST07 and TEST09 don't have accuracy.txt,
+                                # only verification logs
                                 if str(test) in ["TEST07", "TEST09"]:
-                                    # Skip accuracy.txt requirement for these tests
+                                    # Skip accuracy.txt requirement for these
+                                    # tests
                                     hash_val = None
                                 elif (
                                     not os.path.exists(acc_txt)
@@ -242,13 +246,15 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
 
                                 # get to work
                                 hash_val = get_hash(acc_log)
-                                # For TEST07/TEST09, write hash to a new accuracy.txt file
+                                # For TEST07/TEST09, write hash to a new
+                                # accuracy.txt file
                                 if str(test) in ["TEST07", "TEST09"]:
                                     with open(acc_txt, "w", encoding="utf-8") as f:
                                         f.write("hash={0}\n".format(hash_val))
                                 else:
                                     with open(acc_txt, "a", encoding="utf-8") as f:
-                                        f.write("\nhash={0}\n".format(hash_val))
+                                        f.write(
+                                            "\nhash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
                                 log.info("%s truncated", acc_log)
 

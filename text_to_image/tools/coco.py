@@ -108,11 +108,10 @@ if __name__ == "__main__":
     dataset_dir = os.path.abspath(args.dataset_dir)
     dataset_dir = Path(dataset_dir)
     tsv_path = Path(args.tsv_path) if args.tsv_path else None
-    
+
     # Check if the annotation dataframe is there
     captions_source = dataset_dir / "captions" / "captions_source.tsv"
     alt_captions_source = dataset_dir / ".." / "captions_source.tsv"
-    
 
     if captions_source.exists():
         df_annotations = pd.read_csv(
@@ -131,18 +130,21 @@ if __name__ == "__main__":
     elif args.tsv_path is not None and tsv_path.exists():
         file_name = tsv_path.name
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        shutil.copyfile(str(tsv_path), str(dataset_dir / "captions" / file_name))
+        shutil.copyfile(
+            str(tsv_path), str(
+                dataset_dir / "captions" / file_name))
         df_annotations = pd.read_csv(
             str(dataset_dir / "captions" / file_name), sep="\t")
         df_annotations = df_annotations.iloc[: args.max_images]
     else:
         # Check if raw annotations file already exist
-        raw_annotations_path = dataset_dir / "raw" / "annotations" / "captions_val2014.json"
+        raw_annotations_path = dataset_dir / "raw" / \
+            "annotations" / "captions_val2014.json"
 
         if not raw_annotations_path.exists():
             # Download annotations
-            os.makedirs(str(dataset_dir/"raw"), exist_ok=True)
-            os.makedirs(str(dataset_dir/"download_aux"), exist_ok=True)
+            os.makedirs(str(dataset_dir / "raw"), exist_ok=True)
+            os.makedirs(str(dataset_dir / "download_aux"), exist_ok=True)
             download_file(
                 url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
                 output_dir=dataset_dir / "download_aux",

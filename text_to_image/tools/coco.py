@@ -1,3 +1,4 @@
+import zipfile
 import argparse
 import json
 import logging
@@ -9,6 +10,7 @@ import requests
 import urllib.request
 import zipfile
 import shutil
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
@@ -69,25 +71,24 @@ def get_args():
 
 def download_img(args):
     img_url, target_folder, file_name = args
-    if os.path.exists(target_folder + file_name):
+    if (target_folder / file_name).exists():
         log.warning(f"Image {file_name} found locally, skipping download")
     else:
-        urllib.request.urlretrieve(img_url, target_folder + file_name)
+        urllib.request.urlretrieve(img_url, str(target_folder / file_name))
 
 
-def download_file(url: str, output_dir: str, filename: str | None = None):
-    os.makedirs(output_dir, exist_ok=True)
+def download_file(url: str, output_dir: Path, filename: str | None = None):
+    os.makedirs(str(output_dir), exist_ok=True)
 
     if filename is None:
         filename = os.path.basename(url)
 
-    output_path = os.path.join(output_dir, filename)
+    output_path = output_dir / filename
 
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         total_size = int(r.headers.get("Content-Length", 0))
-
-        with open(output_path, "wb") as f, tqdm(
+        with open(str(output_path), "wb") as f, tqdm.tqdm(
             total=total_size,
             unit="B",
             unit_scale=True,
@@ -103,58 +104,68 @@ def download_file(url: str, output_dir: str, filename: str | None = None):
 
 if __name__ == "__main__":
     args = get_args()
-    dataset_dir = os.path.abspath(args.dataset_dir)
     # Check if the annotation dataframe is there
-    if os.path.exists(f"{dataset_dir}/captions/captions_source.tsv"):
+    dataset_dir = os.path.abspath(args.dataset_dir)
+    dataset_dir = Path(dataset_dir)
+    tsv_path = Path(args.tsv_path) if args.tsv_path else None
+    
+    # Check if the annotation dataframe is there
+    captions_source = dataset_dir / "captions" / "captions_source.tsv"
+    alt_captions_source = dataset_dir / ".." / "captions_source.tsv"
+    
+
+    if captions_source.exists():
         df_annotations = pd.read_csv(
-            f"{dataset_dir}/captions/captions_source.tsv", sep="\t"
+            str(captions_source), sep="\t"
         )
         df_annotations = df_annotations.iloc[: args.max_images]
-    elif os.path.exists(f"{dataset_dir}/../captions_source.tsv"):
-        os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
+    elif alt_captions_source.exists():
+        os.makedirs(str(captions_source / "captions"), exist_ok=True)
         shutil.copyfile(
-            f"{dataset_dir}/../captions_source.tsv", f"{dataset_dir}/captions/captions_source.tsv"
+            str(alt_captions_source), str(captions_source)
         )
         df_annotations = pd.read_csv(
-            f"{dataset_dir}/captions/captions_source.tsv", sep="\t"
+            str(captions_source), sep="\t"
         )
         df_annotations = df_annotations.iloc[: args.max_images]
-    elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
-        file_name = args.tsv_path.split("/")[-1]
+    elif args.tsv_path is not None and tsv_path.exists():
+        file_name = tsv_path.name
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        shutil.copyfile(args.tsv_path, f"{dataset_dir}/captions/{file_name}")
+        shutil.copyfile(str(tsv_path), str(dataset_dir / "captions" / file_name))
         df_annotations = pd.read_csv(
-            f"{dataset_dir}/captions/{file_name}", sep="\t")
+            str(dataset_dir / "captions" / file_name), sep="\t")
         df_annotations = df_annotations.iloc[: args.max_images]
     else:
         # Check if raw annotations file already exist
-        if not os.path.exists(
-                f"{dataset_dir}/raw/annotations/captions_val2014.json"):
+        raw_annotations_path = dataset_dir / "raw" / "annotations" / "captions_val2014.json"
+
+        if not raw_annotations_path.exists():
             # Download annotations
-            os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
-            os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
+            os.makedirs(str(dataset_dir/"raw"), exist_ok=True)
+            os.makedirs(str(dataset_dir/"download_aux"), exist_ok=True)
             download_file(
                 url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
-                output_dir=f"{dataset_dir}/download_aux",
+                output_dir=dataset_dir / "download_aux",
             )
-
+            zipfile_path = dataset_dir / "download_aux" / "annotations_trainval2014.zip"
             # Unzip file
             with zipfile.ZipFile(
-                f"{dataset_dir}/download_aux/annotations_trainval2014.zip", "r"
+                str(zipfile_path), "r"
             ) as zip_ref:
-                zip_ref.extractall(f"{dataset_dir}/raw/")
+                zip_ref.extractall(str(dataset_dir / "raw/"))
 
         # Move captions to target folder
-        os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
+        os.makedirs(str(dataset_dir / "captions"), exist_ok=True)
         shutil.move(
-            f"{dataset_dir}/captions/captions_val2014.json",
-            f"{dataset_dir}/captions/captions_val2014.json")
+            str(raw_annotations_path),
+            str(dataset_dir / "captions" / "captions_val2014.json"))
         if not args.keep_raw:
-            shutil.rmtree(f"{dataset_dir}/raw")
-        shutil.rmtree(f"{dataset_dir}/download_aux")
+            shutil.rmtree(str(dataset_dir / "raw"))
+        shutil.rmtree(str(dataset_dir / "download_aux"))
 
         # Convert to dataframe format and extract the relevant fields
-        with open(f"{dataset_dir}/captions/captions_val2014.json") as f:
+        captions_source = dataset_dir / "captions" / "captions_val2014.json"
+        with open(str(captions_source)) as f:
             captions = json.load(f)
             annotations = captions["annotations"]
             images = captions["images"]
@@ -184,10 +195,11 @@ if __name__ == "__main__":
         )
     # Download images
     if args.download_images:
-        os.makedirs(f"{dataset_dir}/validation/data/", exist_ok=True)
+        download_dir = dataset_dir / "validation" / "data"
+        os.makedirs(str(download_dir), exist_ok=True)
         tasks = [
             (row["coco_url"],
-             f"{dataset_dir}/validation/data/",
+             download_dir,
              row["file_name"])
             for i, row in df_annotations.iterrows()
         ]
@@ -201,18 +213,17 @@ if __name__ == "__main__":
     # Finalize annotations
     df_annotations[
         ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]
-    ].to_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t", index=False)
+    ].to_csv(str(dataset_dir / "captions" / "captions.tsv"), sep="\t", index=False)
 
     if os.path.exists(args.latents_path_torch):
-        os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
+        os.makedirs(str(dataset_dir / "latents"), exist_ok=True)
         latents_fname = os.path.basename(args.latents_path_torch)
         shutil.copyfile(
             args.latents_path_torch,
-            f"{dataset_dir}/latents/{latents_fname}")
-
+            str(dataset_dir / "latents" / latents_fname))
     if os.path.exists(args.latents_path_numpy):
-        os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
+        os.makedirs(str(dataset_dir / "latents"), exist_ok=True)
         latents_fname = os.path.basename(args.latents_path_numpy)
         shutil.copyfile(
             args.latents_path_numpy,
-            f"{dataset_dir}/latents/{latents_fname}")
+            str(dataset_dir / "latents" / latents_fname))

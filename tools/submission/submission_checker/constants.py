@@ -1169,7 +1169,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "yolo-99": 1525,
     "yolo-95": 1525,
     "dlrm-v3": 349823,
-    "qwen3-vl-235b-a22b": 48289
+    "qwen3-vl-235b-a22b": 48289,
+    "wan-2.2-t2v-a14b": 248,
 }
 
 SCENARIO_MAPPING = {

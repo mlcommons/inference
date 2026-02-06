@@ -237,7 +237,6 @@ MODEL_CONFIG = {
             "pointpainting": 1024,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 247,
@@ -1164,6 +1163,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama3.1-405b": 8313,
     "rgat": 788379,
     "deepseek-r1": 4388,
+    "gpt-oss-120b": 6396,
     "whisper": 1633,
     "pointpainting": 6636,
     "yolo-99": 1525,

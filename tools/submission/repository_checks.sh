@@ -17,7 +17,7 @@ if [ ${#FILES_GREATER_THAN_50} -gt 0 ] ||
     [ ${#BAD_FOLDER_NAMES} -gt 0 ] ||
     [ ${#SPACE_FILE_NAMES} -gt 0 ]
 then
-    errors="ERRORS:\n;
+    errors="ERRORS:
 FILES GREATER THAN 50MB:
 ${FILES_GREATER_THAN_50};
 SYMBOLIC LINKS:

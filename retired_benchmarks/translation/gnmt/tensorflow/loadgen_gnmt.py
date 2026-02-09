@@ -13,7 +13,11 @@
 # limitations under the License.
 # =============================================================================
 
-from generic_loadgen import *
+from generic_loadgen import Runner, flush_queries 
+import time
+import numpy as np
+import mlperf_loadgen
+import queue
 import sys
 from nmt.nmt import create_hparams, add_arguments, create_or_load_hparams
 import argparse

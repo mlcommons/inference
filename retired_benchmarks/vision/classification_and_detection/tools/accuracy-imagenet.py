@@ -3,9 +3,8 @@ Tool to calculate accuracy for loadgen accuracy output found in mlperf_log_accur
 We assume that loadgen's query index is in the same order as the images in imagenet2012/val_map.txt.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+
+
 
 import argparse
 import json

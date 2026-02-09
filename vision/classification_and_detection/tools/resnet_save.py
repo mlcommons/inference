@@ -19,9 +19,6 @@ includes dataset management, hyperparameter and optimizer code, and argument
 parsing. Code for defining the ResNet layers can be found in resnet_model.py.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import functools
 import math

@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 """For training NMT models."""
-from __future__ import print_function
 
 import math
 import os

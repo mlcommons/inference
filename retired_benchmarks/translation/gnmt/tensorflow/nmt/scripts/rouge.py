@@ -5,10 +5,8 @@ This is a modified and slightly extended verison of
 https://github.com/miso-belica/sumy/blob/dev/sumy/evaluation/rouge.py.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+
+
 
 import itertools
 import numpy as np

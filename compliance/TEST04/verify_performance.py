@@ -40,97 +40,99 @@ def main():
     args = parser.parse_args()
 
     print("Verifying performance.")
-    ref_file = open(args.reference_summary, "r")
-    test_file = open(args.test_summary, "r")
+    
+    
     ref_score = 0
     test_score = 0
     ref_mode = ""
     test_mode = ""
 
-    for line in ref_file:
-        if re.match("Scenario", line):
-            ref_mode = line.split(": ", 1)[1].strip()
-            continue
-
-        if ref_mode == "SingleStream":
-            if re.match(
-                    ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                ref_score = 1e9 / float(ref_score)
+    with open(args.reference_summary, "r") as ref_file:
+        for line in ref_file:
+            if re.match("Scenario", line):
+                ref_mode = line.split(": ", 1)[1].strip()
                 continue
 
-        if ref_mode == "MultiStream":
-            if re.match(
-                    ".*Early stopping (99th|99.0th) percentile estimate", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                ref_score = 1e9 / float(ref_score)
+            if ref_mode == "SingleStream":
+                if re.match(
+                        ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
+                    ref_score = line.split(": ", 1)[1].strip()
+                    ref_score = 1e9 / float(ref_score)
+                    continue
+
+            if ref_mode == "MultiStream":
+                if re.match(
+                        ".*Early stopping (99th|99.0th) percentile estimate", line):
+                    ref_score = line.split(": ", 1)[1].strip()
+                    ref_score = 1e9 / float(ref_score)
+                    continue
+
+            if ref_mode == "Server":
+                if re.match("Completed samples per second", line):
+                    ref_score = line.split(": ", 1)[1].strip()
+                    continue
+                if re.match("target_latency (ns)", line):
+                    ref_target_latency = line.split(": ", 1)[1].strip()
+                    continue
+
+            if ref_mode == "Offline":
+                if re.match("Samples per second", line):
+                    ref_score = line.split(": ", 1)[1].strip()
+                    continue
+
+            if re.match("Result is", line):
+                valid = line.split(": ", 1)[1].strip()
+                if valid == "INVALID":
+                    sys.exit("TEST FAIL: Reference results are invalid")
+
+            if re.match("\\d+ ERROR", line):
+                error = line.split(" ", 1)[0].strip()
+                print("WARNING: " + error + " ERROR reported in reference results")
+
+    with open(args.test_summary, "r") as test_file:
+        for line in test_file:
+            if re.match("Scenario", line):
+                test_mode = line.split(": ", 1)[1].strip()
                 continue
 
-        if ref_mode == "Server":
-            if re.match("Completed samples per second", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
-            if re.match("target_latency (ns)", line):
-                ref_target_latency = line.split(": ", 1)[1].strip()
-                continue
+            if test_mode == "SingleStream":
+                if re.match(
+                        ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
+                    test_score = line.split(": ", 1)[1].strip()
+                    test_score = 1e9 / float(test_score)
+                    continue
 
-        if ref_mode == "Offline":
-            if re.match("Samples per second", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
+            if test_mode == "MultiStream":
+                if re.match(
+                        ".*Early stopping (99th|99.0th) percentile estimate", line):
+                    test_score = line.split(": ", 1)[1].strip()
+                    test_score = 1e9 / float(test_score)
+                    continue
 
-        if re.match("Result is", line):
-            valid = line.split(": ", 1)[1].strip()
-            if valid == "INVALID":
-                sys.exit("TEST FAIL: Reference results are invalid")
+            if test_mode == "Server":
+                if re.match("Completed samples per second", line):
+                    test_score = line.split(": ", 1)[1].strip()
+                    continue
+                if re.match("target_latency (ns)", line):
+                    test_target_latency = line.split(": ", 1)[1].strip()
+                    if test_target_latency != ref_target_latency:
+                        print("TEST FAIL: Server target latency mismatch")
+                        sys.exit()
+                    continue
 
-        if re.match("\\d+ ERROR", line):
-            error = line.split(" ", 1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in reference results")
+            if test_mode == "Offline":
+                if re.match("Samples per second", line):
+                    test_score = line.split(": ", 1)[1].strip()
+                    continue
 
-    for line in test_file:
-        if re.match("Scenario", line):
-            test_mode = line.split(": ", 1)[1].strip()
-            continue
+            if re.match("Result is", line):
+                valid = line.split(": ", 1)[1].strip()
+                if valid == "INVALID":
+                    sys.exit("TEST FAIL: Test results are invalid")
 
-        if test_mode == "SingleStream":
-            if re.match(
-                    ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
-                test_score = line.split(": ", 1)[1].strip()
-                test_score = 1e9 / float(test_score)
-                continue
-
-        if test_mode == "MultiStream":
-            if re.match(
-                    ".*Early stopping (99th|99.0th) percentile estimate", line):
-                test_score = line.split(": ", 1)[1].strip()
-                test_score = 1e9 / float(test_score)
-                continue
-
-        if test_mode == "Server":
-            if re.match("Completed samples per second", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-            if re.match("target_latency (ns)", line):
-                test_target_latency = line.split(": ", 1)[1].strip()
-                if test_target_latency != ref_target_latency:
-                    print("TEST FAIL: Server target latency mismatch")
-                    sys.exit()
-                continue
-
-        if test_mode == "Offline":
-            if re.match("Samples per second", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if re.match("Result is", line):
-            valid = line.split(": ", 1)[1].strip()
-            if valid == "INVALID":
-                sys.exit("TEST FAIL: Test results are invalid")
-
-        if re.match("\\d+ ERROR", line):
-            error = line.split(" ", 1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in test results")
+            if re.match("\\d+ ERROR", line):
+                error = line.split(" ", 1)[0].strip()
+                print("WARNING: " + error + " ERROR reported in test results")
 
     if test_mode != ref_mode:
         sys.exit("Test and reference scenarios do not match!")

@@ -20,19 +20,13 @@
 
 import os
 import sys
-import subprocess
 
 
 def generate_doxygen_html(doxygen_out_dir, loadgen_root):
     os.environ["MLPERF_LOADGEN_SRC_PATH"] = loadgen_root
     os.environ["MLPERF_DOXYGEN_OUT_PATH"] = doxygen_out_dir
-    config_path = os.path.join(loadgen_root, "docs", "src", "doxygen.cfg")
+    os.popen("doxygen " + loadgen_root + "/docs/src/doxygen.cfg")
 
-    subprocess.run(
-        ["doxygen", config_path],
-        env=os.environ,
-        check=True,
-    )
 
 def main(argv):
     doxygen_out_dir = "./docs/gen" if len(argv) < 2 else argv[1]

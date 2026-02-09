@@ -12,9 +12,9 @@ This repository provides the config files and scripts to run and verify TEST07 -
 
 ## Applicable Benchmarks
 
-| Model | Accuracy Threshold | Score Pattern | Dataset Size |
-|-------|-------------------|---------------|--------------|
-| gpt-oss-120b | 60.698 | `'exact_match': <score>` | 990 |
+| Model        | Accuracy Threshold | Score Pattern            | Dataset Size |
+| ------------ | ------------------ | ------------------------ | ------------ |
+| gpt-oss-120b | 60.698             | `'exact_match': <score>` | 990          |
 
 ## Introduction
 
@@ -89,6 +89,10 @@ python3 run_verification.py \
 
 ### Example: gpt-oss-120b
 
+**Dataset:** Use `acc/acc_eval_compliance_gpqa.parquet` from the gpt-oss dataset download for TEST07 compliance runs.
+
+**Generation Config:** Use perf generation config (`max_output_len=10240`, `reasoning_effort=low`).
+
 ```bash
 python3 compliance/TEST07/run_verification.py \
     -c /path/to/compliance/run/logs/ \
@@ -96,7 +100,7 @@ python3 compliance/TEST07/run_verification.py \
     --audit-config compliance/TEST07/gpt-oss-120b/audit.config \
     --accuracy-script "python3 language/gpt-oss-120b/eval_mlperf_accuracy.py \
         --mlperf-log {accuracy_log} \
-        --reference-data /path/to/accuracy_eval_data.pkl \
+        --reference-data /path/to/acc/acc_eval_compliance_gpqa.parquet \
         --tokenizer openai/gpt-oss-120b"
 ```
 

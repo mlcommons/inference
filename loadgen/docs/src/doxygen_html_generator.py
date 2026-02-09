@@ -28,7 +28,6 @@ def generate_doxygen_html(doxygen_out_dir, loadgen_root):
     os.popen("doxygen " + loadgen_root + "/docs/src/doxygen.cfg")
 
 
-
 def main(argv):
     doxygen_out_dir = "./docs/gen" if len(argv) < 2 else argv[1]
     loadgen_root = "." if len(argv) < 3 else argv[2]

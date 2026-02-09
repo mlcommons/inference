@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+
 
 CHECKPOINT_PATH="${CHECKPOINT_PATH:Meta-Llama-3.1-405B-Instruct}"
 DATASET_PATH="${DATASET_PATH:mlperf_llama3.1_405b_dataset_8318.pkl}"

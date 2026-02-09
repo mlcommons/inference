@@ -204,9 +204,7 @@ def main():
                 "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
                 "pointpainting": ["SingleStream"],
-                "whisper": ["Offline"],
-                "yolo-95": ["SingleStream", "MultiStream", "Offline"],
-                "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+                "whisper": ["Offline"]
             },
         }
     elif args.version == "5.0":

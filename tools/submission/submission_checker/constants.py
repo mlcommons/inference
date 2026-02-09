@@ -22,8 +22,6 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "dlrm-v3",
-            "yolo-95",
-            "yolo-99",
         ],
         "required-scenarios-datacenter": {
             "dlrm-v3": ["Server", "Offline"],
@@ -59,8 +57,6 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
             "whisper": ["Offline"],
-            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
-            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -84,8 +80,6 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Offline"],
             "dlrm-v3": ["Offline", "Server"],
-            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
-            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-datacenter-edge": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -193,8 +187,6 @@ MODEL_CONFIG = {
                 "DLRM_AUC",
                 0.78663 * 0.999,
             ),
-            "yolo-95": ("mAP", 53.4 * 0.95),
-            "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
@@ -241,8 +233,6 @@ MODEL_CONFIG = {
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 349823,
-            "yolo-95": 64,
-            "yolo-99": 64,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
@@ -272,8 +262,6 @@ MODEL_CONFIG = {
             "qwen3-vl-235b-a22b": 48289,
             "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 349823,
-            "yolo-95": 1525,
-            "yolo-99": 1525,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -348,8 +336,6 @@ MODEL_CONFIG = {
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
             "wan-2.2-t2v-a14b": {"SingleStream": 248, "Offline": 1},
-            "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
         "models_TEST01": [
             "resnet",
@@ -365,8 +351,6 @@ MODEL_CONFIG = {
             "pointpainting",
             "whisper",
             "wan-2.2-t2v-a14b",
-            "yolo-99",
-            "yolo-95",
         ],
         "models_TEST04": [
             "resnet",
@@ -1166,8 +1150,6 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "gpt-oss-120b": 6396,
     "whisper": 1633,
     "pointpainting": 6636,
-    "yolo-99": 1525,
-    "yolo-95": 1525,
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 248,

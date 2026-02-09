@@ -27,7 +27,6 @@ For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/
 | model | reference app | framework | dataset | category
 | ---- | ---- | ---- | ---- | ---- |
 | resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | tensorflow, onnx, tvm, ncnn | imagenet2012 | edge |
-| yolo v11 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection/yolo) | pytorch, onnx | COCO safe subset | edge |
 | bert | [language/bert](https://github.com/mlcommons/inference/tree/master/language/bert) | tensorflow, pytorch, onnx | squad-1.1 | edge |
 | dlrm-v3 | [recommendation/dlrm_v3](https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v3/pytorch) | pytorch | Synthetic dataset | datacenter |
 | 3d-unet | [vision/medical_imaging/3d-unet-kits19](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19) | pytorch, tensorflow, onnx | KiTS19 | edge |

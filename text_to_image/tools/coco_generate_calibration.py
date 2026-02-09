@@ -8,10 +8,12 @@ import os
 import tqdm
 import urllib.request
 import zipfile
+import shutil
+from pathlib import Path
+import requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
-
 
 def get_args():
     """Parse commandline."""
@@ -39,10 +41,35 @@ def get_args():
     args = parser.parse_args()
     return args
 
+def download_file(url: str, output_dir: Path, filename: str | None = None):
+    os.makedirs(str(output_dir), exist_ok=True)
+
+    if filename is None:
+        filename = os.path.basename(url)
+
+    output_path = output_dir / filename
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        total_size = int(r.headers.get("Content-Length", 0))
+        with open(str(output_path), "wb") as f, tqdm.tqdm(
+            total=total_size,
+            unit="B",
+            unit_scale=True,
+            desc=filename,
+        ) as pbar:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    pbar.update(len(chunk))
+
+    return output_path
 
 if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
+    dataset_dir = Path(dataset_dir)
+
     calibration_dir = (
         args.calibration_dir
         if args.calibration_dir is not None
@@ -50,26 +77,27 @@ if __name__ == "__main__":
             os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014"
         )
     )
+    calibration_dir = Path(calibration_dir)
 
     # Check if raw annotations file already exist
-    if not os.path.exists(
-            f"{dataset_dir}/raw/annotations/captions_train2014.json"):
-        # Download annotations
-        os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
-        os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
-        os.system(
-            f"cd {dataset_dir}/download_aux/ && \
-                wget http://images.cocodataset.org/annotations/annotations_trainval2014.zip --show-progress"
-        )
-
-        # Unzip file
-        with zipfile.ZipFile(
-            f"{dataset_dir}/download_aux/annotations_trainval2014.zip", "r"
-        ) as zip_ref:
-            zip_ref.extractall(f"{dataset_dir}/raw/")
+    if not (dataset_dir / "raw" / "annotations" / "captions_train2014.json").exists():
+            # Download annotations
+            os.makedirs(str(dataset_dir / "raw"), exist_ok=True)
+            os.makedirs(str(dataset_dir / "download_aux"), exist_ok=True)
+            download_file(
+                url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
+                output_dir=dataset_dir / "download_aux",
+            )
+            # Unzip file
+            zipfile_path = dataset_dir / "download_aux" / "annotations_trainval2014.zip"
+            # Unzip file
+            with zipfile.ZipFile(
+                str(zipfile_path), "r"
+            ) as zip_ref:
+                zip_ref.extractall(str(dataset_dir / "raw/"))
 
     # Convert to dataframe format and extract the relevant fields
-    with open(f"{dataset_dir}/raw/annotations/captions_train2014.json") as f:
+    with open(dataset_dir / "raw" / "annotations" / "captions_train2014.json") as f:
         captions = json.load(f)
         annotations = captions["annotations"]
         images = captions["images"]
@@ -100,8 +128,9 @@ if __name__ == "__main__":
         .reset_index(drop=True)
     )
     # Save ids
-    with open(f"{calibration_dir}/coco_cal_images_list.txt", "w+") as f:
+    os.makedirs(str(calibration_dir), exist_ok=True)
+    with open(calibration_dir / "coco_cal_images_list.txt", "w+") as f:
         s = "\n".join([str(_) for _ in df_annotations["id"].values])
         f.write(s)
     # Remove Folder
-    os.system(f"rm -rf {dataset_dir}")
+    shutil.rmtree(dataset_dir)

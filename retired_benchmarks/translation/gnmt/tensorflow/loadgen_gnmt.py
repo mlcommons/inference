@@ -13,7 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
-from generic_loadgen import Runner, flush_queries 
+from generic_loadgen import Runner, flush_queries
 import time
 import numpy as np
 import mlperf_loadgen

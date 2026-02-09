@@ -47,7 +47,7 @@ def main() -> None:
 
     Reads the mlperf_log_accuracy.json file, parses the results, and computes
     accuracy metrics using the MetricsLogger. Each result entry contains
-    predictions, labels, and weights packed as float32 numpy arrays.
+    ts_idx, query_idx, predictions, labels, and weights packed as float32 numpy arrays.
     """
     args = get_args()
     logger.warning("Parsing loadgen accuracy log...")
@@ -64,13 +64,15 @@ def main() -> None:
     logger.warning(f"results have {len(results)} entries")
     for result in results:
         data = np.frombuffer(bytes.fromhex(result["data"]), np.float32)
+        # Format: [ts_idx, query_idx, predictions..., labels..., weights...,
+        # candidate_size]
         num_candidates = data[-1].astype(int)
-        assert len(data) == 1 + num_candidates * 3
-        mt_target_preds = torch.from_numpy(data[0:num_candidates])
+        assert len(data) == 3 + num_candidates * 3
+        mt_target_preds = torch.from_numpy(data[2:2 + num_candidates])
         mt_target_labels = torch.from_numpy(
-            data[num_candidates: num_candidates * 2])
+            data[2 + num_candidates: 2 + num_candidates * 2])
         mt_target_weights = torch.from_numpy(
-            data[num_candidates * 2: num_candidates * 3]
+            data[2 + num_candidates * 2: 2 + num_candidates * 3]
         )
         num_candidates = torch.tensor([num_candidates])
         metrics.update(

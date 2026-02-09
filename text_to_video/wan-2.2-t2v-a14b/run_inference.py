@@ -186,7 +186,7 @@ def generate_videos(args, config):
 
             # Save video with VBench format: <prompt>-<iteration>.mp4
             logging.info(f"Saving to {save_path} (seed: {current_seed})")
-            export_to_video(output, str(save_path), fps=25)
+            export_to_video(output, str(save_path), fps=fps)
             total_videos += 1
             logging.info(
                 f"Saved! ({total_videos}/{len(prompts) * args.num_iterations} for this GPU)")

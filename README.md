@@ -1,4 +1,4 @@
-# MLPerf™ Inference Benchmark Suite
+# MLPerf® Inference Benchmark Suite
 MLPerf Inference is a benchmark suite for measuring how fast systems can run models in a variety of deployment scenarios. 
 
 Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.02549) for a detailed description of the benchmarks along with the motivation and guiding principles behind the benchmark suite. If you use any part of this benchmark (e.g., reference implementations, submissions, etc.), please cite the following:
@@ -17,7 +17,7 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 
 Please see [here](https://docs.mlcommons.org/inference/benchmarks/) for the MLPerf inference documentation website which includes automated commands to run MLPerf inference benchmarks using different implementations.
 
-## MLPerf Inference v6.0 (submission deadline February 13, 2025)
+## MLPerf Inference v6.0 (submission deadline February 13, 2026)
 
 For submissions, please use the master branch and any commit since the [6.0 seed release](https://github.com/mlcommons/inference/commit/f131a0d29ccae9a967d93ffe96f66b1be3537d3b) although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
 

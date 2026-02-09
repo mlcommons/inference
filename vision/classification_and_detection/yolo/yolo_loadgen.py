@@ -1,18 +1,19 @@
+from ultralytics import YOLO
+import mlperf_loadgen as lg
+import numpy as np
+from pathlib import Path
+from datetime import datetime
+import time
+import struct
+import sys
+import os
+import json
+import array
+import argparse
+
 """
 YOLOv11 LoadGen MLPerf
 """
-import argparse
-import array
-import json
-import os
-import sys
-import struct
-import time
-from datetime import datetime
-from pathlib import Path
-import numpy as np
-import mlperf_loadgen as lg
-from ultralytics import YOLO
 
 
 # Standard YOLO (80 classes) to COCO (91 classes) mapping
@@ -110,7 +111,28 @@ def main():
         default=None,
         help="Number of samples to run")
     parser.add_argument("--output", type=str, help="Directory for MLPerf logs")
-
+    parser.add_argument(
+        "--user_conf",
+        default="user.conf",
+        help="user config for user LoadGen settings such as target QPS",
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        required=False,
+        default="yolo"
+    )
+    parser.add_argument(
+        "--enable-log-trace",
+        action="store_true",
+        help="Enable log tracing. This file can become quite large",
+    )
+    parser.add_argument(
+        "--audit-conf",
+        type=str,
+        default="audit.conf",
+        help="audit config for LoadGen settings during compliance runs",
+    )
     # mode flags
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--AccuracyOnly", action="store_true")
@@ -152,6 +174,13 @@ def main():
 
     settings = lg.TestSettings()
 
+    # Load user configuration
+    user_conf = os.path.abspath(args.user_conf)
+    if not os.path.exists(user_conf):
+        print("{} not found".format(user_conf))
+        sys.exit(1)
+    settings.FromConfig(user_conf, args.model_name, args.scenario)
+
     # scenario configurations
     scenario_map = {
         "SingleStream": lg.TestScenario.SingleStream,
@@ -172,16 +201,18 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
         # NOTE MLPerf requirement: minimum 10 minute run for performance
         settings.min_duration_ms = 600000
-        settings.min_query_count = 100
 
         # NOTE: user configs can override this in submission, this is the reference implementation so purposely left barebones
         # settings.target_qps = ...
         # ...
 
     # configure logs
+    log_output_settings = lg.LogOutputSettings()
+    log_output_settings.outdir = log_path
+    log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
-    log_settings.log_output.outdir = log_path
-    log_settings.log_output.copy_summary_to_stdout = True
+    log_settings.log_output = log_output_settings
+    log_settings.enable_trace = args.enable_log_trace
 
     print(f"Starting MLPerf run")
     print(f"Scenario: {args.scenario}")
@@ -189,7 +220,8 @@ def main():
     print(f"Log directory: {log_path}")
 
     try:
-        lg.StartTestWithLogSettings(sut, qsl, settings, lg.LogSettings())
+        lg.StartTestWithLogSettings(
+            sut, qsl, settings, log_settings, args.audit_conf)
         print(f"MLPerf run complete - cleaning up")
     except Exception as e:
         print(f"An error occured during StartTest: {e}")

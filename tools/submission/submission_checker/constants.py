@@ -22,16 +22,16 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "dlrm-v3",
+            "yolo-95",
+            "yolo-99",
         ],
         "required-scenarios-datacenter": {
-            "retinanet": ["Server", "Offline"],
             "dlrm-v3": ["Server", "Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
             "llama3.1-8b": ["Offline"],
             "llama2-70b-99": ["Offline"],
             "llama2-70b-99.9": ["Offline"],
-            "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
@@ -39,7 +39,7 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
-            "dlrm-v3": ["Server", "Offline"],
+            "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -51,7 +51,6 @@ MODEL_CONFIG = {
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
             "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
@@ -60,6 +59,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
             "whisper": ["Offline"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -83,6 +84,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Offline"],
             "dlrm-v3": ["Offline", "Server"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
         },
         "optional-scenarios-datacenter-edge": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -179,13 +182,20 @@ MODEL_CONFIG = {
             "pointpainting": ("mAP", 0.5425 * 0.999),
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
-            # TODO: Placeholder for now
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
             # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1", 0.7903 * 0.99),
-            "dlrm-v3": ("AUC", 78.663 * 0.99),  # TODO: Placeholder for now
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "dlrm-v3": (
+                "DLRM_NE",
+                0.86687 * 0.999,
+                "DLRM_ACC",
+                0.69651 * 0.999,
+                "DLRM_AUC",
+                0.78663 * 0.999,
+            ),
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -227,10 +237,12 @@ MODEL_CONFIG = {
             "pointpainting": 1024,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "dlrm-v3": 34996,
+            "wan-2.2-t2v-a14b": 248,
+            "dlrm-v3": 349823,
+            "yolo-95": 64,
+            "yolo-99": 64,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
@@ -258,7 +270,10 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "dlrm-v3": 34996,
+            "wan-2.2-t2v-a14b": 248,
+            "dlrm-v3": 349823,
+            "yolo-95": 1525,
+            "yolo-99": 1525,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -332,6 +347,9 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 248, "Offline": 1},
+            "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
         "models_TEST01": [
             "resnet",
@@ -346,11 +364,15 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "whisper",
+            "wan-2.2-t2v-a14b",
+            "yolo-99",
+            "yolo-95",
         ],
         "models_TEST04": [
             "resnet",
             "stable-diffusion-xl",
             "pointpainting",
+            "wan-2.2-t2v-a14b"
         ],
         "models_TEST06": [
             "llama2-70b-99",
@@ -363,6 +385,15 @@ MODEL_CONFIG = {
             "llama3.1-405b-interactive",
             "mixtral-8x7b",
             "deepseek-r1",
+        ],
+        "models_TEST07": [
+            "gpt-oss-120b",
+        ],
+        "models_TEST09": [
+            "gpt-oss-120b",
+        ],
+        "models_TEST08": [
+            "dlrm-v3",
         ]
     },
     "v5.0": {
@@ -695,7 +726,7 @@ MODEL_CONFIG = {
             "gptj-99",
             "gptj-99.9",
             "mixtral-8x7b",
-        ]
+        ],
     },
     "v5.1": {
         "models": [
@@ -1026,7 +1057,7 @@ MODEL_CONFIG = {
             "llama3.1-405b-interactive",
             "mixtral-8x7b",
             "deepseek-r1",
-        ]
+        ],
     },
 }
 
@@ -1078,6 +1109,20 @@ REQUIRED_ACC_BENCHMARK = {
                 "4532",
             ]
         },
+        "v6.0": {
+            "images": [
+                "1311",
+                "2476",
+                "3644",
+                "2188",
+                "4114",
+                "52",
+                "388",
+                "1195",
+                "3427",
+                "2289",
+            ]
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
@@ -1118,8 +1163,14 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama3.1-405b": 8313,
     "rgat": 788379,
     "deepseek-r1": 4388,
+    "gpt-oss-120b": 6396,
     "whisper": 1633,
     "pointpainting": 6636,
+    "yolo-99": 1525,
+    "yolo-95": 1525,
+    "dlrm-v3": 349823,
+    "qwen3-vl-235b-a22b": 48289,
+    "wan-2.2-t2v-a14b": 248,
 }
 
 SCENARIO_MAPPING = {
@@ -1226,6 +1277,43 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
         }
     },
+    "v6.0": {
+        "gpt-oss-120b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b-edge": {
+            "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
+        },
+        "mixtral-8x7b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-405b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "deepseek-r1": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        }
+    },
 }
 
 LLM_LATENCY_LIMITS = {
@@ -1280,6 +1368,17 @@ LLM_LATENCY_LIMITS = {
     "deepseek-r1": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 1500 * 1000000, "tpot": 15 * 1000000
+        }
+    },
+    "gpt-oss-120b": {
+        "Server": {
+            "ttft": 3000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 2000 * 1000000, "tpot": 15 * 1000000
         }
     }
 
@@ -1289,6 +1388,10 @@ ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "meanAcc": r".*'mean-accuracy':\s+'?([\d.]+)'?.*",
     "AUC": r"^AUC=([\d\.]+).*",
+    # dlrm-v3 patterns for parsing metric/lifetime_*/rating format
+    "DLRM_NE": r".*metric/lifetime_ne/rating:\s*([\d\.]+).*",
+    "DLRM_ACC": r".*metric/lifetime_accuracy/rating:\s*([\d\.]+).*",
+    "DLRM_AUC": r".*metric/lifetime_gauc/rating:\s*([\d\.]+).*",
     "mAP": r".*(?:mAP=|'Total':)\s*([\d.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
@@ -1304,7 +1407,9 @@ ACC_PATTERN = {
     "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
-    "exact_match": r".*'exact_match':\s([\d.]+).*"
+    "exact_match": r".*'exact_match':\s([\d.]+).*",
+    "vbench_score": r".*'vbench_score':\s([\d.]+).*",
+    "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}',
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1570,6 +1675,30 @@ TEST06_ACC_PATH = {
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+}
+
+TEST07_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+}
+
+TEST09_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+}
+
+TEST08_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+}
+TEST07_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+}
+
+TEST09_ACC_PATH = {
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
 }
 
 COMPLIANCE_PATH = {

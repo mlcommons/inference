@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 set -e
 
 conda install pybind11==2.10.4 -c conda-forge -y

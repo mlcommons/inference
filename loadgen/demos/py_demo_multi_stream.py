@@ -16,8 +16,6 @@
 """Python demo showing how to use the MLPerf Inference load generator bindings.
 """
 
-from __ import print_function
-
 import threading
 import time
 

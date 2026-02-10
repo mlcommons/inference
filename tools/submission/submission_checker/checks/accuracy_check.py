@@ -260,7 +260,8 @@ class AccuracyCheck(BaseCheck):
             return True
         acc_dir = os.path.dirname(self.path)
         target_files = REQUIRED_ACC_BENCHMARK[self.model][self.config.version]
-        extra_files_pass, missing_files = check_extra_files(acc_dir, target_files)
+        extra_files_pass, missing_files = check_extra_files(
+            acc_dir, target_files)
         if not extra_files_pass:
             self.log.error(
                 "%s expected to have the following extra files (%s)",

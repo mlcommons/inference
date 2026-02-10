@@ -96,6 +96,7 @@ def main():
         ),
         axis=1,
     )
+    df["Scenario"] = df["Scenario"].str.capitalize()
 
     output = args.input[:-4]
     writer = pd.ExcelWriter(output + ".xlsx", engine="xlsxwriter")

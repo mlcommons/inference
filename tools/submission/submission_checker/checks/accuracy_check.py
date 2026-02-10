@@ -1,10 +1,9 @@
 from .base import BaseCheck
-from ..constants import *
+from ..constants import MAX_ACCURACY_LOG_SIZE
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 import re
 import os
-
 
 class AccuracyCheck(BaseCheck):
     """Checks accuracy-related submission artifacts and reports issues.

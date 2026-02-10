@@ -1,5 +1,6 @@
 import os
-from .constants import *
+import logging
+from .constants import REQUIRED_COMP_PER_FILES, RESULT_FIELD_NEW, RESULT_FIELD_BENCHMARK_OVERWRITE, MS_TO_NS, S_TO_MS
 from .parsers.loadgen_parser import LoadgenParser
 
 
@@ -181,6 +182,7 @@ def get_inferred_result(
         if uses_early_stopping:
             early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
             if early_stopping_latency_ms == 0 and log_error:
+                log = logging.getLogger("main")
                 log.error(
                     "Not enough samples were processed for early stopping to make an estimate"
                 )
@@ -195,7 +197,6 @@ def get_inferred_result(
 
 def check_compliance_perf_dir(test_dir):
     is_valid = False
-    import logging
     log = logging.getLogger("main")
 
     fname = os.path.join(test_dir, "verify_performance.txt")

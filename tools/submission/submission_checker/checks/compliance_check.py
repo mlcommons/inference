@@ -1,11 +1,11 @@
 
 from .base import BaseCheck
-from ..constants import *
+from ..constants import REQUIRED_TEST01_ACC_FILES, REQUIRED_COMP_PER_FILES
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 from .performance_check import PerformanceCheck
 from .accuracy_check import AccuracyCheck
-from ..utils import *
+from ..utils import files_diff, list_files
 import re
 import os
 

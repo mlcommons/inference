@@ -2,6 +2,7 @@ from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
+from ..utils import check_extra_files
 import re
 import os
 
@@ -25,6 +26,9 @@ class AccuracyCheck(BaseCheck):
     - `loadgen_errors_check`: Fails if Loadgen reported non-ignored errors.
     - `dataset_check`: Verifies the reported sample count matches the
         configured dataset size unless the check is skipped.
+    - `extra_files_check`: For benchmarks in REQUIRED_ACC_BENCHMARK (e.g.
+        stable-diffusion-xl, wan-2.2-t2v-a14b), verifies required extra
+        artifacts (e.g. images/, videos/) exist in the accuracy directory.
 
     Attributes:
             submission_logs (SubmissionLogs): Holder for submission log paths
@@ -78,6 +82,7 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.accuracy_json_check)
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
+        self.checks.append(self.extra_files_check)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.
@@ -231,6 +236,36 @@ class AccuracyCheck(BaseCheck):
         if qsl_total_count != expected_qsl_total_count:
             self.log.error(
                 "%s accurcy run does not cover all dataset, accuracy samples: %s, dataset size: %s", self.path, qsl_total_count, expected_qsl_total_count
+            )
+            return False
+        return True
+
+    def extra_files_check(self):
+        """Verify required extra accuracy files for certain benchmarks.
+
+        For models in REQUIRED_ACC_BENCHMARK (e.g. stable-diffusion-xl
+        images, wan-2.2-t2v-a14b videos), ensures the accuracy directory
+        contains the required subdirs and files. Skipped if
+        skip_extra_accuracy_files_check is set.
+
+        Returns:
+            bool: True if the check is skipped, the model has no extra
+                requirements, or all required files exist; False otherwise.
+        """
+        if self.config.skip_extra_accuracy_files_check:
+            return True
+        if self.model not in REQUIRED_ACC_BENCHMARK:
+            return True
+        if self.config.version not in REQUIRED_ACC_BENCHMARK[self.model]:
+            return True
+        acc_dir = os.path.dirname(self.path)
+        target_files = REQUIRED_ACC_BENCHMARK[self.model][self.config.version]
+        extra_files_pass, missing_files = check_extra_files(acc_dir, target_files)
+        if not extra_files_pass:
+            self.log.error(
+                "%s expected to have the following extra files (%s)",
+                acc_dir,
+                missing_files,
             )
             return False
         return True

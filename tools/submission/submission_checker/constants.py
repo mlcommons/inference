@@ -364,7 +364,6 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "whisper",
-            "wan-2.2-t2v-a14b",
             "yolo-99",
             "yolo-95",
         ],

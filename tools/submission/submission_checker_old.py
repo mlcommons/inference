@@ -257,7 +257,7 @@ MODEL_CONFIG = {
             "whisper": 1633,
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 34996,
             "yolo-95": 64,
             "yolo-99": 64,
@@ -287,7 +287,7 @@ MODEL_CONFIG = {
             "whisper": 1633,
             "gpt-oss-120b": 4395,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 34996,
             "yolo-95": 1525,
             "yolo-99": 1525,
@@ -366,7 +366,7 @@ MODEL_CONFIG = {
             "dlrm-v3": {"Server": 270336, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1}
+            "wan-2.2-t2v-a14b": {"SingleStream": 248, "Offline": 1}
         },
     },
     "v5.1": {
@@ -3361,7 +3361,8 @@ def check_compliance_dir(
         "mixtral-8x7b",
         "llama3.1-405b",
         "deepseek-r1",
-        "qwen3-vl-235b-a22b"
+        "qwen3-vl-235b-a22b",
+        "wan-2.2-t2v-a14b"
     ]:
         test_list.remove("TEST01")
 

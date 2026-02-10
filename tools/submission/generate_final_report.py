@@ -19,10 +19,10 @@ def get_args():
         '--input',
         required=True,
         help='results csv from checker')
-    parser.add_argument('--version', default='5.1', help='mlperf version')
+    parser.add_argument('--version', default='6.0', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_v5.1',
+        default='submissions_inference_v6.0',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',
@@ -137,8 +137,7 @@ def main():
             "retinanet",
             "bert-99",
             "bert-99.9",
-            "dlrm-v2-99",
-            "dlrm-v2-99.9",
+            "dlrm-v3",
             "3d-unet-99",
             "3d-unet-99.9",
             "llama3.1-8b",
@@ -151,7 +150,10 @@ def main():
             "rgat",
             "pointpainting",
             "deepseek-r1",
-            "whisper"
+            "whisper",
+            "wan-2.2-t2v-a14b",
+            "qwen3-vl-235b-a22b",
+            "gpt-oss-120b",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
@@ -204,9 +206,7 @@ def main():
                 "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
                 "pointpainting": ["SingleStream"],
-                "whisper": ["Offline"],
-                "yolo-95": ["SingleStream", "MultiStream", "Offline"],
-                "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+                "whisper": ["Offline"]
             },
         }
     elif args.version == "5.0":

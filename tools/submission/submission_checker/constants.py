@@ -1122,7 +1122,7 @@ REQUIRED_ACC_BENCHMARK = {
                 "3427",
                 "2289",
             ]
-          },
+        },
     },
     "wan-2.2-t2v-a14b": {
         "v6.0": {
@@ -1132,7 +1132,7 @@ REQUIRED_ACC_BENCHMARK = {
                 "84",
                 "59",
                 "12",
-            ]            
+            ]
         },
     }
 }

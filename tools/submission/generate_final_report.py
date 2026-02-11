@@ -96,7 +96,16 @@ def main():
         ),
         axis=1,
     )
-    df["Scenario"] = df["Scenario"].str.capitalize()
+    # Scenario
+    scenario_map = {
+        "singlestream": "SingleStream",
+        "multistream": "MultiStream",
+        "server": "Server",
+        "interactive":"Interactive",
+        "offline": "Offline",
+    }
+    df["Scenario"] = df["Scenario"].apply(lambda x: scenario_map.get(str(x).lower(), x))
+
 
     output = args.input[:-4]
     writer = pd.ExcelWriter(output + ".xlsx", engine="xlsxwriter")

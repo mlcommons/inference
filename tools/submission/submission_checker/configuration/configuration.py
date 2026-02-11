@@ -20,6 +20,23 @@ class Config:
         skip_calibration_check=False,
         skip_dataset_size_check=False
     ):
+        """Initialize submission checker configuration.
+
+        Args:
+            version (str): Version Number
+            extra_model_benchmark_map (_type_): Extra model benchmark map. 
+            ignore_uncommited (bool, optional): Whether to ignore uncommitted changes in loadgen. Defaults to False.
+            skip_compliance (bool, optional): Whether to skip compliance checks. Defaults to False.
+            skip_power_check (bool, optional): Whether to skip power checks. Defaults to False.
+            skip_meaningful_fields_emptiness_check (bool, optional): Whether to skip meaningful fields emptiness checks. Defaults to False.
+            skip_check_power_measure_files (bool, optional): Whether to skip power measure files checks. Defaults to False.
+            skip_empty_files_check (bool, optional): Whether to skip empty files checks. Defaults to False.
+            skip_extra_files_in_root_check (bool, optional): Whether to skip extra files in root checks. Defaults to False.
+            skip_extra_accuracy_files_check (bool, optional): Whether to skip extra accuracy files checks. Defaults to False.
+            skip_all_systems_have_results_check (bool, optional): Whether to skip all systems have results checks. Defaults to False.
+            skip_calibration_check (bool, optional): Whether to skip calibration checks. Defaults to False.
+            skip_dataset_size_check (bool, optional): Whether to skip dataset size checks. Defaults to False.
+        """
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
         self.version = version
@@ -39,6 +56,11 @@ class Config:
         self.load_config(version)
 
     def load_config(self, version):
+        """Unused system used to load config from base or other system.
+
+        Args:
+            version (str): Version Information.
+        """
         # TODO: Load values from
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
@@ -56,6 +78,14 @@ class Config:
         self.optional = None
 
     def set_type(self, submission_type):
+        """Set submission type based on if datacenter, edge, or both.
+
+        Args:
+            submission_type (Enum): Either "datacenter", "edge", "datacenter,edge" or "edge,datacenter".
+
+        Raises:
+            ValueError: Incorrect system type.
+        """
         if submission_type == "datacenter":
             self.required = self.base["required-scenarios-datacenter"]
             self.optional = self.base["optional-scenarios-datacenter"]
@@ -71,6 +101,15 @@ class Config:
             raise ValueError("invalid system type")
 
     def get_mlperf_model(self, model, extra_model_mapping=None):
+        """Get mlperf model scenarios, converting some naming differences when possible.
+
+        Args:
+            model (str): Model name
+            extra_model_mapping (_type_, optional): Dictionary of other model names. Defaults to None.
+
+        Returns:
+            str: MLPerf model scenarios
+        """
         # preferred - user is already using the official name
         if model in self.models:
             return model
@@ -102,26 +141,72 @@ class Config:
         return mlperf_model
 
     def get_required(self, model):
+        """Get required scenarios for a given model.
+
+        Args:
+            model (str): Model name
+
+        Returns:
+            set: Set of required scenarios if model is known, otherwise None.
+        """
         model = self.get_mlperf_model(model)
         if model not in self.required:
             return None
         return set(self.required[model])
 
     def get_optional(self, model):
+        """Get optional scenarios for a given model.
+
+        Args:
+            model (str): Model name
+
+        Returns:
+            set: Set of optional scenarios if model is known, otherwise an empty set.
+        """
         model = self.get_mlperf_model(model)
         if model not in self.optional:
             return set()
         return set(self.optional[model])
 
     def get_accuracy_target(self, model):
+        """Get accuracy target of a given model.
+
+        Args:
+            model (str): Model name
+
+        Raises:
+            ValueError: Model not found in mapping.
+
+        Returns:
+            float: Accuracy target for the given model.
+        """
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
         return self.accuracy_target[model]
 
     def get_accuracy_upper_limit(self, model):
+        """Get accuracy upper limit of a given model.
+
+        Args:
+            model (str): Model name
+
+        Raises:
+            ValueError: Model not found in mapping.
+
+        Returns:
+            float: Accuracy upper limit for the given model.
+        """        
         return self.accuracy_upper_limit.get(model, None)
 
     def get_accuracy_values(self, model):
+        """Get accuracy patterns and targets for a given model.
+
+        Args:
+            model (str): Model name
+
+        Returns:
+            Tuple: Patterns, accuracy targets, accuracy types, accuracy upper limits, and accuracy regex patterns for the given model.
+        """
         patterns = []
         acc_targets = []
         acc_types = []
@@ -146,18 +231,48 @@ class Config:
         return patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit
 
     def get_performance_sample_count(self, model):
+        """Get performance sample count for a given model.
+
+        Args:
+            model (str): Model name
+
+        Raises:
+            ValueError: If model name not found in performance sample count, get it.
+
+        Returns:
+            int: Performance sample count for a given model.
+        """
         model = self.get_mlperf_model(model)
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
     def get_accuracy_sample_count(self, model):
+        """Get accuracy sample count for a given model.
+
+        Args:
+            model (str): Model name
+
+        Raises:
+            ValueError: If model name not found in performance sample count, get it.
+
+        Returns:
+            int: Accuracy sample count for a given model.
+        """        
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)
         return self.accuracy_sample_count[model]
 
     def ignore_errors(self, line):
+        """Check if a given line should be ignored in parsing for errors.
+
+        Args:
+            line (str): log line
+
+        Returns:
+            bool: Whether to ignore the line or not.
+        """
         for error in self.base["ignore_errors"]:
             if error in line:
                 return True
@@ -169,18 +284,50 @@ class Config:
         return False
 
     def get_min_query_count(self, model, scenario):
+        """Get minimum query count for a given model and scenario.
+
+        Args:
+            model (str): Model name
+            scenario (str): Model scenario.
+
+        Raises:
+            ValueError: Raised if model is unknown.
+
+        Returns:
+            int: Minimum number of queries from configuration.
+        """
         model = self.get_mlperf_model(model)
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
 
     def get_dataset_size(self, model):
+        """Get dataset size for a given model.
+
+        Args:
+            model (str): Model name
+
+        Raises:
+            ValueError: Raised if model is unknown.
+
+        Returns:
+            int: Dataset size for a given model.
+        """
         model = self.get_mlperf_model(model)
         if model not in self.dataset_size:
             raise ValueError("model not known: " + model)
         return self.dataset_size[model]
 
     def get_delta_perc(self, model, metric):
+        """Get delta percentage of a given metric for a model.
+
+        Args:
+            model (str): Model name
+            metric (str): Metric name
+
+        Returns:
+            float: Percentage delta.
+        """
         if model in self.accuracy_delta_perc:
             if metric in self.accuracy_delta_perc[model]:
                 return self.accuracy_delta_perc[model][metric]
@@ -193,12 +340,34 @@ class Config:
         return required_delta_perc
 
     def has_new_logging_format(self):
+        """Return if the system has the new logging format or not.
+
+        Returns:
+            bool: True
+        """
         return True
 
     def uses_early_stopping(self, scenario):
+        """Return whether the scenario uses early stopping or not.
+
+        Args:
+            scenario (str): Scenario Name
+
+        Returns:
+            bool : Whether the scenario uses early stopping or not.
+        """
         return scenario in ["Server", "SingleStream", "MultiStream"]
 
     def requires_equal_issue(self, model, division):
+        """Return whether the scenario requires equal issue or not.
+
+        Args:
+            model (str): Model name
+            division (str): Model division.
+
+        Returns:
+            bool: Whether the scenario requires equal issue or not.
+        """
         return (
             division in ["closed", "network"]
             and model
@@ -215,6 +384,11 @@ class Config:
         )
 
     def get_llm_models(self):
+        """Get a list of llm models.
+
+        Returns:
+            list[str]: A list of LLM model names.
+        """
         return [
             "llama2-70b-99",
             "llama2-70b-99.9",

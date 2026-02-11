@@ -248,6 +248,15 @@ def main():
     )
 
     def merge_two_dict(x, y):
+        """Merge two dictionaries by key. If a key is present in both dictionaries, the new key will have the values of the sum.
+
+        Args:
+            x (dict): First dictionary
+            y (dict): Second dictionary
+
+        Returns:
+            dict: Merged dictionary
+        """
         z = x.copy()
         for key in y:
             if key not in z:
@@ -280,6 +289,14 @@ def main():
 
     # Counting the number of closed,open and network results
     def sum_dict_values(x):
+        """Sum over the values in the dictionary.
+
+        Args:
+            x (dict): Dictionary to process
+
+        Returns:
+            float: Sum of dictionary values.
+        """
         count = 0
         for key in x:
             count += x[key]

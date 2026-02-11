@@ -3349,7 +3349,11 @@ def check_compliance_dir(
         "rgat",
         "deepseek-r1",
         "whisper",
-        "qwen3-vl-235b-a22b"
+        "qwen3-vl-235b-a22b",
+        "yolo-95",
+        "yolo-99",
+        "gpt-oss-120b",
+        "dlrm-v3"
     ]:
         test_list.remove("TEST04")
 
@@ -3362,7 +3366,9 @@ def check_compliance_dir(
         "llama3.1-405b",
         "deepseek-r1",
         "qwen3-vl-235b-a22b",
-        "wan-2.2-t2v-a14b"
+        "wan-2.2-t2v-a14b",
+        "gpt-oss-120b",
+        "dlrm-v3"
     ]:
         test_list.remove("TEST01")
 
@@ -3379,6 +3385,13 @@ def check_compliance_dir(
                  "llama3.1-8b-interactive", "llama3.1-405b-interactive",
                  ]:
         test_list.append("TEST06")
+
+    if model in ["dlrm-v3"]:
+        test_list.append("TEST08")
+
+    if model in ["gpt-oss-120b"]:
+        test_list.append("TEST07")
+        test_list.append("TEST09")
 
     if test_list and not os.path.exists(compliance_dir):
         log.error("no compliance dir for %s: %s", name, compliance_dir)
@@ -3420,7 +3433,7 @@ def check_compliance_dir(
             )
 
     compliance_acc_pass = True
-    for test in ["TEST01", "TEST06"]:
+    for test in ["TEST01", "TEST06", "TEST07", "TEST08"]:
         if test in test_list:
             # Check accuracy for TEST01
             compliance_acc_pass &= check_compliance_acc_dir(

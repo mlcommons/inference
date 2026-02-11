@@ -239,13 +239,14 @@ MODEL_CONFIG = {
             "whisper": 1633,
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 248,
+            "wan-2.2-t2v-a14b": 50,
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
+            "wan-2.2-t2v-a14b": 248,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -347,7 +348,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
-            "wan-2.2-t2v-a14b": {"SingleStream": 248, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
@@ -1180,7 +1181,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "yolo-95": 1525,
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
-    "wan-2.2-t2v-a14b": 248,
+    "wan-2.2-t2v-a14b": 50,
 }
 
 SCENARIO_MAPPING = {

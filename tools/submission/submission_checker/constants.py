@@ -1123,6 +1123,17 @@ REQUIRED_ACC_BENCHMARK = {
                 "2289",
             ]
         },
+    },
+    "wan-2.2-t2v-a14b": {
+        "v6.0": {
+            "videos": [
+                "130",
+                "106",
+                "84",
+                "59",
+                "12",
+            ]
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
@@ -1691,6 +1702,7 @@ TEST08_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
 }
+
 TEST07_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",

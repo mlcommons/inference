@@ -152,7 +152,7 @@ def main():
     else:
         scenarios_to_skip = []
 
-    loader = Loader(args.input, args.version)
+    loader = Loader(args.input, args.version, config)
     exporter = ResultExporter(args.csv, config)
     results = {}
     systems = {}

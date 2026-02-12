@@ -4,6 +4,7 @@ from .utils import list_dir
 from .parsers.loadgen_parser import LoadgenParser
 from typing import Generator, Literal
 from .utils import *
+from .configuration.configuration import Config
 import logging
 import json
 
@@ -52,7 +53,7 @@ class Loader:
     handling version-specific path formats and optional artifacts.
     """
 
-    def __init__(self, root, version) -> None:
+    def __init__(self, root, version, config: Config) -> None:
         """Initialize the submission loader.
 
         Sets up path templates based on the MLPerf version and root
@@ -64,6 +65,7 @@ class Loader:
         """
         self.root = root
         self.version = version
+        self.config = config
         self.logger = logging.getLogger("LoadgenParser")
         self.perf_log_path = os.path.join(
             self.root, PERFORMANCE_LOG_PATH.get(
@@ -210,6 +212,30 @@ class Loader:
                 log_type,
                 path)
         return log
+    
+    def check_scenarios(self, benchmark, model_mapping, system_type, scenarios):
+        self.config.set_type(system_type)
+        mlperf_model = self.config.get_mlperf_model(benchmark, model_mapping)
+        required_scenarios = lower_list(self.config.get_required(mlperf_model))
+        optional_scenarios = lower_list(self.config.get_optional(mlperf_model))
+        scenarios = lower_list(scenarios)
+        all_senarios = set(
+            list(required_scenarios)
+            + list(optional_scenarios)
+        )
+        check = True
+        missing, passed = contains_list(set(scenarios), required_scenarios)
+        if not passed:
+            check = False
+        unknown, passed = contains_list(set(all_senarios), scenarios)
+        if not passed:
+            check = False
+        if contains_list(set(optional_scenarios), ["interactive", "server"])[1]:
+            if "interactive" not in scenarios and "server" not in scenarios:
+                check = False
+                missing.append("(one of) Interactive or Server")
+        return missing, unknown, check
+
 
     def load(self) -> Generator[SubmissionLogs, None, None]:
         """Traverse submissions directory and yield parsed log containers.
@@ -240,8 +266,13 @@ class Loader:
                         division=division, submitter=submitter, system=system)
                     system_json = self.load_single_log(
                         system_json_path, "System")
+                    system_type = system_json.get("system_type")
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
+                        if division.lower() in ["closed", "network"]:
+                            missing_scenarios, unknown_scenarios, check_scenarios = self.check_scenarios(benchmark, model_mapping, system_type, list_dir(benchmark_path))
+                        else:
+                            missing_scenarios, unknown_scenarios, check_scenarios = [], [], True
                         for scenario in list_dir(benchmark_path):
                             scenario_path = os.path.join(
                                 benchmark_path, benchmark)
@@ -403,6 +434,9 @@ class Loader:
                                 "model_mapping": model_mapping,
                                 "power_dir_path": power_dir_path,
                                 "src_path": src_path,
+                                "check_scenarios": check_scenarios,
+                                "unknown_scenarios": unknown_scenarios,
+                                "missing_scenarios": missing_scenarios,
                                 # Test paths
                                 "TEST01_perf_path": test01_perf_path,
                                 "TEST01_acc_path": test01_acc_path,

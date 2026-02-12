@@ -62,6 +62,7 @@ class PerformanceCheck(BaseCheck):
         the order they should be executed.
         """
         self.checks.append(self.missing_check)
+        self.checks.append(self.scenarios_check)
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.equal_issue_check)
         self.checks.append(self.performance_sample_count_check)
@@ -84,6 +85,26 @@ class PerformanceCheck(BaseCheck):
             self.log.error("Performance log missing at %s", self.path)
             return False
         return True
+    
+    def scenarios_check(self):
+        if self.submission_logs.loader_data.get("check_scenarios", False):
+            return True
+        else:
+            missing_scenarios = self.submission_logs.loader_data.get("missing_scenarios", [])
+            unknown_scenarios = self.submission_logs.loader_data.get("unknown_scenarios", [])
+            if len(missing_scenarios) > 0:
+                self.log.error(
+                    "%s does not have all required scenarios, missing %s",
+                    self.path,
+                    missing_scenarios,
+                )
+            if len(unknown_scenarios) > 0:
+                self.log.error(
+                    "%s has all unknown scenarios for this benchmark %s",
+                    self.path,
+                    unknown_scenarios,
+                )
+            return False
 
     def loadgen_errors_check(self):
         """Detect Loadgen errors reported in the MLPerf log.

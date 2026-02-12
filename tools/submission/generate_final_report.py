@@ -192,7 +192,7 @@ def main():
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
                 "llama3.1-8b": ["Server", "Offline", "Interactive"],
-                "llama3.1-405b": ["Offline", "Server"],
+                "llama3.1-405b": ["Server", "Offline", "Interactive"],
                 "deepseek-r1": ["Server", "Offline", "Interactive"],
                 "whisper": ["Offline"],
                 "gpt-oss-120b": ["Offline", "Interactive", "Server"],

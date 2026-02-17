@@ -116,17 +116,26 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
+        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
         if self.mlperf_log.has_error():
+            has_critical_errors = False
             if self.config.ignore_uncommited:
-                has_other_errors = False
                 for error in self.mlperf_log.get_errors():
-                    if "Loadgen built with uncommitted changes!" not in error["value"]:
-                        has_other_errors = True
-            self.log.error("%s contains errors:", self.path)
-            for error in self.mlperf_log.get_errors():
-                self.log.error("%s", error["value"])
+                    if (
+                        "Loadgen built with uncommitted changes!" not in error["value"]
+                        and ("Multiple conf files are used" not in error["value"])
+                    ):
+                        has_critical_errors = True
+                    if (
+                        not compliance_skip 
+                        and "Multiple conf files are used" in error["value"]
+                    ):
+                        has_critical_errors = True
 
-            if not self.config.ignore_uncommited or has_other_errors:
+            if has_critical_errors:
+                self.log.error("%s contains errors:", self.path)
+                for error in self.mlperf_log.get_errors():
+                    self.log.error("%s", error["value"])
                 self.log.error(
                     "%s has loadgen errors, number of errors: %s", self.path, self.mlperf_log.num_errors()
                 )

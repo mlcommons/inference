@@ -174,6 +174,9 @@ def main():
             log, logs.loader_data["measurements_path"], config, logs)
         power_checks = PowerCheck(
             log, logs.loader_data["power_dir_path"], config, logs)
+        compliance_checks = ComplianceCheck(
+            log, logs.loader_data["compliance_path"], config, logs
+        )
         # Run checks
         valid = True
         valid &= performance_checks()
@@ -181,6 +184,7 @@ def main():
         valid &= system_checks()
         valid &= measurements_checks()
         valid &= power_checks()
+        valid &= compliance_checks()
         # Add results to summary
         if valid:
             # Results dictionary

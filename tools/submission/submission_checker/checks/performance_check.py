@@ -118,7 +118,8 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
-        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
+        compliance_skip = self.submission_logs.loader_data.get(
+            "compliance_skip", False)
         if self.mlperf_log.has_error():
             has_critical_errors = False
             if self.config.ignore_uncommited:
@@ -129,7 +130,7 @@ class PerformanceCheck(BaseCheck):
                     ):
                         has_critical_errors = True
                     if (
-                        not compliance_skip 
+                        not compliance_skip
                         and "Multiple conf files are used" in error["value"]
                     ):
                         has_critical_errors = True
@@ -456,7 +457,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                    ) not in list_inferred:
+                ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -540,12 +541,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (self.scenario_fixed in ["Offline"]
-                ) and self.scenario in ["MultiStream"]:
+            ) and self.scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (self.scenario_fixed in ["MultiStream"]
-                ) and self.scenario in ["SingleStream"]:
+            ) and self.scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -562,6 +563,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (self.scenario_fixed in ["Interactive"]
-                ) and self.scenario not in ["Server"]:
+            ) and self.scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

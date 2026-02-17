@@ -40,6 +40,7 @@ class ComplianceCheck(BaseCheck):
         super().__init__(log, path)
         self.submission_logs = submission_logs
         self.config = config
+        self.name = "compliance check"
         self.model = self.submission_logs.loader_data.get("benchmark", "")
         self.model_mapping = self.submission_logs.loader_data.get(
             "model_mapping", {})
@@ -182,7 +183,9 @@ class ComplianceCheck(BaseCheck):
                     "division": self.submission_logs.loader_data.get("division", ""),
                     "benchmark": self.submission_logs.loader_data.get("benchmark", ""),
                     "scenario": self.submission_logs.loader_data.get("scenario", ""),
-                    "model_mapping": self.submission_logs.loader_data.get("model_mapping", {})
+                    "model_mapping": self.submission_logs.loader_data.get("model_mapping", {}),
+                    "check_scenarios": True,
+                    "compliance_skip": True,
                 }
                 test_logs = SubmissionLogs(
                     self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)

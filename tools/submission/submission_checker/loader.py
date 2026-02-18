@@ -127,6 +127,7 @@ class Loader:
         self.src_path = os.path.join(
             self.root, SRC_PATH.get(
                 version, SRC_PATH["default"]))
+        self.filter_submitter = self.config.get_submitter()
 
     def get_measurement_path(self, path, division,
                              submitter, system, benchmark, scenario):
@@ -253,6 +254,8 @@ class Loader:
                 continue
             division_path = os.path.join(self.root, division)
             for submitter in list_dir(division_path):
+                if self.filter_submitter is not None and submitter != self.config.submitter:
+                    continue
                 results_path = os.path.join(
                     division_path, submitter, "results")
                 model_mapping = {}

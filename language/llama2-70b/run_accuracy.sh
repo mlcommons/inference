@@ -1,17 +1,19 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
-DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
+CHECKPOINT_PATH=/share/mlperf_sets/model/llama-2-70b-chat-hf.uri
+DATASET_PATH=/share/mlperf_sets/data/validation/llama-2-70b-open-orca-dataset.uri/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 
 mkdir -p "run_outputs"
 
-python3 -u main.py --scenario Offline \
+python3 -u main.py --scenario Offline --vllm\
         --model-path ${CHECKPOINT_PATH} \
         --accuracy \
-        --mlperf-conf mlperf.conf \
         --user-conf user.conf \
         --total-sample-count 24576 \
         --dataset-path ${DATASET_PATH} \
+        --num-workers 4 \
         --output-log-dir offline_accuracy_loadgen_logs \
         --dtype float32 \
+        --api-server http://127.0.0.1:8000 \
+        --api-model-name ${CHECKPOINT_PATH}
         --device cuda:0 2>&1 | tee offline_accuracy_log.log
 
 python3 evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \

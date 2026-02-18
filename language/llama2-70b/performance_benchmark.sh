@@ -1,0 +1,11 @@
+python3 -u main.py --scenario Offline --vllm \
+        --model-path /share/mlperf_sets/model/llama-2-70b-chat-hf.uri \
+        --user-conf user.conf \
+        --num-workers 4 \
+        --total-sample-count 24576 \
+        --dataset-path /share/mlperf_sets/data/validation/llama-2-70b-open-orca-dataset.uri/open_orca_gpt4_tokenized_llama.sampled_24576.pkl \
+        --output-log-dir offline-logs \
+        --dtype float32 \
+        --api-server http://127.0.0.1:8000 \
+        --api-model-name /share/mlperf_sets/model/llama-2-70b-chat-hf.uri \
+        --device cuda:0 2>&1 | tee offline_performance_log.log

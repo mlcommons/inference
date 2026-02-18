@@ -26,7 +26,7 @@ class Config:
         self.version = version
         self.ignore_uncommited = ignore_uncommited
         self.submitter = submitter
-        
+
         # Skip flags. All set to false for official submission
         self.skip_compliance = skip_compliance
         self.skip_power_check = skip_power_check
@@ -71,7 +71,7 @@ class Config:
             self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
-        
+
     def get_submitter(self):
         return self.submitter
 

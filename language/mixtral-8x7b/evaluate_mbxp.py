@@ -58,8 +58,25 @@ def worker(inp_queue, out_queue):
             break
 
         key = f"{problem['lang']}_{problem['entry_point']}"
-        checker = eval(f"check_correctness_{problem['lang']}")
 
+        lang_to_checker_map = {
+            "cpp": check_correctness_cpp,
+            "csharp": check_correctness_csharp,
+            "go": check_correctness_go,
+            "java": check_correctness_java,
+            "javascript": check_correctness_javascript,
+            "kotlin": check_correctness_kotlin,
+            "perl": check_correctness_perl,
+            "php": check_correctness_php,
+            "python": check_correctness_python,
+            "ruby": check_correctness_ruby,
+            "scala": check_correctness_scala,
+            "swift": check_correctness_swift,
+            "typescript": check_correctness_typescript,
+        }
+
+        checker = lang_to_checker_map[problem["lang"]]
+        
         problem["task_id"] = key
         problem["test"] = problem["test_code"]
 

@@ -24,9 +24,14 @@ class BackendOnnxruntime(backend.Backend):
         """image_format. For onnx it is always NCHW."""
         return "NCHW"
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, threads=None):
         """Load model and find input/outputs from the model file."""
+        print("************************************************************")
+        print(">>> Value of num_threads: ", threads)
+        print("************************************************************")
         opt = rt.SessionOptions()
+        opt.intra_op_num_threads = int(threads)
+        opt.inter_op_num_threads = int(threads)
 
         # By default all optimizations are enabled
         # https://onnxruntime.ai/docs/performance/graph-optimizations.html

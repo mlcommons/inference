@@ -2,9 +2,8 @@
 Tool to remove manually verified ERRORs from the log file in the v0.7 submission.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+
+
 
 import argparse
 import sys

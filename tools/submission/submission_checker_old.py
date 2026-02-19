@@ -1,7 +1,6 @@
 """A checker for MLPerf Inference submissions from v5.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
-from __future__ import division, print_function, unicode_literals
 
 import argparse
 import datetime

@@ -16,7 +16,6 @@
 """Python version of perftests_null_sut.cc.
 """
 
-from __future__ import print_function
 from absl import app
 import mlperf_loadgen
 

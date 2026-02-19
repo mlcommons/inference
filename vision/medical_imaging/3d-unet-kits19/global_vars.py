@@ -61,9 +61,11 @@ assert CHECKSUM_INFER_FILE.is_file(), "checksum_inference.json is not found"
 assert CHECKSUM_CALIB_FILE.is_file(), "checksum_calibration.json is not found"
 
 # cases used for inference and calibration
-TARGET_CASES = json.load(open(INFERENCE_CASE_FILE))
-CALIB_CASES = json.load(open(CALIBRATION_CASE_FILE))
-
+with open(INFERENCE_CASE_FILE, "r") as f:
+    TARGET_CASES = json.load(f)
+with open(CALIBRATION_CASE_FILE, "r") as f:
+    CALIB_CASES = json.load(f)
+    
 # constants used preprocessing images as well as sliding window inference
 MEAN_VAL = 101.0
 STDDEV_VAL = 76.9

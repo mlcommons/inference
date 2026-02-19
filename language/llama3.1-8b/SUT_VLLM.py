@@ -218,6 +218,17 @@ class SUTServer(SUT):
 
         self.first_token_queue = queue.Queue()
 
+        self.loop = asyncio.new_event_loop()
+        self.loop_thread = threading.Thread(
+            target=self._run_event_loop, daemon=True
+        )
+        self.loop_thread.start()
+
+    def _run_event_loop(self):
+        """Run the persistent event loop in a dedicated thread"""
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
+
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -271,7 +282,12 @@ class SUTServer(SUT):
                     self.request_id)
             )
             self.request_id += 1
-            asyncio.run(self.stream_output(qitem, results_generator))
+            
+            future = asyncio.run_coroutine_threadsafe(
+                self.stream_output(qitem, results_generator),
+                self.loop
+            )
+            future.result()
 
     def issue_queries(self, query_samples):
         self.query_queue.put(query_samples[0])
@@ -285,6 +301,8 @@ class SUTServer(SUT):
 
         self.first_token_queue.put(None)
         self.ft_response_thread.join()
+        self.loop.call_soon_threadsafe(self.loop.stop)
+        self.loop_thread.join()
 
     def load_model(self):
         log.info("Loading model")

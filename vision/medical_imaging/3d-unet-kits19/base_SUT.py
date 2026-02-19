@@ -23,7 +23,7 @@ import mlperf_loadgen as lg
 import inference_utils as infu
 
 from kits_QSL import get_kits_QSL
-from global_vars import *
+from global_vars import ROI_SHAPE, SLIDE_OVERLAP_FACTOR
 
 
 class BASE_3DUNET_SUT:

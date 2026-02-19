@@ -20,7 +20,7 @@ import numpy as np
 import time
 from scipy import signal
 
-from global_vars import *
+from global_vars import ROI_SHAPE, SLIDE_OVERLAP_FACTOR
 
 __doc__ = """
 Collection of utilities 3D UNet MLPerf-Inference reference model uses.

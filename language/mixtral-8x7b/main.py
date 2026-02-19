@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument(
         "--device",
         type=str,
-        choices=["cpu", "cuda:0"],
+        choices=["cpu", "cuda"],
         default="cpu",
         help="device to use",
     )

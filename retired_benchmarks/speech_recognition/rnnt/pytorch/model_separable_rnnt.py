@@ -70,7 +70,7 @@ class Encoder(torch.nn.Module):
     ):
         super().__init__()
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")
@@ -122,7 +122,7 @@ class Prediction(torch.nn.Module):
     ):
         super().__init__()
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")
@@ -195,7 +195,7 @@ class Joint(torch.nn.Module):
     ):
         super().__init__()
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")

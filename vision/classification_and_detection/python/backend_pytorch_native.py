@@ -13,7 +13,7 @@ class BackendPytorchNative(backend.Backend):
         super(BackendPytorchNative, self).__init__()
         self.sess = None
         self.model = None
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def version(self):
         return torch.__version__

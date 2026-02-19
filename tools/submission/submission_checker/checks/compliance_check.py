@@ -452,16 +452,18 @@ class ComplianceCheck(BaseCheck):
                     self.log.error("%s is missing in %s", fname, test_dir)
                     is_valid = False
                 else:
+                    test_passed = False
                     with open(fname, "r") as f:
                         for line in f:
                             # look for: TEST PASS
                             if "TEST PASS" in line:
-                                is_valid = True
+                                test_passed = True
                                 break
-                    if is_valid == False:
+                    if test_passed == False:
                         self.log.error(
                             "Compliance test performance check in %s failed",
                             test_dir)
+                        is_valid = False
 
                     # Check performance dir
                     test_perf_path = os.path.join(

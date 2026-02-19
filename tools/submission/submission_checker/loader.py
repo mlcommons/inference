@@ -127,6 +127,7 @@ class Loader:
         self.src_path = os.path.join(
             self.root, SRC_PATH.get(
                 version, SRC_PATH["default"]))
+        self.filter_submitter = self.config.get_submitter()
 
     def get_measurement_path(self, path, division,
                              submitter, system, benchmark, scenario):
@@ -212,8 +213,9 @@ class Loader:
                 log_type,
                 path)
         return log
-    
-    def check_scenarios(self, benchmark, model_mapping, system_type, scenarios):
+
+    def check_scenarios(self, benchmark, model_mapping,
+                        system_type, scenarios):
         self.config.set_type(system_type)
         mlperf_model = self.config.get_mlperf_model(benchmark, model_mapping)
         required_scenarios = lower_list(self.config.get_required(mlperf_model))
@@ -230,12 +232,12 @@ class Loader:
         unknown, passed = contains_list(set(all_senarios), scenarios)
         if not passed:
             check = False
-        if contains_list(set(optional_scenarios), ["interactive", "server"])[1]:
+        if contains_list(set(optional_scenarios), [
+                         "interactive", "server"])[1]:
             if "interactive" not in scenarios and "server" not in scenarios:
                 check = False
                 missing.append("(one of) Interactive or Server")
         return missing, unknown, check
-
 
     def load(self) -> Generator[SubmissionLogs, None, None]:
         """Traverse submissions directory and yield parsed log containers.
@@ -253,6 +255,8 @@ class Loader:
                 continue
             division_path = os.path.join(self.root, division)
             for submitter in list_dir(division_path):
+                if self.filter_submitter is not None and submitter != self.config.submitter:
+                    continue
                 results_path = os.path.join(
                     division_path, submitter, "results")
                 model_mapping = {}
@@ -270,7 +274,8 @@ class Loader:
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
                         if division.lower() in ["closed", "network"]:
-                            missing_scenarios, unknown_scenarios, check_scenarios = self.check_scenarios(benchmark, model_mapping, system_type, list_dir(benchmark_path))
+                            missing_scenarios, unknown_scenarios, check_scenarios = self.check_scenarios(
+                                benchmark, model_mapping, system_type, list_dir(benchmark_path))
                         else:
                             missing_scenarios, unknown_scenarios, check_scenarios = [], [], True
                         for scenario in list_dir(benchmark_path):

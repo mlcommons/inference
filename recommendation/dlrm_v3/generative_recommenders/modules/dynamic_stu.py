@@ -27,11 +27,9 @@ from generative_recommenders.ops.jagged_tensors import (
     hstu_split_l2_embeddings,
 )
 
-
 try:
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops")
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops_cpu")
-except OSError:
+    import fbgemm_gpu  # noqa: F401
+except ImportError:
     pass
 
 

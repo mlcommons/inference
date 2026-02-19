@@ -143,7 +143,8 @@ def main():
         skip_extra_accuracy_files_check=args.skip_extra_accuracy_files_check,
         skip_all_systems_have_results_check=args.skip_all_systems_have_results_check,
         skip_calibration_check=args.skip_calibration_check,
-        skip_dataset_size_check=args.skip_dataset_size_check
+        skip_dataset_size_check=args.skip_dataset_size_check,
+        submitter=args.submitter,
     )
 
     if args.scenarios_to_skip:

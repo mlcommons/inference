@@ -169,6 +169,7 @@ def main():
         ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
             "Latency (ms)",
+            "Latency (s)",
             "Samples/s",
             "Queries/s",
             "Tokens/s",
@@ -493,7 +494,7 @@ def main():
     with open(f"{output}_results.json", "w") as f:
         f.write(json.dumps(outjsondata, indent=2))
 
-    score_format = writer.book.add_format({"num_format": "#,##0.00"})
+    score_format = writer.book.add_format({"num_format": "#,##0.000"})
     bg_format = writer.book.add_format({"bg_color": "#efefef"})
     for ws in writer.book.worksheets():
         ws.set_column(1, 1, None, None, {"hidden": 1})

@@ -1,0 +1,1298 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://docs.mlcommons.org/inference/submission/">
+      
+      
+        <link rel="prev" href="../install/">
+      
+      
+        <link rel="next" href="submission-cli/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/logo_v2.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Submission Guide - MLPerf Inference Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mlperf-inference-submission-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MLPerf Inference Documentation" class="md-header__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="../img/logo_v2.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MLPerf Inference Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Submission Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../install/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Install MLCFlow
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Submission
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../power/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Power
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../changelog/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Release Notes
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MLPerf Inference Documentation" class="md-nav__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="../img/logo_v2.svg" alt="logo">
+
+    </a>
+    MLPerf Inference Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href=".." class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../install/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install MLCFlow
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="./" class="md-nav__link md-nav__link--active">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Submission
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link md-nav__link--active" for="__nav_3" id="__nav_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Submission
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="submission-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automated Submission CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../power/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../changelog/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-prerequisites-and-agreements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Prerequisites and Agreements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-overview-of-mlperf-inference-benchmarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Overview of MLPerf Inference Benchmarking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Overview of MLPerf Inference Benchmarking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#benchmark-timings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark Timings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#divisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Divisions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loadgen-load-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoadGen (Load Generator)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-common-steps-in-benchmarking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Common Steps in Benchmarking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-preparing-results-for-submission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Preparing Results for Submission
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-manual-vs-automated-submission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Manual vs Automated Submission
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Manual vs Automated Submission">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-submission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Submission
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-submission-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Submission (CLI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Additional Resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+  
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+
+
+
+  
+  
+
+
+<h1 id="mlperf-inference-submission-guide">MLPerf Inference Submission Guide<a class="headerlink" href="#mlperf-inference-submission-guide" title="Permanent link">&para;</a></h1>
+<p>This document provides a step-by-step overview of the <strong>MLPerf Inference submission process</strong>.  </p>
+<hr />
+<pre class="mermaid"><code>
+%%{init: {"themeVariables": { "fontSize": "12px" }}}%%
+flowchart TD
+    A([Start]) --&gt; B[Prerequisites &amp; Agreements]
+
+    %% Setup phase
+    B --&gt; C[Set up Benchmark Environment]
+
+     %% Iterative benchmarking loop
+    subgraph L[For Each Benchmark]
+        direction TB
+        C --&gt; D[Download Assets]
+        D --&gt; E[Run Benchmarks]
+        E --&gt; F[Validate Accuracy]
+        F --&gt; G{More Benchmarks to Run?}
+        G --&gt;|Yes| C
+    end
+
+    %% Submission preparation
+    G --&gt;|No| H[Prepare Results Structure]
+    H --&gt; I[Run Submission Checker]
+    I --&gt; J[Generate Final Tarball]
+    J --&gt; K[Upload via Submission UI]
+    K --&gt; L1([End])</code></pre>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#1-prerequisites-and-agreements">1. Prerequisites and Agreements</a></li>
+<li><a href="#2-overview-of-mlperf-inference-benchmarking">2. Overview of MLPerf Inference Benchmarking</a></li>
+<li><a href="#3-common-steps-in-benchmarking">3. Common Steps in Benchmarking</a></li>
+<li><a href="#4-preparing-results-for-submission">4. Preparing Results for Submission</a></li>
+<li><a href="#5-manual-vs-automated-submission">5. Manual vs Automated Submission</a></li>
+<li><a href="#6-additional-resources">6. Additional Resources</a></li>
+<li><a href="">7. Troubleshooting</a></li>
+<li><a href="#7-support">8. Support</a></li>
+<li><a href="#notes">Notes</a></li>
+</ul>
+<hr />
+<h2 id="1-prerequisites-and-agreements">1. Prerequisites and Agreements<a class="headerlink" href="#1-prerequisites-and-agreements" title="Permanent link">&para;</a></h2>
+<p>For doing the MLPerf Inference Submission, ensure that your company is a member of MLCommons and all the <strong>required agreements</strong> are completed. You can skip these if you are doing an unofficial submission.</p>
+<ul>
+<li>
+<p><strong>Becoming a member:</strong></p>
+<ul>
+<li>Please find more information about becoming a MLCommons member <a href="https://mlcommons.org/get-involved/#become-a-member">here</a>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Sign the relevant agreements:</strong></p>
+<ul>
+<li><a href="https://drive.google.com/file/d/1UMzPALp0u35aneASJPa-izxtZWT6GZJb/view">Contributor License Agreement (CLA)</a></li>
+<li>Trademark Agreement (Contact <code>support@mlcommons.org</code> to request the trademark agreement.)</li>
+<li>Power EULA (optional, only if submitting power measurements which can be requested by sending an email to <code>support@mlcommons.org</code>)</li>
+</ul>
+</li>
+</ul>
+<p>The submitting organizations/individuals are obliged to follow the below guidelines:</p>
+<ul>
+<li><a href="https://github.com/mlcommons/policies/blob/master/MLPerf_Results_Messaging_Guidelines.adoc"><strong>Results Guidelines</strong></a></li>
+<li><a href="https://drive.google.com/file/d/1IkLCv2GYXSMmRWHPK0GEPMdTkb3Nxm8W/view"><strong>Trademark Guidelines</strong></a></li>
+</ul>
+<hr />
+<h2 id="2-overview-of-mlperf-inference-benchmarking">2. Overview of MLPerf Inference Benchmarking<a class="headerlink" href="#2-overview-of-mlperf-inference-benchmarking" title="Permanent link">&para;</a></h2>
+<p>MLPerf Inference is a benchmarking suite designed to measure <strong>performance of machine learning models</strong> on different hardware and software systems.</p>
+<h3 id="benchmark-timings">Benchmark Timings<a class="headerlink" href="#benchmark-timings" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p>MLPerf Inference benchmarking happens <strong>twice per year</strong>:</p>
+<ul>
+<li><strong>.0 Round</strong> – February  </li>
+<li><strong>.1 Round</strong> – August  </li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="categories">Categories<a class="headerlink" href="#categories" title="Permanent link">&para;</a></h3>
+<p>Results are grouped into <strong>categories</strong> based on system availability:</p>
+<ul>
+<li><strong>Available:</strong> All components are available for purchase or rent.  </li>
+<li><strong>Preview:</strong> Expected to become Available in the next submission round.  </li>
+<li><strong>Research, Development, or Internal (RDI):</strong> Experimental or internal systems.</li>
+</ul>
+<hr />
+<h3 id="system-types">System Types<a class="headerlink" href="#system-types" title="Permanent link">&para;</a></h3>
+<p>Two system types are supported:</p>
+<ul>
+<li><strong>Datacenter:</strong> Large-scale server-class systems.  </li>
+<li><strong>Edge:</strong> Devices and platforms designed for embedded or low-power environments.</li>
+</ul>
+<p>The <strong>System Under Test (SUT)</strong> can be classified under either, depending on the use case.</p>
+<hr />
+<h3 id="scenarios">Scenarios<a class="headerlink" href="#scenarios" title="Permanent link">&para;</a></h3>
+<p>Each benchmark defines one or more <strong>scenarios</strong> to reflect real-world usage.<br />
+See more details <a href="https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#3-scenarios">here</a></p>
+<ul>
+<li><strong>Datacenter:</strong> Offline, Server, Interactive  </li>
+<li><strong>Edge:</strong> SingleStream, MultiStream, Offline  </li>
+</ul>
+<p>Scenario requirements depend on both <strong>system type</strong> and <strong>benchmark model</strong>.<br />
+Refer to the <a href="../"><strong>Benchmark Info page</strong></a> for details.</p>
+<hr />
+<h3 id="divisions">Divisions<a class="headerlink" href="#divisions" title="Permanent link">&para;</a></h3>
+<p>MLPerf supports two divisions, allowing flexibility in reimplementation:</p>
+<ul>
+<li>
+<p><strong>Closed Division:</strong><br />
+  Focused on fair “apples-to-apples” comparison using the same model and reference setup. All applicable scenarios for a given benchmark are mandatory to be submitted. 
+  See <a href="https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#61-closed-division">rules</a>.</p>
+</li>
+<li>
+<p><strong>Open Division:</strong><br />
+  Allows innovation such as retraining or model substitution. One or more scenario of any benchmark can be submitted.
+  See <a href="https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#63-open-division">rules</a>.</p>
+</li>
+</ul>
+<hr />
+<h3 id="loadgen-load-generator">LoadGen (Load Generator)<a class="headerlink" href="#loadgen-load-generator" title="Permanent link">&para;</a></h3>
+<p><strong>LoadGen</strong> is the C++ benchmarking harness (with Python bindings) used across all MLPerf Inference submissions.<br />
+It handles:</p>
+<ul>
+<li>Query generation and scheduling </li>
+<li>logging  </li>
+<li>Latency tracking  </li>
+<li>Accuracy validation  </li>
+<li>Final metric computation  </li>
+</ul>
+<hr />
+<h2 id="3-common-steps-in-benchmarking">3. Common Steps in Benchmarking<a class="headerlink" href="#3-common-steps-in-benchmarking" title="Permanent link">&para;</a></h2>
+<p>Below are the <strong>general steps</strong> followed in the MLPerf Inference benchmarking process.</p>
+<ol>
+<li>
+<p><strong>Determine Division, System Type, and Category</strong><br />
+   Decide whether your submission will be Closed/Open, Edge/Datacenter, and Available/Preview/RDI.</p>
+</li>
+<li>
+<p><strong>Identify Required Scenarios</strong><br />
+   Based on your chosen configuration, identify which scenarios must be run.</p>
+</li>
+<li>
+<p><strong>Download Required Resources</strong></p>
+<ul>
+<li>
+<p><strong>Benchmark Source Repository</strong> (<a href="https://github.com/mlcommons/inference">Reference</a> or vendor implementation):  </p>
+</li>
+<li>
+<p><strong>Datasets</strong>  </p>
+</li>
+<li>
+<p><strong>Models</strong>  </p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Configure Environment</strong><br />
+   Set up the required dependencies, environment variables, and system configurations for benchmarking.</p>
+<p>Please refer to <a href="https://github.com/mlcommons/mlperf-automations/blob/dev/script/get-mlperf-inference-sut-description/README.md">this</a> README for instructions on how to automatically generate the system description file for your SUT.</p>
+</li>
+<li>
+<p><strong>Run Benchmarks</strong><br />
+   Execute benchmarks for the required scenarios, divisions, and categories.<br />
+   Adjust target QPS or latency to meet accuracy and performance requirements.<br />
+<em>(Refer to model-specific documentations for actual command usage.)</em></p>
+</li>
+<li>
+<p><strong>Run Accuracy Checker</strong><br />
+   Verify that the output results meet accuracy thresholds.  </p>
+</li>
+<li>
+<p><strong>Repeat for All Intended Benchmarks</strong><br />
+   Perform the above steps for every model you plan to submit.</p>
+</li>
+</ol>
+<hr />
+<h2 id="4-preparing-results-for-submission">4. Preparing Results for Submission<a class="headerlink" href="#4-preparing-results-for-submission" title="Permanent link">&para;</a></h2>
+<p>After benchmark runs are complete, follow these steps to prepare your submission package.</p>
+<ol>
+<li>
+<p><strong>Arrange Results</strong><br />
+   Organize results according to the structure defined <a href="https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#563-inference">here</a>.</p>
+</li>
+<li>
+<p><strong>Preprocess Submission</strong><br />
+   Use the <a href="https://github.com/mlcommons/inference/blob/master/tools/submission/preprocess_submission.py">preprocessing script</a> from the inference repository to validate and format results.</p>
+</li>
+<li>
+<p><strong>Run Submission Checker</strong><br />
+   The <a href="https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py">checker</a> validates completeness and correctness, producing a final <code>.tar.gz</code> file for submission.</p>
+</li>
+<li>
+<p><strong>Upload to Submission Portal</strong><br />
+   Use the MLCommons <strong>Submission UI</strong>, the link to which will be shared at the time of submission, to upload your final tarball.</p>
+</li>
+</ol>
+<hr />
+<h2 id="5-manual-vs-automated-submission">5. Manual vs Automated Submission<a class="headerlink" href="#5-manual-vs-automated-submission" title="Permanent link">&para;</a></h2>
+<p>There are <strong>two ways</strong> to prepare and submit your results:</p>
+<h3 id="manual-submission">Manual Submission<a class="headerlink" href="#manual-submission" title="Permanent link">&para;</a></h3>
+<p>Each of the above steps (from benchmarking to submission) can be performed manually.<br />
+This approach gives full control but is time-consuming and prone to errors.</p>
+<h3 id="automated-submission-cli">Automated Submission (CLI)<a class="headerlink" href="#automated-submission-cli" title="Permanent link">&para;</a></h3>
+<p>MLCommons provides a <strong>Submission CLI</strong> that automates:</p>
+<ul>
+<li>Result structuring</li>
+<li>Preprocessing</li>
+<li>Checker validation</li>
+<li>Final tarball creation and upload</li>
+</ul>
+<p>This reduces manual intervention and ensures compliance with submission requirements.<br />
+See <a href="submission-cli/">documentation</a> for usage.</p>
+<hr />
+<h2 id="6-additional-resources">6. Additional Resources<a class="headerlink" href="#6-additional-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/mlcommons/policies/tree/master"><strong>MLPerf General Policies</strong></a></li>
+<li><a href="https://github.com/mlcommons/inference_policies/tree/master"><strong>MLPerf Inference Policies</strong></a>  </li>
+<li><a href="https://github.com/mlcommons/inference"><strong>Reference Implementations</strong></a>  </li>
+<li><a href="https://github.com/orgs/mlcommons/repositories?q=inference_results_v"><strong>Previous Submission Results</strong></a></li>
+<li><a href="https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#9-faq"><strong>Submission FAQ</strong></a></li>
+</ul>
+<hr />
+<h2 id="7-troubleshooting">7. Troubleshooting<a class="headerlink" href="#7-troubleshooting" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="8-support">8. Support<a class="headerlink" href="#8-support" title="Permanent link">&para;</a></h2>
+<p>For questions or clarifications:</p>
+<ul>
+<li>Join the <a href="https://groups.google.com/a/mlcommons.org/g/inference">MLPerf Inference mailing list</a> — you can contact the group via <strong>inference@mlcommons.org</strong>.</li>
+<li>Open an issue in the <a href="https://github.com/mlcommons/inference/issues">inference repository</a>.</li>
+</ul>
+<hr />
+<h3 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ensure that all agreements and contributor information are completed <strong>before</strong> performing any submissions.  </li>
+<li>Always use the <strong>latest round’s branch/tag</strong> for submission.  </li>
+<li>Refer to individual model documentation for scenario-specific configurations.  </li>
+</ul>
+<hr />
+<p><em>This document is maintained by the MLPerf Inference Working Group. For suggestions or updates, please raise a pull request or contact the maintainers.</em></p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+  
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.tabs.link", "content.code.copy", "navigation.expand", "navigation.indexes", "navigation.sections", "navigation.instant", "navigation.tabs", "navigation.path", "navigation.tabs.sticky", "navigation.top", "navigation.prune", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

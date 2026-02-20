@@ -1,0 +1,4288 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://docs.mlcommons.org/inference/benchmarks/language/scc25_guide/scc25/">
+      
+      
+        <link rel="prev" href="../../llama2-70b/">
+      
+      
+        <link rel="next" href="../../llama3_1-405b/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../img/logo_v2.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>SCC25 Guide - MLPerf Inference Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#text-summarization-with-llama2-70b-for-student-cluster-competition-2025" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="MLPerf Inference Documentation" class="md-header__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="../../../../img/logo_v2.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MLPerf Inference Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              SCC25 Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../install/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Install MLCFlow
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../submission/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Submission
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../power/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Power
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../changelog/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Release Notes
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="MLPerf Inference Documentation" class="md-nav__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="../../../../img/logo_v2.svg" alt="logo">
+
+    </a>
+    MLPerf Inference Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_2" id="__nav_1_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image Classification
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Image Classification
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../image_classification/resnet50/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ResNet50
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text to Image
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Text to Image
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../text_to_image/sdxl/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stable Diffusion
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_4" id="__nav_1_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2D Object Detection
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2D Object Detection
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../object_detection/retinanet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RetinaNet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../object_detection/yolo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Yolo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automotive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Automotive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../automotive/3d_object_detection/pointpainting/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3D Object Detection
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Medical Imaging
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Medical Imaging
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../medical_imaging/3d-unet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3d-unet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1_7" id="__nav_1_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Language Processing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Language Processing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bert-Large
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gpt-j/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-J
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1_7_3" id="__nav_1_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLAMA2-70B
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_1_7_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LLAMA2-70B
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../llama2-70b/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7_3_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1_7_3_2" id="__nav_1_7_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Use
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_1_7_3_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1_7_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    External Use
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SCC25 Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SCC25 Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#artifacts-to-submit-to-the-scc-committee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artifacts to submit to the SCC committee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-reference-implementation-in-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLPerf Reference Implementation in Python
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MLPerf Reference Implementation in Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datacenter-category" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datacenter category
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Datacenter category">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pytorch-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pytorch framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pytorch framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cpu-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CPU device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#native-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cuda-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CUDA device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#native-environment_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rocm-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ROCm device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ROCm device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-environment_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nvidia-mlperf-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nvidia MLPerf Implementation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nvidia MLPerf Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datacenter-category_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datacenter category
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Datacenter category">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tensorrt-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TensorRT framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TensorRT framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cuda-device_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CUDA device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submission-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submission Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submission Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-actual-submission-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate actual submission tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submit Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../llama3_1-405b/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLAMA3-405B
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../llama3_1-8b/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLAMA3-8B
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mixtral-8x7b/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MIXTRAL-8x7B
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deepseek-r1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DeepSeek-R1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_8" id="__nav_1_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recommendation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Recommendation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../recommendation/dlrm-v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DLRM-v2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_9" id="__nav_1_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph Neural Networks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Graph Neural Networks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../graph/rgat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    R-GAT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_10" id="__nav_1_10_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Speech to Text
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Speech to Text
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../speech_to_text/whisper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whisper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../../install/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install MLCFlow
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../../submission/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Submission
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../../power/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../../changelog/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#artifacts-to-submit-to-the-scc-committee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Artifacts to submit to the SCC committee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-reference-implementation-in-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLPerf Reference Implementation in Python
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MLPerf Reference Implementation in Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datacenter-category" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datacenter category
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Datacenter category">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pytorch-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pytorch framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pytorch framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cpu-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CPU device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#native-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cuda-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CUDA device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#native-environment_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rocm-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ROCm device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ROCm device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-environment_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-a-virtual-environment-for-python_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Setup a virtual environment for Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-estimation-for-offline-scenario_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nvidia-mlperf-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nvidia MLPerf Implementation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nvidia MLPerf Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datacenter-category_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datacenter category
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Datacenter category">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tensorrt-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TensorRT framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TensorRT framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cuda-device_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA device
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CUDA device">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-environment_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-container-build-and-performance-estimation-for-offline-scenario_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        # Docker Container Build and Performance Estimation for Offline Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-only_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        performance-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-only_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        accuracy-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submission-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submission Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submission Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-actual-submission-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate actual submission tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submit Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+  
+
+
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../../../.." class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../../bert/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Language Processing
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../../llama2-70b/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    LLAMA2-70B
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="./" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    External Use
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+
+
+
+  
+  
+
+
+<h1 id="text-summarization-with-llama2-70b-for-student-cluster-competition-2025">Text Summarization with Llama2-70b for Student Cluster Competition 2025<a class="headerlink" href="#text-summarization-with-llama2-70b-for-student-cluster-competition-2025" title="Permanent link">&para;</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>This guide is designed for the <a href="https://sc25.supercomputing.org/students/student-cluster-competition/">Student Cluster Competition 2025</a> to walk participants through running and optimizing the <a href="https://arxiv.org/abs/1911.02549">MLPerf Inference Benchmark</a> using <a href="https://github.com/mlcommons/inference/tree/master/language/llama2-70b">Llama2 70b</a> across various software and hardware configurations. The goal is to maximize system throughput (measured in Tokens per second) without compromising accuracy. Since the model performs poorly on CPUs, it is essential to run it on GPUs.</p>
+<p>For a valid MLPerf Inference submission in this competition, you must run both a performance test and an accuracy test—<strong>no compliance runs are required</strong>. We use the <strong>Offline</strong> scenario, where throughput is the key metric (higher is better). For Llama 2-70B with the OpenOrca dataset (24,576 samples), the <strong>performance run</strong> must process an integer multiple of the full dataset (24,576 × <em>N</em> samples), while the <strong>accuracy run</strong> must process <strong>exactly</strong> the full dataset (24,576 samples). These requirements are taken care of by the MLPerf inference implementations. Setup for NVIDIA GPUs typically takes 2–3 hours and can be done offline. The final output is a tarball (<code>mlperf_submission.tar.gz</code>) containing MLPerf-compatible results which can be submitted to the organizers via a CLI command.</p>
+<h2 id="scoring">Scoring<a class="headerlink" href="#scoring" title="Permanent link">&para;</a></h2>
+<p>In the SCC, your first objective will be to get a valid MLPerf benchmark run. Traditionally running the reference MLPerf inference implementation (in Python) is easier compared to running Nvidia MLPerf inference implementation. Since for SCC25 we are having the Llama2-70b model, running the reference implementation needs around 600GB of VRAM and is tested only on 8xH100 Nvidia GPUs. If you have lower VRAM, trying the vendor implementation like of Nvidia or AMD is the best option.  </p>
+<p>MLCommons provides <a href="https://github.com/mlcommons/mlperf-automations/">automation</a> to run the MLPerf inference benchmarks which you can make use of. Currently the automation supports the reference implementation as well as Nvidia implementation and this is useful for you to get a quick valid result as the automation produces the required final output. You can also use the manual steps by following the <a href="https://github.com/mlcommons/inference/tree/master/language/llama2-70b">reference</a>, <a href="https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/NVIDIA">Nvidia</a> or <a href="https://github.com/mlcommons/inference_results_v5.0/blob/main/closed/AMD/measurements/8xMI325X_2xEPYC_9575F/llama2-70b-99.9/Offline/README.md">AMD</a> implementation readmes.</p>
+<p>Once the initial run is successful, you'll have the opportunity to optimize the benchmark further by maximizing system utilization, applying quantization techniques, adjusting ML frameworks, experimenting with batch sizes, and more, all of which can earn you additional points.</p>
+<p>Since vendor implementations of the MLPerf inference benchmark vary, teams will compete within their respective hardware categories (e.g., Nvidia GPUs, AMD GPUs). Points will be awarded based on the throughput achieved on your system.</p>
+<p>Additionally, significant bonus points will be awarded if your team enhances an existing implementation, enables multi-node execution, or adds/extends scripts to <a href="https://github.com/mlcommons/mlperf-automations/tree/dev/script">mlperf-automations repository</a> supporting new devices, frameworks, implementations etc. All improvements must be made publicly available under the Apache 2.0 license and submitted as pull requests by November 10, 2025 and only the code which is <em>merge ready</em> will be considered for evaluation. As a guideline, below are some examples which can fetch you bonus points. </p>
+<ul>
+<li>Adds multi-node execution support for Nvidia, AMD or reference implementations</li>
+<li>Support automation for AMD implementation</li>
+<li>Supports fp8/fp4 quantization for Reference implementation</li>
+<li>Automate the <a href="https://github.com/mlcommons/inference/blob/master/language/llama2-70b/SUT_API.py">network reference implementation</a> (this uses OpenAI compatible endpoints)</li>
+<li>The MLPerf automation supports docker run of Nvidia implementation. Supporting apptainer is a valuable contribution</li>
+</ul>
+<p>PS: For any query regarding the contribution, feel free to raise an issue in the <a href="https://github.com/mlcommons/inference">Inference</a> or <a href="https://github.com/mlcommons/mlperf-automations">MLPerf automations</a> repositories.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Both MLPerf and MLC automation are evolving projects.
+If you encounter issues related to SCC, please submit them <a href="https://github.com/mlcommons/inference/issues">here</a> with <strong>scc-25</strong> label
+with proper information about the command used, error logs and any additional usefull information to debug the issue.</p>
+</div>
+<blockquote>
+<p><strong>Note:</strong>
+Downloading the models requires service account credentials to be supplied in the run command. These credentials will be shared with participants via their email addresses prior to the start of the competition. Add the following to the existing command described in the sections below:
+<div class="highlight"><pre><span></span><code>--use_service_account=yes --client_id=&lt;CF-Access-Client-Id&gt; --client_secret=&lt;CF-Access-Client-Secret&gt;
+</code></pre></div></p>
+</blockquote>
+<h2 id="artifacts-to-submit-to-the-scc-committee">Artifacts to submit to the SCC committee<a class="headerlink" href="#artifacts-to-submit-to-the-scc-committee" title="Permanent link">&para;</a></h2>
+<p>You will need to submit the following files:</p>
+<ul>
+<li><code>mlperf_submission.run</code> - MLC commands to run MLPerf inference benchmark saved to this file.</li>
+<li><code>mlperf_submission.md</code> - description of your platform and some highlights of the MLPerf benchmark execution.</li>
+<li><code>&lt;Team Name&gt;</code> under which results are pushed to the github repository. </li>
+</ul>
+<h2 id="run-commands">Run Commands<a class="headerlink" href="#run-commands" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">MLCommons-Python</label><label for="__tabbed_1_2">Nvidia</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h2 id="mlperf-reference-implementation-in-python">MLPerf Reference Implementation in Python<a class="headerlink" href="#mlperf-reference-implementation-in-python" title="Permanent link">&para;</a></h2>
+<p>LLAMA2-70B-99</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:1"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">datacenter</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h3 id="datacenter-category">Datacenter category<a class="headerlink" href="#datacenter-category" title="Permanent link">&para;</a></h3>
+<p>In the datacenter category, llama2-70b-99 has Offline scenario and the scenario is  mandatory for a closed division submission.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:1"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Pytorch</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h4 id="pytorch-framework">Pytorch framework<a class="headerlink" href="#pytorch-framework" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">CPU</label><label for="__tabbed_4_2">CUDA</label><label for="__tabbed_4_3">ROCm</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h5 id="cpu-device">CPU device<a class="headerlink" href="#cpu-device" title="Permanent link">&para;</a></h5>
+<p><details>
+<summary>Please click here to see the minimum system requirements for running the benchmark</summary></p>
+<ul>
+<li><strong>Disk Space</strong>:  900GB for manual execution of reference implementation and 1.5TB for automated run through MLC-Scripts</li>
+</ul>
+</details>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Docker</label><label for="__tabbed_5_2">Native</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="docker-environment">Docker Environment<a class="headerlink" href="#docker-environment" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<h6 id="docker-container-build-and-performance-estimation-for-offline-scenario"># Docker Container Build and Performance Estimation for Offline Scenario<a class="headerlink" href="#docker-container-build-and-performance-estimation-for-offline-scenario" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. </p>
+</li>
+<li>
+<p><code>_r5.1-dev</code> could also be given instead of <code>_r6.0-dev</code> if you want to run the benchmark with the MLPerf version being 4.1.</p>
+</li>
+<li>
+<p>Add <code>--adr.mlperf-implementation.tags=_branch.master,_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the official MLPerf Inference implementation in a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.tags=_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the model config accuracy script in the submission checker within a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.version=custom</code> if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.</p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--docker<span class="w"> </span>--quiet<span class="w"> </span>--rerun
+</code></pre></div>
+The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for the Offline scenario.</p>
+<p><details>
+<summary> Please click here to see more options for the docker launch </summary></p>
+<ul>
+<li>
+<p><code>--docker_privileged</code>: to launch the container in privileged mode</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo=&lt;Custom MLC GitHub repo URL in username@repo format&gt;</code>: to use a custom fork of mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo_branch=&lt;Custom MLC GitHub repo Branch&gt;</code>: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_cache=no</code>: to not use docker cache during the image build</p>
+</li>
+<li><code>--docker_os=ubuntu</code>: ubuntu and rhel are supported. </li>
+<li><code>--docker_os_version=20.04</code>: [20.04, 22.04] are supported for Ubuntu and [8, 9] for RHEL
+</details></li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:1"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline">Offline<a class="headerlink" href="#offline" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">performance-only</label><label for="__tabbed_7_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only">performance-only<a class="headerlink" href="#performance-only" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only">accuracy-only<a class="headerlink" href="#accuracy-only" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful
+</details></li>
+</ul>
+</div>
+<div class="tabbed-block">
+<h6 id="native-environment">Native Environment<a class="headerlink" href="#native-environment" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<h6 id="setup-a-virtual-environment-for-python"># Setup a virtual environment for Python<a class="headerlink" href="#setup-a-virtual-environment-for-python" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>install,python-venv<span class="w"> </span>--name<span class="o">=</span>mlperf
+<span class="nb">export</span><span class="w"> </span><span class="nv">MLC_SCRIPT_EXTRA_CMD</span><span class="o">=</span><span class="s2">&quot;--adr.python.name=mlperf&quot;</span>
+</code></pre></div>
+<h6 id="performance-estimation-for-offline-scenario"># Performance Estimation for Offline Scenario<a class="headerlink" href="#performance-estimation-for-offline-scenario" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. </p>
+</li>
+<li>
+<p><code>_r5.1-dev</code> could also be given instead of <code>_r6.0-dev</code> if you want to run the benchmark with the MLPerf version being 4.1.</p>
+</li>
+<li>
+<p>Add <code>--adr.mlperf-implementation.tags=_branch.master,_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the official MLPerf Inference implementation in a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.tags=_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the model config accuracy script in the submission checker within a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.version=custom</code> if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.</p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w"> </span>--rerun
+</code></pre></div>
+The above command should do a test run of Offline scenario and record the estimated offline_target_qps.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="8:1"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline_1">Offline<a class="headerlink" href="#offline_1" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="9:2"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">performance-only</label><label for="__tabbed_9_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only_1">performance-only<a class="headerlink" href="#performance-only_1" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only_1">accuracy-only<a class="headerlink" href="#accuracy-only_1" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cpu<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful
+</details></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="tabbed-block">
+<h5 id="cuda-device">CUDA device<a class="headerlink" href="#cuda-device" title="Permanent link">&para;</a></h5>
+<p><details>
+<summary>Please click here to see the minimum system requirements for running the benchmark</summary></p>
+<ul>
+<li>
+<p><strong>Device Memory</strong>: To be updated</p>
+</li>
+<li>
+<p><strong>Disk Space</strong>:  900GB for manual execution of reference implementation and 1.5TB for automated run through MLC-Scripts</p>
+</li>
+</ul>
+</details>
+<div class="tabbed-set tabbed-alternate" data-tabs="10:2"><input checked="checked" id="__tabbed_10_1" name="__tabbed_10" type="radio" /><input id="__tabbed_10_2" name="__tabbed_10" type="radio" /><div class="tabbed-labels"><label for="__tabbed_10_1">Docker</label><label for="__tabbed_10_2">Native</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="docker-environment_1">Docker Environment<a class="headerlink" href="#docker-environment_1" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<h6 id="docker-container-build-and-performance-estimation-for-offline-scenario_1"># Docker Container Build and Performance Estimation for Offline Scenario<a class="headerlink" href="#docker-container-build-and-performance-estimation-for-offline-scenario_1" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. </p>
+</li>
+<li>
+<p><code>_r5.1-dev</code> could also be given instead of <code>_r6.0-dev</code> if you want to run the benchmark with the MLPerf version being 4.1.</p>
+</li>
+<li>
+<p>Add <code>--adr.mlperf-implementation.tags=_branch.master,_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the official MLPerf Inference implementation in a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.tags=_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the model config accuracy script in the submission checker within a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.version=custom</code> if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.</p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--docker<span class="w"> </span>--quiet<span class="w"> </span>--rerun
+</code></pre></div>
+The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for the Offline scenario.</p>
+<p><details>
+<summary> Please click here to see more options for the docker launch </summary></p>
+<ul>
+<li>
+<p><code>--docker_privileged</code>: to launch the container in privileged mode</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo=&lt;Custom MLC GitHub repo URL in username@repo format&gt;</code>: to use a custom fork of mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo_branch=&lt;Custom MLC GitHub repo Branch&gt;</code>: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_cache=no</code>: to not use docker cache during the image build
+</details></p>
+</li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="11:1"><input checked="checked" id="__tabbed_11_1" name="__tabbed_11" type="radio" /><div class="tabbed-labels"><label for="__tabbed_11_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline_2">Offline<a class="headerlink" href="#offline_2" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="12:2"><input checked="checked" id="__tabbed_12_1" name="__tabbed_12" type="radio" /><input id="__tabbed_12_2" name="__tabbed_12" type="radio" /><div class="tabbed-labels"><label for="__tabbed_12_1">performance-only</label><label for="__tabbed_12_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only_2">performance-only<a class="headerlink" href="#performance-only_2" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only_2">accuracy-only<a class="headerlink" href="#accuracy-only_2" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful
+</details></li>
+</ul>
+</div>
+<div class="tabbed-block">
+<h6 id="native-environment_1">Native Environment<a class="headerlink" href="#native-environment_1" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>It is advisable to use the commands in the Docker tab for CUDA. Run the below native command only if you are already on a CUDA setup with cuDNN and TensorRT installed.</li>
+</ul>
+</div>
+<h6 id="setup-a-virtual-environment-for-python_1"># Setup a virtual environment for Python<a class="headerlink" href="#setup-a-virtual-environment-for-python_1" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>install,python-venv<span class="w"> </span>--name<span class="o">=</span>mlperf
+<span class="nb">export</span><span class="w"> </span><span class="nv">MLC_SCRIPT_EXTRA_CMD</span><span class="o">=</span><span class="s2">&quot;--adr.python.name=mlperf&quot;</span>
+</code></pre></div>
+<h6 id="performance-estimation-for-offline-scenario_1"># Performance Estimation for Offline Scenario<a class="headerlink" href="#performance-estimation-for-offline-scenario_1" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. </p>
+</li>
+<li>
+<p><code>_r5.1-dev</code> could also be given instead of <code>_r6.0-dev</code> if you want to run the benchmark with the MLPerf version being 4.1.</p>
+</li>
+<li>
+<p>Add <code>--adr.mlperf-implementation.tags=_branch.master,_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the official MLPerf Inference implementation in a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.tags=_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the model config accuracy script in the submission checker within a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.version=custom</code> if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.</p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w"> </span>--rerun
+</code></pre></div>
+The above command should do a test run of Offline scenario and record the estimated offline_target_qps.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="13:1"><input checked="checked" id="__tabbed_13_1" name="__tabbed_13" type="radio" /><div class="tabbed-labels"><label for="__tabbed_13_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline_3">Offline<a class="headerlink" href="#offline_3" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="14:2"><input checked="checked" id="__tabbed_14_1" name="__tabbed_14" type="radio" /><input id="__tabbed_14_2" name="__tabbed_14" type="radio" /><div class="tabbed-labels"><label for="__tabbed_14_1">performance-only</label><label for="__tabbed_14_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only_3">performance-only<a class="headerlink" href="#performance-only_3" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only_3">accuracy-only<a class="headerlink" href="#accuracy-only_3" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful
+</details></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="tabbed-block">
+<h5 id="rocm-device">ROCm device<a class="headerlink" href="#rocm-device" title="Permanent link">&para;</a></h5>
+<p><details>
+<summary>Please click here to see the minimum system requirements for running the benchmark</summary></p>
+<ul>
+<li><strong>Disk Space</strong>:  900GB for manual execution of reference implementation and 1.5TB for automated run through MLC-Scripts</li>
+</ul>
+</details>
+<div class="tabbed-set tabbed-alternate" data-tabs="15:1"><input checked="checked" id="__tabbed_15_1" name="__tabbed_15" type="radio" /><div class="tabbed-labels"><label for="__tabbed_15_1">Native</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="native-environment_2">Native Environment<a class="headerlink" href="#native-environment_2" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<h6 id="setup-a-virtual-environment-for-python_2"># Setup a virtual environment for Python<a class="headerlink" href="#setup-a-virtual-environment-for-python_2" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>install,python-venv<span class="w"> </span>--name<span class="o">=</span>mlperf
+<span class="nb">export</span><span class="w"> </span><span class="nv">MLC_SCRIPT_EXTRA_CMD</span><span class="o">=</span><span class="s2">&quot;--adr.python.name=mlperf&quot;</span>
+</code></pre></div>
+<h6 id="performance-estimation-for-offline-scenario_2"># Performance Estimation for Offline Scenario<a class="headerlink" href="#performance-estimation-for-offline-scenario_2" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. </p>
+</li>
+<li>
+<p><code>_r5.1-dev</code> could also be given instead of <code>_r6.0-dev</code> if you want to run the benchmark with the MLPerf version being 4.1.</p>
+</li>
+<li>
+<p>Add <code>--adr.mlperf-implementation.tags=_branch.master,_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the official MLPerf Inference implementation in a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.tags=_repo.&lt;CUSTOM_INFERENCE_REPO_LINK&gt;</code> if you are modifying the model config accuracy script in the submission checker within a custom fork.</p>
+</li>
+<li>
+<p>Add <code>--adr.inference-src.version=custom</code> if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.</p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>rocm<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w"> </span>--rerun
+</code></pre></div>
+The above command should do a test run of Offline scenario and record the estimated offline_target_qps.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="16:1"><input checked="checked" id="__tabbed_16_1" name="__tabbed_16" type="radio" /><div class="tabbed-labels"><label for="__tabbed_16_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline_4">Offline<a class="headerlink" href="#offline_4" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="17:2"><input checked="checked" id="__tabbed_17_1" name="__tabbed_17" type="radio" /><input id="__tabbed_17_2" name="__tabbed_17" type="radio" /><div class="tabbed-labels"><label for="__tabbed_17_1">performance-only</label><label for="__tabbed_17_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only_4">performance-only<a class="headerlink" href="#performance-only_4" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>rocm<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only_4">accuracy-only<a class="headerlink" href="#accuracy-only_4" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>reference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>pytorch<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>rocm<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful
+</details></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tabbed-block">
+<h2 id="nvidia-mlperf-implementation">Nvidia MLPerf Implementation<a class="headerlink" href="#nvidia-mlperf-implementation" title="Permanent link">&para;</a></h2>
+<p>LLAMA2-70B-99</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="18:1"><input checked="checked" id="__tabbed_18_1" name="__tabbed_18" type="radio" /><div class="tabbed-labels"><label for="__tabbed_18_1">datacenter</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h3 id="datacenter-category_1">Datacenter category<a class="headerlink" href="#datacenter-category_1" title="Permanent link">&para;</a></h3>
+<p>In the datacenter category, llama2-70b-99 has Offline scenario and the scenario is  mandatory for a closed division submission.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="19:1"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">TensorRT</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h4 id="tensorrt-framework">TensorRT framework<a class="headerlink" href="#tensorrt-framework" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="20:1"><input checked="checked" id="__tabbed_20_1" name="__tabbed_20" type="radio" /><div class="tabbed-labels"><label for="__tabbed_20_1">CUDA</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h5 id="cuda-device_1">CUDA device<a class="headerlink" href="#cuda-device_1" title="Permanent link">&para;</a></h5>
+<p><details>
+<summary>Please click here to see the minimum system requirements for running the benchmark</summary></p>
+<ul>
+<li>
+<p><strong>Device Memory</strong>: 2x80GB</p>
+</li>
+<li>
+<p><strong>Disk Space</strong>:  900GB for manual execution of vendor implementation and 1.5TB for automated run through MLC-Scripts</p>
+</li>
+</ul>
+</details>
+<div class="tabbed-set tabbed-alternate" data-tabs="21:1"><input checked="checked" id="__tabbed_21_1" name="__tabbed_21" type="radio" /><div class="tabbed-labels"><label for="__tabbed_21_1">Docker</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="docker-environment_2">Docker Environment<a class="headerlink" href="#docker-environment_2" title="Permanent link">&para;</a></h6>
+<p>Please refer to the <a href="/inference/install/">installation page</a> to install MLCFlow for running the automated benchmark commands.</p>
+<h6 id="docker-container-build-and-performance-estimation-for-offline-scenario_2"># Docker Container Build and Performance Estimation for Offline Scenario<a class="headerlink" href="#docker-container-build-and-performance-estimation-for-offline-scenario_2" title="Permanent link">&para;</a></h6>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<ul>
+<li>
+<p>Compliance runs can be enabled by adding <code>--compliance=yes</code>.</p>
+</li>
+<li>
+<p>Number of threads could be adjusted using <code>--threads=#</code>, where <code>#</code> is the desired number of threads. This option works only if the implementation in use supports threading.</p>
+</li>
+<li>
+<p>Batch size could be adjusted using <code>--batch_size=#</code>, where <code>#</code> is the desired batch size. This option works only if the implementation in use is supporting the given batch size. Example: <code>--batch_size.llama2-70b:1024</code></p>
+</li>
+</ul>
+</div>
+<p><div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_find-performance,_full,_r5.1-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>nvidia<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>tensorrt<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--docker<span class="w"> </span>--quiet<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--tp_size<span class="o">=</span><span class="m">2</span><span class="w"> </span>--rerun
+</code></pre></div>
+The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for the Offline scenario.</p>
+<p><details>
+<summary> Please click here to see more options for the docker launch </summary></p>
+<ul>
+<li>
+<p><code>--docker_privileged</code>: to launch the container in privileged mode</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo=&lt;Custom MLC GitHub repo URL in username@repo format&gt;</code>: to use a custom fork of mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_mlc_repo_branch=&lt;Custom MLC GitHub repo Branch&gt;</code>: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image</p>
+</li>
+<li>
+<p><code>--docker_cache=no</code>: to not use docker cache during the image build</p>
+</li>
+<li><code>--gpu_name=&lt;Name of the GPU&gt;</code> : The GPUs with supported configs in MLC are <code>orin</code>, <code>rtx_4090</code>, <code>rtx_a6000</code>, <code>rtx_6000_ada</code>, <code>l4</code>, <code>t4</code>and <code>a100</code>. For other GPUs, default configuration as per the GPU memory will be used.</li>
+<li>Add <code>--adr.llama2-model.tags=_pre-quantized</code> to use the Nvidia quantized models with the available in the MLC Storage. These models were quantized with three different configurations of tensor parallelism and pipeline parallelism: TP1–PP2, TP2–PP1, and TP1–PP1. The appropriate model will be automatically selected based on the values provided for <code>--tp_size</code> and <code>--pp_size</code> in run command. By default tp size of 2 and pp size of 1 would be used.
+</details></li>
+</ul>
+<div class="tabbed-set tabbed-alternate" data-tabs="22:1"><input checked="checked" id="__tabbed_22_1" name="__tabbed_22" type="radio" /><div class="tabbed-labels"><label for="__tabbed_22_1">Offline</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="offline_5">Offline<a class="headerlink" href="#offline_5" title="Permanent link">&para;</a></h6>
+<div class="tabbed-set tabbed-alternate" data-tabs="23:2"><input checked="checked" id="__tabbed_23_1" name="__tabbed_23" type="radio" /><input id="__tabbed_23_2" name="__tabbed_23" type="radio" /><div class="tabbed-labels"><label for="__tabbed_23_1">performance-only</label><label for="__tabbed_23_2">accuracy-only</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<h6 id="performance-only_5">performance-only<a class="headerlink" href="#performance-only_5" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_performance-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>nvidia<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>tensorrt<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--tp_size<span class="o">=</span>&lt;TP_SIZE&gt;<span class="w"> </span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<h6 id="accuracy-only_5">accuracy-only<a class="headerlink" href="#accuracy-only_5" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>run-mlperf,inference,_full,_r5.1-dev,_accuracy-only<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--model<span class="o">=</span>llama2-70b-99<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--implementation<span class="o">=</span>nvidia<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--framework<span class="o">=</span>tensorrt<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--scenario<span class="o">=</span>Offline<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--execution_mode<span class="o">=</span>valid<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--device<span class="o">=</span>cuda<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w">  </span><span class="se">\</span>
+<span class="w">   </span>--tp_size<span class="o">=</span>&lt;TP_SIZE&gt;<span class="w"> </span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><details>
+<summary> Please click here to see more options for the RUN command</summary></p>
+<ul>
+<li>
+<p>Use <code>--division=closed</code> to do a closed division submission which includes compliance runs</p>
+</li>
+<li>
+<p>Use <code>--rerun</code> to do a rerun even when a valid run exists</p>
+</li>
+<li>Use <code>--compliance</code> to do the compliance runs (only applicable for closed division) once the valid runs are successful</li>
+<li><code>--gpu_name=&lt;Name of the GPU&gt;</code> : The GPUs with supported configs in MLC are <code>orin</code>, <code>rtx_4090</code>, <code>rtx_a6000</code>, <code>rtx_6000_ada</code>, <code>l4</code>, <code>t4</code>and <code>a100</code>. For other GPUs, default configuration as per the GPU memory will be used.
+</details></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<ul>
+<li>If you want to download the official MLPerf model and dataset for Llama2-70b you can follow <a href="../../get-llama2-70b-data/">this README</a>.</li>
+</ul>
+<h2 id="submission-commands">Submission Commands<a class="headerlink" href="#submission-commands" title="Permanent link">&para;</a></h2>
+<h3 id="generate-actual-submission-tree">Generate actual submission tree<a class="headerlink" href="#generate-actual-submission-tree" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>mlcr<span class="w"> </span>generate,inference,submission,_wg-inference<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--clean<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--run-checker<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--tar<span class="o">=</span>yes<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--env.MLC_TAR_OUTFILE<span class="o">=</span>submission.tar.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--division<span class="o">=</span>open<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--category<span class="o">=</span>datacenter<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--env.CM_DETERMINE_MEMORY_CONFIGURATION<span class="o">=</span>yes<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--quiet<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span>--submitter<span class="o">=</span>&lt;Team<span class="w"> </span>Name&gt;
+</code></pre></div>
+<ul>
+<li>Use <code>--hw_name="My system name"</code> to give a meaningful system name.</li>
+<li>At the end, a <strong>.tar</strong> file would be generated inside the current working directory.</li>
+</ul>
+<h3 id="submit-results">Submit Results<a class="headerlink" href="#submit-results" title="Permanent link">&para;</a></h3>
+<p>MLCommons provides students with a <a href="https://submissions-ui.mlcommons.org/index">Submission UI</a>, where they can upload the generated <strong>.tar</strong> file using their assigned submission ID.</p>
+<p>The deadline for submitting results is 6:00 PM CDT on November 17 (Monday), 2025.</p>
+<p>Alternatively, students may use the Submission CLI provided through the MLCFlow automation. To do this, first follow the installation steps in this <a href="../../../../install/">guide</a>.
+After installing, follow the instructions under <a href="https://docs.mlcommons.org/inference/submission/#upload-the-final-submission"><strong>Upload the final submission</strong></a>.</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+  
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["content.tabs.link", "content.code.copy", "navigation.expand", "navigation.indexes", "navigation.sections", "navigation.instant", "navigation.tabs", "navigation.path", "navigation.tabs.sticky", "navigation.top", "navigation.prune", "toc.follow"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -30,6 +30,7 @@ The benchmark implementation run command will automatically download the validat
         
     ### Get Calibration Dataset
     ```
+
     mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j
     ```
 
@@ -40,12 +41,13 @@ The benchmark implementation run command will automatically download the require
 
 === "Pytorch"
 
-    === "From MLCOMMONS Storage"
+    === "From Cloudfare R2"
 
         > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Storage. 
 
         ### Get the Official MLPerf LLAMA3.1-8B model from MLCOMMONS Cloudfare R2
         ```
+
         mlcr get,ml-model,llama3,_mlc,_8b,_r2-downloader --outdirname=<path to download> -j
         ```
 

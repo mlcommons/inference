@@ -85,13 +85,15 @@ class PerformanceCheck(BaseCheck):
             self.log.error("Performance log missing at %s", self.path)
             return False
         return True
-    
+
     def scenarios_check(self):
         if self.submission_logs.loader_data.get("check_scenarios", False):
             return True
         else:
-            missing_scenarios = self.submission_logs.loader_data.get("missing_scenarios", [])
-            unknown_scenarios = self.submission_logs.loader_data.get("unknown_scenarios", [])
+            missing_scenarios = self.submission_logs.loader_data.get(
+                "missing_scenarios", [])
+            unknown_scenarios = self.submission_logs.loader_data.get(
+                "unknown_scenarios", [])
             if len(missing_scenarios) > 0:
                 self.log.error(
                     "%s does not have all required scenarios, missing %s",
@@ -116,7 +118,8 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
-        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
+        compliance_skip = self.submission_logs.loader_data.get(
+            "compliance_skip", False)
         if self.mlperf_log.has_error():
             has_critical_errors = False
             if self.config.ignore_uncommited:
@@ -127,7 +130,7 @@ class PerformanceCheck(BaseCheck):
                     ):
                         has_critical_errors = True
                     if (
-                        not compliance_skip 
+                        not compliance_skip
                         and "Multiple conf files are used" in error["value"]
                     ):
                         has_critical_errors = True

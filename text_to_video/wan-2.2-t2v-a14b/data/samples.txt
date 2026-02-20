@@ -3,3 +3,8 @@
 84, The bund Shanghai, black and white
 59, an elephant spraying itself with water using its trunk to cool down
 12, a car turning a corner
+31, a truck turning a corner
+86, The bund Shanghai, pixel art 
+122, Gwen Stacy reading a book, pixel art
+233, sky
+96, a shark is swimming in the ocean, in cyberpunk style

@@ -4,29 +4,69 @@ from .parsers.loadgen_parser import LoadgenParser
 
 
 def list_dir(*path):
+    """List directories inside of a given directory.
+
+    Args:
+        path (list[str]): Path to directory to search from.
+
+    Returns:
+        List[str]: List of files
+    """
     path = os.path.join(*path)
     return sorted([f for f in os.listdir(
         path) if os.path.isdir(os.path.join(path, f))])
 
 
 def list_files(*path):
+    """List files inside of a directory.
+
+    Args:
+        path (list[str]): Path to directory to search from.
+
+    Returns:
+        List[str]: List of files
+    """
     path = os.path.join(*path)
     return sorted([f for f in os.listdir(
         path) if os.path.isfile(os.path.join(path, f))])
 
 
 def list_empty_dirs_recursively(*path):
+    """List all empty directories inside of a directory, recursively.
+
+    Args:
+        path (list[str]): Path to directory to search from.
+
+    Returns:
+        List[str]: List of empty directories
+    """
     path = os.path.join(*path)
     return [dirpath for dirpath, dirs, files in os.walk(
         path) if not dirs and not files]
 
 
 def list_dirs_recursively(*path):
+    """List all directories ( both empty and not empty ) inside of a directory, recursively.
+
+    Args:
+        path (list[str]): Path to directory to search from.
+
+    Returns:
+        List[str]: List of all directories
+    """
     path = os.path.join(*path)
     return [dirpath for dirpath, dirs, files in os.walk(path)]
 
 
 def list_files_recursively(*path):
+    """List all files inside of a directory, looking recursively.
+
+    Args:
+        path (list[str]): Path to directory to search from.
+
+    Returns:
+        List[str]: List of all files
+    """
     path = os.path.join(*path)
     return [
         os.path.join(dirpath, file)
@@ -44,6 +84,16 @@ def files_diff(list1, list2, optional=None):
 
 
 def check_extra_files(path, target_files):
+    """Check if there are extra files in the directory compared to the target files.
+
+    Args:
+        path (str): Path to directory to check.
+        target_files (dict): Dictionary of target files, with keys as subdirectories and values as lists of files in those
+            subdirectories.
+    Returns:
+        bool: Whether there are extra files or not.
+        List[str]: List of extra files.
+    """
     missing_files = []
     check_pass = True
     folders = list_dir(path)
@@ -66,10 +116,29 @@ def check_extra_files(path, target_files):
 
 
 def split_path(m):
+    """Naively split path from string to a list, separating on forward slashes. Converts backslash pairs to forward slashes.
+
+    Args:
+        m (string): Path to split
+
+    Returns:
+        List[string]: Path as list
+    """
     return m.replace("\\", "/").split("/")
 
 
 def get_boolean(s):
+    """Convert a bool, string or int to a bool. Strings are case-insensitive, and ints are converted to bools by checking if they are 0. None values are converted to False.
+ 
+    Args:
+        s (Any): Element to convert into a bool.
+
+    Raises:
+        TypeError: If the input is not a bool, string or int.
+
+    Returns:
+        bool: The converted boolean value.
+    """
     if s is None:
         return False
     elif isinstance(s, bool):
@@ -85,6 +154,15 @@ def get_boolean(s):
 
 
 def merge_two_dict(x, y):
+    """Merge two dictionaries by key. If a key is present in both dictionaries, the new value is the sum of the values in each of them.
+
+    Args:
+        x (dict): A dictionary
+        y (dict): Another dictionary
+
+    Returns:
+        dict: The sum of the dictionaries. Note: Neither x nor y are changed by this operation.
+    """
     z = x.copy()
     for key in y:
         if key not in z:
@@ -95,6 +173,14 @@ def merge_two_dict(x, y):
 
 
 def sum_dict_values(x):
+    """Compute the sum of the values in a given dictionary. Expects values to be numeric.
+
+    Args:
+        x (dict): Dictionary whose values we need to sum over.
+
+    Returns:
+        float: The sum of all values in the dictionary.
+    """
     count = 0
     for key in x:
         count += x[key]
@@ -102,6 +188,14 @@ def sum_dict_values(x):
 
 
 def is_number(s):
+    """Check if argument is a number by trying to cast it to a float.
+
+    Args:
+        s (Any): Some value
+
+    Returns:
+        bool: Whether the argument is a number or not.
+    """
     try:
         float(s)
         return True
@@ -122,6 +216,18 @@ def contains_list(l1, l2):
 
 def get_performance_metric(
         config, model, path, scenario_fixed):
+    """Get performance metric from the logs.
+
+    Args:
+        config (Config): Configuration class.
+        model (str): Model name
+        path (str): Log path
+        scenario_fixed (str): Scenario information.
+
+    Returns:
+        float: Performance metric.
+    """
+    
     # Assumes new logging format
     version = config.version
 
@@ -157,6 +263,19 @@ def get_performance_metric(
 def get_inferred_result(
     scenario_fixed, scenario, res, mlperf_log, config, log_error=False
 ):
+    """Get result from logs.
+
+    Args:
+        scenario_fixed (str): Scenario fixed type
+        scenario (str): Scenario type.
+        res (float): Result variable
+        mlperf_log (LoadgenParser): Parsed log object to get the result from.
+        config (Config): Configuration object to check for scenario properties.
+        log_error (bool, optional): Whether to log errors. Defaults to False.
+
+    Returns:
+        tuple: A tuple containing the inferred flag, result, and validity flag.
+    """
 
     inferred = False
     is_valid = True
@@ -205,6 +324,14 @@ def get_inferred_result(
 
 
 def check_compliance_perf_dir(test_dir):
+    """Check that the compliance perf directory is valid.
+
+    Args:
+        test_dir (str): Test directory.
+
+    Returns:
+        bool: True if the directory is valid, False otherwise.
+    """
     is_valid = False
     import logging
     log = logging.getLogger("main")
@@ -247,6 +374,18 @@ def check_compliance_perf_dir(test_dir):
 
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
+    """Get power metric from logs and config info.
+
+    Args:
+        config (Config): Unuseed.
+        scenario_fixed (str): Fixed scenario.
+        log_path (str): Path to log
+        is_valid (bool): Whether the metric passes the checks or not.
+        res (float): Result.
+
+    Returns:
+        Tuple: If the result was valid, the power metric, the scenario, and the average power efficiency.
+    """
     # parse the power logs
     import datetime
     import logging

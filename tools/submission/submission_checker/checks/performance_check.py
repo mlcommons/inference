@@ -497,6 +497,11 @@ class PerformanceCheck(BaseCheck):
                                 [self.model][scenario]]
             )
 
+        if scenario == "SingleStream" or scenario == "MultiStream":
+            res /= MS_TO_NS
+            if str(self.model).lower() == "wan-2.2-t2v-a14b":
+                res /= S_TO_MS
+
         inferred = False
         if self.scenario.lower() != self.scenario_fixed.lower() and (
                 self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):

@@ -1564,6 +1564,10 @@ SPECIAL_UNIT_DICT = {
         "Server": "Tokens/s",
         "Interactive": "Tokens/s",
     },
+    "wan-2.2-t2v-a14b": {
+        "SingleStream": "Latency (s)",
+        "singlestream": "Latency (s)",
+    }
 }
 UNIT_DICT = {
     "SingleStream": "Latency (ms)",

@@ -57,10 +57,10 @@ def check_extra_files(path, target_files):
             for target_file in target_files[dir]:
                 if target_file not in files:
                     check_pass = False
-                    if "images" in path:
+                    if "images" in dir:
                         missing_files.append(
                             f"{os.path.join(path, dir, target_file)}.png")
-                    if "videos" in path:
+                    if "videos" in dir:
                         missing_files.append(
                             f"{os.path.join(path, dir, target_file)}.mp4")
 

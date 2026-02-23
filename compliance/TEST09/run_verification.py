@@ -189,6 +189,10 @@ def parse_audit_config(config_path: str) -> Dict[str, Any]:
                     key = key.strip()
                     value = value.strip()
 
+                    # Strip inline comments (everything after #)
+                    if '#' in value:
+                        value = value.split('#', 1)[0].strip()
+
                     parts = key.split('.')
                     if len(parts) >= 3:
                         setting_name = parts[-1]

@@ -40,6 +40,7 @@ class ComplianceCheck(BaseCheck):
         super().__init__(log, path)
         self.submission_logs = submission_logs
         self.config = config
+        self.name = "compliance check"
         self.model = self.submission_logs.loader_data.get("benchmark", "")
         self.model_mapping = self.submission_logs.loader_data.get(
             "model_mapping", {})
@@ -184,7 +185,9 @@ class ComplianceCheck(BaseCheck):
                     "division": self.submission_logs.loader_data.get("division", ""),
                     "benchmark": self.submission_logs.loader_data.get("benchmark", ""),
                     "scenario": self.submission_logs.loader_data.get("scenario", ""),
-                    "model_mapping": self.submission_logs.loader_data.get("model_mapping", {})
+                    "model_mapping": self.submission_logs.loader_data.get("model_mapping", {}),
+                    "check_scenarios": True,
+                    "compliance_skip": True,
                 }
                 test_logs = SubmissionLogs(
                     self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)
@@ -452,16 +455,18 @@ class ComplianceCheck(BaseCheck):
                         "{fname} is missing in {test_dir}", fname=fname, test_dir=test_dir)
                     is_valid = False
                 else:
+                    test_passed = False
                     with open(fname, "r") as f:
                         for line in f:
                             # look for: TEST PASS
                             if "TEST PASS" in line:
-                                is_valid = True
+                                test_passed = True
                                 break
-                    if is_valid == False:
+                    if test_passed == False:
                         self.log.error(
                             "Compliance test performance check in {test_dir} failed",
                             test_dir=test_dir)
+                        is_valid = False
 
                     # Check performance dir
                     test_perf_path = os.path.join(

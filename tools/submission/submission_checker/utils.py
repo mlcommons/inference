@@ -107,6 +107,17 @@ def is_number(s):
         return True
     except ValueError:
         return False
+    
+def lower_list(l):
+    return [str(e).lower() for e in l]
+
+def contains_list(l1, l2):
+    # Check if l1 contains all elements of l2
+    missing = []
+    for e in l2:
+        if e not in l1:
+            missing.append(e)
+    return missing, len(missing) == 0 
 
 
 def get_performance_metric(

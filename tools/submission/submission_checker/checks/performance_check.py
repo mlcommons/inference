@@ -62,6 +62,7 @@ class PerformanceCheck(BaseCheck):
         the order they should be executed.
         """
         self.checks.append(self.missing_check)
+        self.checks.append(self.scenarios_check)
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.equal_issue_check)
         self.checks.append(self.performance_sample_count_check)
@@ -84,6 +85,26 @@ class PerformanceCheck(BaseCheck):
             self.log.error("Performance log missing at {path}", path=self.path)
             return False
         return True
+    
+    def scenarios_check(self):
+        if self.submission_logs.loader_data.get("check_scenarios", False):
+            return True
+        else:
+            missing_scenarios = self.submission_logs.loader_data.get("missing_scenarios", [])
+            unknown_scenarios = self.submission_logs.loader_data.get("unknown_scenarios", [])
+            if len(missing_scenarios) > 0:
+                self.log.error(
+                    "%s does not have all required scenarios, missing %s",
+                    self.path,
+                    missing_scenarios,
+                )
+            if len(unknown_scenarios) > 0:
+                self.log.error(
+                    "%s has all unknown scenarios for this benchmark %s",
+                    self.path,
+                    unknown_scenarios,
+                )
+            return False
 
     def loadgen_errors_check(self):
         """Detect Loadgen errors reported in the MLPerf log.
@@ -95,17 +116,31 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
+        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
         if self.mlperf_log.has_error():
+            has_critical_errors = False
             if self.config.ignore_uncommited:
-                has_other_errors = False
                 for error in self.mlperf_log.get_errors():
                     if "Loadgen built with uncommitted changes!" not in error["value"]:
                         has_other_errors = True
             self.log.error("{path} contains errors:", path=self.path)
             for error in self.mlperf_log.get_errors():
                 self.log.error("{error}", path=self.path, error=error["value"])
+                    if (
+                        "Loadgen built with uncommitted changes!" not in error["value"]
+                        and ("Multiple conf files are used" not in error["value"])
+                    ):
+                        has_critical_errors = True
+                    if (
+                        not compliance_skip 
+                        and "Multiple conf files are used" in error["value"]
+                    ):
+                        has_critical_errors = True
 
-            if not self.config.ignore_uncommited or has_other_errors:
+            if has_critical_errors:
+                self.log.error("%s contains errors:", self.path)
+                for error in self.mlperf_log.get_errors():
+                    self.log.error("%s", error["value"])
                 self.log.error(
                     "{path} has loadgen errors, number of errors: {num_errors}", path=self.path, num_errors=self.mlperf_log.num_errors()
                 )
@@ -463,6 +498,11 @@ class PerformanceCheck(BaseCheck):
                 self.mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version]
                                 [self.model][scenario]]
             )
+
+        if scenario == "SingleStream" or scenario == "MultiStream":
+            res /= MS_TO_NS
+            if str(self.model).lower() == "wan-2.2-t2v-a14b":
+                res /= S_TO_MS
 
         inferred = False
         if self.scenario.lower() != self.scenario_fixed.lower() and (

@@ -129,16 +129,16 @@ class PerformanceCheck(BaseCheck):
             self.log.error("{path} contains errors:", path=self.path)
             for error in self.mlperf_log.get_errors():
                 self.log.error("{error}", path=self.path, error=error["value"])
-                   if (
-                        "Loadgen built with uncommitted changes!" not in error["value"]
-                        and ("Multiple conf files are used" not in error["value"])
-                    ):
-                        has_critical_errors = True
-                    if (
-                        not compliance_skip
-                        and "Multiple conf files are used" in error["value"]
-                    ):
-                        has_critical_errors = True
+                if (
+                    "Loadgen built with uncommitted changes!" not in error["value"]
+                    and ("Multiple conf files are used" not in error["value"])
+                ):
+                    has_critical_errors = True
+                if (
+                    not compliance_skip
+                    and "Multiple conf files are used" in error["value"]
+                ):
+                    has_critical_errors = True
 
             if has_critical_errors:
                 self.log.error("%s contains errors:", self.path)

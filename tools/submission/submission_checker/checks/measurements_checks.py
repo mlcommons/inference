@@ -70,8 +70,8 @@ class MeasurementsCheck(BaseCheck):
         """
         if self.measurements_json is None:
             self.log.error(
-                "%s measurements json file not found",
-                self.path
+                "{path} measurements json file not found",
+                path=self.path
             )
             return False
         return True
@@ -84,8 +84,8 @@ class MeasurementsCheck(BaseCheck):
         """
         if not os.path.exists(self.src_dir):
             self.log.error(
-                "%s src directory does not exist",
-                self.src_dir
+                "{src_dir} src directory does not exist",
+                src_dir=self.src_dir
             )
             return False
         return True
@@ -104,15 +104,20 @@ class MeasurementsCheck(BaseCheck):
         files = list_files(self.measurements_dir)
         for i in REQUIRED_MEASURE_FILES:
             if i not in files:
-                self.log.error("%s is missing %s", self.measurements_dir, i)
+                self.log.error(
+                    "{measurements_dir} is missing {file}",
+                    measurements_dir=self.measurements_dir,
+                    file=i
+                )
                 is_valid = False
             elif not self.config.skip_empty_files_check and (
                 os.stat(os.path.join(self.measurements_dir, i)).st_size == 0
             ):
                 self.log.error(
-                    "%s is having empty %s",
-                    self.measurements_dir,
-                    i)
+                    "{measurements_dir} is having empty {file}",
+                    measurements_dir=self.measurements_dir,
+                    file=i
+                )
                 is_valid = False
         return is_valid
 
@@ -131,9 +136,10 @@ class MeasurementsCheck(BaseCheck):
         for k in SYSTEM_IMP_REQUIRED_FILES:
             if k not in self.measurements_json:
                 is_valid = False
-                self.log.error("%s, field %s is missing", self.path, k)
+                self.log.error(
+                    "{path}, field {k} is missing", path=self.path, k=k)
             elif check_empty_fields and not self.measurements_json[k]:
                 is_valid = False
                 self.log.error(
-                    "%s, field %s is missing meaningful value", self.path, k)
+                    "{path}, field {k} is missing meaningful value", path=self.path, k=k)
         return is_valid

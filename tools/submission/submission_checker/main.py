@@ -1,5 +1,5 @@
 import argparse
-import logging
+from loguru import logger
 import os
 import sys
 
@@ -18,8 +18,7 @@ from .checks.compliance_check import ComplianceCheck
 from .checks.power_check import PowerCheck
 from .results import ResultExporter
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("main")
+log = logger
 
 
 def get_args():
@@ -216,12 +215,12 @@ def main():
     with_results = 0
     for k, v in sorted(results.items()):
         if v:
-            log.info("Results %s %s", k, v)
+            log.info("Results {k} {v}", k=k, v=v)
             with_results += 1
     log.info("---")
     for k, v in sorted(results.items()):
         if v is None:
-            log.error("NoResults %s", k)
+            log.error("NoResults {k}", k=k)
 
     closed_systems = systems.get("closed", {})
     open_systems = systems.get("open", {})
@@ -309,48 +308,48 @@ def main():
     # print summary
     log.info("---")
     log.info(
-        "Results=%d, NoResults=%d, Power Results=%d",
-        with_results,
-        len(results) - with_results,
-        count_power_results,
+        "Results={with_results}, NoResults={no_results}, Power Results={power_results}",
+        with_results=with_results,
+        no_results=len(results) - with_results,
+        power_results=count_power_results,
     )
 
     log.info("---")
     log.info(
-        "Closed Results=%d, Closed Power Results=%d\n",
-        count_closed_results,
-        count_closed_power_results,
+        "Closed Results={count_closed_results}, Closed Power Results={count_closed_power_results}\n",
+        count_closed_results=count_closed_results,
+        count_closed_power_results=count_closed_power_results,
     )
     log.info(
-        "Open Results=%d, Open Power Results=%d\n",
-        count_open_results,
-        count_open_power_results,
+        "Open Results={count_open_results}, Open Power Results={count_open_power_results}\n",
+        count_open_results=count_open_results,
+        count_open_power_results=count_open_power_results,
     )
     log.info(
-        "Network Results=%d, Network Power Results=%d\n",
-        count_network_results,
-        count_network_power_results,
+        "Network Results={count_network_results}, Network Power Results={count_network_power_results}\n",
+        count_network_results=count_network_results,
+        count_network_power_results=count_network_power_results,
     )
     log.info("---")
 
     log.info(
-        "Systems=%d, Power Systems=%d",
-        number_systems,
-        number_power_systems)
+        "Systems={number_systems}, Power Systems={number_power_systems}",
+        number_systems=number_systems,
+        number_power_systems=number_power_systems)
     log.info(
-        "Closed Systems=%d, Closed Power Systems=%d",
-        number_closed_systems,
-        number_closed_power_systems,
+        "Closed Systems={number_closed_systems}, Closed Power Systems={number_closed_power_systems}",
+        number_closed_systems=number_closed_systems,
+        number_closed_power_systems=number_closed_power_systems,
     )
     log.info(
-        "Open Systems=%d, Open Power Systems=%d",
-        number_open_systems,
-        number_open_power_systems,
+        "Open Systems={number_open_systems}, Open Power Systems={number_open_power_systems}",
+        number_open_systems=number_open_systems,
+        number_open_power_systems=number_open_power_systems,
     )
     log.info(
-        "Network Systems=%d, Network Power Systems=%d",
-        number_network_systems,
-        number_network_power_systems,
+        "Network Systems={number_network_systems}, Network Power Systems={number_network_power_systems}",
+        number_network_systems=number_network_systems,
+        number_network_power_systems=number_network_power_systems,
     )
     log.info("---")
     if len(results) != with_results:

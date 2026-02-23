@@ -20,7 +20,10 @@ from .results import ResultExporter
 
 log = logger
 log.remove()
-log.add(sys.stderr, format="[<blue>{time}</blue> <green>{file.name}</green>:<cyan>{line}</cyan> <level>{level}</level>] {message}")
+log.add(
+    sys.stderr,
+    format="[<blue>{time}</blue> <green>{file.name}</green>:<cyan>{line}</cyan> <level>{level}</level>] {message}")
+
 
 def get_args():
     """Parse command-line arguments for the submission checker.

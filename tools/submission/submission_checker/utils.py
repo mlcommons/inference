@@ -107,9 +107,11 @@ def is_number(s):
         return True
     except ValueError:
         return False
-    
+
+
 def lower_list(l):
     return [str(e).lower() for e in l]
+
 
 def contains_list(l1, l2):
     # Check if l1 contains all elements of l2
@@ -117,7 +119,7 @@ def contains_list(l1, l2):
     for e in l2:
         if e not in l1:
             missing.append(e)
-    return missing, len(missing) == 0 
+    return missing, len(missing) == 0
 
 
 def get_performance_metric(
@@ -210,7 +212,10 @@ def check_compliance_perf_dir(test_dir):
 
     fname = os.path.join(test_dir, "verify_performance.txt")
     if not os.path.exists(fname):
-        log.error("{fname} is missing in {test_dir}", fname=fname, test_dir=test_dir)
+        log.error(
+            "{fname} is missing in {test_dir}",
+            fname=fname,
+            test_dir=test_dir)
         is_valid = False
     else:
         with open(fname, "r") as f:
@@ -228,7 +233,9 @@ def check_compliance_perf_dir(test_dir):
         # Check performance dir
         test_perf_path = os.path.join(test_dir, "performance", "run_1")
         if not os.path.exists(test_perf_path):
-            log.error("{test_dir} has no performance/run_1 directory", test_dir=test_dir)
+            log.error(
+                "{test_dir} has no performance/run_1 directory",
+                test_dir=test_dir)
             is_valid = False
         else:
             diff = files_diff(

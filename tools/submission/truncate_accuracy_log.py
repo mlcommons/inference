@@ -181,7 +181,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 acc_txt = os.path.join(
                                     acc_path, "accuracy.txt")
                                 if not os.path.exists(acc_log):
-                                    log.error("{acc_log} missing", acc_log=acc_log)
+                                    log.error(
+                                        "{acc_log} missing", acc_log=acc_log)
                                     continue
 
                                 # TEST07 and TEST09 don't have accuracy.txt,
@@ -252,7 +253,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                         f.write(
                                             "\nhash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
-                                log.info("{acc_log} truncated", acc_log=acc_log)
+                                log.info(
+                                    "{acc_log} truncated", acc_log=acc_log)
 
 
 def main():

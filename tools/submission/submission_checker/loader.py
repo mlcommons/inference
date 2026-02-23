@@ -9,6 +9,7 @@ from .configuration.configuration import Config
 import json
 import sys
 
+
 class SubmissionLogs:
     """Container for parsed submission log artifacts and metadata.
 
@@ -186,7 +187,10 @@ class Loader:
         """
         log = None
         if os.path.exists(path):
-            self.logger.info("Loading {log_type} log from {path}", log_type=log_type, path=path)
+            self.logger.info(
+                "Loading {log_type} log from {path}",
+                log_type=log_type,
+                path=path)
             if log_type in ["Performance", "Accuracy", "Test"]:
                 log = LoadgenParser(path)
             elif log_type in ["System", "Measurements"]:

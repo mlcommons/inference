@@ -85,13 +85,15 @@ class PerformanceCheck(BaseCheck):
             self.log.error("Performance log missing at {path}", path=self.path)
             return False
         return True
-    
+
     def scenarios_check(self):
         if self.submission_logs.loader_data.get("check_scenarios", False):
             return True
         else:
-            missing_scenarios = self.submission_logs.loader_data.get("missing_scenarios", [])
-            unknown_scenarios = self.submission_logs.loader_data.get("unknown_scenarios", [])
+            missing_scenarios = self.submission_logs.loader_data.get(
+                "missing_scenarios", [])
+            unknown_scenarios = self.submission_logs.loader_data.get(
+                "unknown_scenarios", [])
             if len(missing_scenarios) > 0:
                 self.log.error(
                     "%s does not have all required scenarios, missing %s",
@@ -116,7 +118,8 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
-        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
+        compliance_skip = self.submission_logs.loader_data.get(
+            "compliance_skip", False)
         if self.mlperf_log.has_error():
             has_critical_errors = False
             if self.config.ignore_uncommited:
@@ -126,13 +129,13 @@ class PerformanceCheck(BaseCheck):
             self.log.error("{path} contains errors:", path=self.path)
             for error in self.mlperf_log.get_errors():
                 self.log.error("{error}", path=self.path, error=error["value"])
-                    if (
+                   if (
                         "Loadgen built with uncommitted changes!" not in error["value"]
                         and ("Multiple conf files are used" not in error["value"])
                     ):
                         has_critical_errors = True
                     if (
-                        not compliance_skip 
+                        not compliance_skip
                         and "Multiple conf files are used" in error["value"]
                     ):
                         has_critical_errors = True
@@ -459,7 +462,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                ) not in list_inferred:
+                    ) not in list_inferred:
                 self.log.error(
                     "Result for scenario {scenario} can not be inferred from {scenario_fixed} for: {path}",
                     scenario_fixed=self.scenario_fixed,
@@ -548,12 +551,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (self.scenario_fixed in ["Offline"]
-            ) and self.scenario in ["MultiStream"]:
+                ) and self.scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (self.scenario_fixed in ["MultiStream"]
-            ) and self.scenario in ["SingleStream"]:
+                ) and self.scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -570,6 +573,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (self.scenario_fixed in ["Interactive"]
-            ) and self.scenario not in ["Server"]:
+                ) and self.scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

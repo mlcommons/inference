@@ -5,7 +5,7 @@ name: Test for MLPerf inference bert submission generation using MLC script auto
 
 on:
   pull_request:
-    branches: [ "master_off", "dev_off" ]
+    branches: [ "master", "dev" ]
     paths:
       - language/bert/**
       - tools/submission/**
@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [ "3.9" ]
-        backend: [ "deepsparse" ]
+        backend: [ "onnxruntime" ]
 
     steps:
     - uses: actions/checkout@v3

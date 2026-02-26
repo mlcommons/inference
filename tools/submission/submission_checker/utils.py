@@ -107,9 +107,11 @@ def is_number(s):
         return True
     except ValueError:
         return False
-    
+
+
 def lower_list(l):
     return [str(e).lower() for e in l]
+
 
 def contains_list(l1, l2):
     # Check if l1 contains all elements of l2
@@ -117,7 +119,7 @@ def contains_list(l1, l2):
     for e in l2:
         if e not in l1:
             missing.append(e)
-    return missing, len(missing) == 0 
+    return missing, len(missing) == 0
 
 
 def get_performance_metric(
@@ -317,7 +319,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

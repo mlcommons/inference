@@ -1,6 +1,8 @@
+import subprocess
 import ncnn
 import numpy as np
 import resnet50_v1_pnnx
+import subprocess
 import os
 import torch
 import torchvision.models as models
@@ -22,7 +24,12 @@ mod.save("resnet50_v1.pt")
 # torchscript to pnnx
 # install ncnn and pnnx to have this working the official docs are well documented
 # to help with the installation of ncnn and pnnx
-os.system("pnnx resnet50_v1.pt inputshape=[1,3,224,224] fp16=0")
+subprocess.run([
+    "pnnx",
+    "resnet50_v1.pt",
+    "inputshape=[1,3,224,224]",
+    "fp16=0",
+], check=True)
 
 # pnnx inference
 

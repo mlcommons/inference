@@ -2,6 +2,7 @@ import argparse
 import os
 import cv2
 import numpy as np
+import subprocess
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
@@ -59,4 +60,7 @@ if __name__ == "__main__":
     main(args.image_dir)
 
     # compile model for edge tpu
-    os.system("edgetpu_compiler resnet50_quant_full_mlperf.tflite")
+    subporcess.run([
+        "edgetpu_compiler",
+        "resnet50_quant_full_mlperf.tflite",
+    ], check=True)

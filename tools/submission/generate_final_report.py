@@ -92,7 +92,7 @@ def main():
     # code url
     df["Code"] = df.apply(
         lambda x: '=HYPERLINK("{}","code")'.format(
-            "/".join([base_url, x["Category"], x["Submitter"], "code"])
+            "/".join([base_url, x["Category"], x["Submitter"], "src"])
         ),
         axis=1,
     )

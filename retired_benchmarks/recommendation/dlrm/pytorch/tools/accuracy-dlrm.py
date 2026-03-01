@@ -4,9 +4,8 @@ We assume that loadgen's query index is in the same order as samples in the last
 of the pre-processed data set.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+
+
 
 import argparse
 import json

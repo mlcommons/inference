@@ -133,8 +133,8 @@ def main():
         "MultiStream": lg.TestScenario.MultiStream,
     }
 
-    args = get_args()
 
+    args = get_args()
     # instantiate SUT as per requested backend; QSL is also instantiated
     if args.backend == "pytorch":
         from pytorch_SUT import get_sut
@@ -181,8 +181,13 @@ def main():
     # if needed check accuracy
     if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY", False):
         print("Checking accuracy...")
-        cmd = f"python3 accuracy_kits.py --preprocessed_data_dir={args.preprocessed_data_dir} --log_file={os.path.join(log_path, 'mlperf_log_accuracy.json')}"
-        subprocess.check_call(cmd, shell=True)
+        cmd = [
+            "python3",
+            "accuracy_kits.py",
+            "--preprocessed_data_dir={}".format(args.preprocessed_data_dir),
+            "--log_file={}".format(os.path.join(log_path, "mlperf_log_accuracy.json")),
+        ]
+        subprocess.check_call(cmd, shell)
 
     # all done
     print("Done!")

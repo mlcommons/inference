@@ -104,24 +104,24 @@ def main():
     unixmode_str = unixmode if unixmode == "" else unixmode + " "
 
     # run verify accuracy
-    verify_accuracy_command = (
-        sys.executable + " "
-        + verify_accuracy_binary
-        + " --dtype "
-        + args.dtype
-        + unixmode_str
-        + " -r "
-        + os.path.join(results_dir, "accuracy", "mlperf_log_accuracy.json")
-        + " -t "
-        + os.path.join(compliance_dir, "mlperf_log_accuracy.json")
-    )
+    verify_accuracy_command = [
+        sys.executable 
+        , verify_accuracy_binary
+        , "--dtype"
+        , dtype
+        , unixmode_str
+        , "--reference_accuracy"
+        , os.path.join(results_dir, "accuracy", "mlperf_log_accuracy.json")
+        , "--test_accuracy"
+        , os.path.join(compliance_dir, "mlperf_log_accuracy.json")]
+    verify_accuracy_command = [arg.strip() for arg in verify_accuracy_command if arg.strip() != ""]
+    
     try:
         with open("verify_accuracy.txt", "w") as f:
             process = subprocess.Popen(
                 verify_accuracy_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                shell=True,
                 text=True
             )
             # Write output to both console and file
@@ -145,16 +145,14 @@ def main():
     verify_performance_binary = os.path.join(
         os.path.dirname(__file__), "verify_performance.py"
     )
-    verify_performance_command = (
-        sys.executable + " "
-        + verify_performance_binary
-        + " -r"
-        + os.path.join(results_dir, "performance",
-                       "run_1", "mlperf_log_detail.txt")
-        + " -t"
-        + os.path.join(compliance_dir, "mlperf_log_detail.txt")
-    )
-
+    verify_performance_command = [
+        sys.executable,
+        verify_performance_binary,
+        "-r",
+        os.path.join(results_dir, "performance", "run_1", "mlperf_log_detail.txt"),
+        "-t",
+        os.path.join(compliance_dir, "mlperf_log_detail.txt")
+    ]
     try:
         with open("verify_performance.txt", "w") as f:
             process = subprocess.Popen(
@@ -162,7 +160,6 @@ def main():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                shell=True,
             )
             # Write output to both console and file
             for line in process.stdout:

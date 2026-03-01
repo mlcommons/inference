@@ -99,7 +99,6 @@ scenario_map = {
 
 def main():
     args = get_args()
-
     sut = None
 
     if not args.network or args.network == "sut":
@@ -199,15 +198,19 @@ def main():
             sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf
         )
         if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
-            cmd = "python3 {:}/accuracy-squad.py {}".format(
-                os.path.dirname(os.path.abspath(__file__)),
-                (
-                    "--max_examples {}".format(args.max_examples)
-                    if args.max_examples
-                    else ""
+            cmd = [
+                "python3",
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "accuracy-squad.py"
                 ),
-            )
-            subprocess.check_call(cmd, shell=True)
+                "--max_examples" if args.max_examples
+                else "",
+                args.max_examples
+                if args.max_examples
+                else "",
+            ]
+            cmd = [arg for arg in cmd if arg.strip() != ""]
+            subprocess.check_call(cmd)
 
     print("Done!")
 

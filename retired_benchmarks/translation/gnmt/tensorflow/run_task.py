@@ -88,44 +88,25 @@ inference_output_file = os.path.join(args.output_path, "output", "g_nmt-out")
 
 outpath = os.path.join(args.output_path, "output", "console_out_gnmt.txt")
 
-cmd = (
-    "python -m nmt.nmt \
-    --src=en --tgt=de \
-    --ckpt="
-    + cpk_path
-    + " \
-    --hparams_path="
-    + haparams_path
-    + " \
-    --out_dir="
-    + out_dir
-    + " \
-    --vocab_prefix="
-    + vocab_prefix
-    + " \
-    --inference_input_file="
-    + inference_input_file
-    + " \
-    --inference_output_file="
-    + inference_output_file
-    + " \
-    --inference_ref_file="
-    + inference_ref_file
-    + " \
-    --infer_batch_size="
-    + args.batch_size
-    + " \
-    --num_inter_threads="
-    + args.num_inter_threads
-    + " \
-    --num_intra_threads="
-    + args.num_intra_threads
-    + " \
-    --iterations="
-    + str(iterations)
-    + " \
-    --run="
-    + args.run
-)
 
-return_code = subprocess.call(cmd, shell=True)
+cmd = [
+    "python",
+    "-m",
+    "nmt.nmt",      
+    "--src=en",
+    "--tgt=de",
+    "--ckpt={}".format(cpk_path),
+    "--hparams_path={}".format(haparams_path),
+    "--out_dir={}".format(out_dir),
+    "--vocab_prefix={}".format(vocab_prefix),
+    "--inference_input_file={}".format(inference_input_file),
+    "--inference_output_file={}".format(inference_output_file),
+    "--inference_ref_file={}".format(inference_ref_file),
+    "--infer_batch_size={}".format(args.batch_size),
+    "--num_inter_threads={}".format(args.num_inter_threads),
+    "--num_intra_threads={}".format(args.num_intra_threads),
+    "--iterations={}".format(iterations),
+    "--run={}".format(args.run)
+]
+
+return_code = subprocess.call(cmd)

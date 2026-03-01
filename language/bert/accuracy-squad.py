@@ -514,14 +514,19 @@ def main():
     )
 
     print("Evaluating predictions...")
-    cmd = "python3 {:}/evaluate_v1.1.py {:} {:} {}".format(
-        os.path.dirname(os.path.abspath(__file__)),
+    cmd = [
+        "python3",
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "evaluate_v1.1.py"
+        ),
         args.val_data,
         args.out_file,
-        "--max_examples {}".format(
-            args.max_examples) if args.max_examples else "",
-    )
-    subprocess.check_call(cmd, shell=True)
+        "--max_examples"if args.max_examples else "",
+        str(args.max_examples) if args.max_examples else ""
+    ]
+    cmd = [arg for arg in cmd if arg.strip() != ""]
+    subprocess.check_call(cmd)
 
 
 if __name__ == "__main__":

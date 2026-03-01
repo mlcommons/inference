@@ -57,16 +57,14 @@ def main():
     verify_performance_binary = os.path.join(
         os.path.dirname(__file__), "verify_performance.py"
     )
-    verify_performance_command = (
-        sys.executable + " "
-        + verify_performance_binary
-        + " -r"
-        + os.path.join(results_dir, "performance",
-                       "run_1", "mlperf_log_summary.txt")
-        + " -t"
-        + os.path.join(compliance_dir, "mlperf_log_summary.txt")
-    )
-
+    verify_performance_command = [
+        sys.executable,
+        verify_performance_binary,
+        "-r",
+        os.path.join(results_dir, "performance", "run_1", "mlperf_log_summary.txt"),
+        "-t",
+        os.path.join(compliance_dir, "mlperf_log_summary.txt")
+    ]
     try:
         with open("verify_performance.txt", "w") as f:
             process = subprocess.Popen(
@@ -74,7 +72,6 @@ def main():
                 stdout=subprocess.PIPE,  # capture output
                 stderr=subprocess.STDOUT,
                 text=True,  # decode output as text
-                shell=True,
             )
             # Write output to both console and file
             for line in process.stdout:

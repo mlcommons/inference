@@ -82,16 +82,18 @@ class PerformanceCheck(BaseCheck):
             bool: True if `mlperf_log` is present, False otherwise.
         """
         if self.mlperf_log is None:
-            self.log.error("Performance log missing at %s", self.path)
+            self.log.error("Performance log missing at {path}", path=self.path)
             return False
         return True
-    
+
     def scenarios_check(self):
         if self.submission_logs.loader_data.get("check_scenarios", False):
             return True
         else:
-            missing_scenarios = self.submission_logs.loader_data.get("missing_scenarios", [])
-            unknown_scenarios = self.submission_logs.loader_data.get("unknown_scenarios", [])
+            missing_scenarios = self.submission_logs.loader_data.get(
+                "missing_scenarios", [])
+            unknown_scenarios = self.submission_logs.loader_data.get(
+                "unknown_scenarios", [])
             if len(missing_scenarios) > 0:
                 self.log.error(
                     "%s does not have all required scenarios, missing %s",
@@ -116,28 +118,34 @@ class PerformanceCheck(BaseCheck):
             bool: True if no blocking Loadgen errors are present,
                 False otherwise.
         """
-        compliance_skip = self.submission_logs.loader_data.get("compliance_skip", False)
+        compliance_skip = self.submission_logs.loader_data.get(
+            "compliance_skip", False)
         if self.mlperf_log.has_error():
             has_critical_errors = False
             if self.config.ignore_uncommited:
                 for error in self.mlperf_log.get_errors():
-                    if (
-                        "Loadgen built with uncommitted changes!" not in error["value"]
-                        and ("Multiple conf files are used" not in error["value"])
-                    ):
-                        has_critical_errors = True
-                    if (
-                        not compliance_skip 
-                        and "Multiple conf files are used" in error["value"]
-                    ):
-                        has_critical_errors = True
+                    if "Loadgen built with uncommitted changes!" not in error["value"]:
+                        has_other_errors = True
+            self.log.error("{path} contains errors:", path=self.path)
+            for error in self.mlperf_log.get_errors():
+                self.log.error("{error}", path=self.path, error=error["value"])
+                if (
+                    "Loadgen built with uncommitted changes!" not in error["value"]
+                    and ("Multiple conf files are used" not in error["value"])
+                ):
+                    has_critical_errors = True
+                if (
+                    not compliance_skip
+                    and "Multiple conf files are used" in error["value"]
+                ):
+                    has_critical_errors = True
 
             if has_critical_errors:
                 self.log.error("%s contains errors:", self.path)
                 for error in self.mlperf_log.get_errors():
                     self.log.error("%s", error["value"])
                 self.log.error(
-                    "%s has loadgen errors, number of errors: %s", self.path, self.mlperf_log.num_errors()
+                    "{path} has loadgen errors, number of errors: {num_errors}", path=self.path, num_errors=self.mlperf_log.num_errors()
                 )
                 return False
         return True
@@ -155,8 +163,8 @@ class PerformanceCheck(BaseCheck):
         if self.config.requires_equal_issue(
                 self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
             self.log.error(
-                "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false",
-                self.path)
+                "{path} requires equal issue mode (sample_concatenate_permutation), expected=true, found=false",
+                path=self.path)
             return False
         return True
 
@@ -175,10 +183,10 @@ class PerformanceCheck(BaseCheck):
         performance_sample_count = self.mlperf_log["effective_performance_sample_count"]
         if performance_sample_count < required_performance_sample_count:
             self.log.error(
-                "%s performance_sample_count, found %d, needs to be >= %d",
-                self.path,
-                performance_sample_count,
-                required_performance_sample_count,
+                "{path} performance_sample_count, found {performance_sample_count}, needs to be >= {required_performance_sample_count}",
+                path=self.path,
+                performance_sample_count=performance_sample_count,
+                required_performance_sample_count=required_performance_sample_count,
             )
             return False
         return True
@@ -199,26 +207,26 @@ class PerformanceCheck(BaseCheck):
         is_valid = True
         if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
             self.log.error(
-                "%s qsl_rng_seed is wrong, expected=%s, found=%s",
-                self.path,
-                config_seeds["qsl_rng_seed"],
-                qsl_rng_seed,
+                "{path} qsl_rng_seed is wrong, expected={expected}, found={found}",
+                path=self.path,
+                expected=config_seeds["qsl_rng_seed"],
+                found=qsl_rng_seed,
             )
             is_valid = False
         if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
             self.log.error(
-                "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
-                self.path,
-                config_seeds["sample_index_rng_seed"],
-                sample_index_rng_seed,
+                "{path} sample_index_rng_seed is wrong, expected={expected}, found={found}",
+                path=self.path,
+                expected=config_seeds["sample_index_rng_seed"],
+                found=sample_index_rng_seed,
             )
             is_valid = False
         if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
             self.log.error(
-                "%s schedule_rng_seed is wrong, expected=%s, found=%s",
-                self.path,
-                config_seeds["schedule_rng_seed"],
-                schedule_rng_seed,
+                "{path} schedule_rng_seed is wrong, expected={expected}, found={found}",
+                path=self.path,
+                expected=config_seeds["schedule_rng_seed"],
+                found=schedule_rng_seed,
             )
             is_valid = False
         return is_valid
@@ -239,8 +247,8 @@ class PerformanceCheck(BaseCheck):
             if not self.mlperf_log["early_stopping_met"]:
                 early_stopping_result = self.mlperf_log["early_stopping_result"]
                 self.log.error(
-                    "Early stopping condition was not met, msg=%s",
-                    early_stopping_result,
+                    "Early stopping condition was not met, msg={early_stopping_result}",
+                    early_stopping_result=early_stopping_result,
                 )
                 return False
             # If the scenario has a target latency (Server scenario), check
@@ -251,17 +259,17 @@ class PerformanceCheck(BaseCheck):
             if target_latency:
                 early_stopping_latency_ns = self.mlperf_log["effective_target_latency_ns"]
                 self.log.info(
-                    "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
-                    target_latency,
-                    early_stopping_latency_ns,
-                    self.scenario,
+                    "Target latency: {target_latency}, Early Stopping Latency: {early_stopping_latency_ns}, Scenario: {scenario}",
+                    target_latency=target_latency,
+                    early_stopping_latency_ns=early_stopping_latency_ns,
+                    scenario=self.scenario,
                 )
                 if early_stopping_latency_ns > target_latency:
                     self.log.error(
-                        "%s Latency constraint with early stopping not met, expected=%s, found=%s",
-                        self.path,
-                        target_latency,
-                        early_stopping_latency_ns,
+                        "{path} Latency constraint with early stopping not met, expected={target_latency}, found={early_stopping_latency_ns}",
+                        path=self.path,
+                        target_latency=target_latency,
+                        early_stopping_latency_ns=early_stopping_latency_ns,
                     )
                     return False
         else:
@@ -270,18 +278,18 @@ class PerformanceCheck(BaseCheck):
             target_latency = self.config.latency_constraint.get(
                 self.model, dict()).get(self.scenario)
             self.log.info(
-                "Target latency: %s, Latency: %s, Scenario: %s",
-                target_latency,
-                latency_99_percentile,
-                self.scenario,
+                "Target latency: {target_latency}, Latency: {latency_99_percentile}, Scenario: {scenario}",
+                target_latency=target_latency,
+                latency_99_percentile=latency_99_percentile,
+                scenario=self.scenario,
             )
             if target_latency:
                 if latency_99_percentile > target_latency:
                     self.log.error(
-                        "%s Latency constraint not met, expected=%s, found=%s",
-                        self.path,
-                        target_latency,
-                        latency_99_percentile,
+                        "{path} Latency constraint not met, expected={target_latency}, found={latency_99_percentile}",
+                        path=self.path,
+                        target_latency=target_latency,
+                        latency_99_percentile=latency_99_percentile,
                     )
                     return False
         return True
@@ -305,19 +313,19 @@ class PerformanceCheck(BaseCheck):
                 self.model, self.scenario)
             if required_min_query_count and min_query_count < required_min_query_count:
                 self.log.error(
-                    "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
-                    self.path,
-                    required_min_query_count,
-                    min_query_count,
+                    "{path} Required minimum Query Count not met by user config, Expected={required_min_query_count}, Found={min_query_count}",
+                    path=self.path,
+                    required_min_query_count=required_min_query_count,
+                    min_query_count=min_query_count,
                 )
                 return False
         if self.scenario.lower() == "offline" and (
                 samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[self.model]) and self.division.lower() == "closed":
             self.log.error(
-                "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
-                self.path,
-                OFFLINE_MIN_SPQ_SINCE_V4[self.model],
-                samples_per_query,
+                "{path} Required minimum samples per query not met by user config, Expected={expected}, Found={found}",
+                path=self.path,
+                expected=OFFLINE_MIN_SPQ_SINCE_V4[self.model],
+                found=samples_per_query,
             )
             return False
         return True
@@ -335,10 +343,10 @@ class PerformanceCheck(BaseCheck):
         min_duration = self.mlperf_log["effective_min_duration_ms"]
         if min_duration < required_min_duration:
             self.log.error(
-                "%s Test duration less than 600s in user config. expected=%s, found=%s",
-                self.path,
-                required_min_duration,
-                min_duration,
+                "{path} Test duration less than 600s in user config. expected={required_min_duration}, found={min_duration}",
+                path=self.path,
+                required_min_duration=required_min_duration,
+                min_duration=min_duration,
             )
             return False
         return True
@@ -354,8 +362,8 @@ class PerformanceCheck(BaseCheck):
         """
         if self.system_json is None:
             self.log.error(
-                "%s system json file not found",
-                self.path
+                "{path} system json file not found",
+                path=self.path
             )
             return False
         is_network_mode_sys_spec_str = self.system_json.get(
@@ -442,11 +450,11 @@ class PerformanceCheck(BaseCheck):
                 self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
             if "edge" not in self.system_json["system_type"].lower():
                 self.log.error(
-                    "Result can not be inferred for %s suite for: %s. Scenario: %s, Scenario fixed: %s",
-                    self.system_json["system_type"],
-                    self.path,
-                    self.scenario,
-                    self.scenario_fixed)
+                    "Result can not be inferred for {system_type} suite for: {path}. Scenario: {scenario}, Scenario fixed: {scenario_fixed}",
+                    system_type=self.system_json["system_type"],
+                    path=self.path,
+                    scenario=self.scenario,
+                    scenario_fixed=self.scenario_fixed)
                 return False
             list_inferred = [
                 ("singlestream", "multistream"),
@@ -454,12 +462,12 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                ) not in list_inferred:
+                    ) not in list_inferred:
                 self.log.error(
-                    "Result for scenario %s can not be inferred from %s for: %s",
-                    self.scenario_fixed,
-                    self.scenario,
-                    self.path)
+                    "Result for scenario {scenario} can not be inferred from {scenario_fixed} for: {path}",
+                    scenario_fixed=self.scenario_fixed,
+                    scenario=self.scenario,
+                    path=self.path)
                 return False
         return True
 
@@ -543,12 +551,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (self.scenario_fixed in ["Offline"]
-            ) and self.scenario in ["MultiStream"]:
+                ) and self.scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (self.scenario_fixed in ["MultiStream"]
-            ) and self.scenario in ["SingleStream"]:
+                ) and self.scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -565,6 +573,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (self.scenario_fixed in ["Interactive"]
-            ) and self.scenario not in ["Server"]:
+                ) and self.scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

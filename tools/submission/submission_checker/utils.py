@@ -107,9 +107,11 @@ def is_number(s):
         return True
     except ValueError:
         return False
-    
+
+
 def lower_list(l):
     return [str(e).lower() for e in l]
+
 
 def contains_list(l1, l2):
     # Check if l1 contains all elements of l2
@@ -117,7 +119,7 @@ def contains_list(l1, l2):
     for e in l2:
         if e not in l1:
             missing.append(e)
-    return missing, len(missing) == 0 
+    return missing, len(missing) == 0
 
 
 def get_performance_metric(
@@ -206,12 +208,14 @@ def get_inferred_result(
 
 def check_compliance_perf_dir(test_dir):
     is_valid = False
-    import logging
-    log = logging.getLogger("main")
+    from loguru import logger as log
 
     fname = os.path.join(test_dir, "verify_performance.txt")
     if not os.path.exists(fname):
-        log.error("%s is missing in %s", fname, test_dir)
+        log.error(
+            "{fname} is missing in {test_dir}",
+            fname=fname,
+            test_dir=test_dir)
         is_valid = False
     else:
         with open(fname, "r") as f:
@@ -222,13 +226,16 @@ def check_compliance_perf_dir(test_dir):
                     break
         if is_valid == False:
             log.error(
-                "Compliance test performance check in %s failed",
-                test_dir)
+                "Compliance test performance check in {test_dir} failed",
+                test_dir=test_dir
+            )
 
         # Check performance dir
         test_perf_path = os.path.join(test_dir, "performance", "run_1")
         if not os.path.exists(test_perf_path):
-            log.error("%s has no performance/run_1 directory", test_dir)
+            log.error(
+                "{test_dir} has no performance/run_1 directory",
+                test_dir=test_dir)
             is_valid = False
         else:
             diff = files_diff(
@@ -238,9 +245,9 @@ def check_compliance_perf_dir(test_dir):
             )
             if diff:
                 log.error(
-                    "%s has file list mismatch (%s)",
-                    test_perf_path,
-                    diff)
+                    "{test_perf_path} has file list mismatch ({diff})",
+                    test_perf_path=test_perf_path,
+                    diff=diff)
                 is_valid = False
 
     return is_valid
@@ -249,8 +256,7 @@ def check_compliance_perf_dir(test_dir):
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     # parse the power logs
     import datetime
-    import logging
-    log = logging.getLogger("main")
+    from loguru import logger
     server_timezone = datetime.timedelta(0)
     client_timezone = datetime.timedelta(0)
 
@@ -285,10 +291,10 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
 
     if len(power_list) == 0:
         log.error(
-            "%s has no power samples falling in power range: %s - %s",
-            spl_fname,
-            power_begin,
-            power_end,
+            "{spl_fname} has no power samples falling in power range: {power_begin} - {power_end}",
+            spl_fname=spl_fname,
+            power_begin=power_begin,
+            power_end=power_end,
         )
         is_valid = False
     else:

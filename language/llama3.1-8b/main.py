@@ -104,7 +104,7 @@ def get_args():
         "--tensor-parallel-size",
         type=int,
         default=8,
-        help="Number of workers to process queries",
+        help="Number of tensor parallel GPUs",
     )
     parser.add_argument("--vllm", action="store_true", help="vllm mode")
     parser.add_argument(
@@ -125,6 +125,55 @@ def get_args():
         default="llama3_1-8b",
         choices=["llama3_1-8b", "llama3_1-8b-edge"],
         help="Model name(specified in llm server)",
+    )
+
+    parser.add_argument(
+        "--gpu-memory-utilization",
+        type=float,
+        default=0.90,
+        help="Fraction of GPU memory for vLLM to use (default: 0.90)",
+    )
+    parser.add_argument(
+        "--max-num-batched-tokens",
+        type=int,
+        default=None,
+        help="Max tokens in a single batch (default: vLLM engine default)",
+    )
+    parser.add_argument(
+        "--max-num-seqs",
+        type=int,
+        default=256,
+        help="Max concurrent sequences (default: 256)",
+    )
+    parser.add_argument(
+        "--enable-prefix-caching",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable/disable KV cache prefix reuse (default: disabled)",
+    )
+    parser.add_argument(
+        "--block-size",
+        type=int,
+        default=16,
+        help="KV cache block size (default: 16)",
+    )
+    parser.add_argument(
+        "--enforce-eager",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Use eager mode instead of CUDA graphs (default: disabled)",
+    )
+    parser.add_argument(
+        "--enable-chunked-prefill",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable chunked prefill (default: vLLM engine default)",
+    )
+    parser.add_argument(
+        "--max-model-len",
+        type=int,
+        default=None,
+        help="Max model context length (default: vLLM engine default)",
     )
 
     args = parser.parse_args()
@@ -177,7 +226,15 @@ def main():
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
             workers=args.num_workers,
-            tensor_parallel_size=args.tensor_parallel_size
+            tensor_parallel_size=args.tensor_parallel_size,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+            max_num_batched_tokens=args.max_num_batched_tokens,
+            max_num_seqs=args.max_num_seqs,
+            enable_prefix_caching=args.enable_prefix_caching,
+            block_size=args.block_size,
+            enforce_eager=args.enforce_eager,
+            enable_chunked_prefill=args.enable_chunked_prefill,
+            max_model_len=args.max_model_len
         )
     else:
         sut = sut_cls(

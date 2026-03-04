@@ -526,7 +526,8 @@ class PerformanceCheck(BaseCheck):
         # Check if current scenario (and version) uses early stopping
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
         scenario = SCENARIO_MAPPING.get(self.scenario, self.scenario)
-        scenario_fixed = SCENARIO_MAPPING.get(self.scenario_fixed, self.scenario_fixed)
+        scenario_fixed = SCENARIO_MAPPING.get(
+            self.scenario_fixed, self.scenario_fixed)
 
         latency_mean = self.mlperf_log["result_mean_latency_ns"]
         if scenario in ["MultiStream"]:

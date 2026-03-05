@@ -1312,7 +1312,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         },
         "whisper": {
             "Offline": "result_tokens_per_second",
-        }
+        },
     },
 }
 
@@ -1567,7 +1567,12 @@ SPECIAL_UNIT_DICT = {
     "wan-2.2-t2v-a14b": {
         "SingleStream": "Latency (s)",
         "singlestream": "Latency (s)",
-    }
+    },
+    "gpt-oss-120b": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
 }
 UNIT_DICT = {
     "SingleStream": "Latency (ms)",

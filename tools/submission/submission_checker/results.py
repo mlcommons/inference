@@ -116,7 +116,8 @@ class ResultExporter:
             submission_logs.loader_data["power_dir_path"])
         unit = SPECIAL_UNIT_DICT.get(
             row["MlperfModel"], UNIT_DICT).get(
-            row["Scenario"], UNIT_DICT[row["Scenario"]]
+            SCENARIO_MAPPING[row["Scenario"].lower()],
+            UNIT_DICT[row["Scenario"]]
         )
         row["Units"] = unit
         row["weight_data_types"] = submission_logs.measurements_json["weight_data_types"]

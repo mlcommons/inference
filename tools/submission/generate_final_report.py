@@ -92,7 +92,7 @@ def main():
     # code url
     df["Code"] = df.apply(
         lambda x: '=HYPERLINK("{}","code")'.format(
-            "/".join([base_url, x["Category"], x["Submitter"], "code"])
+            "/".join([base_url, x["Category"], x["Submitter"], "src"])
         ),
         axis=1,
     )
@@ -101,11 +101,11 @@ def main():
         "singlestream": "SingleStream",
         "multistream": "MultiStream",
         "server": "Server",
-        "interactive":"Interactive",
+        "interactive": "Interactive",
         "offline": "Offline",
     }
-    df["Scenario"] = df["Scenario"].apply(lambda x: scenario_map.get(str(x).lower(), x))
-
+    df["Scenario"] = df["Scenario"].apply(
+        lambda x: scenario_map.get(str(x).lower(), x))
 
     output = args.input[:-4]
     writer = pd.ExcelWriter(output + ".xlsx", engine="xlsxwriter")

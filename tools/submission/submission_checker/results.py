@@ -43,6 +43,7 @@ class ResultExporter:
             "host_processor_core_count",
             "accelerator_model_name",
             "accelerators_per_node",
+            "total_accelerators",
             "Location",
             "framework",
             "operating_system",
@@ -98,6 +99,7 @@ class ResultExporter:
         row["host_processor_core_count"] = submission_logs.system_json["host_processor_core_count"]
         row["accelerator_model_name"] = submission_logs.system_json["accelerator_model_name"]
         row["accelerators_per_node"] = submission_logs.system_json["accelerators_per_node"]
+        row["total_accelerators"] = int(row["number_of_nodes"]) * int(row["accelerators_per_node"])
         row["Location"] = os.path.dirname(
             submission_logs.loader_data["perf_path"])
         row["framework"] = submission_logs.system_json["framework"]

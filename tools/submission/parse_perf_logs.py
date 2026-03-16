@@ -34,7 +34,7 @@ _PERF_RUN_RE = re.compile(
     r"/results"
     r"/(?P<system>[^/]+)"
     r"/(?P<model>[^/]+)"
-    r"/(?P<scenario>[^/]+)"
+    r"/(?P<scenario>[^/]+)"               # is there data in here we want ?  ./offline/TEST01/performance/run_1
     r"/performance"
     r"/run_(?P<run_number>\d+)$"
 )
@@ -42,6 +42,9 @@ _PERF_RUN_RE = re.compile(
 
 def parse_path_context(run_dir: Path, root: Path) -> dict | None:
     rel = run_dir.relative_to(root).as_posix()
+
+    # Debug
+    print (f"run_dir relative to root : {rel}")
     m = _PERF_RUN_RE.search(rel)
     if not m:
         return None
@@ -263,6 +266,8 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
         print(f"  SKIP (path doesn't match expected structure): {run_dir}", file=sys.stderr)
         return
 
+    # These are the files we expect to find.
+    # They will be parsed and added to a PostGres DB    
     summary_path = run_dir / "mlperf_log_summary.txt"
     detail_path = run_dir / "mlperf_log_detail.txt"
 
@@ -443,6 +448,12 @@ def main():
     if not run_dirs:
         sys.exit(f"No performance/run_* directories found under {root}")
 
+    # Debug
+    #print (f"run_dirs = {run_dirs}")
+    for i in range (0,len(run_dirs)):
+        print (run_dirs[i])
+
+    # Should have a format line ../.../run_y
     print(f"Found {len(run_dirs)} run director{'y' if len(run_dirs) == 1 else 'ies'} under {root}")
 
     if args.dry_run:
@@ -450,6 +461,7 @@ def main():
             ingest_run(None, rd, root, dry_run=True)
         return
 
+    # connect to PostGres DB
     conn = psycopg.connect(args.dsn)
     try:
         ensure_schema(conn)

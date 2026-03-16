@@ -9,9 +9,9 @@ Usage:
 The script walks the submission tree looking for:
     {division}/{submitter}/results/{system}/{model}/{scenario}/performance/run_{N}/
 
-Tables created (if not exist):
-    performance_summary  -- one row per run, key metrics as columns
-    performance_detail   -- one row per MLLOG entry per run
+Each submitter gets its own PostgreSQL schema:
+    {submitter}.performance_summary  -- one row per run, key metrics as columns
+    {submitter}.performance_detail   -- one row per MLLOG entry per run
 """
 
 import argparse
@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import psycopg
+from psycopg import sql
 
 # ---------------------------------------------------------------------------
 # Path parsing
@@ -168,92 +169,110 @@ def parse_detail(path: Path) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Database setup
+# Database setup  — one schema per submitter
 # ---------------------------------------------------------------------------
 
-DDL = """
-CREATE TABLE IF NOT EXISTS performance_summary (
-    id                          SERIAL PRIMARY KEY,
-    submitter                   TEXT NOT NULL,
-    division                    TEXT,
-    system                      TEXT,
-    model                       TEXT,
-    scenario                    TEXT,
-    run_number                  INTEGER,
-
-    -- Core result
-    sut_name                    TEXT,
-    mode                        TEXT,
-    result_validity             TEXT,
-    primary_metric              TEXT,
-    primary_value               DOUBLE PRECISION,
-
-    -- Latency stats (ns)
-    min_latency_ns              BIGINT,
-    max_latency_ns              BIGINT,
-    mean_latency_ns             BIGINT,
-    p50_latency_ns              BIGINT,
-    p90_latency_ns              BIGINT,
-    p95_latency_ns              BIGINT,
-    p97_latency_ns              BIGINT,
-    p99_latency_ns              BIGINT,
-    p999_latency_ns             BIGINT,
-
-    -- Test parameters
-    samples_per_query           INTEGER,
-    target_qps                  DOUBLE PRECISION,
-    target_latency_ns           BIGINT,
-    max_async_queries           INTEGER,
-    min_duration_ms             BIGINT,
-    max_duration_ms             BIGINT,
-    performance_sample_count    INTEGER,
-    accuracy_sample_count       INTEGER,
-
-    -- Quality flags
-    has_warnings                BOOLEAN,
-    has_errors                  BOOLEAN,
-
-    -- Provenance
-    file_path                   TEXT,
-    ingested_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    UNIQUE (submitter, division, system, model, scenario, run_number)
-);
-
-CREATE TABLE IF NOT EXISTS performance_detail (
-    id          SERIAL PRIMARY KEY,
-    submitter   TEXT NOT NULL,
-    division    TEXT,
-    system      TEXT,
-    model       TEXT,
-    scenario    TEXT,
-    run_number  INTEGER,
-
-    key         TEXT,
-    value_str   TEXT,
-    value_num   DOUBLE PRECISION,
-    time_ms     DOUBLE PRECISION,
-    event_type  TEXT,
-    is_error    BOOLEAN,
-    is_warning  BOOLEAN,
-    source_file TEXT,
-    line_no     INTEGER,
-
-    file_path   TEXT,
-    ingested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_perf_detail_run
-    ON performance_detail (submitter, system, model, scenario, run_number);
-CREATE INDEX IF NOT EXISTS idx_perf_detail_key
-    ON performance_detail (key);
-"""
+_schemas_created: set[str] = set()
 
 
-def ensure_schema(conn):
+def ensure_submitter_schema(conn, submitter: str):
+    """Create the PostgreSQL schema and tables for a submitter if not yet done."""
+    if submitter in _schemas_created:
+        return
+
+    sc = sql.Identifier(submitter)
+
     with conn.cursor() as cur:
-        cur.execute(DDL)
+        cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sc))
+
+        cur.execute(sql.SQL("""
+            CREATE TABLE IF NOT EXISTS {sc}.performance_summary (
+                id                          SERIAL PRIMARY KEY,
+                submitter                   TEXT NOT NULL,
+                division                    TEXT,
+                system                      TEXT,
+                model                       TEXT,
+                scenario                    TEXT,
+                run_number                  INTEGER,
+
+                -- Core result
+                sut_name                    TEXT,
+                mode                        TEXT,
+                result_validity             TEXT,
+                primary_metric              TEXT,
+                primary_value               DOUBLE PRECISION,
+
+                -- Latency stats (ns)
+                min_latency_ns              BIGINT,
+                max_latency_ns              BIGINT,
+                mean_latency_ns             BIGINT,
+                p50_latency_ns              BIGINT,
+                p90_latency_ns              BIGINT,
+                p95_latency_ns              BIGINT,
+                p97_latency_ns              BIGINT,
+                p99_latency_ns              BIGINT,
+                p999_latency_ns             BIGINT,
+
+                -- Test parameters
+                samples_per_query           INTEGER,
+                target_qps                  DOUBLE PRECISION,
+                target_latency_ns           BIGINT,
+                max_async_queries           INTEGER,
+                min_duration_ms             BIGINT,
+                max_duration_ms             BIGINT,
+                performance_sample_count    INTEGER,
+                accuracy_sample_count       INTEGER,
+
+                -- Quality flags
+                has_warnings                BOOLEAN,
+                has_errors                  BOOLEAN,
+
+                -- Provenance
+                file_path                   TEXT,
+                ingested_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+                UNIQUE (division, system, model, scenario, run_number)
+            )
+        """).format(sc=sc))
+
+        cur.execute(sql.SQL("""
+            CREATE TABLE IF NOT EXISTS {sc}.performance_detail (
+                id          SERIAL PRIMARY KEY,
+                submitter   TEXT NOT NULL,
+                division    TEXT,
+                system      TEXT,
+                model       TEXT,
+                scenario    TEXT,
+                run_number  INTEGER,
+
+                key         TEXT,
+                value_str   TEXT,
+                value_num   DOUBLE PRECISION,
+                time_ms     DOUBLE PRECISION,
+                event_type  TEXT,
+                is_error    BOOLEAN,
+                is_warning  BOOLEAN,
+                source_file TEXT,
+                line_no     INTEGER,
+
+                file_path   TEXT,
+                ingested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """).format(sc=sc))
+
+        cur.execute(sql.SQL("""
+            CREATE INDEX IF NOT EXISTS idx_perf_detail_run
+                ON {sc}.performance_detail (system, model, scenario, run_number)
+        """).format(sc=sc))
+
+        cur.execute(sql.SQL("""
+            CREATE INDEX IF NOT EXISTS idx_perf_detail_key
+                ON {sc}.performance_detail (key)
+        """).format(sc=sc))
+
     conn.commit()
+    _schemas_created.add(submitter)
+    print(f"  Schema ready: {submitter}")
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +286,7 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
         return
 
     # These are the files we expect to find.
-    # They will be parsed and added to a PostGres DB    
+    # They will be parsed and added to a PostGres DB
     summary_path = run_dir / "mlperf_log_summary.txt"
     detail_path = run_dir / "mlperf_log_detail.txt"
 
@@ -284,6 +303,10 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
         print(f"    detail entries: {len(detail_entries)}")
         return
 
+    ensure_submitter_schema(conn, ctx["submitter"])
+
+    sc = sql.Identifier(ctx["submitter"])
+
     def _bigint(d, key):
         v = d.get(key)
         return int(v) if v is not None else None
@@ -294,8 +317,8 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
 
     with conn.cursor() as cur:
         # --- performance_summary upsert ---
-        cur.execute("""
-            INSERT INTO performance_summary (
+        cur.execute(sql.SQL("""
+            INSERT INTO {sc}.performance_summary (
                 submitter, division, system, model, scenario, run_number,
                 sut_name, mode, result_validity,
                 primary_metric, primary_value,
@@ -321,7 +344,7 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
                 %(has_warnings)s, %(has_errors)s,
                 %(file_path)s
             )
-            ON CONFLICT (submitter, division, system, model, scenario, run_number)
+            ON CONFLICT (division, system, model, scenario, run_number)
             DO UPDATE SET
                 sut_name                 = EXCLUDED.sut_name,
                 mode                     = EXCLUDED.mode,
@@ -349,7 +372,7 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
                 has_errors               = EXCLUDED.has_errors,
                 file_path                = EXCLUDED.file_path,
                 ingested_at              = NOW()
-        """, {
+        """).format(sc=sc), {
             **ctx,
             "run_number": int(ctx["run_number"]),
             "sut_name": summary.get("sut_name"),
@@ -380,16 +403,15 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
         })
 
         # --- performance_detail: delete old entries then bulk insert ---
-        cur.execute("""
-            DELETE FROM performance_detail
-            WHERE submitter = %s AND system = %s AND model = %s
-              AND scenario = %s AND run_number = %s
-        """, (ctx["submitter"], ctx["system"], ctx["model"],
-              ctx["scenario"], int(ctx["run_number"])))
+        cur.execute(sql.SQL("""
+            DELETE FROM {sc}.performance_detail
+            WHERE system = %s AND model = %s AND scenario = %s AND run_number = %s
+        """).format(sc=sc), (ctx["system"], ctx["model"],
+                              ctx["scenario"], int(ctx["run_number"])))
 
         if detail_entries:
-            cur.executemany("""
-                INSERT INTO performance_detail (
+            cur.executemany(sql.SQL("""
+                INSERT INTO {sc}.performance_detail (
                     submitter, division, system, model, scenario, run_number,
                     key, value_str, value_num, time_ms,
                     event_type, is_error, is_warning, source_file, line_no,
@@ -400,7 +422,7 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
                     %s, %s, %s, %s, %s,
                     %s
                 )
-            """, [
+            """).format(sc=sc), [
                 (
                     ctx["submitter"], ctx["division"], ctx["system"],
                     ctx["model"], ctx["scenario"], int(ctx["run_number"]),
@@ -463,15 +485,20 @@ def main():
 
     # connect to PostGres DB
     conn = psycopg.connect(args.dsn)
+    ok = failed = 0
     try:
-        ensure_schema(conn)
-        print("Schema ready.")
         for rd in run_dirs:
-            ingest_run(conn, rd, root)
+            try:
+                ingest_run(conn, rd, root)
+                ok += 1
+            except Exception as exc:
+                print(f"  ERROR {rd}: {exc}", file=sys.stderr)
+                conn.rollback()
+                failed += 1
     finally:
         conn.close()
 
-    print("Done.")
+    print(f"Done. {ok} ingested, {failed} failed.")
 
 
 if __name__ == "__main__":

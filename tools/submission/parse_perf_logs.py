@@ -27,14 +27,16 @@ import psycopg
 # Path parsing
 # ---------------------------------------------------------------------------
 
-# Match: .../{division}/{submitter}/results/{system}/{model}/{scenario}/performance/run_{N}
+# Match:
+# .../{division}/{submitter}/results/{system}/{model}/{scenario}/performance/run_{N}
 _PERF_RUN_RE = re.compile(
     r"(?P<division>[^/]+)"
     r"/(?P<submitter>[^/]+)"
     r"/results"
     r"/(?P<system>[^/]+)"
     r"/(?P<model>[^/]+)"
-    r"/(?P<scenario>[^/]+)"               # is there data in here we want ?  ./offline/TEST01/performance/run_1
+    # is there data in here we want ?  ./offline/TEST01/performance/run_1
+    r"/(?P<scenario>[^/]+)"
     r"/performance"
     r"/run_(?P<run_number>\d+)$"
 )
@@ -44,7 +46,7 @@ def parse_path_context(run_dir: Path, root: Path) -> dict | None:
     rel = run_dir.relative_to(root).as_posix()
 
     # Debug
-    print (f"run_dir relative to root : {rel}")
+    print(f"run_dir relative to root : {rel}")
     m = _PERF_RUN_RE.search(rel)
     if not m:
         return None
@@ -80,10 +82,11 @@ def parse_summary(path: Path) -> dict:
     data["has_warnings"] = "No warnings encountered" not in text
     data["has_errors"] = "No errors encountered" not in text
 
-    # Normalise primary metric  ------------------------------------------------
+    # Normalise primary metric  ----------------------------------------------
     # Offline/Server → samples_per_second
     # SingleStream/MultiStream → 90th or 99th percentile latency
-    # The summary already contains these as parsed keys; just alias the main one.
+    # The summary already contains these as parsed keys; just alias the main
+    # one.
     if "samples_per_second" in data:
         data["primary_metric"] = "samples_per_second"
         data["primary_value"] = data["samples_per_second"]
@@ -150,7 +153,8 @@ def parse_detail(path: Path) -> list[dict]:
             value_num = None
         else:
             value_str = str(value) if value is not None else None
-            value_num = float(value) if isinstance(value, (int, float)) else None
+            value_num = float(value) if isinstance(
+                value, (int, float)) else None
 
         entries.append({
             "key": obj.get("key"),
@@ -263,11 +267,13 @@ def ensure_schema(conn):
 def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
     ctx = parse_path_context(run_dir, root)
     if ctx is None:
-        print(f"  SKIP (path doesn't match expected structure): {run_dir}", file=sys.stderr)
+        print(
+            f"  SKIP (path doesn't match expected structure): {run_dir}",
+            file=sys.stderr)
         return
 
     # These are the files we expect to find.
-    # They will be parsed and added to a PostGres DB    
+    # They will be parsed and added to a PostGres DB
     summary_path = run_dir / "mlperf_log_summary.txt"
     detail_path = run_dir / "mlperf_log_detail.txt"
 
@@ -279,7 +285,8 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
         return
 
     if dry_run:
-        print(f"  DRY RUN {ctx['submitter']} / {ctx['model']} / {ctx['scenario']} run {ctx['run_number']}")
+        print(
+            f"  DRY RUN {ctx['submitter']} / {ctx['model']} / {ctx['scenario']} run {ctx['run_number']}")
         print(f"    summary keys: {list(summary.keys())}")
         print(f"    detail entries: {len(detail_entries)}")
         return
@@ -413,7 +420,8 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
             ])
 
     conn.commit()
-    print(f"  OK  {ctx['submitter']:30s} {ctx['model']:30s} {ctx['scenario']:15s} run {ctx['run_number']}")
+    print(
+        f"  OK  {ctx['submitter']:30s} {ctx['model']:30s} {ctx['scenario']:15s} run {ctx['run_number']}")
 
 
 # ---------------------------------------------------------------------------
@@ -449,12 +457,13 @@ def main():
         sys.exit(f"No performance/run_* directories found under {root}")
 
     # Debug
-    #print (f"run_dirs = {run_dirs}")
-    for i in range (0,len(run_dirs)):
-        print (run_dirs[i])
+    # print (f"run_dirs = {run_dirs}")
+    for i in range(0, len(run_dirs)):
+        print(run_dirs[i])
 
     # Should have a format line ../.../run_y
-    print(f"Found {len(run_dirs)} run director{'y' if len(run_dirs) == 1 else 'ies'} under {root}")
+    print(
+        f"Found {len(run_dirs)} run director{'y' if len(run_dirs) == 1 else 'ies'} under {root}")
 
     if args.dry_run:
         for rd in run_dirs:

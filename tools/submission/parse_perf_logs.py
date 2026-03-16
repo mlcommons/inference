@@ -414,7 +414,7 @@ def ingest_run(conn, run_dir: Path, root: Path, dry_run: bool = False):
             DELETE FROM {sc}.performance_detail
             WHERE system = %s AND model = %s AND scenario = %s AND run_number = %s
         """).format(sc=sc), (ctx["system"], ctx["model"],
-                              ctx["scenario"], int(ctx["run_number"])))
+                             ctx["scenario"], int(ctx["run_number"])))
 
         if detail_entries:
             cur.executemany(sql.SQL("""

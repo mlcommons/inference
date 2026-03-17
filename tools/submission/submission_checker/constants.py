@@ -1535,6 +1535,7 @@ SPECIAL_UNIT_DICT = {
     "llama3.1-8b": {
         "Offline": "Tokens/s",
         "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
     },
     "llama3.1-8b-edge": {
         "Offline": "Tokens/s",

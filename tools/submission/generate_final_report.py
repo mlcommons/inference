@@ -55,6 +55,7 @@ def main():
             "host_processor_model_name": "Processor",
             "accelerator_model_name": "Accelerator",
             "accelerators_per_node": "a#",
+            "total_accelerators": "Total Accelerators",
             "notes": "Notes",
             "framework": "Software",
         },
@@ -124,6 +125,7 @@ def main():
         "p#",
         "Accelerator",
         "a#",
+        "Total Accelerators",
         "Software",
         "Notes",
     ]

@@ -1,4 +1,3 @@
-
 import argparse
 import array
 import json
@@ -11,7 +10,6 @@ import numpy as np
 import torch
 import yaml
 from diffusers import AutoencoderKLWan, WanPipeline
-from diffusers.utils import export_to_video
 
 SCENARIO_MAP = {
     "SingleStream": lg.TestScenario.SingleStream,
@@ -28,52 +26,47 @@ def setup_logging(rank):
     """Setup logging configuration for data parallel (all ranks log)."""
     logging.basicConfig(
         level=logging.INFO,
-        format=f'[Rank {rank}] %(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format=f"[Rank {rank}] %(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
 
 def load_config(config_path):
     """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
 
 
 def load_prompts(dataset_path):
     """Load prompts from dataset file."""
-    with open(dataset_path, 'r') as f:
+    with open(dataset_path, "r") as f:
         prompts = [line.strip() for line in f if line.strip()]
     return prompts
 
 
 class Model:
-    def __init__(
-        self, model_path, video_output_path, device, config, prompts, fixed_latent=None, rank=0
-    ):
-        self.video_output_path = video_output_path
+    def __init__(self, model_path, device, config, prompts, fixed_latent=None, rank=0):
         self.device = device
         self.rank = rank
-        self.height = config['height']
-        self.width = config['width']
-        self.num_frames = config['num_frames']
-        self.fps = config['fps']
-        self.guidance_scale = config['guidance_scale']
-        self.guidance_scale_2 = config['guidance_scale_2']
-        self.boundary_ratio = config['boundary_ratio']
-        self.negative_prompt = config['negative_prompt'].strip()
-        self.sample_steps = config['sample_steps']
-        self.base_seed = config['seed']
+        self.height = config["height"]
+        self.width = config["width"]
+        self.num_frames = config["num_frames"]
+        self.fps = config["fps"]
+        self.guidance_scale = config["guidance_scale"]
+        self.guidance_scale_2 = config["guidance_scale_2"]
+        self.boundary_ratio = config["boundary_ratio"]
+        self.negative_prompt = config["negative_prompt"].strip()
+        self.sample_steps = config["sample_steps"]
+        self.base_seed = config["seed"]
         self.vae = AutoencoderKLWan.from_pretrained(
-            model_path,
-            subfolder="vae",
-            torch_dtype=torch.float32
+            model_path, subfolder="vae", torch_dtype=torch.float32
         )
         self.pipe = WanPipeline.from_pretrained(
             model_path,
             boundary_ratio=self.boundary_ratio,
             vae=self.vae,
-            torch_dtype=torch.bfloat16
+            torch_dtype=torch.bfloat16,
         )
         self.pipe.to(self.device)
         self.prompts = prompts
@@ -94,24 +87,15 @@ class Model:
                     "guidance_scale": self.guidance_scale,
                     "guidance_scale_2": self.guidance_scale_2,
                     "num_inference_steps": self.sample_steps,
-                    "generator": torch.Generator(device=self.device).manual_seed(self.base_seed),
+                    "generator": torch.Generator(device=self.device).manual_seed(
+                        self.base_seed
+                    ),
                 }
                 if self.fixed_latent is not None:
                     pipeline_kwargs["latents"] = self.fixed_latent
                 output = self.pipe(**pipeline_kwargs).frames[0]
-
-                # Save to video to reduce mlperf_log_accuracy.json size
-                output_path = Path(
-                    self.video_output_path,
-                    f"{self.prompts[i]}-0.mp4")
-                logging.info(f"Saving {q} to {output_path}")
-                export_to_video(output[0], str(output_path), fps=self.fps)
-
-                with open(output_path, "rb") as f:
-                    resp = f.read()
-
                 response_array = array.array(
-                    "B", resp
+                    "B", output.cpu().detach().numpy().tobytes()
                 )
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(q, bi[0], bi[1]))
@@ -122,23 +106,21 @@ class Model:
 
 
 class DebugModel:
-    def __init__(
-        self, model_path, device, config, prompts, fixed_latent=None, rank=0
-    ):
+    def __init__(self, model_path, device, config, prompts, fixed_latent=None, rank=0):
         self.prompts = prompts
 
     def issue_queries(self, query_samples):
         idx = [q.index for q in query_samples]
         query_ids = [q.id for q in query_samples]
         response = []
+        response_array_refs = []
         for i, q in zip(idx, query_ids):
             print(i, self.prompts[i])
             output = self.prompts[i]
-            response_array = array.array(
-                "B", output.encode("utf-8")
-            )
+            response_array = array.array("B", output.encode("utf-8"))
             bi = response_array.buffer_info()
             response.append(lg.QuerySampleResponse(q, bi[0], bi[1]))
+            response_array_refs.append(response_array)
         lg.QuerySamplesComplete(response)
 
     def flush_queries(self):
@@ -155,56 +137,56 @@ def unload_query_samples(sample_list):
 
 def get_args():
     parser = argparse.ArgumentParser(
-        description="Batch T2V inference with Wan2.2-Diffusers")
+        description="Batch T2V inference with Wan2.2-Diffusers"
+    )
     # Model Arguments
     parser.add_argument(
         "--model-path",
         type=str,
         default="./models/Wan2.2-T2V-A14B-Diffusers",
-        help="Path to model checkpoint directory (default: ./models/Wan2.2-T2V-A14B-Diffusers)"
+        help="Path to model checkpoint directory (default: ./models/Wan2.2-T2V-A14B-Diffusers)",
     )
     parser.add_argument(
         "--dataset",
         type=str,
         default="./data/vbench_prompts.txt",
-        help="Path to dataset file (text prompts, one per line) (default: ./data/prompts.txt)"
+        help="Path to dataset file (text prompts, one per line) (default: ./data/prompts.txt)",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="./output",
-        help="Directory to save generated videos (default: ./data/outputs)"
+        help="Directory to save generated videos (default: ./data/outputs)",
     )
     parser.add_argument(
         "--config",
         type=str,
         default="./inference_config.yaml",
-        help="Path to inference configuration file (default: ./inference_config.yaml)"
+        help="Path to inference configuration file (default: ./inference_config.yaml)",
     )
     parser.add_argument(
         "--num-iterations",
         type=int,
         default=1,
-        help="Number of generation iterations per prompt (default: 1)"
+        help="Number of generation iterations per prompt (default: 1)",
     )
     parser.add_argument(
         "--num-prompts",
         type=int,
         default=-1,
-        help="Process only first N prompts (for testing, default: all)"
+        help="Process only first N prompts (for testing, default: all)",
     )
     parser.add_argument(
         "--fixed-latent",
         type=str,
         default="./data/fixed_latent.pt",
-        help="Path to fixed latent .pt file for deterministic generation (default: data/fixed_latent.pt)"
+        help="Path to fixed latent .pt file for deterministic generation (default: data/fixed_latent.pt)",
     )
     # MLPerf loadgen arguments
     parser.add_argument(
         "--scenario",
         default="SingleStream",
-        help="mlperf benchmark scenario, one of " +
-        str(list(SCENARIO_MAP.keys())),
+        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())),
     )
     parser.add_argument(
         "--user_conf",
@@ -218,19 +200,9 @@ def get_args():
         "--performance-sample-count",
         type=int,
         help="performance sample count",
-        default=248,
+        default=5000,
     )
-    parser.add_argument(
-        "--accuracy",
-        action="store_true",
-        help="enable accuracy pass"
-    )
-    parser.add_argument(
-        "--video_output_path",
-        type=str,
-        default="./videos",
-        help="path to store output videos"
-    )
+    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     # Dont overwrite these for official submission
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -272,20 +244,14 @@ def run_mlperf(args, config):
     if args.fixed_latent:
         fixed_latent = torch.load(args.fixed_latent)
         logging.info(
-            f"Loaded fixed latent from {args.fixed_latent} with shape: {fixed_latent.shape}")
+            f"Loaded fixed latent from {args.fixed_latent} with shape: {fixed_latent.shape}"
+        )
         logging.info("This latent will be reused for all generations")
     else:
         logging.info("No fixed latent provided - using random initial latents")
 
     # Loading model
-    model = Model(
-        args.model_path,
-        args.video_output_path,
-        device,
-        config,
-        dataset,
-        fixed_latent,
-        rank)
+    model = Model(args.model_path, device, config, dataset, fixed_latent, rank)
     # model = DebugModel(args.model_path, device, config, dataset, fixed_latent, rank)
     logging.info("Model loaded successfully!")
 
@@ -305,10 +271,7 @@ def run_mlperf(args, config):
 
         audit_config = os.path.abspath(args.audit_conf)
         if os.path.exists(audit_config):
-            settings.FromConfig(
-                audit_config,
-                "wan-2.2-t2v-a14b",
-                args.scenario)
+            settings.FromConfig(audit_config, "wan-2.2-t2v-a14b", args.scenario)
         settings.scenario = SCENARIO_MAP[args.scenario]
 
         settings.mode = lg.TestMode.PerformanceOnly
@@ -324,24 +287,18 @@ def run_mlperf(args, config):
             settings.server_target_qps = qps
             settings.offline_expected_qps = qps
 
-        count_override = False
         count = args.count
-        if count:
-            count_override = True
 
         if args.count:
             settings.min_query_count = count
             settings.max_query_count = count
-        if not count_override:
-            count = len(dataset)
+        count = len(dataset)
 
         if args.samples_per_query:
             settings.multi_stream_samples_per_query = args.samples_per_query
         if args.max_latency:
-            settings.server_target_latency_ns = int(
-                args.max_latency * NANO_SEC)
-            settings.multi_stream_expected_latency_ns = int(
-                args.max_latency * NANO_SEC)
+            settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
+            settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
 
         performance_sample_count = (
             args.performance_sample_count
@@ -354,13 +311,7 @@ def run_mlperf(args, config):
             count, performance_sample_count, load_query_samples, unload_query_samples
         )
 
-        lg.StartTestWithLogSettings(
-            sut, qsl, settings, log_settings, audit_config)
-        if args.accuracy:
-            # TODO: output accuracy
-            final_results = {}
-            with open("results.json", "w") as f:
-                json.dump(final_results, f, sort_keys=True, indent=4)
+        lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
 
         lg.DestroyQSL(qsl)
         lg.DestroySUT(sut)

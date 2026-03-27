@@ -1,6 +1,7 @@
 import json
 import io
 
+
 def jload(f, mode="r"):
     """Load a .json file into a dictionary."""
     if not isinstance(f, io.IOBase):

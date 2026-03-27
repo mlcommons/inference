@@ -65,7 +65,7 @@ with open(INFERENCE_CASE_FILE, "r") as f:
     TARGET_CASES = json.load(f)
 with open(CALIBRATION_CASE_FILE, "r") as f:
     CALIB_CASES = json.load(f)
-    
+
 # constants used preprocessing images as well as sliding window inference
 MEAN_VAL = 101.0
 STDDEV_VAL = 76.9

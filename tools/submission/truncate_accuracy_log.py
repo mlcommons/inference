@@ -3,7 +3,6 @@ Tool to truncate the mlperf_log_accuracy.json
 """
 
 
-
 import argparse
 import hashlib
 import logging

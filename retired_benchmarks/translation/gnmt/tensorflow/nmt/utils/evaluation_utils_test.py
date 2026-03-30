@@ -16,7 +16,6 @@
 """Tests for evaluation_utils.py."""
 
 
-
 import tensorflow as tf
 
 from ..utils import evaluation_utils

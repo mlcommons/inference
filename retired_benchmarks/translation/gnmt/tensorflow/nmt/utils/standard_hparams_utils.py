@@ -16,7 +16,6 @@
 """standard hparams utils."""
 
 
-
 import tensorflow as tf
 
 

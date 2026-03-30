@@ -16,7 +16,6 @@
 """Tests for model inference."""
 
 
-
 import os
 import numpy as np
 import tensorflow as tf

@@ -3,8 +3,6 @@ mlperf inference benchmarking tool
 """
 
 
-
-
 import argparse
 import array
 import collections

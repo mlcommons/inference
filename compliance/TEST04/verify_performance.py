@@ -40,8 +40,7 @@ def main():
     args = parser.parse_args()
 
     print("Verifying performance.")
-    
-    
+
     ref_score = 0
     test_score = 0
     ref_mode = ""
@@ -87,7 +86,10 @@ def main():
 
             if re.match("\\d+ ERROR", line):
                 error = line.split(" ", 1)[0].strip()
-                print("WARNING: " + error + " ERROR reported in reference results")
+                print(
+                    "WARNING: " +
+                    error +
+                    " ERROR reported in reference results")
 
     with open(args.test_summary, "r") as test_file:
         for line in test_file:

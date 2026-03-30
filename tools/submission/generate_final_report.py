@@ -55,6 +55,7 @@ def main():
             "host_processor_model_name": "Processor",
             "accelerator_model_name": "Accelerator",
             "accelerators_per_node": "a#",
+            "total_accelerators": "Total Accelerators",
             "notes": "Notes",
             "framework": "Software",
         },
@@ -92,7 +93,7 @@ def main():
     # code url
     df["Code"] = df.apply(
         lambda x: '=HYPERLINK("{}","code")'.format(
-            "/".join([base_url, x["Category"], x["Submitter"], "code"])
+            "/".join([base_url, x["Category"], x["Submitter"], "src"])
         ),
         axis=1,
     )
@@ -124,6 +125,7 @@ def main():
         "p#",
         "Accelerator",
         "a#",
+        "Total Accelerators",
         "Software",
         "Notes",
     ]

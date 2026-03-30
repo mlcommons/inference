@@ -502,7 +502,6 @@ class PerformanceCheck(BaseCheck):
             if str(self.model).lower() == "wan-2.2-t2v-a14b":
                 res /= S_TO_MS
 
-        inferred = False
         if self.scenario.lower() != self.scenario_fixed.lower() and (
                 self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
             res, is_valid = self.get_inferred_result(res)
@@ -526,32 +525,35 @@ class PerformanceCheck(BaseCheck):
         is_valid = True
         # Check if current scenario (and version) uses early stopping
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
+        scenario = SCENARIO_MAPPING.get(self.scenario, self.scenario)
+        scenario_fixed = SCENARIO_MAPPING.get(
+            self.scenario_fixed, self.scenario_fixed)
 
         latency_mean = self.mlperf_log["result_mean_latency_ns"]
-        if self.scenario in ["MultiStream"]:
+        if scenario in ["MultiStream"]:
             latency_99_percentile = self.mlperf_log[
                 "result_99.00_percentile_per_query_latency_ns"
             ]
             latency_mean = self.mlperf_log["result_mean_query_latency_ns"]
         samples_per_query = self.mlperf_log["effective_samples_per_query"]
-        if self.scenario == "SingleStream":
+        if scenario == "SingleStream":
             # qps_wo_loadgen_overhead is only used for inferring Offline from
             # SingleStream; only for old submissions
             qps_wo_loadgen_overhead = self.mlperf_log["result_qps_without_loadgen_overhead"]
 
         # special case for results inferred from different scenario
-        if self.scenario_fixed in [
-                "Offline"] and self.scenario in ["SingleStream"]:
+        if scenario_fixed in [
+                "Offline"] and scenario in ["SingleStream"]:
             inferred = True
             res = qps_wo_loadgen_overhead
 
-        if (self.scenario_fixed in ["Offline"]
-                ) and self.scenario in ["MultiStream"]:
+        if (scenario_fixed in ["Offline"]
+            ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
-        if (self.scenario_fixed in ["MultiStream"]
-                ) and self.scenario in ["SingleStream"]:
+        if (scenario_fixed in ["MultiStream"]
+            ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -567,7 +569,7 @@ class PerformanceCheck(BaseCheck):
                        samples_per_query) / MS_TO_NS
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
-        if (self.scenario_fixed in ["Interactive"]
-                ) and self.scenario not in ["Server"]:
+        if (scenario_fixed in ["Interactive"]
+            ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

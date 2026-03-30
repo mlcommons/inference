@@ -3,8 +3,6 @@ Tool to remove manually verified ERRORs from the log file in the v0.7 submission
 """
 
 
-
-
 import argparse
 import sys
 

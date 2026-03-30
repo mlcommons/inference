@@ -16,7 +16,6 @@
 """Utility to handle vocabularies."""
 
 
-
 import codecs
 import os
 import tensorflow as tf

@@ -15,7 +15,6 @@
 """Tests for nmt.py, train.py and inference.py."""
 
 
-
 import argparse
 import os
 

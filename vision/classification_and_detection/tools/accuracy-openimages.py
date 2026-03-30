@@ -5,8 +5,6 @@ the images in coco's annotations/instances_val2017.json.
 """
 
 
-
-
 import argparse
 import json
 import os

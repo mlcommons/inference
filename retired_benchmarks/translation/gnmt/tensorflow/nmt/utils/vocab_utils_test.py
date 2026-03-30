@@ -16,7 +16,6 @@
 """Tests for vocab_utils."""
 
 
-
 import codecs
 import os
 import tensorflow as tf

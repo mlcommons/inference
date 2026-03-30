@@ -16,7 +16,6 @@
 """Common utility functions for tests."""
 
 
-
 import tensorflow as tf
 
 from tensorflow.python.ops import lookup_ops

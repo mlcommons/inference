@@ -5,8 +5,6 @@ of the pre-processed data set.
 """
 
 
-
-
 import argparse
 import json
 

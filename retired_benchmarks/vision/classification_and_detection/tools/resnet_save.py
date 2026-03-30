@@ -20,7 +20,6 @@ parsing. Code for defining the ResNet layers can be found in resnet_model.py.
 """
 
 
-
 import functools
 import math
 import multiprocessing

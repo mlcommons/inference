@@ -3,8 +3,6 @@ collect mlperf loadgen output to csv
 """
 
 
-
-
 import argparse
 import re
 import time

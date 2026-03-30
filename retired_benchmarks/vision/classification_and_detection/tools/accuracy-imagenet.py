@@ -4,8 +4,6 @@ We assume that loadgen's query index is in the same order as the images in image
 """
 
 
-
-
 import argparse
 import json
 

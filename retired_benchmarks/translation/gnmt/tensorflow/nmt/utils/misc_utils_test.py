@@ -16,7 +16,6 @@
 """Tests for vocab_utils."""
 
 
-
 import tensorflow as tf
 
 from ..utils import misc_utils

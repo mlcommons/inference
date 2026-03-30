@@ -6,8 +6,6 @@ https://github.com/miso-belica/sumy/blob/dev/sumy/evaluation/rouge.py.
 """
 
 
-
-
 import itertools
 import numpy as np
 

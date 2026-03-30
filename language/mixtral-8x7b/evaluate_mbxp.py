@@ -76,7 +76,7 @@ def worker(inp_queue, out_queue):
         }
 
         checker = lang_to_checker_map[problem["lang"]]
-        
+
         problem["task_id"] = key
         problem["test"] = problem["test_code"]
 

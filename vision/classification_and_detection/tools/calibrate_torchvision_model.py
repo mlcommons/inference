@@ -74,10 +74,15 @@ def main():
     dataloader = DataLoader(dataset, batch_size=1)
 
     if not hasattr(torchvision_quantization_models, args.model):
-        raise ValueError(f"Model {args.model} not found in torchvision quantization models")
-    
+        raise ValueError(
+            f"Model {args.model} not found in torchvision quantization models")
 
-    model = getattr(torchvision_quantization_models, args.model)(pretrained=True, progress=True, quantize=False)
+    model = getattr(
+        torchvision_quantization_models,
+        args.model)(
+        pretrained=True,
+        progress=True,
+        quantize=False)
     quantize_model(model, dataloader)
     print(model)
 

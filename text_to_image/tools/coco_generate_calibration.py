@@ -15,6 +15,7 @@ import requests
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
 
+
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
@@ -41,6 +42,7 @@ def get_args():
     args = parser.parse_args()
     return args
 
+
 def download_file(url: str, output_dir: Path, filename: str | None = None):
     os.makedirs(str(output_dir), exist_ok=True)
 
@@ -65,6 +67,7 @@ def download_file(url: str, output_dir: Path, filename: str | None = None):
 
     return output_path
 
+
 if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
@@ -80,21 +83,22 @@ if __name__ == "__main__":
     calibration_dir = Path(calibration_dir)
 
     # Check if raw annotations file already exist
-    if not (dataset_dir / "raw" / "annotations" / "captions_train2014.json").exists():
-            # Download annotations
-            os.makedirs(str(dataset_dir / "raw"), exist_ok=True)
-            os.makedirs(str(dataset_dir / "download_aux"), exist_ok=True)
-            download_file(
-                url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
-                output_dir=dataset_dir / "download_aux",
-            )
-            # Unzip file
-            zipfile_path = dataset_dir / "download_aux" / "annotations_trainval2014.zip"
-            # Unzip file
-            with zipfile.ZipFile(
-                str(zipfile_path), "r"
-            ) as zip_ref:
-                zip_ref.extractall(str(dataset_dir / "raw/"))
+    if not (dataset_dir / "raw" / "annotations" /
+            "captions_train2014.json").exists():
+        # Download annotations
+        os.makedirs(str(dataset_dir / "raw"), exist_ok=True)
+        os.makedirs(str(dataset_dir / "download_aux"), exist_ok=True)
+        download_file(
+            url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
+            output_dir=dataset_dir / "download_aux",
+        )
+        # Unzip file
+        zipfile_path = dataset_dir / "download_aux" / "annotations_trainval2014.zip"
+        # Unzip file
+        with zipfile.ZipFile(
+            str(zipfile_path), "r"
+        ) as zip_ref:
+            zip_ref.extractall(str(dataset_dir / "raw/"))
 
     # Convert to dataframe format and extract the relevant fields
     with open(dataset_dir / "raw" / "annotations" / "captions_train2014.json") as f:

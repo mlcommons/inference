@@ -24,7 +24,7 @@ class BackendNCNN(backend.Backend):
         if param_file.endswith("resnet50_v1.param"):
             # download model files if doesn't
             self.net = Resnet50(param_file, bin_file)
-        else:            
+        else:
 
             print(
                 "please add your ncnn model .param and .bin files to dir named 'resnet'"

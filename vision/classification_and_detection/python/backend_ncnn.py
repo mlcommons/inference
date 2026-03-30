@@ -1,7 +1,8 @@
+import sys
 import ncnn
 import numpy as np
 import backend
-from ncnn_models import *
+from ncnn_models import Resnet50
 
 
 class BackendNCNN(backend.Backend):
@@ -23,8 +24,7 @@ class BackendNCNN(backend.Backend):
         if param_file.endswith("resnet50_v1.param"):
             # download model files if doesn't
             self.net = Resnet50(param_file, bin_file)
-        else:
-            import sys
+        else:            
 
             print(
                 "please add your ncnn model .param and .bin files to dir named 'resnet'"

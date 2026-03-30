@@ -5,7 +5,7 @@ name: Test for MLPerf inference bert submission generation using MLC script auto
 
 on:
   pull_request:
-    branches: [ "master_off", "dev_off" ]
+    branches: [ "master", "dev" ]
     paths:
       - language/bert/**
       - tools/submission/**
@@ -22,8 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9" ]
-        backend: [ "deepsparse" ]
+        python-version: [ "3.10" ]
+        backend: [ "onnxruntime" ]
 
     steps:
     - uses: actions/checkout@v3
@@ -36,4 +36,4 @@ jobs:
         python3 -m pip install mlc-scripts
     - name: Test BERT and end to end submission generation
       run: |
-        mlcr run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=bert-99 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.tags=_repo.${{ github.event.pull_request.head.repo.html_url }},_branch.$PR_HEAD_REF --adr.inference-src-loadgen.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src-loadgen.version=custom --adr.loadgen.version=custom
+        mlcr run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=bert-99 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.tags=_repo.${{ github.event.pull_request.head.repo.html_url }},_branch.$PR_HEAD_REF --adr.inference-src-loadgen.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src-loadgen.version=custom --adr.loadgen.version=custom 

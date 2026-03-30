@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3.1-8B-Instruct}"
 DATASET_PATH="${DATASET_PATH:cnn_eval.json}"
 

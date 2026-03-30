@@ -15,7 +15,6 @@
 """Bypass TPUEstimator for ResNet-50 Train."""
 
 
-
 import functools
 import math
 import operator

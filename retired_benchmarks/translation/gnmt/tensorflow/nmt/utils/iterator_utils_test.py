@@ -16,7 +16,6 @@
 """Tests for iterator_utils.py"""
 
 
-
 import tensorflow as tf
 
 from tensorflow.python.ops import lookup_ops

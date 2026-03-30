@@ -3,8 +3,6 @@ coco result analyzer
 """
 
 
-
-
 import argparse
 import collections
 import json

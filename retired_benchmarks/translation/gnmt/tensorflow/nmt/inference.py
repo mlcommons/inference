@@ -14,7 +14,6 @@
 # ==============================================================================
 
 """To perform inference on test set given a trained model."""
-from __future__ import print_function
 
 import codecs
 import time

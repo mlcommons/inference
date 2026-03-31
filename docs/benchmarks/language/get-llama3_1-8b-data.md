@@ -41,7 +41,7 @@ The benchmark implementation run command will automatically download the require
 
 === "Pytorch"
 
-    === "From Cloudfare R2"
+    === "From MLCOMMONS Storage"
 
         > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Storage. 
 

@@ -237,16 +237,16 @@ MODEL_CONFIG = {
             "pointpainting": 1024,
             "deepseek-r1": 4388,
             "whisper": 1633,
-            # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 50,
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
+            "wan-2.2-t2v-a14b": 248,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -271,7 +271,7 @@ MODEL_CONFIG = {
             # TODO: Need to add accuracy sample count checkers as well (4395)
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
@@ -348,7 +348,7 @@ MODEL_CONFIG = {
             "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "dlrm-v3": {"Server": 270336, "Offline": 1},
-            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
         },
@@ -365,7 +365,6 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "whisper",
-            "wan-2.2-t2v-a14b",
             "yolo-99",
             "yolo-95",
         ],
@@ -1124,6 +1123,22 @@ REQUIRED_ACC_BENCHMARK = {
                 "2289",
             ]
         },
+    },
+    "wan-2.2-t2v-a14b": {
+        "v6.0": {
+            "videos": [
+                "130",
+                "106",
+                "84",
+                "59",
+                "12",
+                "31", 
+                "86",
+                "122", 
+                "233", 
+                "96",
+            ]            
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
@@ -1164,12 +1179,14 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama3.1-405b": 8313,
     "rgat": 788379,
     "deepseek-r1": 4388,
+    "gpt-oss-120b": 6396,
     "whisper": 1633,
     "pointpainting": 6636,
     "yolo-99": 1525,
     "yolo-95": 1525,
     "dlrm-v3": 349823,
-    "qwen3-vl-235b-a22b": 48289
+    "qwen3-vl-235b-a22b": 48289,
+    "wan-2.2-t2v-a14b": 50,
 }
 
 SCENARIO_MAPPING = {
@@ -1311,7 +1328,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         },
         "whisper": {
             "Offline": "result_tokens_per_second",
-        }
+        },
     },
 }
 
@@ -1534,6 +1551,7 @@ SPECIAL_UNIT_DICT = {
     "llama3.1-8b": {
         "Offline": "Tokens/s",
         "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
     },
     "llama3.1-8b-edge": {
         "Offline": "Tokens/s",
@@ -1559,6 +1577,15 @@ SPECIAL_UNIT_DICT = {
         "Interactive": "Tokens/s",
     },
     "deepseek-r1": {
+        "Offline": "Tokens/s",
+        "Server": "Tokens/s",
+        "Interactive": "Tokens/s",
+    },
+    "wan-2.2-t2v-a14b": {
+        "SingleStream": "Latency (s)",
+        "singlestream": "Latency (s)",
+    },
+    "gpt-oss-120b": {
         "Offline": "Tokens/s",
         "Server": "Tokens/s",
         "Interactive": "Tokens/s",
@@ -1690,6 +1717,7 @@ TEST08_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
 }
+
 TEST07_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",

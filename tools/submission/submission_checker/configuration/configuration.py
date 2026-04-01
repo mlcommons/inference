@@ -18,7 +18,8 @@ class Config:
         skip_extra_accuracy_files_check=False,
         skip_all_systems_have_results_check=False,
         skip_calibration_check=False,
-        skip_dataset_size_check=False
+        skip_dataset_size_check=False,
+        submitter=None,
     ):
         """Initialize submission checker configuration.
 
@@ -41,6 +42,7 @@ class Config:
         self.extra_model_benchmark_map = extra_model_benchmark_map
         self.version = version
         self.ignore_uncommited = ignore_uncommited
+        self.submitter = submitter
 
         # Skip flags. All set to false for official submission
         self.skip_compliance = skip_compliance
@@ -99,6 +101,9 @@ class Config:
             self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
+
+    def get_submitter(self):
+        return self.submitter
 
     def get_mlperf_model(self, model, extra_model_mapping=None):
         """Get mlperf model scenarios, converting some naming differences when possible.

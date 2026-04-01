@@ -4,6 +4,7 @@ from .utils import list_dir
 from .parsers.loadgen_parser import LoadgenParser
 from typing import Generator, Literal
 from .utils import *
+from .configuration.configuration import Config
 import logging
 import json
 
@@ -52,7 +53,7 @@ class Loader:
     handling version-specific path formats and optional artifacts.
     """
 
-    def __init__(self, root, version) -> None:
+    def __init__(self, root, version, config: Config) -> None:
         """Initialize the submission loader.
 
         Sets up path templates based on the MLPerf version and root
@@ -64,6 +65,7 @@ class Loader:
         """
         self.root = root
         self.version = version
+        self.config = config
         self.logger = logging.getLogger("LoadgenParser")
         self.perf_log_path = os.path.join(
             self.root, PERFORMANCE_LOG_PATH.get(
@@ -110,12 +112,22 @@ class Loader:
         self.test09_acc_path = os.path.join(
             self.root, TEST09_ACC_PATH.get(
                 version, TEST09_ACC_PATH["default"]))
+        self.test08_acc_path = os.path.join(
+            self.root, TEST08_ACC_PATH.get(
+                version, TEST08_ACC_PATH["default"]))
+        self.test07_acc_path = os.path.join(
+            self.root, TEST07_ACC_PATH.get(
+                version, TEST07_ACC_PATH["default"]))
+        self.test09_acc_path = os.path.join(
+            self.root, TEST09_ACC_PATH.get(
+                version, TEST09_ACC_PATH["default"]))
         self.power_dir_path = os.path.join(
             self.root, POWER_DIR_PATH.get(
                 version, POWER_DIR_PATH["default"]))
         self.src_path = os.path.join(
             self.root, SRC_PATH.get(
                 version, SRC_PATH["default"]))
+        self.filter_submitter = self.config.get_submitter()
 
     def get_measurement_path(self, path, division,
                              submitter, system, benchmark, scenario):
@@ -202,6 +214,31 @@ class Loader:
                 path)
         return log
 
+    def check_scenarios(self, benchmark, model_mapping,
+                        system_type, scenarios):
+        self.config.set_type(system_type)
+        mlperf_model = self.config.get_mlperf_model(benchmark, model_mapping)
+        required_scenarios = lower_list(self.config.get_required(mlperf_model))
+        optional_scenarios = lower_list(self.config.get_optional(mlperf_model))
+        scenarios = lower_list(scenarios)
+        all_senarios = set(
+            list(required_scenarios)
+            + list(optional_scenarios)
+        )
+        check = True
+        missing, passed = contains_list(set(scenarios), required_scenarios)
+        if not passed:
+            check = False
+        unknown, passed = contains_list(set(all_senarios), scenarios)
+        if not passed:
+            check = False
+        if contains_list(set(optional_scenarios), [
+                         "interactive", "server"])[1]:
+            if "interactive" not in scenarios and "server" not in scenarios:
+                check = False
+                missing.append("(one of) Interactive or Server")
+        return missing, unknown, check
+
     def load(self) -> Generator[SubmissionLogs, None, None]:
         """Traverse submissions directory and yield parsed log containers.
 
@@ -218,6 +255,8 @@ class Loader:
                 continue
             division_path = os.path.join(self.root, division)
             for submitter in list_dir(division_path):
+                if self.filter_submitter is not None and submitter != self.config.submitter:
+                    continue
                 results_path = os.path.join(
                     division_path, submitter, "results")
                 model_mapping = {}
@@ -231,8 +270,14 @@ class Loader:
                         division=division, submitter=submitter, system=system)
                     system_json = self.load_single_log(
                         system_json_path, "System")
+                    system_type = system_json.get("system_type")
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
+                        if division.lower() in ["closed", "network"]:
+                            missing_scenarios, unknown_scenarios, check_scenarios = self.check_scenarios(
+                                benchmark, model_mapping, system_type, list_dir(benchmark_path))
+                        else:
+                            missing_scenarios, unknown_scenarios, check_scenarios = [], [], True
                         for scenario in list_dir(benchmark_path):
                             scenario_path = os.path.join(
                                 benchmark_path, benchmark)
@@ -322,6 +367,24 @@ class Loader:
                                 system=system,
                                 benchmark=benchmark,
                                 scenario=scenario)
+                            test08_acc_path = self.test08_acc_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            test07_acc_path = self.test07_acc_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            test09_acc_path = self.test09_acc_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
                             src_path = self.src_path.format(
                                 division=division, submitter=submitter)
 
@@ -352,6 +415,12 @@ class Loader:
                                 test07_acc_path, "AccuracyResult")
                             test09_acc_result = self.load_single_log(
                                 test09_acc_path, "AccuracyResult")
+                            test08_acc_result = self.load_single_log(
+                                test08_acc_path, "AccuracyResult")
+                            test07_acc_result = self.load_single_log(
+                                test07_acc_path, "AccuracyResult")
+                            test09_acc_result = self.load_single_log(
+                                test09_acc_path, "AccuracyResult")
 
                             loader_data = {
                                 # Submission info
@@ -370,6 +439,9 @@ class Loader:
                                 "model_mapping": model_mapping,
                                 "power_dir_path": power_dir_path,
                                 "src_path": src_path,
+                                "check_scenarios": check_scenarios,
+                                "unknown_scenarios": unknown_scenarios,
+                                "missing_scenarios": missing_scenarios,
                                 # Test paths
                                 "TEST01_perf_path": test01_perf_path,
                                 "TEST01_acc_path": test01_acc_path,
@@ -378,12 +450,18 @@ class Loader:
                                 "TEST06_acc_path": test06_acc_path,
                                 "TEST07_acc_path": test07_acc_path,
                                 "TEST09_acc_path": test09_acc_path,
+                                "TEST08_acc_path": test08_acc_path,
+                                "TEST07_acc_path": test07_acc_path,
+                                "TEST09_acc_path": test09_acc_path,
                                 # Test logs
                                 "TEST01_perf_log": test01_perf_log,
                                 "TEST01_acc_result": test01_acc_result,
                                 "TEST04_perf_log": test04_perf_log,
                                 "TEST04_acc_result": test04_acc_result,
                                 "TEST06_acc_result": test06_acc_result,
+                                "TEST07_acc_result": test07_acc_result,
+                                "TEST09_acc_result": test09_acc_result,
+                                "TEST08_acc_result": test08_acc_result,
                                 "TEST07_acc_result": test07_acc_result,
                                 "TEST09_acc_result": test09_acc_result,
                             }

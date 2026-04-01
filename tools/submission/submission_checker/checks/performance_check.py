@@ -1,5 +1,5 @@
 from .base import BaseCheck
-from ..constants import *
+from ..constants import OFFLINE_MIN_SPQ, NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME, LLM_LATENCY_LIMITS, RESULT_FIELD_NEW, RESULT_FIELD_BENCHMARK_OVERWRITE, MS_TO_NS, S_TO_MS
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 import os

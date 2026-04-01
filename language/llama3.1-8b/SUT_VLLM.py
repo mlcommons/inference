@@ -41,7 +41,6 @@ class SUT:
         gpu_memory_utilization=0.90,
         max_num_batched_tokens=None,
         max_num_seqs=256,
-        enable_prefix_caching=False,
         block_size=16,
         enforce_eager=False,
         enable_chunked_prefill=None,
@@ -61,7 +60,6 @@ class SUT:
         self.gpu_memory_utilization = gpu_memory_utilization
         self.max_num_batched_tokens = max_num_batched_tokens
         self.max_num_seqs = max_num_seqs
-        self.enable_prefix_caching = enable_prefix_caching
         self.block_size = block_size
         self.enforce_eager = enforce_eager
         self.enable_chunked_prefill = enable_chunked_prefill
@@ -183,7 +181,6 @@ class SUT:
             gpu_memory_utilization=self.gpu_memory_utilization,
             max_num_batched_tokens=self.max_num_batched_tokens,
             max_num_seqs=self.max_num_seqs,
-            enable_prefix_caching=self.enable_prefix_caching,
             block_size=self.block_size,
             enforce_eager=self.enforce_eager,
             enable_chunked_prefill=self.enable_chunked_prefill,
@@ -232,7 +229,6 @@ class SUTServer(SUT):
         gpu_memory_utilization=0.90,
         max_num_batched_tokens=None,
         max_num_seqs=256,
-        enable_prefix_caching=False,
         block_size=16,
         enforce_eager=False,
         enable_chunked_prefill=None,
@@ -249,7 +245,6 @@ class SUTServer(SUT):
             gpu_memory_utilization=gpu_memory_utilization,
             max_num_batched_tokens=max_num_batched_tokens,
             max_num_seqs=max_num_seqs,
-            enable_prefix_caching=enable_prefix_caching,
             block_size=block_size,
             enforce_eager=enforce_eager,
             enable_chunked_prefill=enable_chunked_prefill,
@@ -336,7 +331,6 @@ class SUTServer(SUT):
             gpu_memory_utilization=self.gpu_memory_utilization,
             max_num_batched_tokens=self.max_num_batched_tokens,
             max_num_seqs=self.max_num_seqs,
-            enable_prefix_caching=self.enable_prefix_caching,
             max_model_len=self.max_model_len,
             block_size=self.block_size,
             enforce_eager=self.enforce_eager,

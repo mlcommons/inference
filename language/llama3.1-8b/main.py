@@ -146,12 +146,6 @@ def get_args():
         help="Max concurrent sequences (default: 256)",
     )
     parser.add_argument(
-        "--enable-prefix-caching",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Enable/disable KV cache prefix reuse (default: disabled)",
-    )
-    parser.add_argument(
         "--block-size",
         type=int,
         default=16,
@@ -230,7 +224,6 @@ def main():
             gpu_memory_utilization=args.gpu_memory_utilization,
             max_num_batched_tokens=args.max_num_batched_tokens,
             max_num_seqs=args.max_num_seqs,
-            enable_prefix_caching=args.enable_prefix_caching,
             block_size=args.block_size,
             enforce_eager=args.enforce_eager,
             enable_chunked_prefill=args.enable_chunked_prefill,

@@ -134,7 +134,7 @@ def split_path(m):
 
 def get_boolean(s):
     """Convert a bool, string or int to a bool. Strings are case-insensitive, and ints are converted to bools by checking if they are 0. None values are converted to False.
- 
+
     Args:
         s (Any): Element to convert into a bool.
 
@@ -234,7 +234,7 @@ def get_performance_metric(
     Returns:
         float: Performance metric.
     """
-    
+
     # Assumes new logging format
     version = config.version
 

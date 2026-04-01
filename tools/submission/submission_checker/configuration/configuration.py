@@ -25,7 +25,7 @@ class Config:
 
         Args:
             version (str): Version Number
-            extra_model_benchmark_map (_type_): Extra model benchmark map. 
+            extra_model_benchmark_map (_type_): Extra model benchmark map.
             ignore_uncommited (bool, optional): Whether to ignore uncommitted changes in loadgen. Defaults to False.
             skip_compliance (bool, optional): Whether to skip compliance checks. Defaults to False.
             skip_power_check (bool, optional): Whether to skip power checks. Defaults to False.
@@ -200,7 +200,7 @@ class Config:
 
         Returns:
             float: Accuracy upper limit for the given model.
-        """        
+        """
         return self.accuracy_upper_limit.get(model, None)
 
     def get_accuracy_values(self, model):
@@ -263,7 +263,7 @@ class Config:
 
         Returns:
             int: Accuracy sample count for a given model.
-        """        
+        """
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)

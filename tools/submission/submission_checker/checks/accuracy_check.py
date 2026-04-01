@@ -6,6 +6,7 @@ from ..utils import check_extra_files
 import re
 import os
 
+
 class AccuracyCheck(BaseCheck):
     """Checks accuracy-related submission artifacts and reports issues.
 

@@ -14,7 +14,6 @@
 # https://github.com/allenai/bi-att-flow/blob/master/squad/evaluate-v1.1.py
 
 """ Official evaluation script for v1.1 of the SQuAD dataset. """
-from __future__ import print_function
 from collections import Counter
 import string
 import re

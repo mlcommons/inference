@@ -457,7 +457,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                ) not in list_inferred:
+                    ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,

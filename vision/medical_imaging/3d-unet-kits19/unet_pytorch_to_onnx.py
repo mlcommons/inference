@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from global_vars import *
+from global_vars import ROI_SHAPE
 from pathlib import Path
 import torch
 import argparse

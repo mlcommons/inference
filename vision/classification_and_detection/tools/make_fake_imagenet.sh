@@ -3,7 +3,7 @@
 opt=-q
 
 mkdir -p fake_imagenet/val
-cd fake_imagenet/val
+cd fake_imagenet/val || exit
 wget $opt https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/7weeks_old.JPG/800px-7weeks_old.JPG
 wget $opt https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Welsh_Springer_Spaniel.jpg/800px-Welsh_Springer_Spaniel.jpg
 wget $opt https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Jammlich_crop.jpg/800px-Jammlich_crop.jpg
@@ -14,7 +14,7 @@ wget $opt https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/20180630_Tes
 wget $opt https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Porsche_991_silver_IAA.jpg/800px-Porsche_991_silver_IAA.jpg
 cd ..
 
-cat > val_map.txt <<EOF
+cat >val_map.txt <<EOF
 val/800px-Porsche_991_silver_IAA.jpg 817
 val/512px-Cacatua_moluccensis_-Cincinnati_Zoo-8a.jpg 89
 val/800px-Sardinian_Warbler.jpg 13
@@ -24,4 +24,3 @@ val/800px-Welsh_Springer_Spaniel.jpg 156
 val/800px-Jammlich_crop.jpg 233
 val/782px-Pumiforme.JPG 285
 EOF
-

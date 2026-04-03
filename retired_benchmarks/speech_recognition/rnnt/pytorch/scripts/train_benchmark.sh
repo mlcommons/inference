@@ -14,7 +14,7 @@
 
 #!/bin/bash
 
-echo "Container nvidia build = " $NVIDIA_BUILD_ID
+echo "Container nvidia build = " "$NVIDIA_BUILD_ID"
 
 DATA_DIR=${1:-"/datasets/LibriSpeech"}
 MODEL_CONFIG=${2:-"configs/jasper10x5dr_sp_offline_specaugment.toml"}
@@ -31,34 +31,32 @@ LEARNING_RATE=${12:-"0.015"}
 GRADIENT_ACCUMULATION_STEPS=${13:-1}
 PRINT_FREQUENCY=${14:-1}
 
-
 PREC=""
-if [ "$PRECISION" = "fp16" ] ; then
-   PREC=" --fp16"
-elif [ "$PRECISION" = "fp32" ] ; then
-   PREC=""
+if [ "$PRECISION" = "fp16" ]; then
+	PREC=" --fp16"
+elif [ "$PRECISION" = "fp32" ]; then
+	PREC=""
 else
-   echo "Unknown <precision> argument"
-   exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 
 STEPS=""
-if [ "$NUM_STEPS" -ne "-1" ] ; then
-   STEPS=" --num_steps=$NUM_STEPS"
-elif [ "$NUM_STEPS" = "-1" ] ; then
-   STEPS=""
+if [ "$NUM_STEPS" -ne "-1" ]; then
+	STEPS=" --num_steps=$NUM_STEPS"
+elif [ "$NUM_STEPS" = "-1" ]; then
+	STEPS=""
 else
-   echo "Unknown <precision> argument"
-   exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 
 CUDNN=""
-if [ "$CUDNN_BENCHMARK" = "true" ] ; then
-   CUDNN=" --cudnn"
+if [ "$CUDNN_BENCHMARK" = "true" ]; then
+	CUDNN=" --cudnn"
 else
-   CUDNN=""
+	CUDNN=""
 fi
-
 
 CMD=" train.py"
 CMD+=" --batch_size=$BATCH_SIZE"
@@ -83,48 +81,47 @@ CMD+=" $CUDNN"
 CMD+=" $PREC"
 CMD+=" $STEPS"
 
-if [ "$NUM_GPUS" -gt 1  ] ; then
-   CMD="python3 -m torch.distributed.launch --nproc_per_node=$NUM_GPUS $CMD"
+if [ "$NUM_GPUS" -gt 1 ]; then
+	CMD="python3 -m torch.distributed.launch --nproc_per_node=$NUM_GPUS $CMD"
 else
-   CMD="python3  $CMD"
+	CMD="python3  $CMD"
 fi
 
-
-if [ "$CREATE_LOGFILE" = "true" ] ; then
-  export GBS=$(expr $BATCH_SIZE \* $NUM_GPUS)
-  printf -v TAG "jasper_train_benchmark_%s_gbs%d" "$PRECISION" $GBS
-  DATESTAMP=`date +'%y%m%d%H%M%S'`
-  LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
-  printf "Logs written to %s\n" "$LOGFILE"
+if [ "$CREATE_LOGFILE" = "true" ]; then
+	export GBS=$(expr "$BATCH_SIZE" \* "$NUM_GPUS")
+	printf -v TAG "jasper_train_benchmark_%s_gbs%d" "$PRECISION" "$GBS"
+	DATESTAMP=$(date +'%y%m%d%H%M%S')
+	LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
+	printf "Logs written to %s\n" "$LOGFILE"
 
 fi
 
-if [ -z "$LOGFILE" ] ; then
+if [ -z "$LOGFILE" ]; then
 
-   set -x
-   $CMD
-   set +x
+	set -x
+	$CMD
+	set +x
 else
 
-   set -x
-   (
-     $CMD
-   ) |& tee "$LOGFILE"
+	set -x
+	(
+		$CMD
+	) |& tee "$LOGFILE"
 
-   set +x
+	set +x
 
-   mean_latency=`cat "$LOGFILE" | grep 'Step time' | awk '{print $3}'  | tail -n +2 | egrep -o '[0-9.]+'| awk 'BEGIN {total=0} {total+=$1} END {printf("%.2f\n",total/NR)}'`
-   mean_throughput=`python -c "print($BATCH_SIZE*$NUM_GPUS/${mean_latency})"`
-   training_wer_per_pgu=`cat "$LOGFILE" | grep 'training_batch_WER'| awk '{print $2}'  | tail -n 1 | egrep -o '[0-9.]+'`
-   training_loss_per_pgu=`cat "$LOGFILE" | grep 'Loss@Step'| awk '{print $4}'  | tail -n 1 | egrep -o '[0-9.]+'`
-   final_eval_wer=`cat "$LOGFILE" | grep 'Evaluation WER'| tail -n 1 | egrep -o '[0-9.]+'`
-   final_eval_loss=`cat "$LOGFILE" | grep 'Evaluation Loss'| tail -n 1 | egrep -o '[0-9.]+'`
+	mean_latency=$(cat "$LOGFILE" | grep 'Step time' | awk '{print $3}' | tail -n +2 | egrep -o '[0-9.]+' | awk 'BEGIN {total=0} {total+=$1} END {printf("%.2f\n",total/NR)}')
+	mean_throughput=$(python -c "print($BATCH_SIZE*$NUM_GPUS/${mean_latency})")
+	training_wer_per_pgu=$(cat "$LOGFILE" | grep 'training_batch_WER' | awk '{print $2}' | tail -n 1 | egrep -o '[0-9.]+')
+	training_loss_per_pgu=$(cat "$LOGFILE" | grep 'Loss@Step' | awk '{print $4}' | tail -n 1 | egrep -o '[0-9.]+')
+	final_eval_wer=$(cat "$LOGFILE" | grep 'Evaluation WER' | tail -n 1 | egrep -o '[0-9.]+')
+	final_eval_loss=$(cat "$LOGFILE" | grep 'Evaluation Loss' | tail -n 1 | egrep -o '[0-9.]+')
 
-   echo "max duration: $MAX_DURATION s" | tee -a "$LOGFILE"
-   echo "mean_latency: $mean_latency s" | tee -a "$LOGFILE"
-   echo "mean_throughput: $mean_throughput sequences/s" | tee -a "$LOGFILE"
-   echo "training_wer_per_pgu: $training_wer_per_pgu" | tee -a "$LOGFILE"
-   echo "training_loss_per_pgu: $training_loss_per_pgu" | tee -a "$LOGFILE"
-   echo "final_eval_loss: $final_eval_loss" | tee -a "$LOGFILE"
-   echo "final_eval_wer: $final_eval_wer" | tee -a "$LOGFILE"
+	echo "max duration: $MAX_DURATION s" | tee -a "$LOGFILE"
+	echo "mean_latency: $mean_latency s" | tee -a "$LOGFILE"
+	echo "mean_throughput: $mean_throughput sequences/s" | tee -a "$LOGFILE"
+	echo "training_wer_per_pgu: $training_wer_per_pgu" | tee -a "$LOGFILE"
+	echo "training_loss_per_pgu: $training_loss_per_pgu" | tee -a "$LOGFILE"
+	echo "final_eval_loss: $final_eval_loss" | tee -a "$LOGFILE"
+	echo "final_eval_wer: $final_eval_wer" | tee -a "$LOGFILE"
 fi

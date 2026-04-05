@@ -96,7 +96,7 @@ def main():
     assert Path(model_path).is_file(), "Cannot find the model file {:}!".format(
         model_path
     )
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = torch.jit.load(model_path, map_location=device)
     model.eval()

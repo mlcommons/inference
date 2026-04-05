@@ -175,7 +175,7 @@ python3 -u main.py --scenario Offline \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline-logs \
         --dtype float32 \
-        --device cuda:0 2>&1 | tee offline_performance_log.log
+        --device cuda 2>&1 | tee offline_performance_log.log
 ```
 
 ### Server

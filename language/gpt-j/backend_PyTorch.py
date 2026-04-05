@@ -81,7 +81,7 @@ class SUT_base:
         if self.use_gpu:
             print(f"Casting models to GPU...")
             assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
-            self.device = torch.device("cuda:0")
+            self.device = torch.device("cuda")
             self.model.to(self.device)
 
         self.model.eval()

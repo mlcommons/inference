@@ -167,10 +167,10 @@ def resize_with_aspectratio(
     new_width = int(100.0 * out_width / scale)
     if height > width:
         w = new_width
-        h = int(new_height * height / width)
+        h = int (height * (new_width / width))
     else:
         h = new_height
-        w = int(new_width * width / height)
+        w = int(width * (new_height/ height))
     img = cv2.resize(img, (w, h), interpolation=inter_pol)
     return img
 

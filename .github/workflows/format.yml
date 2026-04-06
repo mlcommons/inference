@@ -10,17 +10,26 @@ env:
 
 jobs:
   format-code:
+    if: github.actor != 'mlc-automations'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.MLC_AUTOMATIONS_APP_ID }}
+          private-key: ${{ secrets.MLC_AUTOMATIONS_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Set up Python ${{ env.python_version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.python_version }}
 
@@ -32,8 +41,8 @@ jobs:
           for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
           do
             # Check if the file still exists in the working tree
-            if [ -f "$FILE" ] && [ "$FILE" != "tools/submission/power/power_checker.py" ]; then
-              autopep8 --in-place -a --max-line-length 79 "$FILE"
+            if [ -f "$FILE" ]; then
+              autopep8 --in-place -a "$FILE"
               git add "$FILE"
             fi
           done
@@ -55,10 +64,10 @@ jobs:
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git config --global user.name github-actions[bot]
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            # Use the GitHub actor's name and email
+            git config --global user.name mlc-automations
+            git config --global user.email "3246381+mlc-automations@users.noreply.github.com"
             # Commit changes
             git commit -m '[Automated Commit] Format Codebase'
-            # Use the GITHUB_TOKEN to push changes
-            git push
+            git push 
           fi

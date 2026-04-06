@@ -1,0 +1,33 @@
+name: Close old issues and PRs older than 2 years
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+ 
+permissions:
+  issues: write
+  pull-requests: write
+ 
+jobs:
+  close-old:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          start-date: created_at<=-730 days
+          days-before-issue-stale: -1
+          days-before-issue-close: 0
+          close-issue-message: |
+            🔒 This issue has been **automatically closed** because it has been open for more than 2 years with no activity.
+            If this is still relevant, you may **reopen it or create a new one**.
+          close-issue-reason: not_planned
+ 
+          days-before-pr-stale: -1
+          days-before-pr-close: 0
+          close-pr-message: |
+            🔒 This pull request has been **automatically closed** because it has been open for more than 2 years with no activity.
+            If you still want to proceed, you may **reopen this PR or open a new one**.
+ 
+          exempt-issue-labels: pinned,security,long-term
+          exempt-pr-labels: pinned,security,wip
+ 

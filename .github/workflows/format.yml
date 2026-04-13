@@ -51,6 +51,24 @@ jobs:
             fi
           done
 
+
+      - name: Format modified shell scripts
+        env:
+          filter: ${{ github.event.before }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt
+          for FILE in $(git diff --name-only $filter | grep -E '.*\.(sh)$')
+          do
+            # Check if the file still exists in the working tree
+            if [ -f "$FILE" ]; then
+              shellcheck --format=diff "$FILE" | patch -p1 "$FILE" 
+              shfmt -w "$FILE"
+              git add $FILE
+            fi
+          done
+
+
       - name: Commit and push changes
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)

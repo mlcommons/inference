@@ -37,10 +37,17 @@ class SUT:
         # Set this to True *only for test accuracy runs* in case your prior
         # session was killed partway through
         workers=1,
-        tensor_parallel_size=8
+        tensor_parallel_size=8,
+        gpu_memory_utilization=0.90,
+        max_num_batched_tokens=None,
+        max_num_seqs=256,
+        block_size=16,
+        enforce_eager=False,
+        enable_chunked_prefill=None,
+        max_model_len=None,
     ):
 
-        self.model_path = model_path or f"meta-llama/Meta-Llama-3.1-8B-Instruct"
+        self.model_path = model_path or "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
         if not batch_size:
             batch_size = 1
@@ -48,6 +55,15 @@ class SUT:
 
         self.dtype = dtype
         self.tensor_parallel_size = tensor_parallel_size
+
+        # Store vLLM engine config
+        self.gpu_memory_utilization = gpu_memory_utilization
+        self.max_num_batched_tokens = max_num_batched_tokens
+        self.max_num_seqs = max_num_seqs
+        self.block_size = block_size
+        self.enforce_eager = enforce_eager
+        self.enable_chunked_prefill = enable_chunked_prefill
+        self.max_model_len = max_model_len
 
         if not torch.cuda.is_available():
             assert False, "torch gpu is not available, exiting..."
@@ -73,7 +89,7 @@ class SUT:
             "top_k": 1,
             "seed": 42,
             "max_tokens": 128,
-            "min_tokens": 1
+            "min_tokens": 1,
         }
         self.sampling_params = SamplingParams(**gen_kwargs)
         # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
@@ -162,6 +178,12 @@ class SUT:
             self.model_path,
             dtype=self.dtype,
             tensor_parallel_size=self.tensor_parallel_size,
+            gpu_memory_utilization=self.gpu_memory_utilization,
+            max_num_batched_tokens=self.max_num_batched_tokens,
+            max_num_seqs=self.max_num_seqs,
+            block_size=self.block_size,
+            enforce_eager=self.enforce_eager,
+            enable_chunked_prefill=self.enable_chunked_prefill,
         )
         log.info("Loaded model")
 
@@ -203,7 +225,14 @@ class SUTServer(SUT):
         dataset_path=None,
         batch_size=None,
         workers=1,
-        tensor_parallel_size=8
+        tensor_parallel_size=8,
+        gpu_memory_utilization=0.90,
+        max_num_batched_tokens=None,
+        max_num_seqs=256,
+        block_size=16,
+        enforce_eager=False,
+        enable_chunked_prefill=None,
+        max_model_len=None,
     ):
 
         super().__init__(
@@ -213,6 +242,13 @@ class SUTServer(SUT):
             dataset_path=dataset_path,
             workers=workers,
             tensor_parallel_size=tensor_parallel_size,
+            gpu_memory_utilization=gpu_memory_utilization,
+            max_num_batched_tokens=max_num_batched_tokens,
+            max_num_seqs=max_num_seqs,
+            block_size=block_size,
+            enforce_eager=enforce_eager,
+            enable_chunked_prefill=enable_chunked_prefill,
+            max_model_len=max_model_len,
         )
         self.request_id = 0
 
@@ -287,10 +323,18 @@ class SUTServer(SUT):
         self.ft_response_thread.join()
 
     def load_model(self):
-        log.info("Loading model")
+        log.info("Loading model...")
         self.engine_args = AsyncEngineArgs(
             self.model_path,
             dtype=self.dtype,
-            tensor_parallel_size=self.tensor_parallel_size)
+            tensor_parallel_size=self.tensor_parallel_size,
+            gpu_memory_utilization=self.gpu_memory_utilization,
+            max_num_batched_tokens=self.max_num_batched_tokens,
+            max_num_seqs=self.max_num_seqs,
+            max_model_len=self.max_model_len,
+            block_size=self.block_size,
+            enforce_eager=self.enforce_eager,
+            enable_chunked_prefill=self.enable_chunked_prefill,
+        )
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
         log.info("Loaded model")

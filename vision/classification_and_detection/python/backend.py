@@ -16,7 +16,7 @@ class Backend:
     def name(self):
         raise NotImplementedError("Backend:name")
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, threads=None):
         raise NotImplementedError("Backend:load")
 
     def predict(self, feed):

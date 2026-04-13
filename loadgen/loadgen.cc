@@ -678,7 +678,7 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   // of samples_per_query, while enabling samples in a query to be contiguous.
   for (auto& loadable_set : result) {
     auto& set = loadable_set.set;
-    for (size_t i = 0; i < set_padding; i++) {
+    for (size_t i = 0; i < std::min(set_padding , set.size() ); i++) {
       // It's not clear in the spec if the STL deallocates the old container
       // before assigning, which would invalidate the source before the
       // assignment happens. Even though we should have reserved enough

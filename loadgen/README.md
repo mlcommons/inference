@@ -74,6 +74,7 @@ for custom testing and continuous integration purposes.
 * As a rule, no local modifications to the LoadGen's C++ library are allowed
 for submission.
 * Please upstream early and often to keep the playing field level.
+* The mlperf.conf file should not be changed
 
 ### Choose your TestSettings carefully!
 * Since the LoadGen is oblivious to the model, it can't enforce the MLPerf
@@ -99,6 +100,53 @@ with the reference models.
 
 For templates of how to do the above in detail, refer to code for the demos,
 tests, and reference models.
+
+## LoadGen Configuration Arguments
+Configuration arguments are passed through the mlperf.conf and user.conf files.
+In general, there are fixed configuration arguments that are passed exclusively 
+through the mlperf.conf file and user modifiable parameters that can be also 
+passed through the user.conf file. However, they might be additional rules 
+restricting which parameters can be modified and how they can be modified for 
+a submission.
+
+**fixed (mlperf.conf):**
+* qsl_rng_seed: Random seed for QSL
+* sample_index_rng_seed: Random seed for sample index
+* schedule_rng_seed: Random seed for query scheduling in the server scenario
+
+**modifiable (user.conf):**
+* performance_issue_unique: Set LoadGen to use each sample exactly once in 
+performance mode. This is always used in accuracy mode.
+* performance_issue_same: Set LoadGen to use only one sample in performance
+mode.
+* performance_issue_same_index: Choose index of sample when performance_issue_same
+is set to true.
+* sample_concatenate_permutation: Set LoadGen to use each sample aproximately
+the same number of times. This is achieved by generating several permutations
+of the dataset, concatenating them and using the result as the sample set for
+the performance run.
+* min_duration: Min duration of the run. This value is used to estimate a lower
+bound of the number of queries.
+* max_duration: Max duration of the run. If this duration is reached, the run
+terminates inmediately.
+* min_query_count: Minimun number of queries of the run.
+* max_query_count: Minimun number of queries of the run. If this number of queries
+ is reached, the run terminates inmediately.
+* performance_sample_count_override: Override the number of samples to use in a
+performance run. Defaults to QSL size.
+* target_qps: Expected queries per second of the system. This value is used to 
+estimate a lower bound of the number of queries.
+
+
+#### Server & Interactive
+* target_latency: Latency constrain
+* target_latency_percentile: Percentage of queries that need to be under the
+latency constrain
+
+#### Token based arguments
+* use_token_latencies: Set loadgen to do a token based run
+* ttft_latency: Time to first token latency constrain
+* tpot_latency: Time per output token latency constrain
 
 
 ## LoadGen over the Network

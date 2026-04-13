@@ -32,10 +32,12 @@ log = logging.getLogger("main")
 
 
 class LineWithoutTimeStamp(Exception):
+    """ Exception raised when there exists a line without a timestamp in the log file. """
     pass
 
 
 class CheckerWarning(Exception):
+    """ Exception raised internally when a Checker reports something wrong. """
     pass
 
 

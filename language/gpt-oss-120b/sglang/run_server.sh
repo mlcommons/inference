@@ -9,28 +9,28 @@ stream_interval=500
 extra_args=""
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        --dp)
-            dp=$2
-            shift 2
-            ;;
-        --model_path)
-            model_path=$2
-            shift 2
-            ;;
-        --eagle_path)
-            eagle_path=$2
-            shift 2
-            ;;
-        --stream_interval)
-            stream_interval=$2
-            shift 2
-            ;;
-        *)
-            extra_args="$extra_args $1"
-            shift 1
-            ;;
-    esac
+	case $1 in
+	--dp)
+		dp=$2
+		shift 2
+		;;
+	--model_path)
+		model_path=$2
+		shift 2
+		;;
+	--eagle_path)
+		eagle_path=$2
+		shift 2
+		;;
+	--stream_interval)
+		stream_interval=$2
+		shift 2
+		;;
+	*)
+		extra_args="$extra_args $1"
+		shift 1
+		;;
+	esac
 done
 
 args=" --model-path $model_path \
@@ -44,7 +44,7 @@ args=" --model-path $model_path \
     --stream-interval $stream_interval "
 
 if [ -n "$eagle_path" ]; then
-    args="$args --speculative-draft-model-path $eagle_path \
+	args="$args --speculative-draft-model-path $eagle_path \
         --speculative-algorithm EAGLE3"
 fi
 
@@ -52,6 +52,5 @@ fi
 # --speculative-eagle-topk 1 \
 # --speculative-num-draft-tokens 3 \
 
-
-set -x;
-python3 -m sglang.launch_server $args $extra_args
+set -x
+python3 -m sglang.launch_server "$args" "$extra_args"

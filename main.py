@@ -155,8 +155,7 @@ def define_env(env):
         for category in categories:
             if category == "Edge":
                 scenarios = ["Offline", "SingleStream"]
-                if model.lower() in [
-                        "resnet50", "retinanet", "yolo-95", "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
+                if model.lower() in ["resnet50", "retinanet", "yolo-95", "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")

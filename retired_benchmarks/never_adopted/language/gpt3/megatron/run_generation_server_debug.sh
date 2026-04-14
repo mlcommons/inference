@@ -12,15 +12,15 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 pip install flask-restful
 
-torchrun $DISTRIBUTED_ARGS text_generation_server.py   \
-       --tensor-model-parallel-size 1  \
-       --pipeline-model-parallel-size 1  \
-       --num-layers 24  \
-       --hidden-size 1024  \
-       --num-attention-heads 16  \
-       --max-position-embeddings 4096  \
-       --tokenizer-type SentencePieceTokenizer  \
-       --micro-batch-size 1  \
-       --seq-length 1024  \
-       --tokenizer-model $TOKENIZER_MODEL_FILE \
-       --seed 42 
+torchrun "$DISTRIBUTED_ARGS" text_generation_server.py \
+	--tensor-model-parallel-size 1 \
+	--pipeline-model-parallel-size 1 \
+	--num-layers 24 \
+	--hidden-size 1024 \
+	--num-attention-heads 16 \
+	--max-position-embeddings 4096 \
+	--tokenizer-type SentencePieceTokenizer \
+	--micro-batch-size 1 \
+	--seq-length 1024 \
+	--tokenizer-model "$TOKENIZER_MODEL_FILE" \
+	--seed 42

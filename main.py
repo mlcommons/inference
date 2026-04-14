@@ -70,7 +70,8 @@ def define_env(env):
                     frameworks = ["Pytorch"]
 
         elif implementation == "nvidia":
-            if model in ["retinanet", "resnet50", "3d-unet-99", "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
+            if model in ["retinanet", "resnet50", "3d-unet-99",
+                         "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
                 code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"
@@ -155,7 +156,8 @@ def define_env(env):
         for category in categories:
             if category == "Edge":
                 scenarios = ["Offline", "SingleStream"]
-                if model.lower() in ["resnet50", "retinanet", "yolo-95", "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
+                if model.lower() in ["resnet50", "retinanet", "yolo-95",
+                                     "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")

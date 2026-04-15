@@ -29,7 +29,7 @@ import numpy as np
 from scipy.ndimage.interpolation import zoom
 from pathlib import Path
 
-from global_vars import *
+from global_vars import CALIB_CASES, TARGET_CASES, MEAN_VAL, STDDEV_VAL, MIN_CLIP_VAL, MAX_CLIP_VAL, PADDING_VAL, TARGET_SPACING, ROI_SHAPE, SLIDE_OVERLAP_FACTOR, ROI_SHAPE, CHECKSUM_CALIB_FILE, CHECKSUM_INFER_FILE
 
 
 __doc__ = """

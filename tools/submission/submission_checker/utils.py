@@ -57,8 +57,13 @@ def check_extra_files(path, target_files):
             for target_file in target_files[dir]:
                 if target_file not in files:
                     check_pass = False
-                    missing_files.append(
-                        f"{os.path.join(path, dir, target_file)}.png")
+                    if "images" in dir:
+                        missing_files.append(
+                            f"{os.path.join(path, dir, target_file)}.png")
+                    if "videos" in dir:
+                        missing_files.append(
+                            f"{os.path.join(path, dir, target_file)}.mp4")
+
             if "captions" not in files:
                 missing_files.append(
                     f"{os.path.join(path, dir, 'captions.txt')}")
@@ -323,7 +328,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

@@ -24,11 +24,8 @@ import os
 import re
 import traceback
 import uuid
-import logging
+from loguru import logger as log
 
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("main")
 
 
 class LineWithoutTimeStamp(Exception):

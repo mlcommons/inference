@@ -5,15 +5,11 @@ Tool to truncate the mlperf_log_accuracy.json
 
 import argparse
 import hashlib
-import logging
+from loguru import logger as log
 import os
 import re
 import sys
 import shutil
-
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("main")
 
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 VIEWABLE_SIZE = 4096
@@ -144,7 +140,7 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
 
                 log_path = os.path.join(division, submitter, directory)
                 if not os.path.exists(log_path):
-                    log.error("no submission in %s", log_path)
+                    log.error("no submission in {log_path}", log_path=log_path)
                     continue
 
                 for system_desc in list_dir(log_path):
@@ -182,7 +178,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 acc_txt = os.path.join(
                                     acc_path, "accuracy.txt")
                                 if not os.path.exists(acc_log):
-                                    log.error("%s missing", acc_log)
+                                    log.error(
+                                        "{acc_log} missing", acc_log=acc_log)
                                     continue
 
                                 # TEST07 and TEST09 don't have accuracy.txt,
@@ -198,13 +195,13 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                     # compliance test directory will not have
                                     # an accuracy.txt file by default
                                     log.info(
-                                        "no accuracy.txt in compliance directory %s",
-                                        acc_path,
+                                        "no accuracy.txt in compliance directory {acc_path}",
+                                        acc_path=acc_path,
                                     )
                                 else:
                                     if not os.path.exists(acc_txt):
                                         log.error(
-                                            "%s missing, generate to continue", acc_txt
+                                            "{acc_txt} missing, generate to continue", acc_txt=acc_txt
                                         )
                                         continue
                                     with open(acc_txt, "r", encoding="utf-8") as f:
@@ -217,8 +214,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 size = os.stat(acc_log).st_size
                                 if hash_val and size < MAX_ACCURACY_LOG_SIZE:
                                     log.info(
-                                        "%s already has hash and size seems truncated",
-                                        acc_path,
+                                        "{acc_path} already has hash and size seems truncated",
+                                        acc_path=acc_path,
                                     )
                                     continue
 
@@ -234,9 +231,9 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                     )
                                     if os.path.exists(dst):
                                         log.error(
-                                            "not processing %s because %s already exist",
-                                            acc_log,
-                                            dst,
+                                            "not processing {acc_log} because {dst} already exist",
+                                            acc_log=acc_log,
+                                            dst=dst,
                                         )
                                         continue
                                     shutil.copy(acc_log, dst)
@@ -253,7 +250,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                         f.write(
                                             "\nhash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
-                                log.info("%s truncated", acc_log)
+                                log.info(
+                                    "{acc_log} truncated", acc_log=acc_log)
 
 
 def main():
@@ -281,8 +279,8 @@ def main():
 
     backup_location = args.output or args.backup
     log.info(
-        "Make sure you keep a backup of %s in case mlperf wants to see the original accuracy logs",
-        backup_location,
+        "Make sure you keep a backup of {backup_location} in case mlperf wants to see the original accuracy logs",
+        backup_location=backup_location,
     )
 
     return 0

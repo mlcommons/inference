@@ -1,4 +1,4 @@
-# Automatic code formatting
+# Automatic code formatting.
 name: "Code formatting"
 on:
   push:

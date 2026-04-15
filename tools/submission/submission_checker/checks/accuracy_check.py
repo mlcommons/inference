@@ -159,7 +159,9 @@ class AccuracyCheck(BaseCheck):
         if acc_upper_limit is not None:
             is_valid &= acc_limit_check
         if not hash_val:
-            self.log.error("{path} not hash value for accuracy.txt", path=self.path)
+            self.log.error(
+                "{path} not hash value for accuracy.txt",
+                path=self.path)
             is_valid = False
         self.submission_logs.loader_data["accuracy_metrics"] = result_acc
         if self.division.lower() == "open":
@@ -174,11 +176,15 @@ class AccuracyCheck(BaseCheck):
                 exceed `MAX_ACCURACY_LOG_SIZE`, False otherwise.
         """
         if not os.path.exists(self.accuracy_json):
-            self.log.error("{accuracy_json} is missing", accuracy_json=self.accuracy_json)
+            self.log.error(
+                "{accuracy_json} is missing",
+                accuracy_json=self.accuracy_json)
             return False
         else:
             if os.stat(self.accuracy_json).st_size > MAX_ACCURACY_LOG_SIZE:
-                self.log.error("{accuracy_json} is not truncated", accuracy_json=self.accuracy_json)
+                self.log.error(
+                    "{accuracy_json} is not truncated",
+                    accuracy_json=self.accuracy_json)
                 return False
         return True
 

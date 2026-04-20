@@ -141,7 +141,7 @@ SUPPORTED_PROFILES = {
         "inputs": "image",
         "outputs": "ArgMax:0",
         "dataset": "imagenet_pytorch",
-        "backend": "tensorflow",
+        "backend": "pytorch-torchscript",
         "model-name": "resnet50",
     },
     "resnet50-onnxruntime": {
@@ -408,6 +408,10 @@ def get_backend(backend):
         from backend_pytorch_native import BackendPytorchNative
 
         backend = BackendPytorchNative()
+    elif backend == "pytorch-torchscript":
+        from backend_pytorch_torchscript import BackendPytorchTorchScript
+
+        backend = BackendPytorchTorchScript()
     elif backend == "tflite":
         from backend_tflite import BackendTflite
 

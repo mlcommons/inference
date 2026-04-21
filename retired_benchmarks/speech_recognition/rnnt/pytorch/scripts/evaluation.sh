@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 #!/bin/bash
-echo "Container nvidia build = " $NVIDIA_BUILD_ID
+echo "Container nvidia build = " "$NVIDIA_BUILD_ID"
 
 DATA_DIR=${1:-"/datasets/LibriSpeech"}
 DATASET=${2:-"dev-clean"}
@@ -29,38 +28,34 @@ NUM_STEPS=${10:-"-1"}
 SEED=${11:-0}
 BATCH_SIZE=${12:-64}
 
-
-if [ "$CREATE_LOGFILE" = "true" ] ; then
-    export GBS=$(expr $BATCH_SIZE \* $NUM_GPUS)
-    printf -v TAG "jasper_evaluation_${DATASET}_%s_gbs%d" "$PRECISION" $GBS
-    DATESTAMP=`date +'%y%m%d%H%M%S'`
-    LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
-    printf "Logs written to %s\n" "$LOGFILE"
+if [ "$CREATE_LOGFILE" = "true" ]; then
+	export GBS=$(expr "$BATCH_SIZE" \* "$NUM_GPUS")
+	printf -v TAG "jasper_evaluation_${DATASET}_%s_gbs%d" "$PRECISION" "$GBS"
+	DATESTAMP=$(date +'%y%m%d%H%M%S')
+	LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
+	printf "Logs written to %s\n" "$LOGFILE"
 fi
 
-
-
 PREC=""
-if [ "$PRECISION" = "fp16" ] ; then
-    PREC="--fp16"
-elif [ "$PRECISION" = "fp32" ] ; then
-    PREC=""
+if [ "$PRECISION" = "fp16" ]; then
+	PREC="--fp16"
+elif [ "$PRECISION" = "fp32" ]; then
+	PREC=""
 else
-    echo "Unknown <precision> argument"
-    exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 
 STEPS=""
-if [ "$NUM_STEPS" -gt 0 ] ; then
-    STEPS=" --steps $NUM_STEPS"
+if [ "$NUM_STEPS" -gt 0 ]; then
+	STEPS=" --steps $NUM_STEPS"
 fi
 
-if [ "$CUDNN_BENCHMARK" = "true" ] ; then
-    CUDNN_BENCHMARK=" --cudnn_benchmark"
+if [ "$CUDNN_BENCHMARK" = "true" ]; then
+	CUDNN_BENCHMARK=" --cudnn_benchmark"
 else
-    CUDNN_BENCHMARK=""
+	CUDNN_BENCHMARK=""
 fi
-
 
 CMD=" inference.py "
 CMD+=" --batch_size $BATCH_SIZE "
@@ -73,20 +68,18 @@ CMD+=" $CUDNN_BENCHMARK"
 CMD+=" $PREC "
 CMD+=" $STEPS "
 
-
-if [ "$NUM_GPUS" -gt 1  ] ; then
-    CMD="python3 -m torch.distributed.launch --nproc_per_node=$NUM_GPUS $CMD"
+if [ "$NUM_GPUS" -gt 1 ]; then
+	CMD="python3 -m torch.distributed.launch --nproc_per_node=$NUM_GPUS $CMD"
 else
-    CMD="python3  $CMD"
+	CMD="python3  $CMD"
 fi
 
-
 set -x
-if [ -z "$LOGFILE" ] ; then
-   $CMD
+if [ -z "$LOGFILE" ]; then
+	$CMD
 else
-   (
-     $CMD
-   ) |& tee "$LOGFILE"
+	(
+		$CMD
+	) |& tee "$LOGFILE"
 fi
 set +x

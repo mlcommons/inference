@@ -1,0 +1,127 @@
+{
+  "settings": {
+    "skip": {
+      "patterns": {},
+      "sizes": {}
+    },
+    "file_snippet": {
+      "min_snippet_lines": 15,
+      "ranking_enabled": true,
+      "ranking_threshold": 5
+    }
+  },
+  "bom": {
+    "exclude": [
+     {
+        "purl": "pkg:github/mlcommons/inference"
+      },
+      {
+        "purl": "pkg:github/mengjou/aipcperf-assets"
+      },
+      {
+        "purl": "pkg:github/georgelyuan/inference"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v1.1"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v0.5"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v0.7"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v1.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v2.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v2.1"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v4.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v4.1"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v5.1"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v6.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/mlperf_automotive"
+      },
+      {
+        "purl": "pkg:github/mlcommons/power-dev"
+      },
+      {
+        "purl": "pkg:github/mlcommons/training"
+      },
+      {
+        "purl": "pkg:github/mlcommons/training_results_v0.7"
+      },
+      {
+        "purl": "pkg:pypi/mlcommons-loadgen"
+      },
+      {
+        "purl": "pkg:github/ctuning/mlperf-loadgen"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v3.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v5.0"
+      },
+      {
+        "purl": "pkg:github/mlcommons/inference_results_v3.1"
+      },
+      {
+        "purl": "pkg:github/mlperf/inference_results_v0.5"
+      },
+      {
+        "purl": "pkg:github/mlperf/training_results_v0.6"
+      },
+      {
+        "purl": "pkg:github/mlcommons/training_results_v0.6"
+      },
+      {
+        "purl": "pkg:github/huacnlee/rails-settings-cached"
+      }
+    ],
+    "include": [
+      { "purl": "pkg:github/habanaai/model-references" },
+      { "purl": "pkg:gitee/deep-spark/deepsparkhub" },
+      { "purl": "pkg:pypi/yupnets" },
+      { "purl": "pkg:github/derryhub/bevformer_tensorrt" },
+      { "purl": "pkg:github/open-mmlab/mmdetection3d" },
+      { "purl": "pkg:github/ctuning/ck" },
+      { "purl": "pkg:github/sophgo/model-zoo" },
+      { "purl": "pkg:github/intel/models" },
+      { "purl": "pkg:github/facebookresearch/generative-recommenders" },
+      { "purl": "pkg:github/facebookresearch/fambench" },
+      { "purl": "pkg:github/miguelvictor/code-completion" },
+      { "purl": "pkg:github/t4ngo/sphinxcontrib-traceables" },
+      { "purl": "pkg:github/amd/zendnn-pytorch-plugin" },
+      { "purl": "pkg:github/transcend-0/earn" },
+      { "purl": "pkg:github/tdurieux/docker-parfum-experiment" },
+      { "purl": "pkg:github/mkuchnik/plumberapp" },
+      { "purl": "pkg:github/tensorflow/nmt" },
+      { "purl": "pkg:github/steveash/netransliteration-coling2018" },
+      { "purl": "pkg:gitee/ascend/modelzoo-his" },
+      { "purl": "pkg:github/lspvic/copynet" },
+      { "purl": "pkg:github/cndn/intelligent-code-completion" },
+      { "purl": "pkg:github/markpkcollier/manns4nmt" },
+      { "purl": "pkg:github/keyunluo/tencent2018_lookalike_rank10th" },
+      { "purl": "pkg:github/intel/lpot" },
+      { "purl": "pkg:github/onnx/tensorflow-onnx" },
+      { "purl": "pkg:github/tensorflow/models" },
+      { "purl": "pkg:github/intel/ai-reference-models" },
+      { "purl": "pkg:github/azure/ai-benchmarking-guide" },
+      { "purl": "pkg:github/intel/neural-compressor" },
+      { "purl": "pkg:github/mlcommons/inference" }
+    ]
+  }
+}

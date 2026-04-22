@@ -11,7 +11,7 @@ on:
     branches: ["arav-codecov-impl"]
     paths:
       - "tests/**"
-      - "tools/submission/submission_checker/**"
+      - "*"
       - ".github/workflows/codecov.yml"
 
 jobs:

@@ -1,0 +1,8 @@
+[run]
+source = .
+omit =
+    nev/*
+    tests/*
+    retired_benchmarks/*
+    */site-packages/*
+    */dist-packages/*

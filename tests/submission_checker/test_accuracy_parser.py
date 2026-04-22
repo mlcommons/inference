@@ -22,7 +22,9 @@ class TestAUCMetric:
         assert parse_line("AUC=80.31", "AUC") == pytest.approx(80.31)
 
     def test_auc_with_trailing_text(self):
-        assert parse_line("AUC=80.31 (threshold=0.5)", "AUC") == pytest.approx(80.31)
+        assert parse_line(
+            "AUC=80.31 (threshold=0.5)",
+            "AUC") == pytest.approx(80.31)
 
     def test_no_match_returns_none(self):
         assert parse_line("accuracy = 80.31", "AUC") is None
@@ -50,7 +52,9 @@ class TestACCURACYMetric:
 
 class TestDICEMetric:
     def test_dice_line(self):
-        assert parse_line("Accuracy: mean = 0.86170", "DICE") == pytest.approx(0.86170)
+        assert parse_line(
+            "Accuracy: mean = 0.86170",
+            "DICE") == pytest.approx(0.86170)
 
     def test_no_match_returns_none(self):
         assert parse_line("mean accuracy 0.86", "DICE") is None
@@ -124,10 +128,14 @@ class TestF1Metric:
         assert parse_line('{"f1": 90.874}', "F1") == pytest.approx(90.874)
 
     def test_f1_with_prefix(self):
-        assert parse_line('prefix text {"f1": 90.874}', "F1") == pytest.approx(90.874)
+        assert parse_line(
+            'prefix text {"f1": 90.874}',
+            "F1") == pytest.approx(90.874)
 
     def test_f1_hierarchical(self):
-        assert parse_line('{"f1": 85.0}', "F1_HIERARCHICAL") == pytest.approx(85.0)
+        assert parse_line(
+            '{"f1": 85.0}',
+            "F1_HIERARCHICAL") == pytest.approx(85.0)
 
     def test_no_json_returns_none(self):
         assert parse_line("f1 = 90.874", "F1") is None

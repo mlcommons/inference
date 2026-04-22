@@ -38,7 +38,8 @@ class TestFilesDiff:
         assert diff == set()
 
     def test_custom_optional_ignored(self):
-        diff = files_diff(["a.txt", "custom.json"], ["a.txt"], optional=["custom.json"])
+        diff = files_diff(["a.txt", "custom.json"], [
+                          "a.txt"], optional=["custom.json"])
         assert diff == set()
 
 

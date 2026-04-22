@@ -68,7 +68,9 @@ class TestGetMlperfModel:
         assert cfg.get_mlperf_model("bert-99-large") == "bert-99"
 
     def test_extra_mapping_used(self, cfg):
-        assert cfg.get_mlperf_model("my_resnet", {"my_resnet": "resnet"}) == "resnet"
+        assert cfg.get_mlperf_model(
+            "my_resnet", {
+                "my_resnet": "resnet"}) == "resnet"
 
 
 # ---------------------------------------------------------------------------

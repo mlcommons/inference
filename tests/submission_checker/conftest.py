@@ -41,7 +41,10 @@ def mllog_with_error(tmp_path):
     p = tmp_path / "mlperf_log_detail.txt"
     lines = [
         make_mllog_line("result_validity", "INVALID"),
-        make_mllog_line("loadgen_error", "something went wrong", is_error=True),
+        make_mllog_line(
+            "loadgen_error",
+            "something went wrong",
+            is_error=True),
     ]
     p.write_text("".join(lines))
     return p

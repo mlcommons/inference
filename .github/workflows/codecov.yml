@@ -1,0 +1,43 @@
+name: Tests and Coverage
+
+on:
+  push:
+    branches: ["arav-codecov-impl"]
+    paths:
+      - "tests/**"
+      - "tools/submission/submission_checker/**"
+      - ".github/workflows/codecov.yml"
+  pull_request:
+    branches: ["arav-codecov-impl"]
+    paths:
+      - "tests/**"
+      - "tools/submission/submission_checker/**"
+      - ".github/workflows/codecov.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: >
+          pytest tests/
+          --cov=.
+          --cov-report=xml
+          --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}

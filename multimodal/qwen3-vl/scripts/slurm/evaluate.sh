@@ -13,9 +13,9 @@ set -eux
 set -p pipefail
 
 srun \
-    --container-image="${CONTAINER_IMAGE}" \
-    --container-mounts="${CACHE_HOST_DIR}":"${CACHE_CONTAINER_DIR}","${OUTPUT_HOST_DIR}":"${OUTPUT_CONTAINER_DIR}" \
-    --no-container-mount-home \
-    --container-env=NVIDIA_VISIBLE_DEVICES \
-    mlperf-inf-mm-q3vl evaluate \
-        --filename="${OUTPUT_CONTAINER_DIR}"/"${BENCHMARK_JOB_ID}"/mlperf_log_accuracy.json
+	--container-image="${CONTAINER_IMAGE}" \
+	--container-mounts="${CACHE_HOST_DIR}":"${CACHE_CONTAINER_DIR}","${OUTPUT_HOST_DIR}":"${OUTPUT_CONTAINER_DIR}" \
+	--no-container-mount-home \
+	--container-env=NVIDIA_VISIBLE_DEVICES \
+	mlperf-inf-mm-q3vl evaluate \
+	--filename="${OUTPUT_CONTAINER_DIR}"/"${BENCHMARK_JOB_ID}"/mlperf_log_accuracy.json

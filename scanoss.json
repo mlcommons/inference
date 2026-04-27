@@ -12,9 +12,6 @@
   },
   "bom": {
     "exclude": [
-     {
-        "purl": "pkg:github/mlcommons/inference"
-      },
       {
         "purl": "pkg:github/mengjou/aipcperf-assets"
       },

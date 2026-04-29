@@ -1,0 +1,5 @@
+*.db
+passages/
+data/
+run_container.sh
+.claude/

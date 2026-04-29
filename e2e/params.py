@@ -254,7 +254,7 @@ COMMON_PARAMS = [
         action="store_true",
         category="common",
         applies_to=["both"]
-    )
+    ),
 ]
 
 # ============================================================================
@@ -267,7 +267,7 @@ GENERAL_PARAMS = [
         arg_names=["--device"],
         type=str,
         default="auto",
-        help="Device to use (auto/cpu/hpu/xpu/cuda/cpu)",
+        help="Device to use (auto/cuda/xpu/hpu/cpu)",
         choices=["auto", "xpu", "cuda", "cpu", "hpu"],
         category="general",
         applies_to=["both"]
@@ -276,7 +276,7 @@ GENERAL_PARAMS = [
         name="threads",
         arg_names=["--threads"],
         type=int,
-        default=4,
+        default=None,
         help="Number of threads for BM25 retrieval (default: CPU count)",
         category="general",
         applies_to=["bm25"]
@@ -309,29 +309,11 @@ GENERAL_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
-        name="llm_output_token_limit",
-        arg_names=["--llm-output-token-limit", "--max_tokens"],
+        name="max_tokens",
+        arg_names=["--max_tokens"],
         type=str,
-        default="2048",
-        help="Maximum tokens the LLM may generate in a response (auto to detect from service, or specify number)",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="llm_context_token_limit",
-        arg_names=["--llm-context-token-limit"],
-        type=int,
-        default=40960,
-        help="Maximum total tokens for retrieval context sent to the LLM (set 0 to disable clipping)",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="llm_chars_per_token",
-        arg_names=["--llm-chars-per-token"],
-        type=float,
-        default=4.0,
-        help="Average characters per token used when converting token budgets to character budgets",
+        default="auto",
+        help="Maximum tokens for LLM response (auto to detect from service, or specify number)",
         category="general",
         applies_to=["both"]
     ),
@@ -500,6 +482,16 @@ VECTOR_PARAMS = [
         category="vector",
         applies_to=["vector"],
         optuna_suggest={'type': 'int', 'min': 1, 'max': 100, 'step': 1}
+    ),
+    ParamDef(
+        name="hierarchical",
+        arg_names=["--hierarchical"],
+        type=bool,
+        default=False,
+        action="store_true",
+        help="Enable hierarchical retrieval (search small chunks, return large parents)",
+        category="vector",
+        applies_to=["vector"]
     ),
 ]
 
@@ -788,6 +780,7 @@ def print_param_info(method: Optional[str] = None):
 # Main (for testing/documentation)
 # ============================================================================
 
+if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1 and sys.argv[1] == "list":

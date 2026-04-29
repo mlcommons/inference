@@ -169,7 +169,76 @@ def estimate_passage_count(text: str, max_length: int = 512, overlap: int = 50) 
     """
     if len(text) <= max_length:
         return 1 if text.strip() else 0
-    
+
     # Rough estimate based on overlap
     effective_length = max_length - overlap
     return max(1, (len(text) - overlap) // effective_length)
+
+
+def split_into_hierarchical_passages(
+    text: str,
+    parent_length: int = 2048,
+    parent_overlap: int = 32,
+    child_length: int = 512,
+    child_overlap: int = 100
+) -> List[dict]:
+    """
+    Split text into hierarchical parent-child passages for retrieval.
+
+    This creates a two-level hierarchy where:
+    - Parent chunks (large): Provide complete context for LLM
+    - Child chunks (small): Enable precise retrieval matching
+
+    Retrieval strategy: Search using child embeddings, return parent text to LLM.
+
+    Args:
+        text: Input text to split
+        parent_length: Length of parent chunks (default: 2048 chars)
+        parent_overlap: Overlap between parent chunks (default: 32 chars)
+        child_length: Length of child chunks (default: 512 chars)
+        child_overlap: Overlap between child chunks (default: 100 chars)
+
+    Returns:
+        List of dicts with keys:
+        - 'child_passage': Small chunk text (for embedding/retrieval)
+        - 'parent_passage': Large parent chunk text (for LLM context)
+        - 'parent_id': ID of parent chunk
+        - 'child_index': Index of this child within parent
+    """
+    # Clean up the text
+    text = clean_text(text)
+
+    if len(text) <= parent_length:
+        # Single parent case - still create child chunks
+        parent_text = text
+        children = split_into_passages(parent_text, child_length, child_overlap)
+
+        results = []
+        for child_idx, child_text in enumerate(children):
+            results.append({
+                'child_passage': child_text,
+                'parent_passage': parent_text,
+                'parent_id': 0,
+                'child_index': child_idx
+            })
+        return results
+
+    # Split into parent chunks first
+    parent_chunks = split_into_passages(text, parent_length, parent_overlap)
+
+    # For each parent, split into children
+    all_results = []
+    for parent_id, parent_text in enumerate(parent_chunks):
+        # Split parent into children
+        children = split_into_passages(parent_text, child_length, child_overlap)
+
+        # Create hierarchical entries
+        for child_idx, child_text in enumerate(children):
+            all_results.append({
+                'child_passage': child_text,
+                'parent_passage': parent_text,
+                'parent_id': parent_id,
+                'child_index': child_idx
+            })
+
+    return all_results

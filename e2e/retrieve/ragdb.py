@@ -25,19 +25,20 @@ class RagDB(abc.ABC):
     def _determine_device(self, device: str) -> str:
         """Determine the best device to use."""
         import torch
-        try:
-            import habana_frameworks.torch as htcore
-        except:
-            pass
-        
+
         if device == "auto":
-            if torch.hpu.is_available():
-                print("Using HPU device")
-                return "hpu"
-            elif torch.cuda.is_available():
+            # Check HPU availability (may not be available in all torch builds)
+            try:
+                if torch.hpu.is_available():
+                    print("Using HPU device")
+                    return "hpu"
+            except AttributeError:
+                pass
+
+            if torch.cuda.is_available():
                 print("Using CUDA device")
                 return "cuda"
-            elif torch.xpu.is_available():
+            elif hasattr(torch, 'xpu') and torch.xpu.is_available():
                 print("Using XPU device")
                 return "xpu"
             else:
@@ -153,19 +154,43 @@ class RagDB(abc.ABC):
         raise NotImplementedError(f"Folder ingestion not supported for {self.__class__.__name__}")
     
     def ingest_from_file(self, file_path: str, **kwargs):
-        """Ingest data from a JSON file. Default implementation for JSON files."""
+        """Ingest data from a JSON file. Default implementation for JSON files.
+
+        Supports both flat and hierarchical passage formats:
+        - Flat: entry['passage'] → passage text
+        - Hierarchical: entry['child_passage'] → child text (for embedding)
+                       entry['parent_passage'] → parent text (stored in metadata)
+        """
         import json
 
         with open(file_path, 'r', encoding='utf-8') as f:
             payload = json.load(f)
 
         passage_data = payload.get('passages', [])
+        config = payload.get('config', {})
+
+        # Detect hierarchical format
+        is_hierarchical = (
+            config.get('strategy') == 'hierarchical' or
+            (len(passage_data) > 0 and 'child_passage' in passage_data[0])
+        )
 
         doc_list = []
         passage_metadata = []
-        for entry in passage_data:
-            doc_list.append(entry['passage'])
-            passage_metadata.append({k: v for k, v in entry.items() if k != 'passage'})
+
+        if is_hierarchical:
+            print(f"Detected hierarchical format")
+            for entry in passage_data:
+                # Use child for embedding
+                doc_list.append(entry['child_passage'])
+                # Store all metadata including parent
+                metadata = {k: v for k, v in entry.items() if k != 'child_passage'}
+                passage_metadata.append(metadata)
+        else:
+            # Flat format
+            for entry in passage_data:
+                doc_list.append(entry['passage'])
+                passage_metadata.append({k: v for k, v in entry.items() if k != 'passage'})
 
         print(f"Ingesting {len(doc_list)} passages from JSON file {file_path}")
         return self.ingest(doc_list, passage_metadata, passages_path=file_path, **kwargs)

@@ -38,7 +38,7 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
         else:
             device = f'{base_device}:{device_id}'
         
-        model_kwargs = {'device': device}
+        model_kwargs = {'device': device, 'local_files_only': True}
         
         # Load model once for this device
         embedder = HuggingFaceEmbeddings(
@@ -78,6 +78,7 @@ class VectorDB(RagDB):
             load_embeddings: bool = True,
             num_embedding_devices: int = 1,
             benchmark: bool = False,
+            hierarchical: bool = False,
             **kwargs
         ):
         super().__init__(reranker_model, device, benchmark)
@@ -87,13 +88,17 @@ class VectorDB(RagDB):
         self._ivf_nprobe = ivf_nprobe
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
+        self._hierarchical = hierarchical
+
+        # For hierarchical mode: map child_index -> parent_passage
+        self._parent_map = {}
 
         if self._device == "hpu":
             import habana_frameworks.torch.core as htcore
             os.environ["PT_HPU_LAZY_MODE"] = "1"
 
         # Initialize embedding model with device configuration
-        model_kwargs = {'device': self._device}
+        model_kwargs = {'device': self._device, 'local_files_only': True}
         encode_kwargs = {'normalize_embeddings': True}
         
         self._embedding_model = HuggingFaceEmbeddings(
@@ -182,8 +187,8 @@ class VectorDB(RagDB):
             # efConstruction: quality of index construction (higher = better quality, slower build)
             M = 32  # Default: 32, good balance
             index = faiss.IndexHNSWFlat(dimension, M)
-            index.hnsw.efConstruction = 40  # Default: 40
-            index.hnsw.efSearch = 16  # Search-time parameter, can be adjusted later
+            index.hnsw.efConstruction = 200  # Default: 40
+            index.hnsw.efSearch = 100  # Search-time parameter, can be adjusted later
             return index
         elif method == "ivf":
             # nlist: number of clusters/cells (sqrt(N) is a good heuristic for N docs)
@@ -402,17 +407,30 @@ class VectorDB(RagDB):
         return total_file_size
     
     def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
-        """Ingest passages with performance monitoring."""
+        """Ingest passages with performance monitoring.
+
+        For hierarchical mode:
+        - passages: list of child passage texts (for embedding)
+        - metadatas: list of dicts with 'parent_passage' key (for retrieval)
+        """
         # Handle BM25-specific parameters gracefully
         if 'num_threads' in kwargs:
             print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
-        
+
         # Extract passages source path for embeddings caching
         passages_path = kwargs.get('passages_path', None)
-        
+
         # Start timing (works for both benchmark and non-benchmark modes)
         ingestion_start = self._start_ingestion_timer()
-        
+
+        # For hierarchical mode: extract parent passages and build mapping
+        if self._hierarchical:
+            print("Hierarchical mode: Indexing children, storing parents for retrieval")
+            for idx, metadata in enumerate(metadatas):
+                if 'parent_passage' in metadata:
+                    self._parent_map[idx] = metadata['parent_passage']
+            print(f"  Stored {len(self._parent_map)} parent mappings")
+
         total_chars = sum(len(passage) for passage in passages)
         
         # Handle embeddings: try to load from cache or generate new ones
@@ -545,23 +563,84 @@ class VectorDB(RagDB):
     
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)
+
+        # In hierarchical mode: replace child passages with parents, deduplicate
+        if self._hierarchical and self._parent_map:
+            parent_docs = []
+            seen_parents = set()
+
+            for doc in results:
+                # Get document index from metadata
+                doc_idx = doc.metadata.get('index', None)
+                if doc_idx is not None and doc_idx in self._parent_map:
+                    parent_text = self._parent_map[doc_idx]
+                    # Deduplicate: only add each unique parent once
+                    if parent_text not in seen_parents:
+                        # Create new document with parent content
+                        from langchain_core.documents import Document
+                        parent_doc = Document(
+                            page_content=parent_text,
+                            metadata=doc.metadata.copy()
+                        )
+                        parent_docs.append(parent_doc)
+                        seen_parents.add(parent_text)
+
+                        # Stop if we have k unique parents
+                        if len(parent_docs) >= k:
+                            break
+                else:
+                    # No parent mapping, use original
+                    parent_docs.append(doc)
+
+            return parent_docs
+
         return results
     
     def lookup_with_scores(self, query: str, k: int):
         """
         Lookup documents with similarity scores.
         Returns list of (document, score) tuples.
-        
+
         Note: FAISS returns L2 distances (lower is better), but we convert to
         similarity scores (higher is better) for consistency with BM25.
         """
         results_with_scores = self._vector_store.similarity_search_with_score(query, k=k)
-        
+
         # FAISS returns (document, distance) where distance is L2 distance (lower is better)
         # Convert to similarity score (higher is better) by negating
         # This makes it consistent with BM25 scores for filtering algorithms
         results_with_similarity = [(doc, -distance) for doc, distance in results_with_scores]
-        
+
+        # In hierarchical mode: replace child passages with parents, deduplicate
+        if self._hierarchical and self._parent_map:
+            parent_results = []
+            seen_parents = set()
+
+            for doc, score in results_with_similarity:
+                # Get document index from metadata
+                doc_idx = doc.metadata.get('index', None)
+                if doc_idx is not None and doc_idx in self._parent_map:
+                    parent_text = self._parent_map[doc_idx]
+                    # Deduplicate: only add each unique parent once
+                    if parent_text not in seen_parents:
+                        # Create new document with parent content
+                        from langchain_core.documents import Document
+                        parent_doc = Document(
+                            page_content=parent_text,
+                            metadata=doc.metadata.copy()
+                        )
+                        parent_results.append((parent_doc, score))
+                        seen_parents.add(parent_text)
+
+                        # Stop if we have k unique parents
+                        if len(parent_results) >= k:
+                            break
+                else:
+                    # No parent mapping, use original
+                    parent_results.append((doc, score))
+
+            return parent_results
+
         return results_with_similarity
 
     def rerank(self, query: str, passages: List[str]):
@@ -584,20 +663,29 @@ class VectorDB(RagDB):
     def serialize(self, path: str):
         # Store path for output size calculation
         self._serialize_path = path
-        
+
         data = self._vector_store.serialize_to_bytes()
         with open(path, "wb") as f:
             f.write(data)
-        
+
+        # Save parent map if hierarchical mode
+        if self._hierarchical and self._parent_map:
+            import pickle
+            from pathlib import Path
+            parent_map_path = Path(path).with_suffix('.parent_map.pkl')
+            with open(parent_map_path, 'wb') as f:
+                pickle.dump(self._parent_map, f)
+            print(f"💾 Saved parent map ({len(self._parent_map)} entries) to {parent_map_path}")
+
         # Update output size after serialization (now file exists)
         if self._benchmark and self._monitor:
             self._monitor.set_output_size_callback("faiss_indexing", self._calculate_index_output_size)
-        
+
         # Report performance after serialization if benchmarking
         if self._benchmark and self._monitor and hasattr(self, '_ingestion_start'):
             # Determine db_type based on whether incremental was used
             db_type = "VectorDB (Incremental)" if hasattr(self._monitor, 'indexing_trend') and len(self._monitor.indexing_trend) > 0 else "VectorDB"
-            self._report_performance(self._ingestion_start, self._ingestion_item_count, 
+            self._report_performance(self._ingestion_start, self._ingestion_item_count,
                                     self._ingestion_total_chars, db_type)
 
     def from_serialized(self, path: str):
@@ -607,8 +695,20 @@ class VectorDB(RagDB):
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
             serialized=data,
             allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
-        
+
         # If it's an IVF index, restore nprobe setting
         if self._vector_index_method == "ivf" and hasattr(self._vector_store.index, 'nprobe'):
             self._vector_store.index.nprobe = self._ivf_nprobe
             print(f"Restored IVF index with nprobe={self._ivf_nprobe}")
+
+        # Load parent map if hierarchical mode
+        if self._hierarchical:
+            import pickle
+            from pathlib import Path
+            parent_map_path = Path(path).with_suffix('.parent_map.pkl')
+            if parent_map_path.exists():
+                with open(parent_map_path, 'rb') as f:
+                    self._parent_map = pickle.load(f)
+                print(f"✓ Loaded parent map ({len(self._parent_map)} entries) from {parent_map_path}")
+            else:
+                print(f"⚠️  Warning: Hierarchical mode enabled but no parent map found at {parent_map_path}")

@@ -11,18 +11,6 @@ from pathlib import Path
 from typing import Dict, Optional, Union, Any
 
 
-DEFAULT_CHARS_PER_TOKEN = 4.0
-TOKEN_LIMIT_ERROR_PATTERNS = (
-    "max context length",
-    "maximum context length",
-    "context length exceeded",
-    "token limit",
-    "too many tokens",
-    "request too large",
-    "context window",
-)
-
-
 
 def load_url_mapping(directory: str) -> Dict[str, str]:
     """Load URL mapping from url_mapping.json in specified directory."""
@@ -47,25 +35,21 @@ def save_url_mapping(directory: str, url_mapping: Dict[str, str]) -> None:
         json.dump(url_mapping, f, indent=2, ensure_ascii=False)
 
 
-def serialize_cli_args(args: Any) -> Dict[str, Any]:
-    """Convert parsed CLI args into JSON-serializable primitive types."""
-    params: Dict[str, Any] = {}
-    for key, value in vars(args).items():
-        if isinstance(value, (str, int, float, bool)) or value is None:
-            params[key] = value
-        else:
-            params[key] = str(value)
-    return params
-
-
 def set_deterministic_seeds(seed: int = 42) -> None:
-    """Set PyTorch seed for reproducible results.
-    
-    Based on systematic analysis, torch.manual_seed() is the only component
-    needed to ensure deterministic behavior in our retrieval system.
+    """Set seeds for reproducible results across all components.
+
+    Covers: Python random, NumPy, PyTorch (CPU + all CUDA/XPU devices).
+    The LLM seed is handled separately via llm_config['seed'] passed to
+    each API payload, so vLLM sampling is also deterministic.
     """
+    import random
+    import numpy as np
     import torch
+    random.seed(seed)
+    np.random.seed(seed)
     torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def filter_dataset_by_difficulty(df, difficulty: int = 0):
@@ -206,77 +190,30 @@ def get_device_config():
 
 def setup_llm_config(args):
     """Setup LLM configuration with auto-detection."""
+    # Resolve device
     device = resolve_config_value(args.device, detect_device)
-
+    
+    # Resolve model name
     model_name = resolve_config_value(
-        args.llm_model,
-        get_model_name_from_service,
-        args.llm_service_url,
+        args.llm_model, 
+        get_model_name_from_service, 
+        args.llm_service_url
     )
-
-    output_token_limit = args.llm_output_token_limit
-    if isinstance(output_token_limit, str):
-        output_token_limit = resolve_config_value(
-            output_token_limit,
+    
+    # Resolve max tokens
+    if isinstance(args.max_tokens, str):
+        max_tokens = resolve_config_value(
+            args.max_tokens,
             get_max_tokens_from_service,
-            args.llm_service_url,
+            args.llm_service_url
         )
-
-    if isinstance(output_token_limit, str):
-        try:
-            output_token_limit = int(output_token_limit)
-        except ValueError:
-            output_token_limit = get_max_tokens_from_service(args.llm_service_url)
-
-    context_token_limit = args.llm_context_token_limit
-    if isinstance(context_token_limit, str):
-        try:
-            context_token_limit = int(context_token_limit)
-        except ValueError:
-            context_token_limit = get_max_tokens_from_service(args.llm_service_url)
-
-    chars_per_token = args.llm_chars_per_token
-    if not isinstance(chars_per_token, (int, float)) or chars_per_token <= 0:
-        chars_per_token = DEFAULT_CHARS_PER_TOKEN
-
-    context_char_limit = int(context_token_limit * chars_per_token) if context_token_limit and context_token_limit > 0 else 0
-
+    else:
+        max_tokens = args.max_tokens
+    
     return {
         "service_url": args.llm_service_url,
         "model_name": model_name,
-        "output_token_limit": output_token_limit,
-        "context_token_limit": context_token_limit,
-        "context_char_limit": context_char_limit,
-        "chars_per_token": chars_per_token,
+        "max_tokens": max_tokens,
         "device": device,
+        "seed": args.seed
     }
-
-
-def is_token_limit_error(response: Optional[requests.Response] = None, message: Optional[str] = None) -> bool:
-    candidates = []
-    if response is not None:
-        try:
-            data = response.json()
-            if isinstance(data, dict):
-                if "error" in data and isinstance(data["error"], dict):
-                    candidates.append(str(data["error"].get("message", "")))
-                elif "message" in data:
-                    candidates.append(str(data.get("message", "")))
-        except ValueError:
-            pass
-        candidates.append(response.text or "")
-        status_code = response.status_code
-    else:
-        status_code = None
-
-    if message:
-        candidates.append(message)
-
-    combined = " ".join(filter(None, candidates)).lower()
-    if not combined:
-        return False
-
-    if status_code in {400, 401, 403, 413, 422}:
-        return any(pattern in combined for pattern in TOKEN_LIMIT_ERROR_PATTERNS)
-
-    return any(pattern in combined for pattern in TOKEN_LIMIT_ERROR_PATTERNS)

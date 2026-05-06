@@ -35,37 +35,6 @@ import requests
 # Prompts
 
 
-# FIX 1: Split into two separate prompts for focused tasks
-
-# Iterative query rewriter prompt for multi-hop refinement
-QUERY_REWRITER_ITERATIVE_PROMPT = """\
-You are an expert at iterative multi-hop search and query rewriting.
-
-USER QUESTION: {user_question}
-
-SEARCH HISTORY:
-{history}
-
-RETRIEVED DOCUMENTS:
-{results}
-
-TASK:
-1. Analyze the user question and the documents retrieved so far.
-2. If the answer can be constructed from the retrieved documents, return it as 'sufficient'.
-3. If not, generate up to {k} new, short, strategic search queries to retrieve missing information.
-4. Never repeat failed query patterns from the search history. Escalate to broader or alternative queries if stuck.
-
-RESPONSE FORMAT (JSON only):
-If sufficient: {"sufficient": true, "answer": "..."}
-If not: {"sufficient": false, "queries": ["...", "..."], "feedback": "..."}
-
-RULES:
-- Make queries short (2-4 words), use entity names not descriptions.
-- Escalate after 3 failed attempts on the same info (e.g., try just the entity name, use list articles, or related entities).
-- Never repeat failed query patterns.
-- If stuck, try broader or alternative queries as described above.
-"""
-
 RELEVANCE_CHECK_PROMPT = """\
 You are a document relevance classifier. Evaluate if documents are relevant to answering a question.
 
@@ -354,7 +323,8 @@ def generate_search_queries(question: str,
     FIX 1 - Call 2: Generate search queries OR final answer.
     """
     service_url = llm_config.get('service_url', 'http://127.0.0.1:8123/v1/chat/completions')
-    model_name = llm_config.get('model_name', '/model/gpt-oss-20b-mxfp4')
+    # Use query_model_name if set (e.g. gpt-oss-120b), fall back to model_name (gpt-oss-20b)
+    model_name = llm_config.get('query_model_name', llm_config.get('model_name', '/model/gpt-oss-20b-mxfp4'))
     max_tokens = llm_config.get('max_tokens', 10240)
 
     # Format KEPT documents
@@ -701,187 +671,6 @@ def query_rewriter(question: str, new_documents: List[tuple],
         }
 
 
-def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium",
-                       history: Optional[List[str]] = None, retrieved_docs: Optional[List[str]] = None,
-                       llm_config: Optional[Dict[str, Any]] = None) -> List[str]:
-    """
-    Use LLM to decompose a complex query into multiple sub-queries, or generate new queries
-    based on iterative feedback.
-    
-    Args:
-        original_query: The original complex query
-        max_queries: Maximum number of sub-queries to generate (default: 3)
-        reasoning_effort: LLM reasoning level (low/medium/high)
-        history: Optional list of previous search queries (for iterative mode)
-        retrieved_docs: Optional list of retrieved document texts (for iterative mode)
-        
-    Returns:
-        List of sub-queries
-    """
-    
-    # Determine if this is initial decomposition or iterative refinement
-    is_iterative = history is not None and retrieved_docs is not None
-    
-    if is_iterative:
-        # Iterative mode: Generate new queries based on what's been retrieved
-        history_text = "\n".join(f"- {q}" for q in history) if history else "None yet"
-        
-        results_text = ""
-        for i, doc in enumerate(retrieved_docs, 1):
-            results_text += f"\n[Document {i}]\n{doc[:300]}...\n"
-        
-        if not results_text:
-            results_text = "None yet"
-        
-        prompt = QUERY_REWRITER_ITERATIVE_PROMPT.format(
-            k=max_queries,
-            user_question=original_query,
-            history=history_text,
-            results=results_text
-        )
-        system_prompt = f"You are a helpful assistant that generates search queries."
-    else:
-        # Initial decomposition mode
-        system_prompt = f"""You are an expert at decomposing complex multi-hop questions into simpler sub-questions.
-
-Your task: Given a complex question, break it down into 1-{max_queries} simpler sub-questions that, when answered together, would help answer the original question.
-
-Guidelines:
-1. Identify the key facts/entities needed to answer the question
-2. Create sub-questions that retrieve each piece of information
-3. Order sub-questions logically (dependencies first)
-4. Keep sub-questions clear and specific
-5. If the question is already simple, return just the original question
-
-Output format: Return ONLY a JSON array of sub-questions, nothing else.
-Example: ["What year did X happen?", "Who won Y in that year?"]
-"""
-        prompt = f"""Original question: {original_query}
-
-Decompose this into at most {max_queries} sub-questions. Return only the JSON array."""
-
-    # Use LLM config if provided, otherwise use defaults
-    if llm_config:
-        model_name = llm_config["model_name"]
-        service_url = llm_config["service_url"]
-        max_tokens = llm_config["max_tokens"]
-    else:
-        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
-        service_url = "http://127.0.0.1:8123/v1/chat/completions"
-        max_tokens = 10240
-
-    seed = llm_config.get('seed') if llm_config else None
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 1,
-        "top_p": 1,
-        "top_k": -1,
-        "max_tokens": max_tokens,
-        "reasoning_effort": "high"
-    }
-    if seed is not None:
-        payload["seed"] = seed
-
-    try:
-        response = requests.post(service_url, json=payload, timeout=300)
-        
-        if response.status_code != 200:
-            print(f"Error response: {response.text[:500]}")
-            print(f"Falling back to original query")
-            return [original_query]
-        
-        result = response.json()
-        
-        # Use only content field
-        message = result['choices'][0]['message']
-        llm_output = message.get('content')
-        
-        # Fallback: use reasoning_content if content is empty (thinking models)
-        reasoning_content = message.get('reasoning_content') or ''
-        if reasoning_content and not llm_output:
-            print(f"DEBUG: reasoning_content exists but content is empty, extracting from reasoning_content")
-            llm_output = reasoning_content
-        
-        if not (llm_output or '').strip():
-            print(f"Warning: LLM returned empty content for query rewriting")
-            return [original_query]
-        
-        llm_output = llm_output.strip()
-        
-        # Strip markdown code blocks if present
-        if llm_output.startswith("```json"):
-            llm_output = llm_output.replace("```json", "").replace("```", "").strip()
-        elif llm_output.startswith("```"):
-            llm_output = llm_output.split("```")[1]
-            if llm_output.startswith("json"):
-                llm_output = llm_output[4:]
-            llm_output = llm_output.strip()
-        
-        # Use raw_decode to parse only the first valid JSON value and ignore trailing text
-        # Find the start of a JSON array
-        array_start = llm_output.find('[')
-        if array_start == -1:
-            print(f"Warning: No JSON array found in LLM output")
-            return [original_query]
-        try:
-            sub_queries, _ = json.JSONDecoder().raw_decode(llm_output, array_start)
-        except json.JSONDecodeError:
-            # Fallback: try to extract array with regex and parse
-            json_match = re.search(r'\[[^\[\]]*\]', llm_output)
-            if json_match:
-                sub_queries = json.loads(json_match.group(0))
-            else:
-                print(f"Warning: Could not parse JSON array from LLM output")
-                return [original_query]
-        
-        if not is_iterative:
-            print(f"LLM output (parsed): {sub_queries}")
-        
-        # Validate output
-        if not isinstance(sub_queries, list):
-            print(f"Warning: LLM output is not a list, using original query")
-            return [original_query]
-        
-        # Limit to max_queries
-        sub_queries = sub_queries[:max_queries]
-        
-        # Ensure at least the original query is included if list is empty
-        if not sub_queries:
-            return [original_query]
-        
-        if not is_iterative:
-            print(f"\n{'='*80}")
-            print(f"QUERY DECOMPOSITION")
-            print(f"{'='*80}")
-            print(f"Original: {original_query}")
-            print(f"Sub-queries ({len(sub_queries)}):")
-            for i, sq in enumerate(sub_queries, 1):
-                print(f"  {i}. {sq}")
-            print(f"{'='*80}\n")
-        
-        return sub_queries
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling LLM service: {e}")
-        print(f"Falling back to original query")
-        return [original_query]
-    except json.JSONDecodeError as e:
-        print(f"Error parsing LLM output as JSON: {e}")
-        print(f"LLM output: {llm_output[:200]}")
-        print(f"Falling back to original query")
-        return [original_query]
-    except Exception as e:
-        print(f"Unexpected error in query rewriting: {e}")
-        import traceback
-        traceback.print_exc()
-        print(f"Falling back to original query")
-        return [original_query]
-
-
 def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          expected_answer: str = "",
                          max_sub_queries: int = 3,
@@ -970,17 +759,22 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         # Special handling for iteration 1: decompose original query first
         if iteration == 1 and not new_docs and not kept_docs:
             if verbose:
-                print(f"  [ITERATION 1] Decomposing original query into sub-queries...")
+                print(f"  [ITERATION 1] Decomposing original query into sub-queries via generate_search_queries...")
 
-            # Use query_rewriter_llm for initial decomposition
-            sub_queries = query_rewriter_llm(
-                original_query=original_query,
+            # Use generate_search_queries for initial decomposition (uses query_model_name / gpt-oss-120b)
+            query_result = generate_search_queries(
+                question=original_query,
+                kept_documents=[],
                 max_queries=max_sub_queries,
-                reasoning_effort=reasoning_effort,
-                history=None,
-                retrieved_docs=None,
+                query_history=None,
+                query_results=None,
+                feedback_history=None,
                 llm_config=llm_config
             )
+
+            sub_queries = query_result.get("queries", [original_query])
+            if not sub_queries:
+                sub_queries = [original_query]
 
             if verbose:
                 print(f"    Generated {len(sub_queries)} initial sub-queries")
@@ -989,7 +783,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
             sufficient = False
             final_answer = ""
-            current_feedback = "Initial query decomposition"
+            current_feedback = query_result.get("feedback", "Initial query decomposition")
             relevance = []
             summaries = []
             reasoning_steps = ""

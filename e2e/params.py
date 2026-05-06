@@ -304,7 +304,16 @@ GENERAL_PARAMS = [
         arg_names=["--llm_model"],
         type=str,
         default="auto",
-        help="LLM model name/path (auto to detect from service)",
+        help="LLM model name/path (auto to detect from service). Used by document grader (evaluate_document_relevance).",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="query_model",
+        arg_names=["--query_model"],
+        type=str,
+        default=None,
+        help="LLM model name/path for query generation (generate_search_queries). Defaults to --llm_model if not set. Example: /model/gpt-oss-120b",
         category="general",
         applies_to=["both"]
     ),

@@ -210,9 +210,14 @@ def setup_llm_config(args):
     else:
         max_tokens = args.max_tokens
     
+    # Resolve query model name (for generate_search_queries); falls back to model_name if not set
+    query_model_arg = getattr(args, 'query_model', None)
+    query_model_name = query_model_arg if query_model_arg else model_name
+
     return {
         "service_url": args.llm_service_url,
         "model_name": model_name,
+        "query_model_name": query_model_name,
         "max_tokens": max_tokens,
         "device": device,
         "seed": args.seed

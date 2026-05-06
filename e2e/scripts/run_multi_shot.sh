@@ -21,6 +21,8 @@
 set -e
 
 MODEL="/model/gpt-oss-20b-mxfp4"
+# QUERY_MODEL="/model/gpt-oss-120b"
+QUERY_MODEL="/model/gpt-oss-120b-mxfp4"
 DB="vector_html_hnsw_len768_ov32_word"
 LLM_URL="http://127.0.0.1:8123/v1/chat/completions"
 
@@ -38,8 +40,9 @@ RESULT_JSON="result_multi_shot_len768_${TAG}.json"
 LOG_FILE="logs_768/test_${TAG}.log"
 SCORE_FILE="score_multi_shot_len768_${TAG}.txt"
 
-echo "=== Multi-shot baseline: GPT-OSS 20B ==="
-echo "  Model:       ${MODEL}"
+echo "=== Multi-shot baseline: GPT-OSS 20B (grader) + GPT-OSS 120B (query gen) ==="
+echo "  Model (grader):    ${MODEL}"
+echo "  Model (query gen): ${QUERY_MODEL}"
 echo "  DB:          ${DB}"
 echo "  Queries:     ${N_QUERIES}"
 echo "  Result file: ${RESULT_JSON}"
@@ -50,15 +53,16 @@ python3 -u multi_shot_retrieval.py \
     --retrieval_method vector \
     --db "${DB}" \
     ${EVAL_FLAG} \
-    --no-rerank \
     --max-iterations 5 \
     --max-sub-queries 3 \
     --device xpu \
     --retrieval_strategy fixed_k \
+    --retriever_model /model/e5-base-v2 \
     --top_k_retriever 15 \
     --top_k_reranking 15 \
     --generate-answer \
     --llm_model "${MODEL}" \
+    --query_model "${QUERY_MODEL}" \
     --llm_service_url "${LLM_URL}"
 
 # Rename output to avoid overwrite on next run

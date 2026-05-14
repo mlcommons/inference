@@ -1,10 +1,10 @@
 def define_env(env):
 
     @env.macro
-    def mlperf_inference_implementation_readme(spaces,model,implementation,*,implementation_tips=True,setup_tips=True,run_tips=True,skip_test_query_count=False,fixed_scenarios=[],devices=[],frameworks=[],categories=[],extra_variation_tags="",
-        extra_input_string="",
-        extra_docker_input_string="",
-    ):
+    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, skip_test_query_count=False, fixed_scenarios=[], devices=[], frameworks=[], categories=[], extra_variation_tags="",
+                                               extra_input_string="",
+                                               extra_docker_input_string="",
+                                               ):
         pre_space = ""
 
         for i in range(1, spaces):
@@ -143,7 +143,8 @@ def define_env(env):
         for category in categories:
             if category == "Edge":
                 scenarios = ["Offline", "SingleStream"]
-                if model.lower() in ["resnet50", "retinanet", "yolo-95", "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
+                if model.lower() in ["resnet50", "retinanet", "yolo-95",
+                                     "yolo-99"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")

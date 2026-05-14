@@ -1,0 +1,7 @@
+transformers
+datasets
+evaluate
+accelerate
+simplejson
+nltk
+rouge_score

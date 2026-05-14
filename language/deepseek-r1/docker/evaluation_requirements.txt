@@ -1,0 +1,10 @@
+# Evaluation requirements for MLPerf DeepSeek reference implementation
+# This file includes editable installs of evaluation submodules
+
+# Install build dependencies first
+numpy
+pylatexenc
+
+# Install evaluation submodules as editable packages
+-e submodules/LiveCodeBench
+-e submodules/prm800k

@@ -1,0 +1,7 @@
+To calibrate this benchmark, first follow the setup steps in `closed/NVIDIA/README.md`.
+
+```
+make calibrate RUN_ARGS="--benchmarks=llama3_1-405b --scenarios=Interactive"
+```
+
+For more details, please refer to `closed/NVIDIA/README.md`.

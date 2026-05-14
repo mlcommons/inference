@@ -1,0 +1,68 @@
+# PyTorch Backend Dockerfile
+FROM nvcr.io/nvidia/pytorch:25.04-py3
+# FROM pytorch/pytorch:2.4.1-cuda12.4-cudnn9-runtime
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV MLPERF_BACKEND=pytorch
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    git \
+    curl \
+    ca-certificates \
+    cmake \
+    build-essential \
+    pybind11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV package manager system-wide
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx && \
+    chmod 755 /usr/local/bin/uv /usr/local/bin/uvx && \
+    uv --version
+
+# Clone DeepSeek-V3 repository directly to /opt/ref_dsinfer
+RUN git clone https://github.com/deepseek-ai/DeepSeek-V3.git /opt/ref_dsinfer && \
+    cd /opt/ref_dsinfer && \
+    git checkout 4cc6253d5c225e2c5fea32c54573449c1c46470a 
+# echo "export PYTHONPATH=/opt:\$PYTHONPATH" >> /etc/bash.bashrc
+# touch /opt/ref_dsinfer/__init__.py && \
+# touch /opt/ref_dsinfer/inference/__init__.py && \
+
+RUN pip3 install --no-cache-dir \
+    triton \
+    transformers \
+    accelerate \
+    pandas \
+    numpy \
+    tqdm \
+    datasets \
+    huggingface-hub[hf_transfer] \
+    safetensors
+
+# Set Python path for the container
+ENV PYTHONPATH=/opt:${PYTHONPATH}
+
+# Set cache directory environment variables
+# These will be overridden at runtime if needed
+ENV HF_HOME=/raid/data/\$USER/.cache
+ENV HF_HUB_CACHE=/raid/data/\$USER/.cache
+ENV HUGGINGFACE_HUB_CACHE=/raid/data/\$USER/.cache
+
+# Enable HF Transfer for faster downloads
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+
+# Set working directory to /work for mounted workspace
+WORKDIR /work
+
+# Add /work to PATH so setup.sh can be run without ./
+ENV PATH="/work:${PATH}"
+
+# Set default command
+CMD ["/bin/bash"] 

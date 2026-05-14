@@ -1,0 +1,95 @@
+site_name: MLPerf Inference Documentation
+repo_url: https://github.com/mlcommons/inference
+site_url: https://docs.mlcommons.org/inference
+
+theme:
+  name: material
+  logo: img/logo_v2.svg
+  favicon: img/logo_v2.svg
+  palette:
+    primary: deep purple
+    accent: green
+  features:
+    - content.tabs.link
+    - content.code.copy
+    - navigation.expand
+    - navigation.indexes
+    - navigation.sections
+    - navigation.instant
+    - navigation.tabs
+    - navigation.path
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.prune
+    - toc.follow
+   
+nav:
+  - Home:
+      - index.md
+      - Image Classification:
+          - ResNet50: benchmarks/image_classification/resnet50.md
+      - Text to Image:
+          - Stable Diffusion: 
+            - Run Commands: benchmarks/text_to_image/sdxl.md
+            - External Use:
+              - SCC24 Guide: benchmarks/text_to_image/reproducibility/scc24.md
+      - 2D Object Detection:
+          - RetinaNet: benchmarks/object_detection/retinanet.md
+          - Yolo: benchmarks/object_detection/yolo.md
+      - Automotive:
+          - 3D Object Detection:
+              - PointPainting: benchmarks/automotive/3d_object_detection/pointpainting.md
+      - Medical Imaging:
+          - 3d-unet: benchmarks/medical_imaging/3d-unet.md
+      - Language Processing:
+        - Bert-Large: benchmarks/language/bert.md
+        - GPT-J: benchmarks/language/gpt-j.md
+        - LLAMA2-70B: 
+          - Run Commands: benchmarks/language/llama2-70b.md
+          - External Use:
+            - SCC25 Guide: benchmarks/language/scc25_guide/scc25.md
+        - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
+        - LLAMA3-8B: benchmarks/language/llama3_1-8b.md
+        - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
+        - DeepSeek-R1: benchmarks/language/deepseek-r1.md
+      - Recommendation:
+        - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
+      - Graph Neural Networks:
+        - R-GAT: benchmarks/graph/rgat.md
+      - Speech to Text:
+        - Whisper: benchmarks/speech_to_text/whisper.md
+  - Install MLCFlow:
+    - install/index.md
+  - Submission:
+    - Submission Guide: submission/index.md
+    - Automated Submission CLI: submission/submission-cli.md
+  - Power:
+    - power/index.md
+  - Release Notes:
+    - What's New: changelog/index.md
+    - Changelog: changelog/changelog.md
+
+markdown_extensions:
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+plugins:
+  - search
+  - macros
+  - site-urls
+  - redirects:
+      redirect_maps:
+        'benchmarks/index.md': 'index.md'

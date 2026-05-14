@@ -1,0 +1,49 @@
+# SGLang Backend Dockerfile
+FROM lmsysorg/sglang:v0.5.2-cu129-b200
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV MLPERF_BACKEND=sglang
+
+# Make /root accessible to non-root users so they can access /root/.cargo and /root/.rustup
+# This is needed because flashinfer/tvm_ffi tries to search these paths
+RUN chmod a+rX /root && \
+    if [ -d /root/.cargo ]; then chmod -R a+rX /root/.cargo 2>/dev/null || true; fi && \
+    if [ -d /root/.rustup ]; then chmod -R a+rX /root/.rustup 2>/dev/null || true; fi && \
+    if [ -d /root/.cargo/bin ]; then cp -a /root/.cargo/bin/* /usr/local/bin/ 2>/dev/null || true; fi
+
+# Install UV package manager system-wide
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx && \
+    chmod 755 /usr/local/bin/uv /usr/local/bin/uvx && \
+    uv --version
+
+# Install base Python packages
+RUN pip3 install --no-cache-dir \
+    numpy \
+    setuptools \
+    wheel \
+    "pybind11>=2.11.1"
+
+# Set CUDA environment for proper compilation
+ENV CUDA_HOME=/usr/local/cuda
+
+# Set cache directory environment variables
+# These will be overridden at runtime if needed
+ENV HF_HOME=/raid/data/\$USER/.cache/huggingface
+ENV HF_HUB_CACHE=/raid/data/\$USER/.cache/huggingface
+ENV HUGGINGFACE_HUB_CACHE=/raid/data/\$USER/.cache/huggingface
+
+# Create necessary directories
+RUN mkdir -p /work /work/logs
+
+# Set working directory to /work for mounted workspace
+WORKDIR /work
+
+# Add /work to PATH so setup.sh can be run without ./
+ENV PATH="/work:${PATH}"
+
+# Set default command
+CMD ["/bin/bash"]

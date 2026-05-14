@@ -1,0 +1,6 @@
+mkdocs-material
+swagger-markdown
+mkdocs-macros-plugin
+ruamel.yaml
+mkdocs-redirects
+mkdocs-site-urls

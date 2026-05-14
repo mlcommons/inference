@@ -1,0 +1,31 @@
+name: Language Translation Inference
+description: MLCommons Language Translation Inference Benchmark
+authors: 
+ - {name: "MLCommons Best Practices Working Group"}
+
+platform:
+  accelerator_count: 1
+
+docker:
+  # Image name.
+  image: mlcommons/translation_inference:0.0.1
+  # Docker build context relative to $MLCUBE_ROOT. Default is `build`.
+  build_context: "../tensorflow"
+  # Docker file name within docker build context, default is `Dockerfile`.
+  build_file: "Dockerfile"
+
+tasks:
+  download_data:
+    parameters:
+      outputs: {data_dir: data/}
+  download_model:
+    parameters:
+      outputs: {model_dir: model/}
+  run_performance:
+    parameters:
+      inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
+      outputs: {output_dir: output/}
+  run_accuracy:
+    parameters:
+      inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
+      outputs: {output_dir: output/}

@@ -1,0 +1,81 @@
+[project]
+name = "mlperf-inf-mm-q3vl"
+description = "The reference implementation for the Qwen3-VL (Q3VL) benchmark in MLPerf Inference"
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX :: Linux",
+]
+requires-python = ">=3.12"
+dependencies = [
+  "datasets",
+  "loguru",
+  "matplotlib",
+  "mlcommons-loadgen",
+  "openai[aiohttp]",
+  "pydantic",
+  "pydantic-typer @ git+https://github.com/CentML/pydantic-typer.git@wangshangsam/preserve-full-annotated-type",
+  "pympler",
+  "typer",
+  "scikit-learn",
+  "tabulate",
+  "hiclass",
+  "rapidfuzz",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["black", "ruff", "mypy", "shellcheck-py", "pytest"]
+
+[project.scripts]
+mlperf-inf-mm-q3vl = "mlperf_inf_mm_q3vl.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/mlcommons/inference/multimodal/qwen3-vl"
+
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"mlperf_inf_mm_q3vl" = ["py.typed"]
+
+[tool.setuptools_scm]
+root = "../../"
+
+[tool.ruff]
+lint.select = ["ALL"]
+lint.ignore = [
+  "ANN002",  # Missing type annotation for `*args`"
+  "ANN003",  # Missing type annotation for `**kwargs`
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.mypy]
+check_untyped_defs = true
+plugins = ['pydantic.mypy']
+
+[[tool.mypy.overrides]]
+module = "pydantic_typer"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "mlperf_loadgen"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "datasets"
+ignore_missing_imports = true

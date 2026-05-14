@@ -1,0 +1,15 @@
+[submodule "language/bert/DeepLearningExamples"]
+	path = language/bert/DeepLearningExamples
+	url = https://github.com/NVIDIA/DeepLearningExamples.git
+[submodule "vision/medical_imaging/3d-unet-brats19/nnUnet"]
+	path = vision/medical_imaging/3d-unet-brats19/nnUnet
+	url = https://github.com/MIC-DKFZ/nnUNet.git
+[submodule "language/deepseek-r1/submodules/prm800k"]
+	path = language/deepseek-r1/submodules/prm800k
+	url = https://github.com/openai/prm800k
+[submodule "language/deepseek-r1/submodules/LiveCodeBench"]
+	path = language/deepseek-r1/submodules/LiveCodeBench
+	url = https://github.com/LiveCodeBench/LiveCodeBench
+[submodule "text_to_video/wan-2.2-t2v-14b/submodules/VBench"]
+	path = text_to_video/wan-2.2-t2v-a14b/submodules/VBench
+	url = https://github.com/Vchitect/VBench

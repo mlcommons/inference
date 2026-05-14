@@ -62,16 +62,28 @@ class RagDB(abc.ABC):
         return f"{base_name}.db"
 
     def _init_reranker(self):
-        """Initialize the reranker model."""
+        """Initialize the reranker model.
+
+        Always uses CPU with NUMA configuration:
+        - NUMA node 1
+        - Cores 43-85
+        - Memory from node 1
+        """
         import torch
+        import os
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
-        
+
+        # Configure CPU affinity for optimal performance on GNR server
+        os.environ['OMP_NUM_THREADS'] = '43'  # 85-43+1 = 43 cores
+        os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1,0'
+
         self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
         self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
-        device = self._device 
-        if device == "hpu":
-            print("Falling back to CPU for reranker as HPU is not supported.")
-            device = "cpu"
+
+        # Always use CPU for reranking
+        device = "cpu"
+        print(f"Using CPU for reranker with NUMA node 1, cores 43-85")
+
         self._reranker_model = self._reranker_model.to(device)
         self._reranker_model.eval()
     

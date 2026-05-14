@@ -6,13 +6,14 @@ Supports loading results from:
 - Pickle files (oracle format): oracle_checkpoint.pkl (pandas DataFrame)
 
 Usage:
-    python evaluate.py result_single_shot.json
-    python evaluate.py oracle_checkpoint.pkl
-    python evaluate.py oracle_checkpoint.pkl --dataset data/frames_dataset.tsv
+    OPENROUTER_API_KEY="sk-or-v1-..." python evaluate.py result_single_shot.json
+    OPENROUTER_API_KEY="sk-or-v1-..." python evaluate.py oracle_checkpoint.pkl
+    OPENROUTER_API_KEY="sk-or-v1-..." python evaluate.py oracle_checkpoint.pkl --dataset data/frames_dataset.tsv
 """
 
 import argparse
 import json
+import os
 import pickle
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,9 +23,10 @@ from typing import Optional
 import pandas as pd
 import requests
 
-DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
-# DEFAULT_JUDGE_MODEL = "/mnt/weka/data/pytorch/llama3.1/Meta-Llama-3.1-8B-Instruct"
-DEFAULT_JUDGE_MODEL = "/model/gpt-oss-20b-mxfp4"
+# OpenRouter configuration
+DEFAULT_JUDGE_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "openai/gpt-oss-20b"
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 
 def load_results(path: Path):
@@ -140,7 +142,17 @@ def call_judge(session: requests.Session, service_url: str, model: str, question
         "temperature": 0.0,
         "max_tokens": 256
     }
-    response = session.post(service_url, json=payload, timeout=120)
+
+    # Add OpenRouter authentication headers if using OpenRouter
+    headers = {}
+    if "openrouter.ai" in service_url and OPENROUTER_API_KEY:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
+            "X-Title": "E2E DocGrader Evaluation"
+        }
+
+    response = session.post(service_url, json=payload, headers=headers, timeout=120)
     response.raise_for_status()
     data = response.json()
     # Defensive: handle missing or malformed 'choices' in response
@@ -184,6 +196,12 @@ def _judge_row(idx, prompt, gold, pred, service_url, model):
 
 
 def evaluate(results_path: Path, dataset_path: Path, service_url: str, model: str, batch_size: int = 16):
+    # Check for OpenRouter API key if using OpenRouter
+    if "openrouter.ai" in service_url and not OPENROUTER_API_KEY:
+        print("ERROR: OPENROUTER_API_KEY environment variable not set")
+        print("Usage: OPENROUTER_API_KEY=\"sk-or-v1-YOUR_KEY_HERE\" python evaluate.py ...")
+        exit(1)
+
     predictions = load_results(results_path)
 
     # Show checkpoint stats if loading from pickle

@@ -39,8 +39,7 @@ def set_deterministic_seeds(seed: int = 42) -> None:
     """Set seeds for reproducible results across all components.
 
     Covers: Python random, NumPy, PyTorch (CPU + all CUDA/XPU devices).
-    The LLM seed is handled separately via llm_config['seed'] passed to
-    each API payload, so vLLM sampling is also deterministic.
+    Note: LLM responses are stochastic and cannot be made deterministic via seed.
     """
     import random
     import numpy as np
@@ -189,17 +188,17 @@ def get_device_config():
 
 
 def setup_llm_config(args):
-    """Setup LLM configuration with auto-detection."""
+    """Setup LLM configuration with auto-detection and OpenRouter support."""
     # Resolve device
     device = resolve_config_value(args.device, detect_device)
-    
+
     # Resolve model name
     model_name = resolve_config_value(
-        args.llm_model, 
-        get_model_name_from_service, 
+        args.llm_model,
+        get_model_name_from_service,
         args.llm_service_url
     )
-    
+
     # Resolve max tokens
     if isinstance(args.max_tokens, str):
         max_tokens = resolve_config_value(
@@ -209,10 +208,22 @@ def setup_llm_config(args):
         )
     else:
         max_tokens = args.max_tokens
-    
+
     # Resolve query model name (for generate_search_queries); falls back to model_name if not set
     query_model_arg = getattr(args, 'query_model', None)
     query_model_name = query_model_arg if query_model_arg else model_name
+
+    # OpenRouter URLs and model names for different components
+    # Document grader uses gpt-oss-20b
+    grader_service_url = "https://openrouter.ai/api/v1/chat/completions"
+    grader_model_name = "openai/gpt-oss-20b"
+
+    # Query generator and sufficiency checker use gpt-oss-120b
+    query_service_url = "https://openrouter.ai/api/v1/chat/completions"
+    query_model_name = "openai/gpt-oss-120b"
+
+    sufficiency_service_url = "https://openrouter.ai/api/v1/chat/completions"
+    sufficiency_model_name = "openai/gpt-oss-120b"
 
     return {
         "service_url": args.llm_service_url,
@@ -220,5 +231,10 @@ def setup_llm_config(args):
         "query_model_name": query_model_name,
         "max_tokens": max_tokens,
         "device": device,
-        "seed": args.seed
+        # OpenRouter-specific endpoints
+        "grader_service_url": grader_service_url,
+        "grader_model_name": grader_model_name,
+        "query_service_url": query_service_url,
+        "sufficiency_service_url": sufficiency_service_url,
+        "sufficiency_model_name": sufficiency_model_name,
     }

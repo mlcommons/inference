@@ -17,6 +17,7 @@ import json
 import re
 import time
 import os
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 import pandas as pd
 
@@ -25,11 +26,15 @@ original_no_proxy = os.environ.get('no_proxy', '')
 os.environ['no_proxy'] = '127.0.0.1,localhost,' + original_no_proxy
 os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 
+# Get OpenRouter API key from environment
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import (set_deterministic_seeds, filter_dataset_by_difficulty, 
+from utils import (set_deterministic_seeds, filter_dataset_by_difficulty,
                    setup_llm_config, get_device_config)
 from params import add_all_args
+from llm_logger import LLMLogger
 import requests
 
 # Prompts
@@ -60,6 +65,35 @@ OUTPUT FORMAT (JSON only):
 The array MUST have exactly {num_docs} elements (one per NEW document).
 """
 
+SUFFICIENCY_CHECK_PROMPT = """\
+You check if the retrieved documents are sufficient to answer a question.
+
+QUESTION: {question}
+
+KEPT DOCUMENTS (already marked relevant):
+{kept_docs}
+
+TASK: Review ALL kept documents and determine if they contain enough information to answer the question.
+
+Try to connect information across documents:
+- Match entity names across documents
+- Chain relationships (A → B → C)
+- Cross-reference dates, positions, attributes
+- Build complete answer chains
+
+ITERATION: {iteration} of {max_iterations}
+
+If iteration is {max_iterations} (the last iteration), you MUST provide a final answer with available information or return "Unknown" if truly insufficient.
+
+OUTPUT FORMAT (JSON only):
+If sufficient: {{"sufficient": true, "reasoning": "Found all required facts across documents X, Y, Z..."}}
+If not sufficient: {{"sufficient": false, "reasoning": "Missing: specific fact or detail needed..."}}
+
+RULES:
+- Be precise about what information is present vs missing
+- If on final iteration ({max_iterations}), force sufficient=true to generate final answer
+"""
+
 QUERY_GENERATION_PROMPT = """\
 You generate search queries for complex multi-hop questions.
 
@@ -71,16 +105,7 @@ KEPT DOCUMENTS (already marked relevant):
 SEARCH HISTORY: {history}
 FEEDBACK: {feedback_history}
 
-TASK 1: CHECK IF SUFFICIENT
-Review ALL kept documents. Try to connect information across documents to answer the question:
-- Match entity names across documents
-- Chain relationships (A → B → C)
-- Cross-reference dates, positions, attributes
-- Build complete answer chains
-
-If you can construct a complete answer with specific facts from kept documents, provide it.
-
-TASK 2: GENERATE QUERIES (if not sufficient)
+TASK: GENERATE QUERIES
 Analyze what's MISSING, then generate up to {max_queries} strategic search queries.
 
 CRITICAL ANALYSIS OF FAILURES:
@@ -102,15 +127,13 @@ QUERY PATTERNS:
 - **Simple is better**: 2-4 words, entity names not descriptions
 
 RESPONSE FORMAT (JSON only):
-If sufficient: {{"sufficient": true, "answer": "Jane Ballou"}}
-If not: {{"sufficient": false, "queries": ["Harriet Lane", "James Garfield mother"], "feedback": "Found: 15th first lady is Harriet Lane. Missing: Her mother's name, 2nd assassinated president's mother's maiden name."}}
+{{"queries": ["Harriet Lane", "James Garfield mother"], "feedback": "Found: 15th first lady is Harriet Lane. Missing: Her mother's name, 2nd assassinated president's mother's maiden name."}}
 
 RULES:
 - Make queries SHORT (2-4 words)
 - Use entity NAMES not descriptions
 - Never repeat failed query patterns
 - Escalate after 3 failed attempts on same info
-- If you cannot find enough information to give a specific answer, "answer": "Unknown" rather than guessing
 """
 
 # Legacy monolithic prompt (still used by old query_rewriter function)
@@ -221,26 +244,115 @@ Respond only in JSON format"""
 # FIX 1: SPLIT APPROACH - Two separate LLM calls for better performance
 # ==============================================================================
 
+def get_openrouter_headers():
+    """Get headers for OpenRouter API requests."""
+    if not OPENROUTER_API_KEY:
+        return {}
+    return {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
+        "X-Title": "E2E DocGrader Multi-Shot Retrieval"
+    }
+
+def call_openrouter_llm(service_url: str, model_name: str, messages: List[Dict],
+                        temperature: float = 1.0, max_tokens: int = 4096,
+                        top_p: float = 1.0,
+                        top_k: int = -1,
+                        reasoning_effort: str = "medium",
+                        frequency_penalty: float = 0.0,
+                        presence_penalty: float = 0.0,
+                        repetition_penalty: float = 1.0,
+                        logger: Optional[LLMLogger] = None,
+                        component: str = "unknown",
+                        hop_count: Optional[int] = None,
+                        context: Dict[str, Any] = None) -> str:
+    """Call OpenRouter API with proper authentication and logging.
+
+    Default sampling parameters:
+        - top_p=1.0: No nucleus sampling (consider full distribution)
+        - top_k=-1: No top-k filtering (unlimited vocabulary)
+        - reasoning_effort="medium": Balanced reasoning vs speed
+    """
+    payload = {
+        "model": model_name,
+        "messages": messages,
+        "temperature": temperature,
+        "top_p": top_p,
+        "top_k": top_k,
+        "max_tokens": max_tokens
+    }
+
+    # Add reasoning_effort if not default
+    if reasoning_effort != "medium":
+        payload["reasoning_effort"] = reasoning_effort
+    else:
+        payload["reasoning_effort"] = reasoning_effort  # Always include for logging
+
+    # Add optional sampling parameters
+    if frequency_penalty != 0.0:
+        payload["frequency_penalty"] = frequency_penalty
+    if presence_penalty != 0.0:
+        payload["presence_penalty"] = presence_penalty
+    if repetition_penalty != 1.0:
+        payload["repetition_penalty"] = repetition_penalty
+
+    headers = get_openrouter_headers()
+
+    start_time = time.time()
+    try:
+        response = requests.post(service_url, json=payload, headers=headers, timeout=120)
+        response.raise_for_status()
+        result = response.json()
+        latency_ms = (time.time() - start_time) * 1000
+
+        message = result['choices'][0]['message']
+        llm_output = (message.get('content') or '').strip()
+
+        # Fallback: thinking models put output in reasoning_content
+        if not llm_output:
+            reasoning_content = message.get('reasoning_content') or ''
+            if reasoning_content:
+                json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
+                if json_match:
+                    llm_output = json_match.group(0)
+
+        # Log this call
+        if logger:
+            logger.log_llm_call(
+                component=component,
+                hop_count=hop_count,
+                payload=payload,
+                response=result,
+                latency_ms=latency_ms,
+                context=context or {}
+            )
+
+        return llm_output
+    except Exception as e:
+        print(f"    Error calling LLM: {e}")
+        return ""
+
 def evaluate_document_relevance(question: str,
                                 new_documents: List[tuple],
                                 kept_documents: List[tuple],
-                                llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                llm_config: Optional[Dict[str, Any]] = None,
+                                logger: Optional[LLMLogger] = None,
+                                hop_count: int = 1) -> Dict[str, Any]:
     """
-    FIX 1 - Call 1: Simple binary relevance classification.
+    FIX 1 - Call 1: Simple binary relevance classification using gpt-oss-20b.
     """
     if not new_documents:
         return {"relevance": []}
 
-    service_url = llm_config.get('service_url', 'http://127.0.0.1:8123/v1/chat/completions')
-    model_name = llm_config.get('model_name', '/model/gpt-oss-20b-mxfp4')
-    # Use 4096 so thinking models have enough budget for reasoning + final JSON output
+    # Use OpenRouter for document grading (gpt-oss-20b)
+    service_url = llm_config.get('grader_service_url', 'https://openrouter.ai/api/v1/chat/completions')
+    model_name = llm_config.get('grader_model_name', 'openai/gpt-oss-20b')
     max_tokens = 4096
 
     # Format NEW documents
     new_docs_text = ""
     for i, (url, content) in enumerate(new_documents):
-        snippet = content[:800] if len(content) > 800 else content
-        new_docs_text += f"\n[NEW {i+1}] {snippet}\n"
+        new_docs_text += f"\n[NEW {i+1}] {content}\n"
 
     # Format KEPT documents
     kept_docs_text = ""
@@ -258,33 +370,27 @@ def evaluate_document_relevance(question: str,
         num_docs=len(new_documents)
     )
 
-    seed = llm_config.get('seed') if llm_config else None
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 1,
-        "top_p": 1,
-        "top_k": -1,
-        "max_tokens": max_tokens
-    }
-    if seed is not None:
-        payload["seed"] = seed
+    messages = [{"role": "user", "content": prompt}]
 
     try:
-        response = requests.post(service_url, json=payload, timeout=120)
-        response.raise_for_status()
-        result = response.json()
-        message = result['choices'][0]['message']
-        llm_output = (message.get('content') or '').strip()
-
-        # Fallback: thinking models put output in reasoning_content
-        if not llm_output:
-            reasoning_content = message.get('reasoning_content') or ''
-            if reasoning_content:
-                print(f"    [DEBUG] content empty, reasoning_content snippet: {reasoning_content[-300:]}...")
-                json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
-                if json_match:
-                    llm_output = json_match.group(0)
+        llm_output = call_openrouter_llm(
+            service_url=service_url,
+            model_name=model_name,
+            messages=messages,
+            temperature=1,
+            max_tokens=max_tokens,
+            top_p=1.0,
+            top_k=-1,
+            reasoning_effort="medium",
+            logger=logger,
+            component="evaluate_document_relevance",
+            hop_count=hop_count,
+            context={
+                "num_documents_evaluated": len(new_documents),
+                "iteration_state": "evaluating_relevance",
+                "kept_docs_before": len(kept_documents)
+            }
+        )
 
         print(f"    [DEBUG] Relevance LLM raw output: {llm_output[:200]}...")
 
@@ -312,19 +418,132 @@ def evaluate_document_relevance(question: str,
         return {"relevance": [1] * len(new_documents)}
 
 
-def generate_search_queries(question: str,
-                           kept_documents: List[tuple],
-                           max_queries: int = 3,
-                           query_history: Optional[List[str]] = None,
-                           query_results: Optional[List[int]] = None,
-                           feedback_history: Optional[List[str]] = None,
-                           llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def check_sufficiency(question: str,
+                     kept_documents: List[tuple],
+                     iteration: int,
+                     max_iterations: int,
+                     llm_config: Optional[Dict[str, Any]] = None,
+                     logger: Optional[LLMLogger] = None,
+                     hop_count: int = 1) -> Dict[str, Any]:
     """
-    FIX 1 - Call 2: Generate search queries OR final answer.
+    Check if kept documents are sufficient to answer the question.
+    Uses gpt-oss-120b model via OpenRouter.
+
+    Args:
+        question: The user's original question
+        kept_documents: List of documents marked as relevant
+        iteration: Current iteration number
+        max_iterations: Maximum iterations allowed
+        llm_config: LLM configuration
+
+    Returns:
+        Dict with:
+        - 'sufficient' (bool): Whether documents are sufficient
+        - 'reasoning' (str): Explanation of decision
     """
-    service_url = llm_config.get('service_url', 'http://127.0.0.1:8123/v1/chat/completions')
-    # Use query_model_name if set (e.g. gpt-oss-120b), fall back to model_name (gpt-oss-20b)
-    model_name = llm_config.get('query_model_name', llm_config.get('model_name', '/model/gpt-oss-20b-mxfp4'))
+    # Use OpenRouter for sufficiency check (gpt-oss-120b)
+    service_url = llm_config.get('sufficiency_service_url', 'https://openrouter.ai/api/v1/chat/completions')
+    model_name = llm_config.get('sufficiency_model_name', 'openai/gpt-oss-120b')
+    max_tokens = 10240
+
+    # Format KEPT documents
+    kept_docs_text = ""
+    if kept_documents:
+        for i, doc in enumerate(kept_documents):
+            content = doc[1] if len(doc) >= 2 else ""
+            kept_docs_text += f"\n[DOC {i+1}] {content}\n"
+    else:
+        kept_docs_text = "None"
+
+    prompt = SUFFICIENCY_CHECK_PROMPT.format(
+        question=question,
+        kept_docs=kept_docs_text,
+        iteration=iteration,
+        max_iterations=max_iterations
+    )
+
+    messages = [{"role": "user", "content": prompt}]
+
+    try:
+        llm_output = call_openrouter_llm(
+            service_url=service_url,
+            model_name=model_name,
+            messages=messages,
+            temperature=1,
+            max_tokens=max_tokens,
+            top_p=1.0,
+            top_k=-1,
+            reasoning_effort="medium",
+            logger=logger,
+            component="check_sufficiency",
+            hop_count=hop_count,
+            context={
+                "kept_docs_count": len(kept_documents),
+                "iteration": iteration,
+                "max_iterations": max_iterations,
+                "iteration_state": "checking_sufficiency"
+            }
+        )
+
+        print(f"    [DEBUG] Sufficiency check raw output: {llm_output[:200]}...")
+
+        if not llm_output:
+            print(f"    Warning: Sufficiency check returned empty")
+            # On final iteration, force sufficient
+            if iteration >= max_iterations:
+                return {"sufficient": True, "reasoning": "Max iterations reached"}
+            return {"sufficient": False, "reasoning": "LLM returned empty"}
+
+        if llm_output.startswith("```"):
+            llm_output = llm_output.split("```")[1]
+            if llm_output.startswith("json"):
+                llm_output = llm_output[4:]
+            llm_output = llm_output.strip()
+
+        # Try to extract JSON
+        json_match = re.search(r'\{.*\}', llm_output, re.DOTALL)
+        if json_match:
+            llm_output = json_match.group(0)
+
+        result = json.loads(llm_output)
+        sufficient = result.get("sufficient", False)
+        reasoning = result.get("reasoning", "")
+
+        # Force sufficient on final iteration
+        if iteration >= max_iterations and not sufficient:
+            print(f"    [OVERRIDE] Final iteration - forcing sufficient=True")
+            sufficient = True
+            reasoning = f"Max iterations reached. {reasoning}"
+
+        return {"sufficient": sufficient, "reasoning": reasoning}
+
+    except Exception as e:
+        print(f"    Error in sufficiency check: {e}")
+        # On final iteration, force sufficient
+        if iteration >= max_iterations:
+            return {"sufficient": True, "reasoning": f"Max iterations reached (error: {str(e)})"}
+        return {"sufficient": False, "reasoning": f"Error: {str(e)}"}
+
+
+def generate_answer(question: str,
+                   kept_documents: List[tuple],
+                   llm_config: Optional[Dict[str, Any]] = None,
+                   logger: Optional[LLMLogger] = None,
+                   hop_count: Optional[int] = None) -> str:
+    """
+    Generate final answer from kept documents using gpt-oss-120b.
+
+    Args:
+        question: The user's original question
+        kept_documents: List of documents to base answer on
+        llm_config: LLM configuration
+
+    Returns:
+        Final answer string
+    """
+    # Use OpenRouter for answer generation (gpt-oss-120b)
+    service_url = llm_config.get('sufficiency_service_url', 'https://openrouter.ai/api/v1/chat/completions')
+    model_name = llm_config.get('sufficiency_model_name', 'openai/gpt-oss-120b')
     max_tokens = llm_config.get('max_tokens', 10240)
 
     # Format KEPT documents
@@ -332,8 +551,80 @@ def generate_search_queries(question: str,
     if kept_documents:
         for i, doc in enumerate(kept_documents):
             content = doc[1] if len(doc) >= 2 else ""
-            snippet = content[:1200] if len(content) > 1200 else content
-            kept_docs_text += f"\n[DOC {i+1}] {snippet}\n"
+            kept_docs_text += f"\n[DOC {i+1}] {content}\n"
+    else:
+        return "Unknown"
+
+    prompt = f"""Answer the question based ONLY on the provided documents.
+
+QUESTION: {question}
+
+DOCUMENTS:
+{kept_docs_text}
+
+INSTRUCTIONS:
+- Provide a specific, concise answer
+- Base your answer ONLY on facts from the documents
+- If documents don't contain enough information, answer "Unknown"
+- Do NOT guess or make assumptions
+
+Answer:"""
+
+    messages = [{"role": "user", "content": prompt}]
+
+    try:
+        llm_output = call_openrouter_llm(
+            service_url=service_url,
+            model_name=model_name,
+            messages=messages,
+            temperature=1,
+            max_tokens=max_tokens,
+            top_p=1.0,
+            top_k=-1,
+            reasoning_effort="medium",
+            logger=logger,
+            component="answer_generator",
+            hop_count=hop_count,
+            context={
+                "num_documents_used": len(kept_documents),
+                "iteration_state": "generating_final_answer",
+                "retrieval_complete": True
+            }
+        )
+
+        if not llm_output or not llm_output.strip():
+            return "Unknown"
+
+        return llm_output.strip()
+
+    except Exception as e:
+        print(f"    Error generating answer: {e}")
+        return "Unknown"
+
+
+def generate_search_queries(question: str,
+                           kept_documents: List[tuple],
+                           max_queries: int = 3,
+                           query_history: Optional[List[str]] = None,
+                           query_results: Optional[List[int]] = None,
+                           feedback_history: Optional[List[str]] = None,
+                           llm_config: Optional[Dict[str, Any]] = None,
+                           logger: Optional[LLMLogger] = None,
+                           hop_count: int = 1) -> Dict[str, Any]:
+    """
+    Generate search queries using gpt-oss-120b via OpenRouter.
+    """
+    # Use OpenRouter for query generation (gpt-oss-120b)
+    service_url = llm_config.get('query_service_url', 'https://openrouter.ai/api/v1/chat/completions')
+    model_name = llm_config.get('query_model_name', 'openai/gpt-oss-120b')
+    max_tokens = llm_config.get('max_tokens', 10240)
+
+    # Format KEPT documents
+    kept_docs_text = ""
+    if kept_documents:
+        for i, doc in enumerate(kept_documents):
+            content = doc[1] if len(doc) >= 2 else ""
+            kept_docs_text += f"\n[DOC {i+1}] {content}\n"
     else:
         kept_docs_text = "None"
 
@@ -356,38 +647,33 @@ def generate_search_queries(question: str,
         max_queries=max_queries
     )
 
-    seed = llm_config.get('seed') if llm_config else None
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 1,
-        "top_p": 1,
-        "top_k": -1,
-        "max_tokens": max_tokens
-    }
-    if seed is not None:
-        payload["seed"] = seed
+    messages = [{"role": "user", "content": prompt}]
 
     try:
-        response = requests.post(service_url, json=payload, timeout=300)
-        response.raise_for_status()
-        result = response.json()
-        message = result['choices'][0]['message']
-        llm_output = (message.get('content') or '').strip()
-
-        # Fallback: thinking models put output in reasoning_content
-        if not llm_output:
-            reasoning_content = message.get('reasoning_content') or ''
-            if reasoning_content:
-                json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
-                if json_match:
-                    llm_output = json_match.group(0)
+        llm_output = call_openrouter_llm(
+            service_url=service_url,
+            model_name=model_name,
+            messages=messages,
+            temperature=1,
+            max_tokens=max_tokens,
+            top_p=1.0,
+            top_k=-1,
+            reasoning_effort="medium",
+            logger=logger,
+            component="generate_search_queries",
+            hop_count=hop_count,
+            context={
+                "kept_docs_count": len(kept_documents),
+                "iteration_state": "generating_queries",
+                "query_history_length": len(query_history) if query_history else 0
+            }
+        )
 
         print(f"    [DEBUG] Query gen LLM raw output: {llm_output[:200]}...")
 
         if not llm_output:
             print(f"    Warning: Query generation returned empty")
-            return {"sufficient": False, "queries": [question], "feedback": "LLM returned empty"}
+            return {"queries": [question], "feedback": "LLM returned empty"}
 
         if llm_output.startswith("```"):
             llm_output = llm_output.split("```")[1]
@@ -401,27 +687,14 @@ def generate_search_queries(question: str,
             llm_output = json_match.group(0)
 
         query_result = json.loads(llm_output)
-        sufficient = query_result.get("sufficient", False)
-
-        if sufficient:
-            return {"sufficient": True, "answer": query_result.get("answer", ""), "feedback": "Answer generated"}
-        else:
-            return {"sufficient": False, "queries": query_result.get("queries", [question]), 
-                    "feedback": query_result.get("feedback", "Generating queries")}
+        return {
+            "queries": query_result.get("queries", [question]),
+            "feedback": query_result.get("feedback", "Generating queries")
+        }
 
     except Exception as e:
         print(f"    Error in query generation: {e}")
-        # Last-ditch: if the raw output looks like a conclusive answer in free-text, surface it
-        if llm_output:
-            answer_match = re.search(
-                r'(?:answer is|most recently described(?:\s+genus)?(?:\s+is)?)[:\s]+([^\n.]+)',
-                llm_output, re.IGNORECASE
-            )
-            if answer_match:
-                extracted = answer_match.group(1).strip()
-                print(f"    [FALLBACK] Extracted answer from free-text: {extracted}")
-                return {"sufficient": True, "answer": extracted, "feedback": "Extracted from free-text response"}
-        return {"sufficient": False, "queries": [question], "feedback": f"Error: {str(e)}"}
+        return {"queries": [question], "feedback": f"Error: {str(e)}"}
 
 
 def query_rewriter(question: str, new_documents: List[tuple],
@@ -682,6 +955,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          verbose: bool = True,
                          reasoning_effort: str = "medium",
                          llm_config: Optional[Dict[str, Any]] = None,
+                         logger: Optional[LLMLogger] = None,
                          **strategy_params) -> Dict[str, Any]:
     """
     Multi-shot retrieval with iterative query refinement and document evaluation.
@@ -769,7 +1043,9 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 query_history=None,
                 query_results=None,
                 feedback_history=None,
-                llm_config=llm_config
+                llm_config=llm_config,
+                logger=logger,
+                hop_count=iteration
             )
 
             sub_queries = query_result.get("queries", [original_query])
@@ -791,17 +1067,19 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         else:
             # FIX 1: Split approach for iterations 2+
 
-            # CALL 1: Evaluate document relevance (if we have new docs)
+            # CALL 1: Evaluate document relevance (if we have new docs) - uses gpt-oss-20b
             relevance = []
             if new_docs:
                 if verbose:
-                    print(f"  [FIX1-CALL1] Evaluating {len(new_docs)} new documents...")
+                    print(f"  [CALL1] Evaluating {len(new_docs)} new documents with gpt-oss-20b...")
 
                 relevance_result = evaluate_document_relevance(
                     question=original_query,
                     new_documents=new_docs,
                     kept_documents=kept_docs,
-                    llm_config=llm_config
+                    llm_config=llm_config,
+                    logger=logger,
+                    hop_count=iteration
                 )
                 relevance = relevance_result.get("relevance", [1] * len(new_docs))
 
@@ -815,32 +1093,79 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     print(f"    Relevance array: {relevance}")
                     print(f"    Total kept docs now: {len(kept_docs)}")
 
-            # CALL 2: Generate queries or answer
-            # Cap kept_docs sent to CALL2 to avoid context overflow (most recent docs are most useful)
-            MAX_DOCS_FOR_QUERY_GEN = 12
-            docs_for_query_gen = kept_docs[-MAX_DOCS_FOR_QUERY_GEN:] if len(kept_docs) > MAX_DOCS_FOR_QUERY_GEN else kept_docs
-            if verbose:
-                print(f"  [FIX1-CALL2] Generating queries from {len(kept_docs)} kept documents (capped to {len(docs_for_query_gen)})...")
-
-            query_result = generate_search_queries(
-                question=original_query,
-                kept_documents=docs_for_query_gen,
-                max_queries=max_sub_queries,
-                query_history=query_history,
-                query_results=query_results,
-                feedback_history=feedback_history,
-                llm_config=llm_config
-            )
-
-            sufficient = query_result.get("sufficient", False)
-            # Never declare sufficient with no evidence - force more retrieval
-            if sufficient and not kept_docs:
-                sufficient = False
+            # CALL 2: Check sufficiency - uses gpt-oss-120b
+            if kept_docs:
                 if verbose:
-                    print(f"    [GUARD] Overriding sufficient=True: no kept docs, forcing more retrieval")
-            sub_queries = query_result.get("queries", [])
-            current_feedback = query_result.get("feedback", "")
-            final_answer = str(query_result.get("answer", ""))
+                    print(f"  [CALL2] Checking sufficiency with gpt-oss-120b (iteration {iteration}/{max_iterations})...")
+
+                sufficiency_result = check_sufficiency(
+                    question=original_query,
+                    kept_documents=kept_docs,
+                    iteration=iteration,
+                    max_iterations=max_iterations,
+                    llm_config=llm_config,
+                    logger=logger,
+                    hop_count=iteration
+                )
+
+                sufficient = sufficiency_result.get("sufficient", False)
+                sufficiency_reasoning = sufficiency_result.get("reasoning", "")
+
+                if verbose:
+                    print(f"    Sufficient: {sufficient}")
+                    print(f"    Reasoning: {sufficiency_reasoning}")
+
+            else:
+                sufficient = False
+                sufficiency_reasoning = "No relevant documents kept yet"
+
+            # CALL 3a or 3b: Either generate answer (if sufficient) or generate queries (if not)
+            if sufficient:
+                # CALL 3a: Generate final answer - uses gpt-oss-120b
+                if verbose:
+                    print(f"  [CALL3a] Generating final answer with gpt-oss-120b...")
+
+                final_answer = generate_answer(
+                    question=original_query,
+                    kept_documents=kept_docs,
+                    llm_config=llm_config,
+                    logger=logger,
+                    hop_count=iteration
+                )
+
+                if verbose:
+                    print(f"    Generated answer: {final_answer[:200]}...")
+
+                sub_queries = []
+                current_feedback = sufficiency_reasoning
+            else:
+                # CALL 3b: Generate search queries - uses gpt-oss-120b
+                if verbose:
+                    print(f"  [CALL3b] Generating search queries with gpt-oss-120b...")
+
+                # Cap kept_docs sent to avoid context overflow
+                MAX_DOCS_FOR_QUERY_GEN = 12
+                docs_for_query_gen = kept_docs[-MAX_DOCS_FOR_QUERY_GEN:] if len(kept_docs) > MAX_DOCS_FOR_QUERY_GEN else kept_docs
+
+                query_result = generate_search_queries(
+                    question=original_query,
+                    kept_documents=docs_for_query_gen,
+                    max_queries=max_sub_queries,
+                    query_history=query_history,
+                    query_results=query_results,
+                    feedback_history=feedback_history,
+                    llm_config=llm_config,
+                    logger=logger,
+                    hop_count=iteration
+                )
+
+                sub_queries = query_result.get("queries", [])
+                current_feedback = query_result.get("feedback", "")
+                final_answer = ""
+
+                if verbose:
+                    print(f"    Generated {len(sub_queries)} queries")
+
             summaries = []
             reasoning_steps = ""
 
@@ -898,10 +1223,10 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         num_sub_queries = len(sub_queries)
         #docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
         docs_per_subquery = max(1, top_k_retriever)
-        
+
         iteration_results = []
         per_query_counts = []  # Track new docs found by each query
-        
+
         # Calculate target docs per subquery after reranking
         target_docs_per_subquery = max(3, top_k_retriever // num_sub_queries)
         
@@ -1051,6 +1376,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               difficulty: int = 0,
                               max_iterations: int = 10,
                               llm_config: Optional[Dict[str, Any]] = None,
+                              logger: Optional[LLMLogger] = None,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
@@ -1105,17 +1431,21 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     
     for idx, row in df.iterrows():
         print(f"\n[Query {idx+1}/{max_queries}]")
-        
+
         # Extract expected URLs
         expected_urls = []
         for col in df.columns:
             if col.startswith('wikipedia_link_') and pd.notna(row[col]):
                 expected_urls.append(row[col].strip())
-        
+
         # Extract expected answer
         expected_answer = row.get('Answer', '').strip() if 'Answer' in row and pd.notna(row.get('Answer')) else ""
-        
+
         if expected_urls:
+            # Start logging for this query
+            if logger:
+                logger.start_query(str(idx), row['Prompt'])
+
             # Multi-shot retrieval with iterative refinement
             metrics = multi_shot_retrieval(
                 rag_db, row['Prompt'], expected_urls,
@@ -1129,16 +1459,33 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                 verbose=True,
                 reasoning_effort=reasoning_effort,
                 llm_config=llm_config,
+                logger=logger,
                 **strategy_params
             )
             
+            # End logging for this query with results
+            if logger:
+                logger.end_query(
+                    retrieval_results={
+                        "retrieved_urls": metrics.get('retrieved_urls', []),
+                        "correct_urls": expected_urls,
+                        "precision": metrics.get('precision', 0),
+                        "recall": metrics.get('recall', 0),
+                        "f1": metrics.get('f1', 0)
+                    },
+                    answer_results={
+                        "llm_answer": metrics.get('llm_answer', ''),
+                        "ground_truth_answer": expected_answer
+                    }
+                )
+
             # Accumulate metrics
             for metric_name, value in metrics.items():
                 if metric_name not in total_metrics:
                     total_metrics[metric_name] = 0.0
                 if isinstance(value, (int, float)):
                     total_metrics[metric_name] += value
-            
+
             valid_queries += 1
 
             # Collect per-query results for evaluate.py scoring
@@ -1269,11 +1616,47 @@ if __name__ == "__main__":
         strategy_params["p"] = args.top_p
     elif args.retrieval_strategy == "relative":
         strategy_params["ratio"] = args.relative_ratio
-    
+
+    # Initialize LLM logger with incremental writing
+    experiment_start_time = datetime.now()
+    log_filename = f"llm_logs_multi_shot_{experiment_start_time.strftime('%Y%m%d_%H%M%S')}.json"
+
+    # Determine chunk size from database name
+    chunk_size = 768  # default
+    if 'len' in db_base_name:
+        import re as re_module
+        match = re_module.search(r'len(\d+)', db_base_name)
+        if match:
+            chunk_size = int(match.group(1))
+
+    # Create logger with file and metadata for incremental writing
+    llm_logger = LLMLogger(
+        output_file=log_filename,
+        experiment_metadata={
+            "experiment_name": f"multi_shot_{db_base_name}_n{{queries}}",  # Will be updated
+            "timestamp_start": experiment_start_time.isoformat(),
+            "timestamp_end": "in_progress",
+            "retrieval_method": args.retrieval_method,
+            "retrieval_mode": "multi_shot",
+            "max_iterations": args.max_iterations,
+            "max_sub_queries": args.max_sub_queries,
+            "top_k_retriever": args.top_k_retriever,
+            "rerank_per_subquery": f"top_k_retriever / num_sub_queries (= {args.top_k_retriever} / 3 = {args.top_k_retriever // 3})",
+            "chunk_size": chunk_size,
+            "device": args.device,
+            "grader_model": llm_config.get('grader_model_name', 'unknown'),
+            "sufficiency_checker_model": llm_config.get('sufficiency_model_name', 'unknown'),
+            "query_model": llm_config.get('query_model_name', 'unknown'),
+            "answer_generator_model": llm_config.get('sufficiency_model_name', 'unknown'),
+            "total_queries": "in_progress"
+        }
+    )
+    print(f"LLM logs will be written incrementally to: {log_filename}")
+
     # Run evaluation or single query
     if args.eval:
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
-        
+
         metrics = run_multi_shot_evaluation(
             rag_db, args.dataset,
             max_sub_queries=args.max_sub_queries,
@@ -1287,6 +1670,7 @@ if __name__ == "__main__":
             difficulty=args.difficulty,
             max_iterations=args.max_iterations,
             llm_config=llm_config,
+            logger=llm_logger,
             **strategy_params
         )
         
@@ -1302,16 +1686,32 @@ if __name__ == "__main__":
         
         with open("result_multi_shot.json", "w") as f:
             json.dump(results_data, f, indent=2)
-        
+
         print(f"Results saved to result_multi_shot.json")
+
+        # Finalize LLM logs (update metadata with final values)
+        experiment_end_time = datetime.now()
+        llm_logger.experiment_metadata.update({
+            "experiment_name": f"multi_shot_{db_base_name}_n{max_queries or len(per_query_results)}",
+            "timestamp_end": experiment_end_time.isoformat(),
+            "total_queries": max_queries or len(per_query_results)
+        })
+
+        # Write final version with updated metadata
+        llm_logger.save()
+        print(f"LLM logs finalized: {log_filename}")
         
     else:
         # Single query multi-shot retrieval
         if not args.query:
             args.query = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
-        
+
         print(f"\nRunning multi-shot retrieval for single query...")
-        multi_shot_retrieval(
+
+        # Start logging for single query
+        llm_logger.start_query("0", args.query)
+
+        result = multi_shot_retrieval(
             rag_db, args.query, expected_urls=[],
             max_sub_queries=args.max_sub_queries,
             top_k_retriever=args.top_k_retriever,
@@ -1321,5 +1721,33 @@ if __name__ == "__main__":
             verbose=True,
             reasoning_effort=args.reasoning,
             llm_config=llm_config,
+            logger=llm_logger,
             **strategy_params
         )
+
+        # End logging for single query
+        llm_logger.end_query(
+            retrieval_results={
+                "retrieved_urls": result.get('retrieved_urls', []),
+                "correct_urls": [],
+                "precision": result.get('precision', 0),
+                "recall": result.get('recall', 0),
+                "f1": result.get('f1', 0)
+            },
+            answer_results={
+                "llm_answer": result.get('llm_answer', ''),
+                "ground_truth_answer": ""
+            }
+        )
+
+        # Finalize LLM logs (update metadata with final values)
+        experiment_end_time = datetime.now()
+        llm_logger.experiment_metadata.update({
+            "experiment_name": f"single_query_{db_base_name}",
+            "timestamp_end": experiment_end_time.isoformat(),
+            "total_queries": 1
+        })
+
+        # Write final version
+        llm_logger.save()
+        print(f"LLM logs finalized: {log_filename}")

@@ -12,10 +12,12 @@ from .ragdb import RagDB
 # Worker function for parallel embedding generation (must be at module level for multiprocessing)
 def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model_name, encode_kwargs, base_device):
     """Worker function to generate embeddings on a specific device.
-    
+
     This worker processes multiple chunks on a single device to avoid
     loading the model multiple times.
-    
+
+    For CPU-based processing, uses numactl to bind to specific NUMA node and cores.
+
     Args:
         device_id: Device index (0, 1, 2, etc.)
         chunk_indices: List of chunk indices this worker should process
@@ -27,40 +29,46 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
     """
     try:
         import torch
+        import os
         from langchain_huggingface import HuggingFaceEmbeddings
-        
+
         # Format device string: CPU doesn't use indices, others do
         if base_device == 'cpu':
             device = 'cpu'
+            # Set CPU affinity for numactl configuration
+            # NUMA node 1, cores 43-85, memory from node 1
+            os.environ['OMP_NUM_THREADS'] = '43'  # 85-43+1 = 43 cores
+            os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1,0'
+            # Note: In production, you would use numactl command wrapper
+            # numactl --cpunodebind=1 --membind=1 --physcpubind=43-85 <command>
         elif base_device == 'hpu':
             device = 'hpu'
             import habana_frameworks.torch.core as htcore
         else:
             device = f'{base_device}:{device_id}'
-        
+
         model_kwargs = {'device': device, 'local_files_only': True}
-        
+
         # Load model once for this device
         embedder = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs=model_kwargs,
             encode_kwargs=encode_kwargs
         )
-        
+
         print(f"✓ Device {device}: Loaded model, processing {len(chunks)} chunk(s)")
-        
+
         # Process all chunks assigned to this device
         for chunk_idx, chunk in zip(chunk_indices, chunks):
             embeddings = embedder.embed_documents(chunk)
             result_queue.put((chunk_idx, embeddings))
-        
+
     except Exception as e:
         print(f"❌ Error on device {device_id} ({base_device}): {e}")
         import traceback
         traceback.print_exc()
         # Put None for all failed chunks
         for chunk_idx in chunk_indices:
-            result_queue.put((chunk_idx, None))
             result_queue.put((chunk_idx, None))
 
 class VectorDB(RagDB):

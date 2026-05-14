@@ -1,20 +1,7 @@
 def define_env(env):
 
     @env.macro
-    def mlperf_inference_implementation_readme(
-        spaces,
-        model,
-        implementation,
-        *,
-        implementation_tips=True,
-        setup_tips=True,
-        run_tips=True,
-        skip_test_query_count=False,
-        fixed_scenarios=[],
-        devices=[],
-        frameworks=[],
-        categories=[],
-        extra_variation_tags="",
+    def mlperf_inference_implementation_readme(spaces,model,implementation,*,implementation_tips=True,setup_tips=True,run_tips=True,skip_test_query_count=False,fixed_scenarios=[],devices=[],frameworks=[],categories=[],extra_variation_tags="",
         extra_input_string="",
         extra_docker_input_string="",
     ):

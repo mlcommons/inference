@@ -10,6 +10,7 @@ class RagDB(abc.ABC):
         self._device = self._determine_device(device)
         self._reranker_model = None
         self._reranker_tokenizer = None
+        self._reranker_queue = None
         self._benchmark = benchmark
         self._monitor = None
         
@@ -141,6 +142,10 @@ class RagDB(abc.ABC):
             print(f"{db_type} ingestion: {item_count} docs, {total_chars:,} chars in {duration:.2f}s")
             print(f"  Performance: {docs_per_sec:.1f} docs/sec, {chars_per_sec/1024:.1f} KB/sec")
     
+    def enable_threading(self):
+        """Enable thread-safe access. Override in subclasses that need locks."""
+        pass
+
     @abc.abstractmethod
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]]):
         """Ingest passages and their metadata into the database."""
@@ -226,26 +231,31 @@ class RagDB(abc.ABC):
         else:
             raise ValueError(f"Source path {source_path} is neither a file nor a directory")
 
+    def set_reranker_queue(self, reranker_queue):
+        """Set shared reranker queue for thread-safe reranking."""
+        self._reranker_queue = reranker_queue
+
     def rerank(self, query: str, passages: List[str]):
         """Rerank passages using the reranker model."""
+        if self._reranker_queue:
+            return self._reranker_queue.submit(query, passages)
+
         if self._reranker_model is None:
-            # If no reranker, return passages with dummy scores
             return [(p, 0.0) for p in passages]
-        
+
         import torch
-        
+
         pairs = [[query, passage] for passage in passages]
-        
+
         with torch.no_grad():
-            inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt', 
+            inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt',
                                             truncation=True, max_length=512)
             inputs = {k: v.to(self._device) for k, v in inputs.items()}
             scores = self._reranker_model(**inputs).logits.view(-1).float()
-        
+
         scored_passages = list(zip(passages, scores.cpu().tolist()))
-        # Sort by score descending
         scored_passages.sort(key=lambda x: x[1], reverse=True)
-        
+
         return scored_passages
     
     def lookup_with_rerank(self, query: str, k: int, rerank_k: int = None) -> List[Any]:

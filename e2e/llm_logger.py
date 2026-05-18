@@ -6,6 +6,7 @@ LLM call logger for tracking all LLM requests, responses, and token usage.
 import uuid
 import time
 import json
+import threading
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
@@ -16,13 +17,22 @@ class LLMLogger:
     def __init__(self, output_file: str = None, experiment_metadata: Dict[str, Any] = None):
         self.session_id = str(uuid.uuid4())
         self.queries = []
-        self.current_query = None
         self.output_file = output_file
         self.experiment_metadata = experiment_metadata or {}
+        self._lock = threading.Lock()
+        self._local = threading.local()
 
         # Initialize file with header if output_file provided
         if self.output_file:
             self._initialize_file()
+
+    @property
+    def current_query(self):
+        return getattr(self._local, 'current_query', None)
+
+    @current_query.setter
+    def current_query(self, value):
+        self._local.current_query = value
 
     def start_query(self, query_id: str, original_query: str):
         """Start logging a new query"""
@@ -194,11 +204,12 @@ class LLMLogger:
             if answer_results:
                 self.current_query["answer_results"] = answer_results
 
-            self.queries.append(self.current_query)
+            with self._lock:
+                self.queries.append(self.current_query)
 
-            # Write to file immediately after completing query
-            if self.output_file:
-                self._append_query_to_file(self.current_query)
+                # Write to file immediately after completing query
+                if self.output_file:
+                    self._append_query_to_file(self.current_query)
 
             self.current_query = None
 

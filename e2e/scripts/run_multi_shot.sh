@@ -3,14 +3,16 @@
 # Multi-shot baseline experiment — GPT-OSS 20B (grader) + GPT-OSS 120B (query gen + sufficiency)
 #
 # Usage:
-#   OPENROUTER_API_KEY="sk-or-v1-YOUR_KEY_HERE" bash scripts/run_multi_shot.sh [N_QUERIES]
+#   bash scripts/run_multi_shot.sh [N_QUERIES] [NUM_WORKERS]
 #
-#   N_QUERIES: number of queries to evaluate (default: 50 for pilot run)
-#              Use 'all' or omit for the full dataset (824 queries)
+#   N_QUERIES:   number of queries to evaluate (default: 5)
+#                Use 'all' for the full dataset (824 queries)
+#   NUM_WORKERS: parallel query threads (default: 1, sequential)
 #
 # Examples:
-#   OPENROUTER_API_KEY="sk-or-v1-..." bash scripts/run_multi_shot.sh 50    # fast pilot run
-#   OPENROUTER_API_KEY="sk-or-v1-..." bash scripts/run_multi_shot.sh all   # full evaluation
+#   bash scripts/run_multi_shot.sh 50        # 50 queries, sequential
+#   bash scripts/run_multi_shot.sh 50 10     # 50 queries, 10 parallel workers
+#   bash scripts/run_multi_shot.sh all 20    # full evaluation, 20 workers
 #
 # Prerequisites:
 #   - OPENROUTER_API_KEY environment variable set
@@ -42,6 +44,7 @@ LLM_URL="http://127.0.0.1:8123/v1/chat/completions"
 
 # Eval size: positional arg or default 5
 N_QUERIES="${1:-5}"
+NUM_WORKERS="${2:-1}"
 if [[ "${N_QUERIES}" == "all" ]]; then
     EVAL_FLAG="--eval"
     TAG="full"
@@ -50,16 +53,20 @@ else
     TAG="n${N_QUERIES}"
 fi
 
-RESULT_JSON="result_multi_shot_len768_${TAG}.json"
-LOG_FILE="logs_768/test_${TAG}.log"
-SCORE_FILE="score_multi_shot_len768_${TAG}.txt"
+OUTPUT_DIR="output_multi_shot_${TAG}_w${NUM_WORKERS}_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "${OUTPUT_DIR}"
+
+RESULT_JSON="${OUTPUT_DIR}/result_multi_shot_len768_${TAG}.json"
+LOG_FILE="${OUTPUT_DIR}/run.log"
+SCORE_FILE="${OUTPUT_DIR}/score_multi_shot_len768_${TAG}.txt"
 
 echo "=== Multi-shot baseline: GPT-OSS 20B (grader) + GPT-OSS 120B (query gen) ==="
 echo "  Model (grader):    ${MODEL}"
 echo "  Model (query gen): ${QUERY_MODEL}"
 echo "  DB:          ${DB}"
+echo "  Workers:     ${NUM_WORKERS}"
 echo "  Queries:     ${N_QUERIES}"
-echo "  Result file: ${RESULT_JSON}"
+echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
 # ── Run multi-shot retrieval ──────────────────────────────────────────────────
@@ -79,15 +86,22 @@ python3 -u multi_shot_retrieval.py \
     --retriever_model /data/model/e5-base-v2 \
     --top_k_retriever 15 \
     --generate-answer \
+    --num-workers ${NUM_WORKERS} \
     --llm_model "${MODEL}" \
     --query_model "${QUERY_MODEL}" \
-    --llm_service_url "${LLM_URL}"
+    --llm_service_url "${LLM_URL}" \
+    2>&1 | tee "${LOG_FILE}"
 
-# Rename output to avoid overwrite on next run
+# Move output to output dir
 if [[ -f "result_multi_shot.json" ]]; then
     mv result_multi_shot.json "${RESULT_JSON}"
     echo "Saved results to ${RESULT_JSON}"
 fi
+
+# Move LLM logs to output dir
+for f in llm_logs_multi_shot_*.json; do
+    [[ -f "$f" ]] && mv "$f" "${OUTPUT_DIR}/"
+done
 
 # ── Score with LLM judge ──────────────────────────────────────────────────────
 echo ""
@@ -101,6 +115,7 @@ python3 -u evaluate.py "${RESULT_JSON}" \
 
 echo ""
 echo "=== Done ==="
-echo "  Retrieval log: ${LOG_FILE}"
-echo "  Results:       ${RESULT_JSON}"
-echo "  Score:         ${SCORE_FILE}"
+echo "  Output dir:  ${OUTPUT_DIR}"
+echo "  Results:     ${RESULT_JSON}"
+echo "  Score:       ${SCORE_FILE}"
+echo "  Run log:     ${LOG_FILE}"

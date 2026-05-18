@@ -97,6 +97,7 @@ class VectorDB(RagDB):
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
         self._hierarchical = hierarchical
+        self._embedding_lock = None
 
         # For hierarchical mode: map child_index -> parent_passage
         self._parent_map = {}
@@ -569,8 +570,22 @@ class VectorDB(RagDB):
                 indexing_time=indexing_time
             )
     
+    def enable_threading(self):
+        """Enable thread-safe access to the embedding model."""
+        import threading
+        self._embedding_lock = threading.Lock()
+
+    def embed_query(self, query: str) -> List[float]:
+        """Embed a single query string. Caller must hold _embedding_lock if threading."""
+        return self._embedding_model.embed_query(query)
+
     def lookup(self, query: str, k: int):
-        results = self._vector_store.similarity_search(query, k=k)
+        if self._embedding_lock:
+            with self._embedding_lock:
+                embedding = self.embed_query(query)
+        else:
+            embedding = self.embed_query(query)
+        results = self._vector_store.similarity_search_by_vector(embedding, k=k)
 
         # In hierarchical mode: replace child passages with parents, deduplicate
         if self._hierarchical and self._parent_map:
@@ -612,7 +627,12 @@ class VectorDB(RagDB):
         Note: FAISS returns L2 distances (lower is better), but we convert to
         similarity scores (higher is better) for consistency with BM25.
         """
-        results_with_scores = self._vector_store.similarity_search_with_score(query, k=k)
+        if self._embedding_lock:
+            with self._embedding_lock:
+                embedding = self.embed_query(query)
+        else:
+            embedding = self.embed_query(query)
+        results_with_scores = self._vector_store.similarity_search_with_score_by_vector(embedding, k=k)
 
         # FAISS returns (document, distance) where distance is L2 distance (lower is better)
         # Convert to similarity score (higher is better) by negating

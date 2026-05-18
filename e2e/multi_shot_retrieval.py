@@ -17,6 +17,7 @@ import json
 import re
 import time
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import pandas as pd
@@ -1377,6 +1378,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               max_iterations: int = 10,
                               llm_config: Optional[Dict[str, Any]] = None,
                               logger: Optional[LLMLogger] = None,
+                              num_workers: int = 1,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
@@ -1428,76 +1430,97 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     valid_queries = 0
     all_query_metrics = []  # For detailed analysis
     all_results = []  # For per-query results (used by evaluate.py)
-    
-    for idx, row in df.iterrows():
-        print(f"\n[Query {idx+1}/{max_queries}]")
 
-        # Extract expected URLs
+    # Prepare work items
+    work_items = []
+    for idx, row in df.iterrows():
         expected_urls = []
         for col in df.columns:
             if col.startswith('wikipedia_link_') and pd.notna(row[col]):
                 expected_urls.append(row[col].strip())
-
-        # Extract expected answer
         expected_answer = row.get('Answer', '').strip() if 'Answer' in row and pd.notna(row.get('Answer')) else ""
-
         if expected_urls:
-            # Start logging for this query
-            if logger:
-                logger.start_query(str(idx), row['Prompt'])
+            work_items.append((idx, row['Prompt'], expected_urls, expected_answer))
 
-            # Multi-shot retrieval with iterative refinement
-            metrics = multi_shot_retrieval(
-                rag_db, row['Prompt'], expected_urls,
-                expected_answer=expected_answer,
-                max_sub_queries=max_sub_queries,
-                top_k_retriever=top_k_retriever,
-                top_k_reranking=top_k_reranking,
-                max_iterations=max_iterations,
-                no_rerank=no_rerank,
-                retrieval_strategy=retrieval_strategy,
-                verbose=True,
-                reasoning_effort=reasoning_effort,
-                llm_config=llm_config,
-                logger=logger,
-                **strategy_params
+    def process_single_query(item):
+        idx, prompt, expected_urls, expected_answer = item
+        print(f"\n[Query {idx+1}/{max_queries}]")
+
+        if logger:
+            logger.start_query(str(idx), prompt)
+
+        metrics = multi_shot_retrieval(
+            rag_db, prompt, expected_urls,
+            expected_answer=expected_answer,
+            max_sub_queries=max_sub_queries,
+            top_k_retriever=top_k_retriever,
+            top_k_reranking=top_k_reranking,
+            max_iterations=max_iterations,
+            no_rerank=no_rerank,
+            retrieval_strategy=retrieval_strategy,
+            verbose=True,
+            reasoning_effort=reasoning_effort,
+            llm_config=llm_config,
+            logger=logger,
+            **strategy_params
+        )
+
+        if logger:
+            logger.end_query(
+                retrieval_results={
+                    "retrieved_urls": metrics.get('retrieved_urls', []),
+                    "correct_urls": expected_urls,
+                    "precision": metrics.get('precision', 0),
+                    "recall": metrics.get('recall', 0),
+                    "f1": metrics.get('f1', 0)
+                },
+                answer_results={
+                    "llm_answer": metrics.get('llm_answer', ''),
+                    "ground_truth_answer": expected_answer
+                }
             )
-            
-            # End logging for this query with results
-            if logger:
-                logger.end_query(
-                    retrieval_results={
-                        "retrieved_urls": metrics.get('retrieved_urls', []),
-                        "correct_urls": expected_urls,
-                        "precision": metrics.get('precision', 0),
-                        "recall": metrics.get('recall', 0),
-                        "f1": metrics.get('f1', 0)
-                    },
-                    answer_results={
-                        "llm_answer": metrics.get('llm_answer', ''),
-                        "ground_truth_answer": expected_answer
-                    }
-                )
 
-            # Accumulate metrics
+        result = {
+            "prompt": prompt,
+            "llm_answer": metrics.get('llm_answer', ''),
+            "ground_truth": expected_answer,
+        }
+        return idx, metrics, result
+
+    if num_workers <= 1:
+        # Sequential execution (original behavior)
+        for item in work_items:
+            idx, metrics, result = process_single_query(item)
             for metric_name, value in metrics.items():
                 if metric_name not in total_metrics:
                     total_metrics[metric_name] = 0.0
                 if isinstance(value, (int, float)):
                     total_metrics[metric_name] += value
-
             valid_queries += 1
-
-            # Collect per-query results for evaluate.py scoring
-            all_results.append({
-                "prompt": row['Prompt'],
-                "llm_answer": metrics.get('llm_answer', ''),
-                "ground_truth": expected_answer,
-            })
-
-            # Collect metrics for detailed analysis
+            all_results.append(result)
             if detailed_analysis:
                 all_query_metrics.append(metrics.copy())
+    else:
+        # Parallel execution with thread pool
+        print(f"\n  Using {num_workers} parallel workers")
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = {executor.submit(process_single_query, item): item for item in work_items}
+            for future in as_completed(futures):
+                try:
+                    idx, metrics, result = future.result()
+                    for metric_name, value in metrics.items():
+                        if metric_name not in total_metrics:
+                            total_metrics[metric_name] = 0.0
+                        if isinstance(value, (int, float)):
+                            total_metrics[metric_name] += value
+                    valid_queries += 1
+                    all_results.append(result)
+                    if detailed_analysis:
+                        all_query_metrics.append(metrics.copy())
+                except Exception as e:
+                    print(f"  Error processing query: {e}")
+                    import traceback
+                    traceback.print_exc()
     
     if valid_queries > 0:
         # Calculate averages
@@ -1554,7 +1577,9 @@ if __name__ == "__main__":
                      help='LLM reasoning level for query decomposition (default: medium)')
     args.add_argument('--max-iterations', type=int, default=10,
                      help='Maximum number of retrieval iterations (default: 10)')
-    
+    args.add_argument('--num-workers', type=int, default=1,
+                     help='Number of parallel query workers (default: 1, sequential)')
+
     # Special handling for --eval argument
     for action in args._actions:
         if '--eval' in action.option_strings:
@@ -1653,6 +1678,23 @@ if __name__ == "__main__":
     )
     print(f"LLM logs will be written incrementally to: {log_filename}")
 
+    # Setup threading infrastructure if parallel workers requested
+    reranker_queue = None
+    if args.num_workers > 1:
+        print(f"Enabling parallel execution with {args.num_workers} workers")
+        rag_db.enable_threading()
+
+        if rag_db._reranker_model is not None:
+            from reranker_worker import RerankerQueue
+            reranker_queue = RerankerQueue(
+                rag_db._reranker_model,
+                rag_db._reranker_tokenizer,
+                device="cpu"
+            )
+            reranker_queue.start()
+            rag_db.set_reranker_queue(reranker_queue)
+            print("  Reranker queue worker started")
+
     # Run evaluation or single query
     if args.eval:
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
@@ -1671,6 +1713,7 @@ if __name__ == "__main__":
             max_iterations=args.max_iterations,
             llm_config=llm_config,
             logger=llm_logger,
+            num_workers=args.num_workers,
             **strategy_params
         )
         
@@ -1700,7 +1743,7 @@ if __name__ == "__main__":
         # Write final version with updated metadata
         llm_logger.save()
         print(f"LLM logs finalized: {log_filename}")
-        
+
     else:
         # Single query multi-shot retrieval
         if not args.query:
@@ -1751,3 +1794,8 @@ if __name__ == "__main__":
         # Write final version
         llm_logger.save()
         print(f"LLM logs finalized: {log_filename}")
+
+    # Cleanup threading infrastructure
+    if reranker_queue:
+        reranker_queue.stop()
+        print("Reranker queue worker stopped")

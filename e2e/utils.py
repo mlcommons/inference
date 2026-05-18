@@ -214,16 +214,22 @@ def setup_llm_config(args):
     query_model_name = query_model_arg if query_model_arg else model_name
 
     # OpenRouter URLs and model names for different components
-    # Document grader uses gpt-oss-20b
-    grader_service_url = "https://openrouter.ai/api/v1/chat/completions"
-    grader_model_name = "openai/gpt-oss-20b"
-
-    # Query generator and sufficiency checker use gpt-oss-120b
-    query_service_url = "https://openrouter.ai/api/v1/chat/completions"
-    query_model_name = "openai/gpt-oss-120b"
-
-    sufficiency_service_url = "https://openrouter.ai/api/v1/chat/completions"
-    sufficiency_model_name = "openai/gpt-oss-120b"
+    # If no API key is set, use the local LLM service URL for all components
+    openrouter_key = os.environ.get('OPENROUTER_API_KEY', '')
+    if openrouter_key:
+        grader_service_url = "https://openrouter.ai/api/v1/chat/completions"
+        grader_model_name = "openai/gpt-oss-20b"
+        query_service_url = "https://openrouter.ai/api/v1/chat/completions"
+        query_model_name = "openai/gpt-oss-120b"
+        sufficiency_service_url = "https://openrouter.ai/api/v1/chat/completions"
+        sufficiency_model_name = "openai/gpt-oss-120b"
+    else:
+        grader_service_url = args.llm_service_url
+        grader_model_name = model_name
+        query_service_url = args.llm_service_url
+        query_model_name = model_name
+        sufficiency_service_url = args.llm_service_url
+        sufficiency_model_name = model_name
 
     return {
         "service_url": args.llm_service_url,

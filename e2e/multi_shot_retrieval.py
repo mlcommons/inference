@@ -378,7 +378,7 @@ def evaluate_document_relevance(question: str,
             service_url=service_url,
             model_name=model_name,
             messages=messages,
-            temperature=1,
+            temperature=llm_config.get('temperature', 1.0),
             max_tokens=max_tokens,
             top_p=1.0,
             top_k=-1,
@@ -470,7 +470,7 @@ def check_sufficiency(question: str,
             service_url=service_url,
             model_name=model_name,
             messages=messages,
-            temperature=1,
+            temperature=llm_config.get('temperature', 1.0),
             max_tokens=max_tokens,
             top_p=1.0,
             top_k=-1,
@@ -578,7 +578,7 @@ Answer:"""
             service_url=service_url,
             model_name=model_name,
             messages=messages,
-            temperature=1,
+            temperature=llm_config.get('temperature', 1.0),
             max_tokens=max_tokens,
             top_p=1.0,
             top_k=-1,
@@ -655,7 +655,7 @@ def generate_search_queries(question: str,
             service_url=service_url,
             model_name=model_name,
             messages=messages,
-            temperature=1,
+            temperature=llm_config.get('temperature', 1.0),
             max_tokens=max_tokens,
             top_p=1.0,
             top_k=-1,
@@ -816,7 +816,7 @@ def query_rewriter(question: str, new_documents: List[tuple],
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 1,
+        "temperature": llm_config.get('temperature', 1.0) if llm_config else 1.0,
         "top_p": 1,
         "top_k": -1,
         "max_tokens": max_tokens
@@ -1579,6 +1579,10 @@ if __name__ == "__main__":
                      help='Maximum number of retrieval iterations (default: 10)')
     args.add_argument('--num-workers', type=int, default=1,
                      help='Number of parallel query workers (default: 1, sequential)')
+    args.add_argument('--temperature', type=float, default=1.0,
+                     help='LLM sampling temperature (default: 1.0)')
+    args.add_argument('--output-dir', type=str, default='.',
+                     help='Directory for output files (default: current directory)')
 
     # Special handling for --eval argument
     for action in args._actions:
@@ -1594,6 +1598,7 @@ if __name__ == "__main__":
     
     # Setup LLM configuration with auto-detection
     llm_config = setup_llm_config(args)
+    llm_config['temperature'] = args.temperature
     print(f"LLM Config: {llm_config}")
     
     # Setup device-specific environment
@@ -1644,7 +1649,8 @@ if __name__ == "__main__":
 
     # Initialize LLM logger with incremental writing
     experiment_start_time = datetime.now()
-    log_filename = f"llm_logs_multi_shot_{experiment_start_time.strftime('%Y%m%d_%H%M%S')}.json"
+    os.makedirs(args.output_dir, exist_ok=True)
+    log_filename = os.path.join(args.output_dir, f"llm_logs_multi_shot_{experiment_start_time.strftime('%Y%m%d_%H%M%S')}.json")
 
     # Determine chunk size from database name
     chunk_size = 768  # default
@@ -1727,10 +1733,11 @@ if __name__ == "__main__":
             "results": per_query_results,
         }
         
-        with open("result_multi_shot.json", "w") as f:
+        result_path = os.path.join(args.output_dir, "result_multi_shot.json")
+        with open(result_path, "w") as f:
             json.dump(results_data, f, indent=2)
 
-        print(f"Results saved to result_multi_shot.json")
+        print(f"Results saved to {result_path}")
 
         # Finalize LLM logs (update metadata with final values)
         experiment_end_time = datetime.now()

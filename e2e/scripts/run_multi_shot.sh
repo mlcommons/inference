@@ -87,21 +87,18 @@ python3 -u multi_shot_retrieval.py \
     --top_k_retriever 15 \
     --generate-answer \
     --num-workers ${NUM_WORKERS} \
+    --temperature ${TEMPERATURE:-1.0} \
+    --output-dir "${OUTPUT_DIR}" \
     --llm_model "${MODEL}" \
     --query_model "${QUERY_MODEL}" \
     --llm_service_url "${LLM_URL}" \
     2>&1 | tee "${LOG_FILE}"
 
-# Move output to output dir
-if [[ -f "result_multi_shot.json" ]]; then
-    mv result_multi_shot.json "${RESULT_JSON}"
+# Rename result file
+if [[ -f "${OUTPUT_DIR}/result_multi_shot.json" ]]; then
+    mv "${OUTPUT_DIR}/result_multi_shot.json" "${RESULT_JSON}"
     echo "Saved results to ${RESULT_JSON}"
 fi
-
-# Move LLM logs to output dir
-for f in llm_logs_multi_shot_*.json; do
-    [[ -f "$f" ]] && mv "$f" "${OUTPUT_DIR}/"
-done
 
 # ── Score with LLM judge ──────────────────────────────────────────────────────
 echo ""

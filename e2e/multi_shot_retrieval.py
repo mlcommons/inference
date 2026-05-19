@@ -263,6 +263,7 @@ def call_openrouter_llm(service_url: str, model_name: str, messages: List[Dict],
                         frequency_penalty: float = 0.0,
                         presence_penalty: float = 0.0,
                         repetition_penalty: float = 1.0,
+                        max_retries: int = 5,
                         logger: Optional[LLMLogger] = None,
                         component: str = "unknown",
                         hop_count: Optional[int] = None,
@@ -299,39 +300,72 @@ def call_openrouter_llm(service_url: str, model_name: str, messages: List[Dict],
 
     headers = get_openrouter_headers()
 
-    start_time = time.time()
-    try:
-        response = requests.post(service_url, json=payload, headers=headers, timeout=120)
-        response.raise_for_status()
-        result = response.json()
-        latency_ms = (time.time() - start_time) * 1000
+    for attempt in range(max_retries):
+        start_time = time.time()
+        try:
+            response = requests.post(service_url, json=payload, headers=headers, timeout=120)
 
-        message = result['choices'][0]['message']
-        llm_output = (message.get('content') or '').strip()
+            # Retry on rate limit
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 2 ** attempt))
+                print(f"    Rate limited (429). Retrying in {retry_after}s (attempt {attempt+1}/{max_retries})")
+                time.sleep(retry_after)
+                continue
 
-        # Fallback: thinking models put output in reasoning_content
-        if not llm_output:
-            reasoning_content = message.get('reasoning_content') or ''
-            if reasoning_content:
-                json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
-                if json_match:
-                    llm_output = json_match.group(0)
+            response.raise_for_status()
+            result = response.json()
+            latency_ms = (time.time() - start_time) * 1000
 
-        # Log this call
-        if logger:
-            logger.log_llm_call(
-                component=component,
-                hop_count=hop_count,
-                payload=payload,
-                response=result,
-                latency_ms=latency_ms,
-                context=context or {}
-            )
+            message = result['choices'][0]['message']
+            llm_output = (message.get('content') or '').strip()
 
-        return llm_output
-    except Exception as e:
-        print(f"    Error calling LLM: {e}")
-        return ""
+            # Fallback: thinking models put output in reasoning_content
+            if not llm_output:
+                reasoning_content = message.get('reasoning_content') or ''
+                if reasoning_content:
+                    json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
+                    if json_match:
+                        llm_output = json_match.group(0)
+
+            if not llm_output:
+                print(f"    WARNING [{component}]: LLM returned empty content. Raw response: {json.dumps(result)[:500]}")
+
+            # Log this call
+            if logger:
+                logger.log_llm_call(
+                    component=component,
+                    hop_count=hop_count,
+                    payload=payload,
+                    response=result,
+                    latency_ms=latency_ms,
+                    context=context or {}
+                )
+
+            return llm_output
+
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            if status in (502, 503, 504) and attempt < max_retries - 1:
+                wait = 2 ** attempt
+                print(f"    Server error ({status}). Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
+                time.sleep(wait)
+                continue
+            print(f"    ERROR [{component}]: HTTP {status}: {e}")
+            raise
+        except requests.exceptions.Timeout:
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt
+                print(f"    Timeout. Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
+                time.sleep(wait)
+                continue
+            print(f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
+            raise
+        except Exception as e:
+            print(f"    ERROR [{component}]: {e}")
+            raise
+
+    print(f"    ERROR [{component}]: Max retries ({max_retries}) exceeded")
+    raise RuntimeError(f"LLM call failed after {max_retries} retries")
 
 def evaluate_document_relevance(question: str,
                                 new_documents: List[tuple],
@@ -383,6 +417,7 @@ def evaluate_document_relevance(question: str,
             top_p=1.0,
             top_k=-1,
             reasoning_effort="medium",
+            max_retries=llm_config.get('max_retries', 5),
             logger=logger,
             component="evaluate_document_relevance",
             hop_count=hop_count,
@@ -475,6 +510,7 @@ def check_sufficiency(question: str,
             top_p=1.0,
             top_k=-1,
             reasoning_effort="medium",
+            max_retries=llm_config.get('max_retries', 5),
             logger=logger,
             component="check_sufficiency",
             hop_count=hop_count,
@@ -583,6 +619,7 @@ Answer:"""
             top_p=1.0,
             top_k=-1,
             reasoning_effort="medium",
+            max_retries=llm_config.get('max_retries', 5),
             logger=logger,
             component="answer_generator",
             hop_count=hop_count,
@@ -660,6 +697,7 @@ def generate_search_queries(question: str,
             top_p=1.0,
             top_k=-1,
             reasoning_effort="medium",
+            max_retries=llm_config.get('max_retries', 5),
             logger=logger,
             component="generate_search_queries",
             hop_count=hop_count,
@@ -1581,6 +1619,8 @@ if __name__ == "__main__":
                      help='Number of parallel query workers (default: 1, sequential)')
     args.add_argument('--temperature', type=float, default=1.0,
                      help='LLM sampling temperature (default: 1.0)')
+    args.add_argument('--max-retries', type=int, default=5,
+                     help='Max retries for LLM calls on rate limit/server errors (default: 5)')
     args.add_argument('--output-dir', type=str, default='.',
                      help='Directory for output files (default: current directory)')
 
@@ -1599,6 +1639,7 @@ if __name__ == "__main__":
     # Setup LLM configuration with auto-detection
     llm_config = setup_llm_config(args)
     llm_config['temperature'] = args.temperature
+    llm_config['max_retries'] = args.max_retries
     print(f"LLM Config: {llm_config}")
     
     # Setup device-specific environment

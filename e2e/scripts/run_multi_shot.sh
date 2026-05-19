@@ -88,6 +88,7 @@ python3 -u multi_shot_retrieval.py \
     --generate-answer \
     --num-workers ${NUM_WORKERS} \
     --temperature ${TEMPERATURE:-1.0} \
+    --max-retries ${MAX_RETRIES:-5} \
     --output-dir "${OUTPUT_DIR}" \
     --llm_model "${MODEL}" \
     --query_model "${QUERY_MODEL}" \

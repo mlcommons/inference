@@ -3,6 +3,7 @@
 LLM call logger for tracking all LLM requests, responses, and token usage.
 """
 
+import os
 import uuid
 import time
 import json
@@ -97,7 +98,7 @@ class LLMLogger:
             return ""
 
         message = response['choices'][0].get('message', {})
-        content = message.get('content', '').strip()
+        content = (message.get('content') or '').strip()
 
         # Fallback for thinking models
         if not content:
@@ -122,6 +123,9 @@ class LLMLogger:
         """Append a completed query to the JSON file"""
         if not self.output_file:
             return
+
+        if not os.path.exists(self.output_file):
+            self._initialize_file()
 
         # Read current file
         with open(self.output_file, 'r', encoding='utf-8') as f:

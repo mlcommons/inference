@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 #!/bin/bash
-echo "Container nvidia build = " $NVIDIA_BUILD_ID
+echo "Container nvidia build = " "$NVIDIA_BUILD_ID"
 
 DATA_DIR=${1:-"/datasets/LibriSpeech"}
 MODEL_CONFIG=${2:-"configs/rnnt.toml"}
@@ -34,32 +33,28 @@ LEARNING_RATE_WARMUP=${12:-"8000"}
 GRADIENT_ACCUMULATION_STEPS=${13:-1}
 LAUNCH_OPT=${LAUNCH_OPT:-"none"}
 
-
 PREC=""
-if [ "$PRECISION" = "fp16" ] ; then
-   PREC="--fp16"
-elif [ "$PRECISION" = "fp32" ] ; then
-   PREC=""
+if [ "$PRECISION" = "fp16" ]; then
+	PREC="--fp16"
+elif [ "$PRECISION" = "fp32" ]; then
+	PREC=""
 else
-   echo "Unknown <precision> argument"
-   exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 
 CUDNN=""
 if [ "$CUDNN_BENCHMARK" = "true" ] && [ "$PRECISION" = "fp16" ]; then
-   CUDNN=" --cudnn"
+	CUDNN=" --cudnn"
 else
-   CUDNN=""
+	CUDNN=""
 fi
 
-
-
-if [ "$CHECKPOINT" = "none" ] ; then
-   CHECKPOINT=""
+if [ "$CHECKPOINT" = "none" ]; then
+	CHECKPOINT=""
 else
-   CHECKPOINT=" --ckpt=${CHECKPOINT}"
+	CHECKPOINT=" --ckpt=${CHECKPOINT}"
 fi
-
 
 CMD=" train.py"
 CMD+=" --batch_size=$BATCH_SIZE"
@@ -84,30 +79,28 @@ CMD+=" $CHECKPOINT"
 CMD+=" $PREC"
 CMD+=" $CUDNN"
 
-
 if [ "${LAUNCH_OPT}" != "none" ]; then
-   CMD="python -m $LAUNCH_OPT $CMD"
-elif [ "$NUM_GPUS" -gt 1  ] ; then
-   CMD="python3 -m multiproc --nproc_per_node=$NUM_GPUS $CMD"
+	CMD="python -m $LAUNCH_OPT $CMD"
+elif [ "$NUM_GPUS" -gt 1 ]; then
+	CMD="python3 -m multiproc --nproc_per_node=$NUM_GPUS $CMD"
 else
-   CMD="python3  $CMD"
+	CMD="python3  $CMD"
 fi
 
-
-if [ "$CREATE_LOGFILE" = "true" ] ; then
-  export GBS=$(expr $BATCH_SIZE \* $NUM_GPUS)
-  printf -v TAG "rnnt_train_%s_gbs%d" "$PRECISION" $GBS
-  DATESTAMP=`date +'%y%m%d%H%M%S'`
-  LOGFILE=$RESULT_DIR/$TAG.$DATESTAMP.log
-  printf "Logs written to %s\n" "$LOGFILE"
+if [ "$CREATE_LOGFILE" = "true" ]; then
+	export GBS=$(expr "$BATCH_SIZE" \* "$NUM_GPUS")
+	printf -v TAG "rnnt_train_%s_gbs%d" "$PRECISION" "$GBS"
+	DATESTAMP=$(date +'%y%m%d%H%M%S')
+	LOGFILE=$RESULT_DIR/$TAG.$DATESTAMP.log
+	printf "Logs written to %s\n" "$LOGFILE"
 fi
 
 set -x
-if [ -z "$LOGFILE" ] ; then
-   $CMD
+if [ -z "$LOGFILE" ]; then
+	$CMD
 else
-   (
-     $CMD
-   ) |& tee $LOGFILE
+	(
+		$CMD
+	) |& tee "$LOGFILE"
 fi
 set +x

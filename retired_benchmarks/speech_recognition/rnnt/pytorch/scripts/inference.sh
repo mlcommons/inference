@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 #!/bin/bash
-echo "Container nvidia build = " $NVIDIA_BUILD_ID
-
+echo "Container nvidia build = " "$NVIDIA_BUILD_ID"
 
 DATA_DIR=${1-"/datasets/LibriSpeech"}
 DATASET=${2:-"dev-clean"}
@@ -31,50 +29,47 @@ BATCH_SIZE=${11:-64}
 MODELOUTPUT_FILE=${12:-"none"}
 PREDICTION_FILE=${13:-"$RESULT_DIR/${DATASET}.predictions"}
 
-if [ "$CREATE_LOGFILE" = "true" ] ; then
-    export GBS=$(expr $BATCH_SIZE)
-    printf -v TAG "jasper_inference_${DATASET}_%s_gbs%d" "$PRECISION" $GBS
-    DATESTAMP=`date +'%y%m%d%H%M%S'`
-    LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
-    printf "Logs written to %s\n" "$LOGFILE"
+if [ "$CREATE_LOGFILE" = "true" ]; then
+	export GBS=$(expr "$BATCH_SIZE")
+	printf -v TAG "jasper_inference_${DATASET}_%s_gbs%d" "$PRECISION" "$GBS"
+	DATESTAMP=$(date +'%y%m%d%H%M%S')
+	LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
+	printf "Logs written to %s\n" "$LOGFILE"
 fi
 
-
-
 PREC=""
-if [ "$PRECISION" = "fp16" ] ; then
-    PREC="--fp16"
-elif [ "$PRECISION" = "fp32" ] ; then
-    PREC=""
+if [ "$PRECISION" = "fp16" ]; then
+	PREC="--fp16"
+elif [ "$PRECISION" = "fp32" ]; then
+	PREC=""
 else
-    echo "Unknown <precision> argument"
-    exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 
 PRED=""
-if [ "$PREDICTION_FILE" = "none" ] ; then
-    PRED=""
+if [ "$PREDICTION_FILE" = "none" ]; then
+	PRED=""
 else
-    PRED=" --save_prediction $PREDICTION_FILE"
+	PRED=" --save_prediction $PREDICTION_FILE"
 fi
 
 OUTPUT=""
-if [ "$MODELOUTPUT_FILE" = "none" ] ; then
-    OUTPUT=" "
+if [ "$MODELOUTPUT_FILE" = "none" ]; then
+	OUTPUT=" "
 else
-    OUTPUT=" --logits_save_to $MODELOUTPUT_FILE"
+	OUTPUT=" --logits_save_to $MODELOUTPUT_FILE"
 fi
 
-
 if [ "$CUDNN_BENCHMARK" = "true" ]; then
-    CUDNN_BENCHMARK=" --cudnn_benchmark"
+	CUDNN_BENCHMARK=" --cudnn_benchmark"
 else
-    CUDNN_BENCHMARK=""
+	CUDNN_BENCHMARK=""
 fi
 
 STEPS=""
-if [ "$NUM_STEPS" -gt 0 ] ; then
-    STEPS=" --steps $NUM_STEPS"
+if [ "$NUM_STEPS" -gt 0 ]; then
+	STEPS=" --steps $NUM_STEPS"
 fi
 
 CMD=" python inference.py "
@@ -90,14 +85,13 @@ CMD+=" $OUTPUT "
 CMD+=" $PREC "
 CMD+=" $STEPS "
 
-
 set -x
-if [ -z "$LOGFILE" ] ; then
-   $CMD
+if [ -z "$LOGFILE" ]; then
+	$CMD
 else
-   (
-     $CMD
-   ) |& tee "$LOGFILE"
+	(
+		$CMD
+	) |& tee "$LOGFILE"
 fi
 set +x
 echo "MODELOUTPUT_FILE: ${MODELOUTPUT_FILE}"

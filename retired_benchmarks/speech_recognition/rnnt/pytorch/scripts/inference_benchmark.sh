@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 #!/bin/bash
 
-echo "Container nvidia build = " $NVIDIA_BUILD_ID
-
+echo "Container nvidia build = " "$NVIDIA_BUILD_ID"
 
 DATA_DIR=${1:-"/datasets/LibriSpeech"}
 DATASET=${2:-"dev-clean"}
@@ -32,22 +30,22 @@ SEED=${11:-0}
 BATCH_SIZE=${12:-64}
 
 PREC=""
-if [ "$PRECISION" = "fp16" ] ; then
-   PREC="--fp16"
-elif [ "$PRECISION" = "fp32" ] ; then
-   PREC=""
+if [ "$PRECISION" = "fp16" ]; then
+	PREC="--fp16"
+elif [ "$PRECISION" = "fp32" ]; then
+	PREC=""
 else
-   echo "Unknown <precision> argument"
-   exit -2
+	echo "Unknown <precision> argument"
+	exit -2
 fi
 STEPS=""
-if [ "$NUM_STEPS" -gt 0 ] ; then
-   STEPS=" --steps $NUM_STEPS"
+if [ "$NUM_STEPS" -gt 0 ]; then
+	STEPS=" --steps $NUM_STEPS"
 fi
-if [ "$CUDNN_BENCHMARK" = "true" ] ; then
-    CUDNN_BENCHMARK=" --cudnn_benchmark"
+if [ "$CUDNN_BENCHMARK" = "true" ]; then
+	CUDNN_BENCHMARK=" --cudnn_benchmark"
 else
-    CUDNN_BENCHMARK=""
+	CUDNN_BENCHMARK=""
 fi
 
 CMD=" python inference_benchmark.py"
@@ -63,22 +61,21 @@ CMD+=" $CUDNN_BENCHMARK"
 CMD+=" $PREC"
 CMD+=" $STEPS"
 
-
-if [ "$CREATE_LOGFILE" = "true" ] ; then
-  export GBS=$(expr $BATCH_SIZE )
-  printf -v TAG "jasper_inference_benchmark_%s_gbs%d" "$PRECISION" $GBS
-  DATESTAMP=`date +'%y%m%d%H%M%S'`
-  LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
-  printf "Logs written to %s\n" "$LOGFILE"
+if [ "$CREATE_LOGFILE" = "true" ]; then
+	export GBS=$(expr "$BATCH_SIZE")
+	printf -v TAG "jasper_inference_benchmark_%s_gbs%d" "$PRECISION" "$GBS"
+	DATESTAMP=$(date +'%y%m%d%H%M%S')
+	LOGFILE="${RESULT_DIR}/${TAG}.${DATESTAMP}.log"
+	printf "Logs written to %s\n" "$LOGFILE"
 fi
 
 set -x
-if [ -z "$LOGFILE" ] ; then
-   $CMD
+if [ -z "$LOGFILE" ]; then
+	$CMD
 else
-   (
-     $CMD
-   ) |& tee "$LOGFILE"
-   grep 'latency' "$LOGFILE"
+	(
+		$CMD
+	) |& tee "$LOGFILE"
+	grep 'latency' "$LOGFILE"
 fi
 set +x

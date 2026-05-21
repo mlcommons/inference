@@ -63,7 +63,7 @@ class RagDB(abc.ABC):
         return f"{base_name}.db"
 
     def _init_reranker(self):
-        """Initialize the reranker model.
+        """Initialize the reranker model (ColBERT late-interaction).
 
         Always uses CPU with NUMA configuration:
         - NUMA node 1
@@ -72,13 +72,13 @@ class RagDB(abc.ABC):
         """
         import torch
         import os
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        from transformers import AutoModel, AutoTokenizer
 
         # Configure CPU affinity for optimal performance on GNR server
         os.environ['OMP_NUM_THREADS'] = '43'  # 85-43+1 = 43 cores
         os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1,0'
 
-        self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
+        self._reranker_model = AutoModel.from_pretrained(self._reranker_model_name)
         self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
 
         # Always use CPU for reranking
@@ -236,27 +236,14 @@ class RagDB(abc.ABC):
         self._reranker_queue = reranker_queue
 
     def rerank(self, query: str, passages: List[str]):
-        """Rerank passages using the reranker model."""
+        """Rerank passages via the reranker queue (ColBERT MaxSim)."""
         if self._reranker_queue:
             return self._reranker_queue.submit(query, passages)
 
         if self._reranker_model is None:
             return [(p, 0.0) for p in passages]
 
-        import torch
-
-        pairs = [[query, passage] for passage in passages]
-
-        with torch.no_grad():
-            inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt',
-                                            truncation=True, max_length=512)
-            inputs = {k: v.to(self._device) for k, v in inputs.items()}
-            scores = self._reranker_model(**inputs).logits.view(-1).float()
-
-        scored_passages = list(zip(passages, scores.cpu().tolist()))
-        scored_passages.sort(key=lambda x: x[1], reverse=True)
-
-        return scored_passages
+        raise RuntimeError("Reranker model loaded but no queue set. Call set_reranker_queue() first.")
     
     def lookup_with_rerank(self, query: str, k: int, rerank_k: int = None) -> List[Any]:
         """Retrieve and rerank passages."""

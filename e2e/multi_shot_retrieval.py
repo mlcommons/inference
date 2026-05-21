@@ -1725,22 +1725,23 @@ if __name__ == "__main__":
     )
     print(f"LLM logs will be written incrementally to: {log_filename}")
 
-    # Setup threading infrastructure if parallel workers requested
+    # Setup reranker queue (always, for consistent code path)
     reranker_queue = None
+    if rag_db._reranker_model is not None:
+        from reranker_worker import RerankerQueue
+        reranker_queue = RerankerQueue(
+            rag_db._reranker_model,
+            rag_db._reranker_tokenizer,
+            device="cpu"
+        )
+        reranker_queue.start()
+        rag_db.set_reranker_queue(reranker_queue)
+        print("Reranker queue worker started")
+
+    # Setup threading infrastructure if parallel workers requested
     if args.num_workers > 1:
         print(f"Enabling parallel execution with {args.num_workers} workers")
         rag_db.enable_threading()
-
-        if rag_db._reranker_model is not None:
-            from reranker_worker import RerankerQueue
-            reranker_queue = RerankerQueue(
-                rag_db._reranker_model,
-                rag_db._reranker_tokenizer,
-                device="cpu"
-            )
-            reranker_queue.start()
-            rag_db.set_reranker_queue(reranker_queue)
-            print("  Reranker queue worker started")
 
     # Run evaluation or single query
     if args.eval:
@@ -1846,4 +1847,5 @@ if __name__ == "__main__":
     # Cleanup threading infrastructure
     if reranker_queue:
         reranker_queue.stop()
-        print("Reranker queue worker stopped")
+        avg_ms = reranker_queue.total_latency_ms / reranker_queue.total_requests if reranker_queue.total_requests else 0
+        print(f"Reranker queue worker stopped: {reranker_queue.total_requests} requests, {reranker_queue.total_documents} docs, {reranker_queue.total_latency_ms:.0f}ms total, {avg_ms:.1f}ms/request avg")

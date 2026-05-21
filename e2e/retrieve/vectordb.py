@@ -671,21 +671,6 @@ class VectorDB(RagDB):
 
         return results_with_similarity
 
-    def rerank(self, query: str, passages: List[str]):
-        assert self._reranker_model is not None, "Reranker model not initialized"
-        pairs = [[query, passage] for passage in passages]
-
-        with torch.no_grad():
-            inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt', truncation=True, max_length=512)
-            inputs = {k: v.to(self._device) for k, v in inputs.items()}
-            scores = self._reranker_model(**inputs).logits.view(-1).float()
-        
-        scored_passages = list(zip(passages, scores.cpu().tolist()))
-        # Sort by score descending
-        scored_passages.sort(key=lambda x: x[1], reverse=True)
-        
-        # Return passages in sorted order (optionally include scores)
-        return [(p, s) for p, s in scored_passages]
 
 
     def serialize(self, path: str):

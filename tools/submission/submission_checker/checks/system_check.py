@@ -1,8 +1,8 @@
 from .base import BaseCheck
-from ..constants import *
+from ..constants import VALID_AVAILABILITIES, SYSTEM_DESC_IS_NETWORK_MODE, SYSTEM_DESC_REQUIRED_FIELDS, SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE, SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS, SYSTEM_DESC_NUMERIC_RESPONSE_REQUIRED_FIELDS 
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
-from ..utils import *
+from ..utils import is_number
 
 
 class SystemCheck(BaseCheck):

@@ -6,7 +6,7 @@ For the MLPerf Inference v6.1 round, benchmarking uses a decoupled load generato
 
 ### Start the model server
 
-The model server can run in its own environment (for example, a Docker container). Start vLLM as you would for any standard OpenAI-compatible deployment:
+The model server can run in its own environment. Using vLLM as example, start vLLM as you would for any standard OpenAI-compatible deployment:
 
 ```bash
 export MODEL_NAME=Qwen/Qwen3-VL-235B-A22B-Instruct
@@ -24,12 +24,12 @@ docker run --runtime nvidia --gpus all \
   --max-model-len=32768 \
   --async-scheduling \
   --limit-mm-per-prompt.video 0 \
-  --no-enable-prefix-caching
+  --no-enable-prefix-caching  ## Must have this flag as the rule forbids prefix caching
 ```
 
 ### Set up endpoints
 
-After the server is listening for requests, clone [endpoints](https://github.com/mlcommons/endpoints#) on the same node—or on any host that can reach the server over HTTP. Follow the [endpoints quick start](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e#quick-start) and install with either **uv**:
+After the server is ready to listen for requests, clone [endpoints](https://github.com/mlcommons/endpoints#) on the same node—or on any host that can reach the server over HTTP. Follow the [endpoints quick start](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e#quick-start) and install with either **uv**:
 
 ```bash
 git clone https://github.com/mlcommons/endpoints.git
@@ -56,7 +56,7 @@ endpoint_config:
 
 ### Run the benchmark
 
-Launch offline or server (online) scenarios:
+Launch offline or server scenarios:
 
 ```bash
 uv run inference-endpoint benchmark from-config \

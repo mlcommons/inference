@@ -27,10 +27,10 @@ class BaseCheck(ABC):
             except BaseException:
                 valid &= False
                 self.log.error(
-                    "Execution occurred in running check %s. Running %s in %s",
-                    self.path,
-                    check.__name__,
-                    self.__class__.__name__)
+                    "Execution occurred in running check {check_name}. Running {check_name} in {class_name}",
+                    path=self.path,
+                    check_name=check.__name__,
+                    class_name=self.__class__.__name__)
         return valid
 
     def execute(self, check):
@@ -39,13 +39,13 @@ class BaseCheck(ABC):
 
     def __call__(self):
         """Allows the check instance to be called like a function."""
-        self.log.info("Starting %s for: %s", self.name, self.path)
+        self.log.info("Starting {name} for: {path}", name=self.name, path=self.path)
         valid = self.run_checks()
         if valid:
-            self.log.info("All %s checks passed for: %s", self.name, self.path)
+            self.log.info("All {name} checks passed for: {path}", name=self.name, path=self.path)
         else:
             self.log.error(
-                "Some %s Checks failed for: %s",
-                self.name,
-                self.path)
+                "Some {name} Checks failed for: {path}",
+                name=self.name,
+                path=self.path)
         return valid

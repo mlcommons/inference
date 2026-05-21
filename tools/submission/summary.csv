@@ -1,0 +1,1 @@
+Organization,Availability,Division,SystemType,SystemName,Platform,Model,MlperfModel,Scenario,Result,Accuracy,number_of_nodes,host_processor_model_name,host_processors_per_node,host_processor_core_count,accelerator_model_name,accelerators_per_node,Location,framework,operating_system,notes,compliance,errors,version,inferred,has_power,Units,weight_data_types

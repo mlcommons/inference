@@ -67,8 +67,8 @@ class SystemCheck(BaseCheck):
         """
         if self.system_json is None:
             self.log.error(
-                "%s system json file not found",
-                self.path
+                "{path} system json file not found",
+                path=self.path
             )
             return False
         return True
@@ -85,7 +85,7 @@ class SystemCheck(BaseCheck):
         availability = self.system_json.get("status").lower()
         if availability not in VALID_AVAILABILITIES:
             self.log.error(
-                "%s has invalid status (%s)", self.path, availability
+                "{path} has invalid status ({availability})", path=self.path, availability=availability
             )
             return False
         return True
@@ -105,9 +105,9 @@ class SystemCheck(BaseCheck):
 
         if system_type not in valid_system_types:
             self.log.error(
-                "%s has invalid system type (%s)",
-                self.path,
-                system_type,
+                "{path} has invalid system type ({system_type})",
+                path=self.path,
+                system_type=system_type,
             )
             return False
         # Maybe add this line if needed
@@ -161,7 +161,7 @@ class SystemCheck(BaseCheck):
         for k in required_fields:
             if k not in self.system_json:
                 is_valid = False
-                self.log.error("%s, field %s is missing", self.path, k)
+                self.log.error("{path}, field {k} is missing", path=self.path, k=k)
             elif (
                 check_empty_fields
                 and k in SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS
@@ -169,7 +169,7 @@ class SystemCheck(BaseCheck):
             ):
                 is_valid = False
                 self.log.error(
-                    "%s, field %s requires a meaningful response but is empty", self.path, k
+                    "{path}, field {k} requires a meaningful response but is empty", path=self.path, k=k
                 )
             elif (
                 check_empty_fields
@@ -177,7 +177,7 @@ class SystemCheck(BaseCheck):
                 and not is_number(str(self.system_json[k]))
             ):
                 self.log.error(
-                    "%s, field %s requires a numeric response but is empty", self.path, k
+                    "{path}, field {k} requires a numeric response but is empty", path=self.path, k=k
                 )
         return is_valid
 
@@ -192,10 +192,10 @@ class SystemCheck(BaseCheck):
         """
         if self.system_json.get("submitter").lower() != self.submitter.lower():
             self.log.error(
-                "%s has submitter %s, directory has %s",
-                self.path,
-                self.system_json.get("submitter"),
-                self.submitter,
+                "{path} has submitter {system_json_submitter}, directory has {submitter}",
+                path=self.path,
+                system_json_submitter=self.system_json.get("submitter"),
+                submitter=self.submitter,
             )
             return False
         return True
@@ -211,10 +211,10 @@ class SystemCheck(BaseCheck):
         """
         if self.system_json.get("division").lower() != self.division.lower():
             self.log.error(
-                "%s has division %s, directory has %s",
-                self.path,
-                self.system_json.get("division"),
-                self.division,
+                "{path} has division {system_json_division}, directory has {division}",
+                path=self.path,
+                system_json_division=self.system_json.get("division"),
+                division=self.division,
             )
             return False
         return True

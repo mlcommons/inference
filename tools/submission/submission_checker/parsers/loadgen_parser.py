@@ -14,7 +14,7 @@
 
 import argparse
 import json
-import logging
+from loguru import logger
 import sys
 from .base import BaseParser
 
@@ -32,7 +32,7 @@ class LoadgenParser(BaseParser):
         self.endpoints_marker = ":::ENDPTS"
         self.marker = ""
         self.log_is_endpoints = False
-        self.logger = logging.getLogger("MLPerfLog")
+        self.logger = logger
         self.messages = {}
         with open(log_path, "r", encoding="utf-8") as f:
             for i, line in enumerate(f):

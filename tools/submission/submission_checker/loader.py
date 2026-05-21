@@ -4,14 +4,10 @@ from .utils import list_dir
 from .parsers.loadgen_parser import LoadgenParser
 from typing import Generator, Literal
 from .utils import *
+from loguru import logger
 from .configuration.configuration import Config
-import logging
 import json
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s",
-)
+import sys
 
 
 class SubmissionLogs:
@@ -65,8 +61,8 @@ class Loader:
         """
         self.root = root
         self.version = version
+        self.logger = logger
         self.config = config
-        self.logger = logging.getLogger("LoadgenParser")
         self.perf_log_path = os.path.join(
             self.root, PERFORMANCE_LOG_PATH.get(
                 version, PERFORMANCE_LOG_PATH["default"]))
@@ -191,7 +187,10 @@ class Loader:
         """
         log = None
         if os.path.exists(path):
-            self.logger.info("Loading %s log from %s", log_type, path)
+            self.logger.info(
+                "Loading {log_type} log from {path}",
+                log_type=log_type,
+                path=path)
             if log_type in ["Performance", "Accuracy", "Test"]:
                 log = LoadgenParser(path)
             elif log_type in ["System", "Measurements"]:
@@ -204,14 +203,14 @@ class Loader:
                 log = path
             else:
                 self.logger.info(
-                    "Could not load %s log from %s, log type not recognized",
-                    log_type,
-                    path)
+                    "Could not load {log_type} log from {path}, log type not recognized",
+                    log_type=log_type,
+                    path=path)
         else:
             self.logger.info(
-                "Could not load %s log from %s, path does not exist",
-                log_type,
-                path)
+                "Could not load {log_type} log from {path}, path does not exist",
+                log_type=log_type,
+                path=path)
         return log
 
     def check_scenarios(self, benchmark, model_mapping,

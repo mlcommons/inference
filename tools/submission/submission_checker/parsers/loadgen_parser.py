@@ -18,10 +18,8 @@ import logging
 import sys
 from .base import BaseParser
 
-# pylint: disable=missing-docstring
-
-
 class LoadgenParser(BaseParser):
+    """Loadgenerator Logs Parser."""
     def __init__(self, log_path, strict=True):
         """
         Helper class to parse the detail logs.

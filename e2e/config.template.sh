@@ -57,6 +57,14 @@ INFERENCE_ORACLE_WIKI_DIR="wiki_articles"
 # INFERENCE_EMBEDDING_GPU_DEVICES="0,1"   # one entry per --num_embedding_devices worker
 # INFERENCE_RERANKER_GPU_DEVICES="2"
 
+# Per-component NUMA / OMP placement (applied inside the per-process worker).
+# Pins the worker's CPU set + memory to the given node; OMP threads default
+# to the node's physical core count if not set.
+# INFERENCE_RERANKER_NUMA_NODE=0
+# INFERENCE_RERANKER_OMP_NUM_THREADS=21
+# INFERENCE_EMBEDDING_NUMA_NODES="0,0,1,1"     # one node per embedding worker
+# INFERENCE_EMBEDDING_OMP_NUM_THREADS=21       # cap per worker; default = even split
+
 # ── Python-side env vars (CPU_*) ──────────────────────────────────────────────
 # These only fire when a model lands on CPU (gated in apply_cpu_threading_env).
 # Uncomment to override Python defaults:

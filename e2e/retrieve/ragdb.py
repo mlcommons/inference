@@ -11,18 +11,16 @@ class RagDB(abc.ABC):
         self._device = self._determine_device(device)
         # Reranker device defaults to inheriting from --device.
         self._reranker_device = self._determine_device(reranker_device) if reranker_device else self._device
-        self._reranker_model = None
-        self._reranker_tokenizer = None
         self._reranker_queue = None
         self._benchmark = benchmark
         self._monitor = None
-        
+
         # Initialize monitoring if benchmark mode enabled
         if self._benchmark:
             from ingestion_monitor import IngestionMonitor
             self._monitor = IngestionMonitor()
-        
-        # Initialize reranker if specified
+
+        # Initialize out-of-process reranker if specified
         if self._reranker_model_name:
             self._init_reranker()
     
@@ -54,25 +52,28 @@ class RagDB(abc.ABC):
         return f"{base_name}.db"
 
     def _init_reranker(self):
-        """Initialize the reranker model (ColBERT late-interaction)."""
-        from transformers import AutoModel, AutoTokenizer
+        """Spawn the reranker in its own process."""
         from utils import resolve_gpu_device
+        from reranker_worker import RerankerQueue
 
         device = resolve_gpu_device(
             self._reranker_device, name="reranker",
             override_env="INFERENCE_RERANKER_GPU_DEVICES",
         )
         self._reranker_device = device
-        print(f"Using {device} for reranker")
 
-        if device == "cpu":
-            from utils import apply_cpu_threading_env
-            apply_cpu_threading_env()
+        numa_node = os.environ.get("INFERENCE_RERANKER_NUMA_NODE")
+        omp_threads = os.environ.get("INFERENCE_RERANKER_OMP_NUM_THREADS")
+        print(f"Using {device} for reranker"
+              f"{f' (NUMA node {numa_node})' if numa_node else ''}"
+              f"{f' OMP={omp_threads}' if omp_threads else ''}")
 
-        self._reranker_model = AutoModel.from_pretrained(self._reranker_model_name)
-        self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
-        self._reranker_model = self._reranker_model.to(device)
-        self._reranker_model.eval()
+        self._reranker_queue = RerankerQueue(
+            self._reranker_model_name, device=device,
+            numa_node=int(numa_node) if numa_node is not None else None,
+            omp_threads=int(omp_threads) if omp_threads else None,
+        )
+        self._reranker_queue.start()
     
     def _track_component(self, name: str, total_chars: int, item_count: int, func, 
                         is_pipeline_input: bool = False, is_pipeline_output: bool = False):
@@ -217,30 +218,28 @@ class RagDB(abc.ABC):
         else:
             raise ValueError(f"Source path {source_path} is neither a file nor a directory")
 
-    def set_reranker_queue(self, reranker_queue):
-        """Set shared reranker queue for thread-safe reranking."""
-        self._reranker_queue = reranker_queue
+    def shutdown_reranker(self):
+        """Tear down the reranker child process. Safe to call multiple times."""
+        if self._reranker_queue is not None:
+            self._reranker_queue.stop()
+            self._reranker_queue = None
 
     def rerank(self, query: str, passages: List[str]):
         """Rerank passages via the reranker queue (ColBERT MaxSim)."""
         if self._reranker_queue:
             return self._reranker_queue.submit(query, passages)
+        return [(p, 0.0) for p in passages]
 
-        if self._reranker_model is None:
-            return [(p, 0.0) for p in passages]
-
-        raise RuntimeError("Reranker model loaded but no queue set. Call set_reranker_queue() first.")
-    
     def lookup_with_rerank(self, query: str, k: int, rerank_k: int = None) -> List[Any]:
         """Retrieve and rerank passages."""
         if rerank_k is None:
             rerank_k = k
-            
+
         # Get initial results
         results = self.lookup(query, k=rerank_k)
-        
+
         # If no reranker or fewer results than requested, return as-is
-        if self._reranker_model is None or len(results) <= k:
+        if self._reranker_queue is None or len(results) <= k:
             return results[:k]
         
         # Extract passages for reranking

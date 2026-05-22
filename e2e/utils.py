@@ -121,6 +121,109 @@ def _physical_cores_for_node(node: int) -> list:
     return primary
 
 
+def set_mempolicy_membind(node: int) -> None:
+    """Bind this process's memory allocations to a NUMA node.
+
+    Equivalent to `numactl --membind=N` but applied per-process from inside
+    Python. Linux x86_64-only; raises OSError on failure.
+
+    glibc doesn't export set_mempolicy() as a regular symbol, so we issue the
+    syscall directly. Try libnuma first (which does export it), fall back to
+    raw syscall.
+    """
+    import ctypes
+    MPOL_BIND = 2
+    nodemask = ctypes.c_ulong(1 << node)
+    maxnode = ctypes.c_ulong(64)
+
+    try:
+        libnuma = ctypes.CDLL("libnuma.so.1", use_errno=True)
+        rc = libnuma.set_mempolicy(MPOL_BIND, ctypes.byref(nodemask), maxnode)
+    except (OSError, AttributeError):
+        # set_mempolicy is syscall 238 on x86_64; 237 on aarch64 (rare in this codebase).
+        SYS_SET_MEMPOLICY_X86_64 = 238
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+        rc = libc.syscall(SYS_SET_MEMPOLICY_X86_64, MPOL_BIND,
+                          ctypes.byref(nodemask), maxnode)
+
+    if rc != 0:
+        err = ctypes.get_errno()
+        raise OSError(err, f"set_mempolicy(MPOL_BIND, node={node}) failed")
+
+
+def slice_cores_for_workers(numa_nodes: list, omp_per_worker: int = 0) -> list:
+    """Compute disjoint per-worker (node, cpu_set) plans for parallel workers.
+
+    Args:
+        numa_nodes: One node ID per worker, e.g. [0, 0, 1, 1] for 4 workers.
+        omp_per_worker: Cores to assign each worker. 0 = even split of each
+                        node's cores among the workers assigned to that node.
+
+    Returns:
+        List of (node, [cpu_ids]) tuples, one per worker. Workers on the same
+        node get disjoint core slices.
+    """
+    import collections
+    workers_per_node = collections.Counter(numa_nodes)
+    cores_taken = collections.defaultdict(int)
+    plan = []
+
+    for worker_idx, node in enumerate(numa_nodes):
+        node_cores = _physical_cores_for_node(node)
+        if not node_cores:
+            raise RuntimeError(
+                f"NUMA node {node} cpulist not readable for worker {worker_idx}"
+            )
+        if omp_per_worker > 0:
+            slice_len = omp_per_worker
+        else:
+            slice_len = len(node_cores) // workers_per_node[node]
+            if slice_len == 0:
+                raise RuntimeError(
+                    f"Node {node} has {len(node_cores)} cores, can't split among "
+                    f"{workers_per_node[node]} workers"
+                )
+        offset = cores_taken[node]
+        cpu_set = node_cores[offset:offset + slice_len]
+        if len(cpu_set) < slice_len:
+            raise RuntimeError(
+                f"Worker {worker_idx} on node {node}: needs {slice_len} cores, "
+                f"only {len(cpu_set)} left ({len(node_cores)} total - {offset} taken)."
+            )
+        plan.append((node, cpu_set))
+        cores_taken[node] += slice_len
+
+    return plan
+
+
+def pin_worker_to_node(node: int, cpu_set: list) -> None:
+    """Pin THIS process to a specific NUMA node + CPU set.
+
+    Call as the very first thing in a child process, before importing torch
+    or allocating large objects. Sets CPU affinity, memory binding, and
+    OMP_NUM_THREADS.
+    """
+    if not cpu_set:
+        print(f"  [worker] no cpu_set for node {node}; skipping pinning")
+        return
+
+    if hasattr(os, "sched_setaffinity"):
+        try:
+            os.sched_setaffinity(0, set(cpu_set))
+        except OSError as e:
+            print(f"  [worker] sched_setaffinity failed: {e}")
+
+    try:
+        set_mempolicy_membind(node)
+    except OSError as e:
+        print(f"  [worker] set_mempolicy failed: {e}")
+
+    if "OMP_NUM_THREADS" not in os.environ:
+        os.environ["OMP_NUM_THREADS"] = str(len(cpu_set))
+
+    print(f"  [worker] node={node} cores={cpu_set[0]}..{cpu_set[-1]} ({len(cpu_set)}) OMP_NUM_THREADS={os.environ['OMP_NUM_THREADS']}")
+
+
 def apply_numa_pinning() -> None:
     """Pin CPU affinity to one NUMA node's physical cores.
 

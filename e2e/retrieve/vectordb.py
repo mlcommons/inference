@@ -10,13 +10,12 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from .ragdb import RagDB
 
 # Worker function for parallel embedding generation (must be at module level for multiprocessing)
-def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue, model_name, encode_kwargs, base_device):
+def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue,
+                           model_name, encode_kwargs, base_device, numa_plan=None):
     """Worker function to generate embeddings on a specific device.
 
     This worker processes multiple input chunks on a single device to avoid
     loading the model multiple times.
-
-    For CPU-based processing, uses numactl to bind to specific NUMA node and cores.
 
     Args:
         device_id: Device index assigned by DeviceAllocator (e.g. 2 for xpu:2).
@@ -28,17 +27,27 @@ def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_
         model_name: Name of the embedding model.
         encode_kwargs: Encoding arguments.
         base_device: Base device type ('xpu', 'cuda', 'hpu', 'cpu').
+        numa_plan: Optional (node, cpu_set) tuple. When set, this worker pins
+                   itself to that node before importing torch.
     """
     try:
-        import torch
         import os
+
+        # NUMA pinning must happen before torch import + before allocations.
+        if numa_plan is not None:
+            from utils import pin_worker_to_node
+            node, cpu_set = numa_plan
+            pin_worker_to_node(node, cpu_set)
+
+        import torch
         from langchain_huggingface import HuggingFaceEmbeddings
 
         # Format device string: CPU doesn't use indices, others do
         if base_device == 'cpu':
             device = 'cpu'
-            from utils import apply_cpu_threading_env
-            apply_cpu_threading_env()
+            if numa_plan is None:
+                from utils import apply_cpu_threading_env
+                apply_cpu_threading_env()
         elif base_device == 'hpu':
             device = 'hpu'
             import habana_frameworks.torch.core as htcore
@@ -314,6 +323,34 @@ class VectorDB(RagDB):
             print(f"⚠️  Failed to load embeddings cache: {e}")
             return None
     
+    def _build_numa_plans(self, num_workers: int):
+        """Parse INFERENCE_EMBEDDING_NUMA_NODES into per-worker (node, cpu_set).
+
+        Returns None if the env var isn't set (no NUMA pinning).
+        """
+        nodes_env = os.environ.get("INFERENCE_EMBEDDING_NUMA_NODES")
+        if not nodes_env:
+            return None
+
+        try:
+            numa_nodes = [int(x) for x in nodes_env.split(",") if x.strip()]
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid INFERENCE_EMBEDDING_NUMA_NODES={nodes_env!r}; "
+                f"expected comma-separated ints"
+            )
+        if len(numa_nodes) != num_workers:
+            raise RuntimeError(
+                f"INFERENCE_EMBEDDING_NUMA_NODES has {len(numa_nodes)} entries "
+                f"but num_embedding_devices={num_workers}"
+            )
+
+        omp_env = os.environ.get("INFERENCE_EMBEDDING_OMP_NUM_THREADS")
+        omp_per_worker = int(omp_env) if omp_env else 0
+
+        from utils import slice_cores_for_workers
+        return slice_cores_for_workers(numa_nodes, omp_per_worker)
+
     def _embed_documents_parallel(self, passages: List[str]) -> list:
         """Generate embeddings using multiple devices in parallel.
         
@@ -359,6 +396,9 @@ class VectorDB(RagDB):
 
         print(f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
 
+        # Optional per-worker NUMA pinning (CPU + memory + OMP).
+        numa_plans = self._build_numa_plans(num_workers)
+
         # Split passages into per-worker input chunks.
         input_chunk_size = (len(passages) + num_workers - 1) // num_workers
         input_chunks = [passages[i:i + input_chunk_size] for i in range(0, len(passages), input_chunk_size)]
@@ -374,9 +414,10 @@ class VectorDB(RagDB):
         # index from the allocator. They differ when the allocator returns
         # non-contiguous indices.
         for input_chunk_idx, device_id in enumerate(device_indices[:len(input_chunks)]):
+            numa_plan = numa_plans[input_chunk_idx] if numa_plans else None
             p = mp.Process(target=_parallel_embed_worker,
                        args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
-                             self._retriever_model_name, encode_kwargs, base_device))
+                             self._retriever_model_name, encode_kwargs, base_device, numa_plan))
             p.start()
             processes.append(p)
 

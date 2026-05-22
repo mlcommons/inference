@@ -83,21 +83,27 @@ def detect_device() -> str:
     if torch is None:
         return "cpu"
 
+    if torch.cuda.is_available():
+        if getattr(torch.version, "hip", None):
+            print(f"Using AMD ROCm GPU (torch.version.hip={torch.version.hip})")
+        else:
+            print("Using NVIDIA CUDA GPU")
+        return "cuda"
+
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        print("Using Intel XPU GPU")
+        return "xpu"
+
     try:
-        import habana_frameworks.torch.core as htcore
+        import habana_frameworks.torch.core as htcore  # noqa: F401
         if torch.hpu.is_available():
             os.environ["PT_HPU_LAZY_MODE"] = "1"
+            print("Using Habana HPU")
             return "hpu"
     except ImportError:
-            pass
-    
-    if torch.cuda.is_available():
-        return "cuda"
-    
-    if torch.xpu.is_available():
-        return "xpu"
-    
-    # Default to CPU
+        pass
+
+    print("Using CPU")
     return "cpu"
 
 

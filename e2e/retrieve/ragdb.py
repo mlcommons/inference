@@ -24,29 +24,17 @@ class RagDB(abc.ABC):
             self._init_reranker()
     
     def _determine_device(self, device: str) -> str:
-        """Determine the best device to use."""
-        import torch
+        """Determine the best device to use.
 
+        Delegates to utils.detect_device() for auto detection so device-selection
+        logic lives in one place. ROCm maps to "cuda" 
+        """
+        if device == "rocm":
+            return "cuda"
         if device == "auto":
-            # Check HPU availability (may not be available in all torch builds)
-            try:
-                if torch.hpu.is_available():
-                    print("Using HPU device")
-                    return "hpu"
-            except AttributeError:
-                pass
-
-            if torch.cuda.is_available():
-                print("Using CUDA device")
-                return "cuda"
-            elif hasattr(torch, 'xpu') and torch.xpu.is_available():
-                print("Using XPU device")
-                return "xpu"
-            else:
-                print("Using CPU device")
-                return "cpu"
-        else:
-            return device
+            from utils import detect_device
+            return detect_device()
+        return device
     
     @staticmethod
     def get_data_dir(db_name: str) -> str:

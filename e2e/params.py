@@ -267,8 +267,8 @@ GENERAL_PARAMS = [
         arg_names=["--device"],
         type=str,
         default="auto",
-        help="Device to use (auto/cuda/xpu/hpu/cpu)",
-        choices=["auto", "xpu", "cuda", "cpu", "hpu"],
+        help="Device to use (auto/cuda/rocm/xpu/hpu/cpu)",
+        choices=["auto", "xpu", "cuda", "rocm", "cpu", "hpu"],
         category="general",
         applies_to=["both"]
     ),

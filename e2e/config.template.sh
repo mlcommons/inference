@@ -51,6 +51,12 @@ INFERENCE_ORACLE_TIMEOUT=2400
 INFERENCE_ORACLE_DATASET="data/frames_dataset.tsv"
 INFERENCE_ORACLE_WIKI_DIR="wiki_articles"
 
+# Override GPU index allocator (e.g. when auto-detect picks the wrong devices).
+# Comma-separated 0-based indices; subset of available CUDA/XPU devices.
+# Per-component:
+# INFERENCE_EMBEDDING_GPU_DEVICES="0,1"   # one entry per --num_embedding_devices worker
+# INFERENCE_RERANKER_GPU_DEVICES="2"
+
 # ── Python-side env vars (CPU_*) ──────────────────────────────────────────────
 # These only fire when a model lands on CPU (gated in apply_cpu_threading_env).
 # Uncomment to override Python defaults:

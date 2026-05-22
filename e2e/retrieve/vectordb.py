@@ -10,22 +10,24 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from .ragdb import RagDB
 
 # Worker function for parallel embedding generation (must be at module level for multiprocessing)
-def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model_name, encode_kwargs, base_device):
+def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue, model_name, encode_kwargs, base_device):
     """Worker function to generate embeddings on a specific device.
 
-    This worker processes multiple chunks on a single device to avoid
+    This worker processes multiple input chunks on a single device to avoid
     loading the model multiple times.
 
     For CPU-based processing, uses numactl to bind to specific NUMA node and cores.
 
     Args:
-        device_id: Device index (0, 1, 2, etc.)
-        chunk_indices: List of chunk indices this worker should process
-        chunks: List of passage chunks to embed
-        result_queue: Multiprocessing queue for results
-        model_name: Name of the embedding model
-        encode_kwargs: Encoding arguments
-        base_device: Base device type from --device option ('xpu', 'cuda', 'hpu', 'cpu')
+        device_id: Device index assigned by DeviceAllocator (e.g. 2 for xpu:2).
+        input_chunk_indices: Position(s) in the parent's `input_chunks` list.
+                             Used as a sortable key so the parent can reassemble
+                             in order even when workers finish out of order.
+        input_chunks: Per-worker shards of passages.
+        result_queue: Multiprocessing queue for results.
+        model_name: Name of the embedding model.
+        encode_kwargs: Encoding arguments.
+        base_device: Base device type ('xpu', 'cuda', 'hpu', 'cpu').
     """
     try:
         import torch
@@ -52,20 +54,18 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
             encode_kwargs=encode_kwargs
         )
 
-        print(f"✓ Device {device}: Loaded model, processing {len(chunks)} chunk(s)")
+        print(f"✓ Device {device}: Loaded model, processing {len(input_chunks)} input chunk(s)")
 
-        # Process all chunks assigned to this device
-        for chunk_idx, chunk in zip(chunk_indices, chunks):
-            embeddings = embedder.embed_documents(chunk)
-            result_queue.put((chunk_idx, embeddings))
+        for input_chunk_idx, input_chunk in zip(input_chunk_indices, input_chunks):
+            embeddings = embedder.embed_documents(input_chunk)
+            result_queue.put((input_chunk_idx, embeddings))
 
     except Exception as e:
         print(f"❌ Error on device {device_id} ({base_device}): {e}")
         import traceback
         traceback.print_exc()
-        # Put None for all failed chunks
-        for chunk_idx in chunk_indices:
-            result_queue.put((chunk_idx, None))
+        for input_chunk_idx in input_chunk_indices:
+            result_queue.put((input_chunk_idx, None))
 
 class VectorDB(RagDB):
     @classmethod
@@ -109,6 +109,16 @@ class VectorDB(RagDB):
         if self._embedding_device == "cpu":
             from utils import apply_cpu_threading_env
             apply_cpu_threading_env()
+
+        # For single-device embedding, allocate one GPU now so the reranker
+        # (allocated later) can't pick the same one. Multi-device path
+        # allocates inside _embed_documents_parallel.
+        if num_embedding_devices == 1 and self._embedding_device in ("cuda", "xpu"):
+            from utils import resolve_gpu_device
+            self._embedding_device = resolve_gpu_device(
+                self._embedding_device, name="embedding",
+                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+            )
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._embedding_device, 'local_files_only': True}
@@ -319,73 +329,69 @@ class VectorDB(RagDB):
         import multiprocessing as mp
         
         # Use the embedding device (may differ from the global --device).
-        base_device = self._embedding_device  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
-        
-        # Determine number of available devices based on device type
-        if base_device == 'cpu':
-            # For CPU, use requested number as process count
-            num_devices = self._num_embedding_devices
-        elif base_device == 'hpu' and hasattr(torch, 'hpu'):
-            num_devices = torch.hpu.device_count()
-        elif base_device == 'xpu' and hasattr(torch, 'xpu'):
-            num_devices = torch.xpu.device_count()
-        elif base_device == 'cuda':
-            num_devices = torch.cuda.device_count()
-        else:
-            # Fallback for unknown device types
-            num_devices = 1
-        
-        num_workers = min(self._num_embedding_devices, num_devices, len(passages))
-        
+        # Strip any GPU index already allocated for the single-device path so
+        # the parallel allocator gets a clean device-type string.
+        base_device = self._embedding_device.split(":")[0]  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
+
+        num_workers = min(self._num_embedding_devices, len(passages))
+
         if num_workers <= 1:
             # Fallback to single device
             return self._embedding_model.embed_documents(passages)
-        
+
+        # Resolve per-worker device indices.
+        if base_device in ("cuda", "xpu"):
+            from utils import get_device_allocator
+            device_indices = get_device_allocator(base_device).allocate(
+                count=num_workers, name="parallel-embedding",
+                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+            )
+        else:
+            # CPU / HPU: workers use the same device string; index field is ignored.
+            device_indices = list(range(num_workers))
+
         # Set spawn method for device compatibility (required for XPU/CUDA)
         try:
             mp.set_start_method('spawn', force=True)
         except RuntimeError:
             # Already set, ignore
             pass
-        
+
         print(f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
-        
-        # Split passages into chunks - one chunk per device
-        chunk_size = (len(passages) + num_workers - 1) // num_workers
-        chunks = [passages[i:i + chunk_size] for i in range(0, len(passages), chunk_size)]
-        
-        print(f"   Split {len(passages)} passages into {len(chunks)} chunks (~{chunk_size} passages/device)")
-        
-        # Create result queue and spawn one worker per device
+
+        # Split passages into per-worker input chunks.
+        input_chunk_size = (len(passages) + num_workers - 1) // num_workers
+        input_chunks = [passages[i:i + input_chunk_size] for i in range(0, len(passages), input_chunk_size)]
+
+        print(f"   Split {len(passages)} passages into {len(input_chunks)} input chunk(s) (~{input_chunk_size} passages/device)")
+
         result_queue = mp.Queue()
         processes = []
-        
+
         encode_kwargs = {'normalize_embeddings': True}
-        
-        # Spawn one worker per device (not per chunk)
-        for device_id in range(num_workers):
-            if device_id < len(chunks):
-                # Each worker processes one chunk on one device
-                p = mp.Process(target=_parallel_embed_worker, 
-                           args=(device_id, [device_id], [chunks[device_id]], result_queue,
-                                 self._retriever_model_name, encode_kwargs, base_device))
-                p.start()
-                processes.append(p)
-        
-        # Collect results
+
+        # input_chunk_idx is the position in `input_chunks`; device_id is the GPU
+        # index from the allocator. They differ when the allocator returns
+        # non-contiguous indices.
+        for input_chunk_idx, device_id in enumerate(device_indices[:len(input_chunks)]):
+            p = mp.Process(target=_parallel_embed_worker,
+                       args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
+                             self._retriever_model_name, encode_kwargs, base_device))
+            p.start()
+            processes.append(p)
+
         results = {}
-        for _ in range(min(num_workers, len(chunks))):
-            chunk_idx, embeddings = result_queue.get()
+        for _ in range(min(num_workers, len(input_chunks))):
+            input_chunk_idx, embeddings = result_queue.get()
             if embeddings is not None:
-                results[chunk_idx] = embeddings
-        
-        # Wait for all processes to complete
+                results[input_chunk_idx] = embeddings
+
         for p in processes:
             p.join()
-        
-        # Combine results in order
+
+        # Reassemble in original passage order.
         all_embeddings = []
-        for i in range(len(chunks)):
+        for i in range(len(input_chunks)):
             if i in results:
                 all_embeddings.extend(results[i])
         

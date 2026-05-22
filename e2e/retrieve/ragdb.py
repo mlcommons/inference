@@ -56,8 +56,13 @@ class RagDB(abc.ABC):
     def _init_reranker(self):
         """Initialize the reranker model (ColBERT late-interaction)."""
         from transformers import AutoModel, AutoTokenizer
+        from utils import resolve_gpu_device
 
-        device = self._reranker_device
+        device = resolve_gpu_device(
+            self._reranker_device, name="reranker",
+            override_env="INFERENCE_RERANKER_GPU_DEVICES",
+        )
+        self._reranker_device = device
         print(f"Using {device} for reranker")
 
         if device == "cpu":

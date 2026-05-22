@@ -208,6 +208,114 @@ def detect_cpu_vendor() -> str:
     return "unknown"
 
 
+_DEVICE_ALLOCATORS: Dict[str, "DeviceAllocator"] = {}
+
+
+class DeviceAllocator:
+    """Per-process GPU index allocator.
+
+    Picks GPU indices that are empty (not running other workloads) and
+    unused within this process. Errors if not enough are available.
+
+    Per-component override via env var (e.g. INFERENCE_RERANKER_GPU_DEVICES,
+    INFERENCE_EMBEDDING_GPU_DEVICES). Indices are 0-based and post any vendor
+    visibility mask (CUDA_VISIBLE_DEVICES, HIP_VISIBLE_DEVICES,
+    ROCR_VISIBLE_DEVICES, ZE_AFFINITY_MASK, etc.) — i.e. they match
+    torch.{cuda,xpu}.device_count() output.
+    """
+
+    EMPTY_FREE_RATIO = 0.95   # device counts as 'empty' if >=95% memory free
+
+    def __init__(self, device_type: str):
+        self.device_type = device_type
+        self._taken: set = set()
+        self._all_indices: list = self._enumerate()
+
+    def _enumerate(self) -> list:
+        if torch is None:
+            return []
+        if self.device_type == "cuda":
+            return list(range(torch.cuda.device_count()))
+        if self.device_type == "xpu" and hasattr(torch, "xpu"):
+            return list(range(torch.xpu.device_count()))
+        return []
+
+    def _is_empty(self, idx: int) -> bool:
+        try:
+            if self.device_type == "cuda":
+                free, total = torch.cuda.mem_get_info(idx)
+            elif self.device_type == "xpu" and hasattr(torch.xpu, "mem_get_info"):
+                free, total = torch.xpu.mem_get_info(idx)
+            else:
+                return True   # can't probe, assume usable
+            return total > 0 and (free / total) >= self.EMPTY_FREE_RATIO
+        except Exception:
+            return True
+
+    def _parse_override(self, override_env: str) -> list:
+        raw = os.environ.get(override_env)
+        if not raw:
+            return []
+        try:
+            indices = [int(x) for x in raw.split(",") if x.strip()]
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid {override_env}={raw!r}; expected comma-separated ints"
+            )
+        invalid = [i for i in indices if i not in self._all_indices]
+        if invalid:
+            raise RuntimeError(
+                f"{override_env}={raw!r}: indices {invalid} not visible "
+                f"(available: {self._all_indices})"
+            )
+        return indices
+
+    def allocate(self, count: int = 1, name: str = "", override_env: str = "") -> list:
+        if override_env:
+            requested = self._parse_override(override_env)
+            if requested:
+                avail = [i for i in requested if i not in self._taken]
+                source = f"{override_env}={','.join(map(str, requested))}"
+            else:
+                avail = [i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
+                source = "auto"
+        else:
+            avail = [i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
+            source = "auto"
+
+        if len(avail) < count:
+            override_hint = f" or set {override_env}=<csv>" if override_env else ""
+            raise RuntimeError(
+                f"DeviceAllocator: need {count} empty {self.device_type} device(s) for {name!r}, "
+                f"got {len(avail)} via {source} (taken={sorted(self._taken)}, "
+                f"all={self._all_indices}). Free a GPU{override_hint}."
+            )
+        chosen = avail[:count]
+        self._taken.update(chosen)
+        label = name or self.device_type
+        print(f"  Allocated {self.device_type}:{chosen} for {label} (via {source})")
+        return chosen
+
+
+def get_device_allocator(device_type: str) -> DeviceAllocator:
+    """Return the process-wide allocator for the given GPU device type."""
+    if device_type not in _DEVICE_ALLOCATORS:
+        _DEVICE_ALLOCATORS[device_type] = DeviceAllocator(device_type)
+    return _DEVICE_ALLOCATORS[device_type]
+
+
+def resolve_gpu_device(device: str, name: str = "", override_env: str = "") -> str:
+    """Map a bare device type ('cuda' / 'xpu') to a specific 'cuda:N' string.
+
+    Returns `device` unchanged for cpu/hpu/auto/already-indexed strings.
+    Errors if no empty GPU is available (use override_env to override).
+    """
+    if device in ("cuda", "xpu"):
+        idx = get_device_allocator(device).allocate(count=1, name=name, override_env=override_env)[0]
+        return f"{device}:{idx}"
+    return device
+
+
 def detect_device() -> str:
     """Auto-detect the best available device."""
     if torch is None:

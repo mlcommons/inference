@@ -17,7 +17,19 @@
 # Prerequisites:
 #   - OPENROUTER_API_KEY environment variable set
 #   - scripts/setup_db.sh has been run (vector DB exists)
-#   - Running on Intel GNR server (for CPU NUMA configuration)
+#
+# Device selection (env vars):
+#   - DEVICE=<auto|cpu|cuda|rocm|xpu|hpu>      default: cpu
+#   - EMBEDDING_DEVICE=<...>                   default: ${DEVICE}
+#   - RERANKER_DEVICE=<...>                    default: ${DEVICE}
+#
+# CPU NUMA pinning (handled in Python; only fires when a model is on CPU):
+#   - E2E_DISABLE_NUMA=1            skip pinning entirely
+#   - E2E_NUMA_NODE=<n>             force NUMA node (default: 0)
+#   - E2E_NUMA_CORES=<list>         force core list (e.g. "43-85" or "0,1,2")
+#
+# For strict memory binding, invoke under numactl:
+#   numactl --membind=0 bash scripts/run_multi_shot.sh ...
 # =============================================================================
 
 set -e
@@ -34,13 +46,16 @@ QUERY_MODEL="/model/gpt-oss-120b-mxfp4"
 DB="vector_html_hnsw_len768_ov32_word"
 LLM_URL="http://127.0.0.1:8123/v1/chat/completions"
 
+DEVICE="${DEVICE:-cpu}"
+EMBEDDING_DEVICE="${EMBEDDING_DEVICE:-${DEVICE}}"
+RERANKER_DEVICE="${RERANKER_DEVICE:-${DEVICE}}"
+
 # Architecture:
 # - Document grader: gpt-oss-20b via OpenRouter (openai/gpt-oss-20b)
 # - Sufficiency checker: gpt-oss-120b via OpenRouter (openai/gpt-oss-120b)
 # - Query generator: gpt-oss-120b via OpenRouter (openai/gpt-oss-120b)
 # - Answer generator: gpt-oss-120b via OpenRouter (openai/gpt-oss-120b)
-# - Embeddings: CPU with numactl (node 1, cores 43-85, memory 1)
-# - Reranking: CPU with numactl (node 1, cores 43-85, memory 1)
+# - Embeddings / reranking: device controlled by EMBEDDING_DEVICE / RERANKER_DEVICE
 
 # Eval size: positional arg or default 5
 N_QUERIES="${1:-5}"
@@ -66,22 +81,20 @@ echo "  Model (query gen): ${QUERY_MODEL}"
 echo "  DB:          ${DB}"
 echo "  Workers:     ${NUM_WORKERS}"
 echo "  Queries:     ${N_QUERIES}"
+echo "  Device:      ${DEVICE} (embedding=${EMBEDDING_DEVICE}, reranker=${RERANKER_DEVICE})"
 echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
 # ── Run multi-shot retrieval ──────────────────────────────────────────────────
-# Note: Embeddings and reranking now run on CPU with NUMA configuration
-# NUMA node 1, cores 43-85, memory from node 1
-echo "Running with CPU-based embeddings and reranking (NUMA node 1, cores 43-85)"
-
-numactl --cpunodebind=1 --membind=1 --physcpubind=43-85 \
 python3 -u multi_shot_retrieval.py \
     --retrieval_method vector \
     --db "${DB}" \
     ${EVAL_FLAG} \
     --max-iterations 5 \
     --max-sub-queries 3 \
-    --device cpu \
+    --device "${DEVICE}" \
+    --embedding-device "${EMBEDDING_DEVICE}" \
+    --reranker-device "${RERANKER_DEVICE}" \
     --retrieval_strategy fixed_k \
     --retriever_model /data/model/e5-base-v2 \
     --top_k_retriever 15 \

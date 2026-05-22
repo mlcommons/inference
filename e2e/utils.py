@@ -78,31 +78,114 @@ def filter_dataset_by_difficulty(df, difficulty: int = 0):
     return filtered_df
 
 
+def _parse_cpulist(s: str) -> list:
+    """Parse a Linux cpulist string ("0-3,7,9-11") into a list of ints."""
+    result = []
+    for part in s.strip().split(","):
+        if not part:
+            continue
+        if "-" in part:
+            lo, hi = part.split("-", 1)
+            result.extend(range(int(lo), int(hi) + 1))
+        else:
+            result.append(int(part))
+    return result
+
+
+def _physical_cores_for_node(node: int) -> list:
+    """Return one logical CPU per physical core on the given NUMA node.
+
+    Reads /sys/devices/system/node/nodeN/cpulist for the node's CPUs, then
+    filters HT siblings via /sys/devices/system/cpu/cpuN/topology/thread_siblings_list.
+    """
+    try:
+        with open(f"/sys/devices/system/node/node{node}/cpulist") as f:
+            node_cpus = set(_parse_cpulist(f.read()))
+    except OSError:
+        return []
+
+    seen_cores = set()
+    primary = []
+    for cpu in sorted(node_cpus):
+        try:
+            with open(f"/sys/devices/system/cpu/cpu{cpu}/topology/thread_siblings_list") as f:
+                siblings = _parse_cpulist(f.read())
+        except OSError:
+            primary.append(cpu)
+            continue
+        core_key = min(siblings)
+        if core_key in seen_cores:
+            continue
+        seen_cores.add(core_key)
+        primary.append(cpu)
+    return primary
+
+
+def apply_numa_pinning() -> None:
+    """Pin CPU affinity to one NUMA node's physical cores.
+
+    Honors E2E_DISABLE_NUMA / E2E_NUMA_NODE / E2E_NUMA_CORES.
+    Memory locality relies on Linux first-touch (good enough for our small
+    Python working set). For strict membind, invoke under `numactl --membind=N`.
+    """
+    if os.environ.get("E2E_DISABLE_NUMA") == "1":
+        print("  NUMA pinning disabled via E2E_DISABLE_NUMA=1")
+        return
+
+    if not hasattr(os, "sched_setaffinity"):
+        print("  NUMA pinning unavailable (os.sched_setaffinity missing)")
+        return
+
+    cores_env = os.environ.get("E2E_NUMA_CORES")
+    if cores_env:
+        try:
+            cores = _parse_cpulist(cores_env)
+        except ValueError:
+            print(f"  Invalid E2E_NUMA_CORES={cores_env!r}; skipping pinning")
+            return
+    else:
+        node = int(os.environ.get("E2E_NUMA_NODE", "0"))
+        cores = _physical_cores_for_node(node)
+        if not cores:
+            print(f"  NUMA node {node} cpulist not readable; skipping pinning")
+            return
+
+    try:
+        os.sched_setaffinity(0, set(cores))
+    except OSError as e:
+        print(f"  sched_setaffinity failed: {e}; skipping pinning")
+        return
+
+    print(f"  Pinned CPU affinity to {len(cores)} cores: {cores[0]}..{cores[-1]}")
+
+
 def apply_cpu_threading_env() -> None:
-    """Configure OpenMP thread count + affinity env vars for CPU-bound models.
+    """Pin CPU affinity to a NUMA node and configure OpenMP env vars.
 
     Only call this when a model is actually being placed on CPU.
     Never overwrites a user-set env var.
     """
+    apply_numa_pinning()
+
     if "OMP_NUM_THREADS" not in os.environ:
         override = os.environ.get("E2E_OMP_NUM_THREADS")
         if override:
             n_threads = override
         else:
             try:
+                # sched_getaffinity reflects the pinning we just applied.
                 n_threads = str(len(os.sched_getaffinity(0)))
             except (AttributeError, OSError):
                 n_threads = str(os.cpu_count() or 1)
         os.environ["OMP_NUM_THREADS"] = n_threads
         print(f"  Set OMP_NUM_THREADS={n_threads}")
 
-    # vendor specific env vars
     vendor = detect_cpu_vendor()
     if vendor == "intel" and "KMP_AFFINITY" not in os.environ:
         os.environ["KMP_AFFINITY"] = "granularity=fine,compact,1,0"
         print("  Set KMP_AFFINITY (Intel OpenMP)")
     elif vendor != "intel":
-        print(f"  Skipping KMP_AFFINITY (CPU vendor={vendor}); rely on numactl for pinning")
+        print(f"  Skipping KMP_AFFINITY (CPU vendor={vendor})")
 
 
 def detect_cpu_vendor() -> str:

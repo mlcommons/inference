@@ -12,11 +12,12 @@ class BM25DB(RagDB):
         """Get the default database filename for BM25DB."""
         return "bm25.db"
     
-    def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None, 
-                 database: str = None, delta: float = None, idf_method: str = None, dtype: str = None, 
-                 backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None, 
-                 lower: bool = None, show_progress: bool = None, benchmark: bool = False, **kwargs):
-        super().__init__(reranker_model, device, benchmark)
+    def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None,
+                 database: str = None, delta: float = None, idf_method: str = None, dtype: str = None,
+                 backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None,
+                 lower: bool = None, show_progress: bool = None, benchmark: bool = False,
+                 reranker_device: str = None, **kwargs):
+        super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
         self._bm25_retriever = None
         self._doc_list = []
         self._passages_metadata = []

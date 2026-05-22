@@ -268,7 +268,27 @@ GENERAL_PARAMS = [
         type=str,
         default="auto",
         help="Device to use (auto/cuda/rocm/xpu/hpu/cpu)",
-        choices=["auto", "xpu", "cuda", "rocm", "cpu", "hpu"],
+        choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="embedding_device",
+        arg_names=["--embedding-device"],
+        type=str,
+        default=None,
+        help="Override device for the embedding model (default: inherit --device)",
+        choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
+        category="general",
+        applies_to=["vector"]
+    ),
+    ParamDef(
+        name="reranker_device",
+        arg_names=["--reranker-device"],
+        type=str,
+        default=None,
+        help="Override device for the reranker model (default: inherit --device)",
+        choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
         category="general",
         applies_to=["both"]
     ),

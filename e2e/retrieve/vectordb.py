@@ -35,12 +35,8 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
         # Format device string: CPU doesn't use indices, others do
         if base_device == 'cpu':
             device = 'cpu'
-            # Set CPU affinity for numactl configuration
-            # NUMA node 1, cores 43-85, memory from node 1
-            os.environ['OMP_NUM_THREADS'] = '43'  # 85-43+1 = 43 cores
-            os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1,0'
-            # Note: In production, you would use numactl command wrapper
-            # numactl --cpunodebind=1 --membind=1 --physcpubind=43-85 <command>
+            from utils import apply_cpu_threading_env
+            apply_cpu_threading_env()
         elif base_device == 'hpu':
             device = 'hpu'
             import habana_frameworks.torch.core as htcore
@@ -87,9 +83,11 @@ class VectorDB(RagDB):
             num_embedding_devices: int = 1,
             benchmark: bool = False,
             hierarchical: bool = False,
+            embedding_device: str = None,
+            reranker_device: str = None,
             **kwargs
         ):
-        super().__init__(reranker_model, device, benchmark)
+        super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
         self._vector_index_method = vector_index_method
@@ -98,16 +96,22 @@ class VectorDB(RagDB):
         self._num_embedding_devices = num_embedding_devices
         self._hierarchical = hierarchical
         self._embedding_lock = None
+        # Embedding device defaults to inheriting from --device.
+        self._embedding_device = self._determine_device(embedding_device) if embedding_device else self._device
 
         # For hierarchical mode: map child_index -> parent_passage
         self._parent_map = {}
 
-        if self._device == "hpu":
+        if self._embedding_device == "hpu":
             import habana_frameworks.torch.core as htcore
             os.environ["PT_HPU_LAZY_MODE"] = "1"
 
+        if self._embedding_device == "cpu":
+            from utils import apply_cpu_threading_env
+            apply_cpu_threading_env()
+
         # Initialize embedding model with device configuration
-        model_kwargs = {'device': self._device, 'local_files_only': True}
+        model_kwargs = {'device': self._embedding_device, 'local_files_only': True}
         encode_kwargs = {'normalize_embeddings': True}
         
         self._embedding_model = HuggingFaceEmbeddings(
@@ -314,8 +318,8 @@ class VectorDB(RagDB):
         import torch
         import multiprocessing as mp
         
-        # Use the device type already configured via --device option
-        base_device = self._device  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
+        # Use the embedding device (may differ from the global --device).
+        base_device = self._embedding_device  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
         
         # Determine number of available devices based on device type
         if base_device == 'cpu':

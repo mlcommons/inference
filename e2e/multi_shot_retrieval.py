@@ -1669,8 +1669,10 @@ if __name__ == "__main__":
         show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer,
         vector_index_method=args.vector_index_method, 
         ivf_nprobe=args.ivf_nprobe,
-        load_embeddings=args.load_embeddings, 
+        load_embeddings=args.load_embeddings,
         num_embedding_devices=args.num_embedding_devices,
+        embedding_device=args.embedding_device,
+        reranker_device=args.reranker_device,
         benchmark=args.benchmark
     )
     

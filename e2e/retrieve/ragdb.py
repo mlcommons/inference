@@ -5,9 +5,12 @@ from typing import List, Dict, Any
 class RagDB(abc.ABC):
     """Base class for retrieval-augmented generation databases."""
     
-    def __init__(self, reranker_model: str = None, device: str = "auto", benchmark: bool = False):
+    def __init__(self, reranker_model: str = None, device: str = "auto",
+                 benchmark: bool = False, reranker_device: str = None):
         self._reranker_model_name = reranker_model
         self._device = self._determine_device(device)
+        # Reranker device defaults to inheriting from --device.
+        self._reranker_device = self._determine_device(reranker_device) if reranker_device else self._device
         self._reranker_model = None
         self._reranker_tokenizer = None
         self._reranker_queue = None
@@ -54,12 +57,11 @@ class RagDB(abc.ABC):
         """Initialize the reranker model (ColBERT late-interaction)."""
         from transformers import AutoModel, AutoTokenizer
 
-        # Always use CPU for reranking 
-        device = "cpu"
+        device = self._reranker_device
+        print(f"Using {device} for reranker")
 
         if device == "cpu":
             from utils import apply_cpu_threading_env
-            print("Using CPU for reranker")
             apply_cpu_threading_env()
 
         self._reranker_model = AutoModel.from_pretrained(self._reranker_model_name)

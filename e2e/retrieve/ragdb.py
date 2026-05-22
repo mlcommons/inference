@@ -51,28 +51,19 @@ class RagDB(abc.ABC):
         return f"{base_name}.db"
 
     def _init_reranker(self):
-        """Initialize the reranker model (ColBERT late-interaction).
-
-        Always uses CPU with NUMA configuration:
-        - NUMA node 1
-        - Cores 43-85
-        - Memory from node 1
-        """
-        import torch
-        import os
+        """Initialize the reranker model (ColBERT late-interaction)."""
         from transformers import AutoModel, AutoTokenizer
 
-        # Configure CPU affinity for optimal performance on GNR server
-        os.environ['OMP_NUM_THREADS'] = '43'  # 85-43+1 = 43 cores
-        os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1,0'
+        # Always use CPU for reranking 
+        device = "cpu"
+
+        if device == "cpu":
+            from utils import apply_cpu_threading_env
+            print("Using CPU for reranker")
+            apply_cpu_threading_env()
 
         self._reranker_model = AutoModel.from_pretrained(self._reranker_model_name)
         self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
-
-        # Always use CPU for reranking
-        device = "cpu"
-        print(f"Using CPU for reranker with NUMA node 1, cores 43-85")
-
         self._reranker_model = self._reranker_model.to(device)
         self._reranker_model.eval()
     

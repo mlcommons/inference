@@ -78,6 +78,53 @@ def filter_dataset_by_difficulty(df, difficulty: int = 0):
     return filtered_df
 
 
+def apply_cpu_threading_env() -> None:
+    """Configure OpenMP thread count + affinity env vars for CPU-bound models.
+
+    Only call this when a model is actually being placed on CPU.
+    Never overwrites a user-set env var.
+    """
+    if "OMP_NUM_THREADS" not in os.environ:
+        override = os.environ.get("E2E_OMP_NUM_THREADS")
+        if override:
+            n_threads = override
+        else:
+            try:
+                n_threads = str(len(os.sched_getaffinity(0)))
+            except (AttributeError, OSError):
+                n_threads = str(os.cpu_count() or 1)
+        os.environ["OMP_NUM_THREADS"] = n_threads
+        print(f"  Set OMP_NUM_THREADS={n_threads}")
+
+    # vendor specific env vars
+    vendor = detect_cpu_vendor()
+    if vendor == "intel" and "KMP_AFFINITY" not in os.environ:
+        os.environ["KMP_AFFINITY"] = "granularity=fine,compact,1,0"
+        print("  Set KMP_AFFINITY (Intel OpenMP)")
+    elif vendor != "intel":
+        print(f"  Skipping KMP_AFFINITY (CPU vendor={vendor}); rely on numactl for pinning")
+
+
+def detect_cpu_vendor() -> str:
+    """Detect host CPU vendor from /proc/cpuinfo.
+
+    Returns "intel", "amd", or "unknown". Used to gate vendor-specific tuning
+    """
+    try:
+        with open("/proc/cpuinfo", "r") as f:
+            for line in f:
+                if line.startswith("vendor_id"):
+                    vendor = line.split(":", 1)[1].strip()
+                    if vendor == "GenuineIntel":
+                        return "intel"
+                    if vendor == "AuthenticAMD":
+                        return "amd"
+                    return "unknown"
+    except OSError:
+        pass
+    return "unknown"
+
+
 def detect_device() -> str:
     """Auto-detect the best available device."""
     if torch is None:

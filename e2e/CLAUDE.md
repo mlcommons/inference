@@ -45,7 +45,7 @@ The codebase follows a modular pipeline architecture:
 python3 download_docs.py --output_dir doc_html --format html --processes 30
 
 # Build vector database (run once)
-bash scripts/setup_db.sh
+bash scripts/run_ingestion.sh
 ```
 
 The setup script will:

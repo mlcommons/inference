@@ -124,27 +124,27 @@ def _physical_cores_for_node(node: int) -> list:
 def apply_numa_pinning() -> None:
     """Pin CPU affinity to one NUMA node's physical cores.
 
-    Honors E2E_DISABLE_NUMA / E2E_NUMA_NODE / E2E_NUMA_CORES.
+    Honors CPU_DISABLE_NUMA / CPU_NUMA_NODE / CPU_NUMA_CORES.
     Memory locality relies on Linux first-touch (good enough for our small
     Python working set). For strict membind, invoke under `numactl --membind=N`.
     """
-    if os.environ.get("E2E_DISABLE_NUMA") == "1":
-        print("  NUMA pinning disabled via E2E_DISABLE_NUMA=1")
+    if os.environ.get("CPU_DISABLE_NUMA") == "1":
+        print("  NUMA pinning disabled via CPU_DISABLE_NUMA=1")
         return
 
     if not hasattr(os, "sched_setaffinity"):
         print("  NUMA pinning unavailable (os.sched_setaffinity missing)")
         return
 
-    cores_env = os.environ.get("E2E_NUMA_CORES")
+    cores_env = os.environ.get("CPU_NUMA_CORES")
     if cores_env:
         try:
             cores = _parse_cpulist(cores_env)
         except ValueError:
-            print(f"  Invalid E2E_NUMA_CORES={cores_env!r}; skipping pinning")
+            print(f"  Invalid CPU_NUMA_CORES={cores_env!r}; skipping pinning")
             return
     else:
-        node = int(os.environ.get("E2E_NUMA_NODE", "0"))
+        node = int(os.environ.get("CPU_NUMA_NODE", "0"))
         cores = _physical_cores_for_node(node)
         if not cores:
             print(f"  NUMA node {node} cpulist not readable; skipping pinning")
@@ -168,7 +168,7 @@ def apply_cpu_threading_env() -> None:
     apply_numa_pinning()
 
     if "OMP_NUM_THREADS" not in os.environ:
-        override = os.environ.get("E2E_OMP_NUM_THREADS")
+        override = os.environ.get("CPU_OMP_NUM_THREADS")
         if override:
             n_threads = override
         else:

@@ -1,5 +1,7 @@
 *.db
+output_*
 passages/
 data/
 run_container.sh
 .claude/
+config.sh

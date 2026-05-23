@@ -75,7 +75,7 @@ uv run inference-endpoint benchmark from-config \
   -c examples/08_Qwen3-VL-235B-A22B_Example/interactive_qwen3_vl_235b_a22b_shopify_8k.yaml
 ```
 
-## Compliance test
+## Compliance Test
 
 Each example benchmark config includes an accuracy test that queries the same server backend. You do not need a separate accuracy-mode run. Reported accuracy must meet the minimum thresholds in [Reference Implementation Specification](#reference-implementation-specification) below.
 
@@ -131,7 +131,9 @@ Each example benchmark config includes an accuracy test that queries the same se
   - You must explicitly set `--no-enable-prefix-caching` for vLLM.
 
 
-> **MLPerf Inference v6.0 round only.** The following section and the Qwen3-VL reference under `multimodal/qwen3-vl` were maintained for the **v6.0** submission round. They are **deprecated** for newer rounds; use the current MLPerf Inference docs and repository layout for later versions.
+> [!CAUTION]
+> **MLPerf Inference v6.0 round only.**
+> The following sections and the Qwen3-VL reference implementation under `multimodal/qwen3-vl` were maintained for the **v6.0** submission round, and they are **deprecated** for the newer rounds. Please use the above documentation along with [mlcommons/endpoints](https://github.com/mlcommons/endpoints) for the newer rounds.
 
 # Reference Implementation for the Qwen3-VL (Q3VL) Benchmark 
 

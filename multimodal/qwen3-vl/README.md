@@ -46,7 +46,18 @@ pip install .
 
 ### Configure the benchmark
 
-Example configs live under [endpoints/examples/08_Qwen3-VL-235B-A22B_Example](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e/examples/08_Qwen3-VL-235B-A22B_Example). Set the endpoint URL in the YAML file to match your server address and port:
+Example configs live under [endpoints/examples/08_Qwen3-VL-235B-A22B_Example](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e/examples/08_Qwen3-VL-235B-A22B_Example). 
+
+#### Fields that the submitter **should** update to match their server status:
+
+- Served model name:
+
+```yaml
+model_params:
+  name: "Qwen/Qwen3-VL-235B-A22B-Instruct"
+```
+
+- Endpoints url and port:
 
 ```yaml
 endpoint_config:
@@ -54,18 +65,49 @@ endpoint_config:
     - "http://localhost:8000"
 ```
 
+#### Fields that the submitter **may** customize for performance tuning:
+
+- Target_qps (for server and interactive mode):
+
+```yaml
+  load_pattern:
+    type: "poisson"
+    target_qps: 6.5
+```
+
+- Client worker related settings:
+
+```yaml
+client:
+    num_workers: 5
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+    max_connections: 1000
+    worker_initialization_timeout: 120
+```
+
+#### Fileds that the submitter **MUST NOT** change for valid results:
+
+- Sampling parameters that specified in scection [Reference Implementation Specification](#reference-implementation-specification)
+
+- Datasets (Neither performance or accuracy dataset)
+
 ### Run the benchmark
 
-Launch offline or server scenarios:
+Launch the offline scenario:
 
 ```bash
 uv run inference-endpoint benchmark from-config \
   -c examples/08_Qwen3-VL-235B-A22B_Example/offline_qwen3_vl_235b_a22b_shopify.yaml
 ```
 
+Launch the server scenario:
+
 ```bash
 uv run inference-endpoint benchmark from-config \
-  -c examples/08_Qwen3-VL-235B-A22B_Example/online_qwen3_vl_235b_a22b_shopify.yaml
+  -c examples/08_Qwen3-VL-235B-A22B_Example/server_qwen3_vl_235b_a22b_shopify.yaml
 ```
 
 Launch the interactive scenario:

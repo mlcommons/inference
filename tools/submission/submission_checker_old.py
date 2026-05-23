@@ -1,7 +1,6 @@
 """A checker for MLPerf Inference submissions from v5.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
-from __future__ import division, print_function, unicode_literals
 
 import argparse
 import datetime
@@ -257,7 +256,7 @@ MODEL_CONFIG = {
             "whisper": 1633,
             "gpt-oss-120b": 6396,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 34996,
             "yolo-95": 64,
             "yolo-99": 64,
@@ -287,7 +286,7 @@ MODEL_CONFIG = {
             "whisper": 1633,
             "gpt-oss-120b": 4395,
             "qwen3-vl-235b-a22b": 48289,
-            "wan-2.2-t2v-a14b": 247,
+            "wan-2.2-t2v-a14b": 248,
             "dlrm-v3": 34996,
             "yolo-95": 1525,
             "yolo-99": 1525,
@@ -366,7 +365,7 @@ MODEL_CONFIG = {
             "dlrm-v3": {"Server": 270336, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "wan-2.2-t2v-a14b": {"SingleStream": 247, "Offline": 1}
+            "wan-2.2-t2v-a14b": {"SingleStream": 248, "Offline": 1}
         },
     },
     "v5.1": {
@@ -3349,7 +3348,11 @@ def check_compliance_dir(
         "rgat",
         "deepseek-r1",
         "whisper",
-        "qwen3-vl-235b-a22b"
+        "qwen3-vl-235b-a22b",
+        "yolo-95",
+        "yolo-99",
+        "gpt-oss-120b",
+        "dlrm-v3"
     ]:
         test_list.remove("TEST04")
 
@@ -3361,7 +3364,10 @@ def check_compliance_dir(
         "mixtral-8x7b",
         "llama3.1-405b",
         "deepseek-r1",
-        "qwen3-vl-235b-a22b"
+        "qwen3-vl-235b-a22b",
+        "wan-2.2-t2v-a14b",
+        "gpt-oss-120b",
+        "dlrm-v3"
     ]:
         test_list.remove("TEST01")
 
@@ -3378,6 +3384,13 @@ def check_compliance_dir(
                  "llama3.1-8b-interactive", "llama3.1-405b-interactive",
                  ]:
         test_list.append("TEST06")
+
+    if model in ["dlrm-v3"]:
+        test_list.append("TEST08")
+
+    if model in ["gpt-oss-120b"]:
+        test_list.append("TEST07")
+        test_list.append("TEST09")
 
     if test_list and not os.path.exists(compliance_dir):
         log.error("no compliance dir for %s: %s", name, compliance_dir)
@@ -3419,7 +3432,7 @@ def check_compliance_dir(
             )
 
     compliance_acc_pass = True
-    for test in ["TEST01", "TEST06"]:
+    for test in ["TEST01", "TEST06", "TEST07", "TEST08"]:
         if test in test_list:
             # Check accuracy for TEST01
             compliance_acc_pass &= check_compliance_acc_dir(

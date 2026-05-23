@@ -1,4 +1,4 @@
-# YOLO README - a working design doc
+# YOLOv11l README
 
 ## Automated command to run the benchmark via MLCFlow
 
@@ -18,7 +18,7 @@ You can also do `pip install mlc-scripts` and then use `mlcr` commands for downl
 
 ### Python virtual environment and installing dependencies
 
-Please ensure you have Python installed, if not please see: https://www.python.org/downloads/.To isolate your development environment and manage dependencies cleanly, use Python’s built-in `venv` module.
+Please ensure you have Python installed, if not please see: https://www.python.org/downloads/. To isolate your development environment and manage dependencies cleanly, use Python’s built-in `venv` module.
 
 #### Steps:
 1. **Create a virtual environment**
@@ -84,6 +84,9 @@ mlcr get-ml-model-yolov11,_mlc,_r2-downloader --outdirname=<Download path> -j
 Instructions for how to download the model can be found at this website: https://inference.mlcommons-storage.org/index.html
 
 ## How to run yolo_loadgen.py
+Ensure your configs are in the right place
+Copy the user.conf file from the directory above and have in this subdiretory: https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/user.conf. This will be the config file to edit the runtime parameters for performance and accuracy runs. Ensure this file is NOT in this directory when running compliance TEST01.
+
 Perf run  
 ```bash
 python yolo_loadgen.py --model {MODEL_FILE} --dataset-path {DATASET_PATH} --annotation-file {ANNOTATIONS_JSON_FILE} --count {integer value sample count} --output {OUTPUT_PATH} --PerformanceOnly --scenario {Offline, SingleStream, MultiStream}
@@ -160,6 +163,7 @@ found 1 images with no results
 ignored 19 dupes   
 
 ```
+
 ## Method in which accuracy will be computed using mlperf_log_accuracy.json
 1. LoadGen runs → creates mlperf_log_accuracy.json (hex-encoded)
 2. yolo_loadgen.py calls validate_accuracy_requirement()
@@ -172,4 +176,6 @@ ignored 19 dupes
 5. Returns PASS/FAIL
 
 
+## Run compliance
+In order to run compliance TEST01, please copy the audit.conf file from the `inference/compliance/TEST01/yolo/` available at: https://github.com/mlcommons/inference/blob/master/compliance/TEST01/yolo/audit.config. Please use the same Perf run command described above with `--audit-conf {PATH_TO_AUDIT_CONF}` appended for the compliance test. The `user.conf` file must NOT be in this directory while running compliance. 
 

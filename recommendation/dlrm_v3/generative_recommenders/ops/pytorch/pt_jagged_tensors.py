@@ -22,9 +22,8 @@ import torch
 from generative_recommenders.common import fx_arange
 
 try:
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops")
-    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops_cpu")
-except OSError:
+    import fbgemm_gpu  # noqa: F401
+except ImportError:
     pass
 
 

@@ -56,6 +56,13 @@ INFERENCE_NUM_WORKERS="${INFERENCE_NUM_WORKERS:-1}"
 INFERENCE_LLM_URL="${INFERENCE_LLM_URL:-http://127.0.0.1:8123/v1/chat/completions}"
 INFERENCE_MODEL="${INFERENCE_MODEL:-/model/gpt-oss-20b-mxfp4}"
 INFERENCE_QUERY_MODEL="${INFERENCE_QUERY_MODEL:-/model/gpt-oss-120b-mxfp4}"
+
+# Per-component endpoint splits. Empty -> inherit INFERENCE_LLM_URL / INFERENCE_MODEL.
+INFERENCE_GRADER_URL="${INFERENCE_GRADER_URL:-}"
+INFERENCE_GRADER_MODEL="${INFERENCE_GRADER_MODEL:-}"
+INFERENCE_QUERY_URL="${INFERENCE_QUERY_URL:-}"
+INFERENCE_SUFFICIENCY_URL="${INFERENCE_SUFFICIENCY_URL:-}"
+INFERENCE_SUFFICIENCY_MODEL="${INFERENCE_SUFFICIENCY_MODEL:-}"
 INFERENCE_JUDGE_URL="${INFERENCE_JUDGE_URL:-https://openrouter.ai/api/v1/chat/completions}"
 INFERENCE_JUDGE_MODEL="${INFERENCE_JUDGE_MODEL:-openai/gpt-oss-20b}"
 
@@ -108,6 +115,11 @@ python3 -u multi_shot_retrieval.py \
     --llm_model "${INFERENCE_MODEL}" \
     --query_model "${INFERENCE_QUERY_MODEL}" \
     --llm_service_url "${INFERENCE_LLM_URL}" \
+    ${INFERENCE_GRADER_URL:+--grader-service-url "${INFERENCE_GRADER_URL}"} \
+    ${INFERENCE_GRADER_MODEL:+--grader-model "${INFERENCE_GRADER_MODEL}"} \
+    ${INFERENCE_QUERY_URL:+--query-service-url "${INFERENCE_QUERY_URL}"} \
+    ${INFERENCE_SUFFICIENCY_URL:+--sufficiency-service-url "${INFERENCE_SUFFICIENCY_URL}"} \
+    ${INFERENCE_SUFFICIENCY_MODEL:+--sufficiency-model "${INFERENCE_SUFFICIENCY_MODEL}"} \
     2>&1 | tee "${LOG_FILE}"
 
 if [[ -f "${OUTPUT_DIR}/result_multi_shot.json" ]]; then

@@ -556,35 +556,26 @@ def setup_llm_config(args):
     else:
         max_tokens = args.max_tokens
 
-    # Resolve query model name (for generate_search_queries); falls back to model_name if not set
-    query_model_arg = getattr(args, 'query_model', None)
-    query_model_name = query_model_arg if query_model_arg else model_name
+    # Per-component URL/model resolution.
+    # Each component falls back to --llm_service_url / --llm_model when not set;
+    # query and sufficiency further fall back to --query_model when set.
+    base_url = args.llm_service_url
+    query_model_name = getattr(args, 'query_model', None) or model_name
+    sufficiency_model_name = (
+        getattr(args, 'sufficiency_model', None) or query_model_name
+    )
 
-    # OpenRouter URLs and model names for different components
-    # If no API key is set, use the local LLM service URL for all components
-    openrouter_key = os.environ.get('OPENROUTER_API_KEY', '')
-    if openrouter_key:
-        grader_service_url = "https://openrouter.ai/api/v1/chat/completions"
-        grader_model_name = "openai/gpt-oss-20b"
-        query_service_url = "https://openrouter.ai/api/v1/chat/completions"
-        query_model_name = "openai/gpt-oss-120b"
-        sufficiency_service_url = "https://openrouter.ai/api/v1/chat/completions"
-        sufficiency_model_name = "openai/gpt-oss-120b"
-    else:
-        grader_service_url = args.llm_service_url
-        grader_model_name = model_name
-        query_service_url = args.llm_service_url
-        query_model_name = model_name
-        sufficiency_service_url = args.llm_service_url
-        sufficiency_model_name = model_name
+    grader_service_url = getattr(args, 'grader_service_url', None) or base_url
+    grader_model_name = getattr(args, 'grader_model', None) or model_name
+    query_service_url = getattr(args, 'query_service_url', None) or base_url
+    sufficiency_service_url = getattr(args, 'sufficiency_service_url', None) or base_url
 
     return {
-        "service_url": args.llm_service_url,
+        "service_url": base_url,
         "model_name": model_name,
         "query_model_name": query_model_name,
         "max_tokens": max_tokens,
         "device": device,
-        # OpenRouter-specific endpoints
         "grader_service_url": grader_service_url,
         "grader_model_name": grader_model_name,
         "query_service_url": query_service_url,

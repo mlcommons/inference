@@ -337,6 +337,54 @@ GENERAL_PARAMS = [
         category="general",
         applies_to=["both"]
     ),
+    # Per-component endpoint overrides. Each defaults to --llm_service_url when
+    # not set; same for the model. Lets you split components across separate
+    # vLLM servers (e.g. 20B grader on :8124, 120B query/sufficiency on :8123).
+    ParamDef(
+        name="grader_service_url",
+        arg_names=["--grader-service-url"],
+        type=str,
+        default=None,
+        help="LLM service URL for the document grader (default: --llm_service_url).",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="grader_model",
+        arg_names=["--grader-model"],
+        type=str,
+        default=None,
+        help="Model name for the document grader (default: --llm_model).",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="query_service_url",
+        arg_names=["--query-service-url"],
+        type=str,
+        default=None,
+        help="LLM service URL for query generation (default: --llm_service_url).",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="sufficiency_service_url",
+        arg_names=["--sufficiency-service-url"],
+        type=str,
+        default=None,
+        help="LLM service URL for sufficiency check + answer generation (default: --llm_service_url).",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="sufficiency_model",
+        arg_names=["--sufficiency-model"],
+        type=str,
+        default=None,
+        help="Model name for sufficiency check + answer generation (default: --query_model, then --llm_model).",
+        category="general",
+        applies_to=["both"]
+    ),
     ParamDef(
         name="max_tokens",
         arg_names=["--max_tokens"],

@@ -241,21 +241,22 @@ Respond only in JSON format"""
 
 
 
-# ==============================================================================
-# FIX 1: SPLIT APPROACH - Two separate LLM calls for better performance
-# ==============================================================================
+def get_chat_completions_headers(service_url: str):
+    """Headers for an OpenAI-compatible /v1/chat/completions request.
 
-def get_openrouter_headers():
-    """Get headers for OpenRouter API requests."""
-    if not OPENROUTER_API_KEY:
-        return {}
-    return {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
-        "X-Title": "E2E DocGrader Multi-Shot Retrieval"
-    }
+    Adds Bearer auth + OpenRouter-specific headers when the URL is OpenRouter
+    and OPENROUTER_API_KEY is set. Local endpoints (vLLM, etc.) get an empty
+    header dict.
+    """
+    if "openrouter.ai" in service_url and OPENROUTER_API_KEY:
+        return {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
+            "X-Title": "E2E DocGrader Multi-Shot Retrieval"
+        }
+    return {}
 
-def call_openrouter_llm(service_url: str, model_name: str, messages: List[Dict],
+def call_chat_completions(service_url: str, model_name: str, messages: List[Dict],
                         temperature: float = 1.0, max_tokens: int = 4096,
                         top_p: float = 1.0,
                         top_k: int = -1,
@@ -298,7 +299,7 @@ def call_openrouter_llm(service_url: str, model_name: str, messages: List[Dict],
     if repetition_penalty != 1.0:
         payload["repetition_penalty"] = repetition_penalty
 
-    headers = get_openrouter_headers()
+    headers = get_chat_completions_headers(service_url)
 
     for attempt in range(max_retries):
         start_time = time.time()
@@ -373,15 +374,12 @@ def evaluate_document_relevance(question: str,
                                 llm_config: Optional[Dict[str, Any]] = None,
                                 logger: Optional[LLMLogger] = None,
                                 hop_count: int = 1) -> Dict[str, Any]:
-    """
-    FIX 1 - Call 1: Simple binary relevance classification using gpt-oss-20b.
-    """
+    """Simple binary relevance classification using the grader model."""
     if not new_documents:
         return {"relevance": []}
 
-    # Use OpenRouter for document grading (gpt-oss-20b)
-    service_url = llm_config.get('grader_service_url', 'https://openrouter.ai/api/v1/chat/completions')
-    model_name = llm_config.get('grader_model_name', 'openai/gpt-oss-20b')
+    service_url = llm_config['grader_service_url']
+    model_name = llm_config['grader_model_name']
     max_tokens = 4096
 
     # Format NEW documents
@@ -408,7 +406,7 @@ def evaluate_document_relevance(question: str,
     messages = [{"role": "user", "content": prompt}]
 
     try:
-        llm_output = call_openrouter_llm(
+        llm_output = call_chat_completions(
             service_url=service_url,
             model_name=model_name,
             messages=messages,
@@ -477,9 +475,8 @@ def check_sufficiency(question: str,
         - 'sufficient' (bool): Whether documents are sufficient
         - 'reasoning' (str): Explanation of decision
     """
-    # Use OpenRouter for sufficiency check (gpt-oss-120b)
-    service_url = llm_config.get('sufficiency_service_url', 'https://openrouter.ai/api/v1/chat/completions')
-    model_name = llm_config.get('sufficiency_model_name', 'openai/gpt-oss-120b')
+    service_url = llm_config['sufficiency_service_url']
+    model_name = llm_config['sufficiency_model_name']
     max_tokens = 10240
 
     # Format KEPT documents
@@ -501,7 +498,7 @@ def check_sufficiency(question: str,
     messages = [{"role": "user", "content": prompt}]
 
     try:
-        llm_output = call_openrouter_llm(
+        llm_output = call_chat_completions(
             service_url=service_url,
             model_name=model_name,
             messages=messages,
@@ -578,9 +575,8 @@ def generate_answer(question: str,
     Returns:
         Final answer string
     """
-    # Use OpenRouter for answer generation (gpt-oss-120b)
-    service_url = llm_config.get('sufficiency_service_url', 'https://openrouter.ai/api/v1/chat/completions')
-    model_name = llm_config.get('sufficiency_model_name', 'openai/gpt-oss-120b')
+    service_url = llm_config['sufficiency_service_url']
+    model_name = llm_config['sufficiency_model_name']
     max_tokens = llm_config.get('max_tokens', 10240)
 
     # Format KEPT documents
@@ -610,7 +606,7 @@ Answer:"""
     messages = [{"role": "user", "content": prompt}]
 
     try:
-        llm_output = call_openrouter_llm(
+        llm_output = call_chat_completions(
             service_url=service_url,
             model_name=model_name,
             messages=messages,
@@ -652,9 +648,8 @@ def generate_search_queries(question: str,
     """
     Generate search queries using gpt-oss-120b via OpenRouter.
     """
-    # Use OpenRouter for query generation (gpt-oss-120b)
-    service_url = llm_config.get('query_service_url', 'https://openrouter.ai/api/v1/chat/completions')
-    model_name = llm_config.get('query_model_name', 'openai/gpt-oss-120b')
+    service_url = llm_config['query_service_url']
+    model_name = llm_config['query_model_name']
     max_tokens = llm_config.get('max_tokens', 10240)
 
     # Format KEPT documents
@@ -688,7 +683,7 @@ def generate_search_queries(question: str,
     messages = [{"role": "user", "content": prompt}]
 
     try:
-        llm_output = call_openrouter_llm(
+        llm_output = call_chat_completions(
             service_url=service_url,
             model_name=model_name,
             messages=messages,
@@ -1065,10 +1060,6 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         # Aggressive summarization: use summaries after iteration 2 to improve information connection
         total_content_length = sum(len(doc[1]) for doc in kept_docs)
 
-        # ============================================================
-        # FIX 1: SPLIT APPROACH WITH ITERATION 1 SPECIAL HANDLING
-        # ============================================================
-
         # Special handling for iteration 1: decompose original query first
         if iteration == 1 and not new_docs and not kept_docs:
             if verbose:
@@ -1104,9 +1095,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             reasoning_steps = ""
 
         else:
-            # FIX 1: Split approach for iterations 2+
-
-            # CALL 1: Evaluate document relevance (if we have new docs) - uses gpt-oss-20b
+            # CALL 1: Evaluate document relevance (if we have new docs)
             relevance = []
             if new_docs:
                 if verbose:

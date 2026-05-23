@@ -40,6 +40,15 @@ INFERENCE_LLM_URL="http://127.0.0.1:8123/v1/chat/completions"
 INFERENCE_MODEL="/model/gpt-oss-20b-mxfp4"
 INFERENCE_QUERY_MODEL="/model/gpt-oss-120b-mxfp4"
 
+# Per-component endpoint splits. Each defaults to INFERENCE_LLM_URL /
+# INFERENCE_MODEL when empty. Set when components live on different servers
+# (e.g. small grader on one vLLM, large query/sufficiency on another).
+# INFERENCE_GRADER_URL="http://127.0.0.1:8124/v1/chat/completions"
+# INFERENCE_GRADER_MODEL="/model/gpt-oss-20b"
+# INFERENCE_QUERY_URL="http://127.0.0.1:8123/v1/chat/completions"
+# INFERENCE_SUFFICIENCY_URL="http://127.0.0.1:8123/v1/chat/completions"
+# INFERENCE_SUFFICIENCY_MODEL="/model/gpt-oss-120b"
+
 # Judge (used by evaluate.py at the end of the run scripts)
 INFERENCE_JUDGE_URL="https://openrouter.ai/api/v1/chat/completions"
 INFERENCE_JUDGE_MODEL="openai/gpt-oss-20b"

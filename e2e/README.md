@@ -1,100 +1,103 @@
 # E2E: RAG benchmark
-This is a WIP proposal, and will undergo changes.
+
+End-to-end retrieval-augmented generation benchmark for multi-hop QA on the
+[FRAMES](https://huggingface.co/datasets/google/frames-benchmark) Wikipedia
+dataset. Supports BM25 and dense vector retrieval, optional ColBERTv2 reranking,
+and iterative multi-shot retrieval with LLM-driven query decomposition.
+
+This is a WIP proposal and will undergo changes.
+
+---
 
 ## Benchmark flow
-We start with a corpus of documents and a set of user queries. 
 
-First, we preprocess the corpus to get a vector DB.
+We start with a corpus of documents and a set of user queries.
 
-Then, given a user query, we perfrom:
-1. retrieval
-2. reranking
-3. answer generation
+1. **Corpus preparation** (one-time): download Wikipedia pages → chunk into
+   passages → build a vector DB.
+2. **Inference** (per query): retrieve → rerank → generate answer.
+3. **Evaluation**: LLM judge scores the answer against ground truth.
 
-## Preliminary: Environment setup
-The recommended environment setup depends on enroot installation - however, it is simple enough that docker may be used. 
+For multi-hop questions, step 2 iterates: the LLM evaluates retrieved docs,
+decides if they're sufficient, and otherwise generates fresh sub-queries to
+search again. See [Architecture: multi-shot retrieval](#architecture-multi-shot-retrieval).
 
-### Base environment
-It is assumed that the user starts from a Ubuntu PyTorch base image (sandbox/container)
+---
 
-You may use either:
-- [Ubuntu base image from dockerhub](https://hub.docker.com/_/ubuntu) (not recommended)
-- [NVIDIA PyTorch image from NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch/tags) (recommended)
-- [AMD ROCm/PyTorch image from dockerhub](https://hub.docker.com/r/rocm/pytorch/tags) (not tested yet)
+## Quick start
 
-### Enroot setup
-If you have enroot, you can get started by:
+For a system with the vector DB already built (and `data/frames_dataset.tsv`
+present):
+
+```bash
+cp config.template.sh config.sh
+$EDITOR config.sh                              # set device, paths, NUMA, model
+
+export OPENROUTER_API_KEY="sk-or-v1-..."       # only needed for LLM judge
+
+bash scripts/run_multi_shot.sh 50 10           # 50 queries, 10 parallel workers
+```
+
+Output lands in `output_multi_shot_n50_w10_<timestamp>/` with:
+- `result_multi_shot_n50.json` — retrieval + answer per query
+- `score_multi_shot_n50.txt` — LLM judge accuracy summary
+- `run.log` — full stdout
+
+---
+
+## Setup from scratch
+
+### Environment
+
+Recommended: a Ubuntu PyTorch sandbox via enroot or Docker.
+
+- [Ubuntu base image](https://hub.docker.com/_/ubuntu) (works, not optimal)
+- [NVIDIA PyTorch image](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch/tags) (CUDA)
+- [AMD ROCm/PyTorch image](https://hub.docker.com/r/rocm/pytorch/tags) (ROCm)
+- Intel XPU: build PyTorch from Intel's wheels manually inside the sandbox.
+
+Enroot example:
+
 ```bash
 mkdir -p containers/
-
-enroot import -o containers/my_image.sqsh dockerd://docker_image:tag 
-# For example, docker://pytorch/pytorch:2.8.0-cuda12.9-cudnn9-runtime
-
+enroot import -o containers/my_image.sqsh dockerd://pytorch/pytorch:2.8.0-cuda12.9-cudnn9-runtime
 enroot create --name my_sandbox containers/my_image.sqsh
-
 enroot start --root --rw \
     --mount /actual/path:/mounted/path \
     --mount $(pwd):/work my_sandbox
 
-## Once inside sandbox, install dependancies via
-cd /work && ./setup.sh
+cd /work && ./setup.sh                         # pip install + apt deps
 ```
 
-## Corpus creation
-Starting from [FRAMES](https://huggingface.co/datasets/google/frames-benchmark), we have a set of tuples as:
-```
-[UserQuery, WikiLinks, Answer]
-```
+### Corpus download
 
-We extract all the unique wikipedia links, and download the web pages as PDFs or HTML. This is done using [`wkhtmltopdf`](https://wkhtmltopdf.org/) for PDFs or direct HTTP requests for HTML.
+Pulls all Wikipedia URLs referenced in the FRAMES dataset and saves them as
+PDFs or HTML, plus a `url_mapping.json` linking the original URL to each file
+(used later for retrieval grading).
 
-Additionally, it saves `url_mapping.json` which maps the url from FRAMES dataset and file name.
-
-This will be used later for evaluation.
-
-You may use [download_docs.py](./download_docs.py) script. 
 ```bash
-$ python3 download_docs.py --help
-usage: download_docs.py [-h] [--tsv_path TSV_PATH] [--max_urls MAX_URLS] [--output_dir OUTPUT_DIR]
-                        [--output_data OUTPUT_DATA] [--processes PROCESSES] [--format {pdf,html}]
-
-Download FRAMES dataset from Hugging Face and convert URLs to PDFs or HTML
-
-options:
-  -h, --help            show this help message and exit
-  --tsv_path TSV_PATH   Input TSV file (default: download FRAMES dataset)
-  --max_urls MAX_URLS   Maximum number of URLs to process (default: all)
-  --output_dir OUTPUT_DIR
-                        Output directory for downloaded documents (default: doc_pdf or doc_html)
-  --output_data OUTPUT_DATA
-                        Output directory for dataset file, if downloaded from Hugging Face (default:
-                        data)
-  --processes PROCESSES
-                        Number of parallel processes (default: 10)
-  --format {pdf,html}   Output format: pdf or html (default: pdf)
-
-## Sample usage
-$ python3 download_docs.py --output_dir doc_pdf --format pdf --processes 30 
-$ python3 download_docs.py --output_dir doc_html --format html --processes 30
-## Will download documents in ./doc_pdf/ or ./doc_html/
+python3 download_docs.py --output_dir doc_html --format html --processes 30
 ```
 
-## Corpus preprocessing
-We now need to extract text content from the set of PDFs or HTML files. This is done using [PyMuPDF](https://pypi.org/project/PyMuPDF/) for PDFs or [BeautifulSoup4](https://pypi.org/project/beautifulsoup4/) for HTML.
+| Option | Default | Notes |
+|---|---|---|
+| `--tsv_path` | (downloads FRAMES) | Local TSV instead |
+| `--max_urls` | all | Cap for testing |
+| `--output_dir` | `doc_pdf` / `doc_html` | Where to save documents |
+| `--format` | `pdf` | `pdf` or `html` |
+| `--processes` | 10 | Parallelism |
 
-Important considerations:
-- Extracted text from a single document has many characters.
-- However, embedding models (especially rerankers like [`ColBERTv2`](https://huggingface.co/colbert-ir/colbertv2.0)) have a size restriction on the maximum length of sequence they can encode (~512). 
-- Thus, we break down documents into chunks. We call these chunks "passages".
-    - Each passage belongs to a single unique document source.
+HTML is the default in our scripts since it scores ~1% better than PDF in
+extraction quality. Use `download_docs.py --help` for the full list.
 
-In this step:
-- our input is a set of PDFs or HTML documents
-- our output is:
-    - a set of txt documents (1 per source), and
-    - a JSON file of passages.
+### Passage chunking (handled by `run_ingestion.sh`)
 
-The passages JSON has a schema as follows:
+Embedding models (especially the ColBERTv2 reranker) cap input at ~512 tokens,
+so we split each document into overlapping fixed-length passages. Default:
+768-char passages with 32-char overlap and word-boundary splitting.
+
+The chunker output is a JSON list:
+
 ```json
 {
     "index": 0,
@@ -104,139 +107,227 @@ The passages JSON has a schema as follows:
 }
 ```
 
-Here, original_url is from `url_mapping.json` and will be used to grade if the correct document has been retrieved.
+`run_ingestion.sh` invokes `read_docs.py` for chunking and then
+`single_shot_retrieval.py --ingest` to build the vector DB. To change chunk
+size or paths, edit `INGESTION_*` variables in `config.sh`.
 
-You may use the [`read_docs.py`](./read_docs.py) script. 
-```bash
-$ python3 read_docs.py --help
-usage: read_docs.py [-h] [--json JSON] [--max-files MAX_FILES] [--max-length MAX_LENGTH]
-                    [--overlap OVERLAP] [--fixed-length FIXED_LENGTH] [--fixed-overlap FIXED_OVERLAP]
-                    [--no-tables] [--no-lists] [--text-boundary {sentence,word,none}] [--benchmark]
-                    input_dir output_dir
-
-Extract text from PDF and HTML files and split into passages
-
-positional arguments:
-  input_dir             Directory containing document files (PDF/HTML)
-  output_dir            Directory to save text files
-
-options:
-  -h, --help            show this help message and exit
-  --json JSON           JSON file to save passage data
-  --max-files MAX_FILES
-                        Maximum number of files to process (for testing)
-  --max-length MAX_LENGTH
-                        Maximum passage length in characters (default: 512)
-  --overlap OVERLAP     Overlap between passages in characters (default: 50)
-  --fixed-length FIXED_LENGTH
-                        Use fixed-length passages instead of variable-length
-  --fixed-overlap FIXED_OVERLAP
-                        Overlap for fixed-length passages (default: 32)
-  --no-tables           Don't preserve table structure (HTML only)
-  --no-lists            Don't preserve list structure (HTML only)
-  --text-boundary {sentence,word,none}
-                        Text boundary optimization (default: sentence)
-  --benchmark           Enable performance monitoring
-
-## Sample usage
-$ python3 read_docs.py doc_pdf passages --max-length 256 --json passages/doc_pdf_len256.json --overlap 32
-$ python3 read_docs.py doc_html passages --max-length 256 --json passages/doc_html_len256.json --overlap 32
-```
-
-### TODO Items for passage chunking:
-~~1. Chunking is done at a character level right now. We may need to do this at the token level directly to avoid truncation.~~
-
-Use --text-boundary
-
-~~2. Need to assess the quality of text extraction - PyMuPDF may have ordering issues, HTML parsing needs filtering of non-content elements.~~
-
-HTML has ~1% better accuracy than PDF-processed passages.
-
-3. Passage size will directly affect vector operations. Need to study impact of passage len + overlap on vector size, ingestion time, lookup time, etc.
-
-## Vector Database & Indexing
-
-The retrieval system supports multiple backends and index types:
-
-### Retrieval Methods
-- **BM25**: Sparse lexical retrieval (traditional keyword search)
-- **Vector**: Dense semantic retrieval using embeddings
-
-### Vector Index Methods
-- **Flat L2**: Exact k-NN search, O(n) time, best for <10K documents
-- **HNSW**: Approximate search, O(log n) time, balanced accuracy & latency, default choice
-- **IVF**: Inverted file index, memory efficient, best for >1M documents
-  - Configurable `nprobe` parameter (default: 10) controls accuracy/speed tradeoff (higher the better accuracy)
-
-## Single-shot retrieval & evaluation
-
-Use [`single_shot_retrieval.py`](./single_shot_retrieval.py) to ingest passages, perform retrieval, and evaluate accuracy.
+### Vector DB build
 
 ```bash
-# Ingest passages and save database
-$ python3 single_shot_retrieval.py --ingest passages/data.json --db my_db --retrieval_method vector
-
-# Load existing database and run single query
-$ python3 single_shot_retrieval.py --db my_db.db --retrieval_method vector --query "Your question"
-
-# Run full evaluation on FRAMES dataset
-$ python3 single_shot_retrieval.py --db my_db.db --retrieval_method vector --eval
-$ python3 single_shot_retrieval.py --db my_db.db --retrieval_method bm25 --bm25_stemmer pystemmer --eval
-
-# Key options:
-#   --device                                 Device to run the models on (e.g., 'cpu', 'cuda', 'xpu', or 'auto')
-#   --retrieval_strategy                     Retrieval strategy: 'fixed_k' (default), 'top_p' (nucleus sampling), 'relative' (score-based)
-#   --retrieval_method {bm25,vector}         Retrieval backend
-#   --vector_index_method {flat,hnsw,ivf}    Vector index type (default: hnsw)
-#   --eval [N]                               Evaluate accuracy using N queries from dataset specified by --dataset 
-#   --ivf_nprobe N                           IVF clusters to search (default: 10)
-#   --top_k_retriever N                      Top-K documents to retrieve (default: 25)
-#   --top_k_reranking N                      Top-K after reranking (default: 10)
-#   --no-rerank                              Skip reranking step
-#   --no-save                                Not saving DB for testing purpose
-#   --benchmark                              Enable performance monitoring
-...
+bash scripts/run_ingestion.sh
 ```
 
-## Multi-step lookup (TODO)
-Instead of a single step retrieval, we perform multiple steps. In each step, we give the LLM partial retrieved context, and the user query - and ask it to generate search queries. This helps in breaking down multi-step reasoning questions.
+Outputs:
+- `${INGESTION_PASSAGES_JSON}` — passage JSON
+- `${INGESTION_DB}.db` — FAISS index file
+- `${INGESTION_DB}_data/` — docstore + metadata
 
-Consider, as an example, the below query: 
-```none
-Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?
+---
+
+## Configuration (`config.sh`)
+
+System-specific knobs live in a shell-sourced `config.sh` at the repo root.
+Copy `config.template.sh` and edit. The file is gitignored.
+
+```bash
+cp config.template.sh config.sh
+$EDITOR config.sh
 ```
 
-This is a classic multi-step reasoning. The logical deduction of a well-performing system is: 
-```
-- What year did New York City FC win their first MLS Cup title
-(retrieve docs regarding MLS cup winners)
-(say, answer is 2005)
-- Who won the French Open Mens Singles tournament in 2005?
-(retrieve 2005 French open document)
+### Variable namespacing
+
+| Prefix | Used by | Examples |
+|---|---|---|
+| `INGESTION_*` | `run_ingestion.sh` | chunk size, embedding device for build, paths |
+| `INFERENCE_*` | `run_multi_shot.sh`, `run_single_shot.sh` | device, retriever, top-k, LLM endpoints, judge |
+| `INFERENCE_ORACLE_*` | `run_oracle.sh` | batch size, timeout, dataset, wiki dir |
+| `CPU_*` | Python (interpreted by `utils.apply_cpu_threading_env`) | NUMA node, OMP thread count |
+
+### Resolution order
+
+For each variable:
+
+1. Already-exported env var (one-off override). E.g. `INFERENCE_DEVICE=cpu bash scripts/run_multi_shot.sh 50`.
+2. Value set in `config.sh`.
+3. Built-in default in the script.
+
+So setting a value in `config.sh` is per-system; setting it on the command line
+is per-run.
+
+### Pre-built reference configs
+
+- `config.template.sh` — annotated template, copy this.
+- `config.AMD.CPU.sh` — 2×96C Turin, embedding+reranker on CPU.
+- `config.AMD.GPU.sh` — 2×96C Turin + 8 AMD GPUs, embedding+reranker on GPU.
+
+For the full per-knob reasoning see `claude/design/config_layout.md`.
+
+---
+
+## Pipelines
+
+All entry-point scripts source `config.sh` and pass appropriate flags to the
+underlying Python. Direct Python invocation is still supported for ad-hoc work.
+
+| Script | Purpose | Underlying script |
+|---|---|---|
+| `scripts/run_ingestion.sh` | Build vector DB from a doc directory | `read_docs.py` + `single_shot_retrieval.py --ingest` |
+| `scripts/run_single_shot.sh [N]` | Single-shot retrieval + judge | `single_shot_retrieval.py` + `evaluate.py` |
+| `scripts/run_multi_shot.sh [N] [WORKERS]` | Iterative multi-shot retrieval + judge | `multi_shot_retrieval.py` + `evaluate.py` |
+| `scripts/run_oracle.sh [N]` | Upper-bound: ground-truth docs → LLM | `oracle_single_shot.py` + `evaluate.py` |
+| `scripts/write_db_manifest.sh` | Generate cross-system DB fingerprint | `db_manifest.py write` |
+| `scripts/verify_db_manifest.sh MANIFEST` | Verify local DB matches a reference manifest | `db_manifest.py verify` |
+
+Positional args:
+- `N` = number of queries (`all` = full 824-query dataset).
+- `WORKERS` = parallel query threads (default 1).
+
+Both override the config defaults (`INFERENCE_N_QUERIES`, `INFERENCE_NUM_WORKERS`).
+
+### Direct Python invocation (ad-hoc)
+
+```bash
+# Single query, no eval
+python3 single_shot_retrieval.py \
+    --db vector_html_hnsw_len768_ov32_word.db \
+    --retrieval_method vector \
+    --query "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
+
+# BM25 instead of vector
+python3 single_shot_retrieval.py --db bm25.db --retrieval_method bm25 --eval 50
 ```
 
-The flow now looks something like: 
-1. User query comes in
-2. Repeat 1..n times:  
-    1. Given to query rewriter, which gives at most k search queries.
-    2. For each query:
-        1. Encode into vector
-        2. Perform vector search and retrieve relevant documents
-3. Rerank retrieved documents, and choose top-n (call this filtered documents)
-4. Give filtered documents + user query to LLM generator
+Useful flags (for both single-shot and multi-shot):
 
-The query rewriter may be thought of as an LLM with the following prompt: 
+| Flag | Notes |
+|---|---|
+| `--device {auto,cuda,rocm,xpu,hpu,cpu}` | Default device for embedding + reranker |
+| `--embedding-device <...>` | Override just the embedder. Defaults to `--device`. |
+| `--reranker-device <...>` | Override just the reranker. |
+| `--retrieval_method {bm25,vector}` | Backend |
+| `--vector_index_method {flat,hnsw,ivf}` | Vector index type (default: hnsw) |
+| `--eval [N]` | Run on N queries from `--dataset` |
+| `--top_k_retriever N` | Top-K from retriever |
+| `--top_k_reranking N` | Top-K after reranker |
+| `--no-rerank` | Skip reranker entirely |
+| `--benchmark` | Performance monitoring |
+
+---
+
+## Cross-vendor support
+
+This codebase originally targeted Intel CPU + Intel XPU. After the
+cross-vendor refactor it also runs on:
+
+- AMD CPU + AMD GPU (ROCm)
+- AMD CPU + NVIDIA GPU
+- Intel CPU + NVIDIA GPU
+
+Key surfaces:
+
+- **Device detection**: `utils.detect_device()` returns the best available.
+  PyTorch ROCm exposes AMD GPUs through `torch.cuda.*`, so AMD GPU device
+  strings are `"cuda:N"`. `--device rocm` is a cosmetic alias for `cuda` with
+  ROCm-specific logging.
+- **Per-model placement**: `--embedding-device` and `--reranker-device` let
+  embedding and reranker live on different devices.
+- **GPU index allocation**: `DeviceAllocator` picks empty GPUs (≥95% free VRAM
+  via `mem_get_info`) and prevents within-process collisions. Override with
+  `INFERENCE_EMBEDDING_GPU_DEVICES` / `INFERENCE_RERANKER_GPU_DEVICES`.
+- **CPU NUMA pinning** (when a model is on CPU): each worker process pins
+  itself to a NUMA node — `os.sched_setaffinity` for CPU, `set_mempolicy` for
+  memory. Configure via `INFERENCE_RERANKER_NUMA_NODE`,
+  `INFERENCE_EMBEDDING_NUMA_NODES`, `CPU_NUMA_NODE`.
+- **Per-process reranker**: the reranker model loads in its own
+  `multiprocessing.Process` so it has independent `OMP_NUM_THREADS` and NUMA
+  placement, isolated from the main process and the embedder.
+
+The full reasoning is in `claude/design/cross_vendor_plan.md`.
+
+### Cross-system DB sanity check
+
+To confirm a vector DB built on system A matches one built independently on
+system B (same passages, same model, same parameters):
+
+```bash
+# System A:
+bash scripts/write_db_manifest.sh manifest.json.gz
+# Ship manifest.json.gz to system B.
+
+# System B (after building its own DB):
+bash scripts/verify_db_manifest.sh manifest.json.gz
+# exits 0 on match; prints summary diff on mismatch.
 ```
-You are an expert at generating search queries to help answer complex questions using a collection of Wikipedia articles. 
 
-Given the following:
+The manifest contains a corpus sha256, sample embeddings at deterministic
+indices, and probe-query top-K results. Tolerances:
+- Corpus + counts: exact match.
+- Sample embeddings: cosine ≥ 0.9999 (configurable via `--cosine-threshold`).
+- Probe top-K: exact rank match for top-3 (configurable via `--top-k-depth`).
+
+---
+
+## Vector DB & indexing
+
+### Retrieval methods
+
+- **BM25**: sparse lexical retrieval (traditional keyword search). Uses [bm25s](https://github.com/xhluca/bm25s).
+- **Vector**: dense semantic retrieval via [intfloat/e5-base-v2](https://huggingface.co/intfloat/e5-base-v2) embeddings + FAISS.
+
+### Vector index types
+
+| Type | Time | Best for |
+|---|---|---|
+| `flat` (L2) | O(n) | <10K passages |
+| `hnsw` | O(log n) | balanced, default |
+| `ivf` | O(√n) | >1M passages, configurable `--ivf_nprobe` |
+
+---
+
+## Architecture: multi-shot retrieval
+
+For multi-hop questions like:
+
+> Who won the French Open Mens Singles tournament the year that New York City
+> FC won their first MLS Cup title?
+
+A single retrieval rarely surfaces both facts. Multi-shot iterates:
+
+1. User query → query decomposer (LLM) generates k focused sub-queries.
+2. For each sub-query: embed → vector search → retrieve top docs.
+3. LLM evaluates relevance of new docs.
+4. LLM checks if accumulated docs are sufficient.
+5. If insufficient, generate new sub-queries and repeat (up to N iterations).
+6. Final docs are reranked, then passed to answer generator.
+
+Three LLM components, separable by URL + model:
+
+- **Grader** (`INFERENCE_GRADER_URL`): binary relevance per doc. Cheap; small model.
+- **Sufficiency checker** (`INFERENCE_SUFFICIENCY_URL`): "is this enough to answer?" Bigger model.
+- **Query generator** (`INFERENCE_QUERY_URL`): generates new sub-queries when insufficient.
+
+Each defaults to `INFERENCE_LLM_URL` if not set explicitly. Lets you put the
+small grader on a dedicated vLLM and the larger sufficiency/query model on a
+beefier endpoint.
+
+The judge model used by `evaluate.py` is independent
+(`INFERENCE_JUDGE_URL` / `INFERENCE_JUDGE_MODEL`).
+
+### Query rewriter prompt (sketch)
+
+```
+You are an expert at generating search queries to help answer complex questions
+using a collection of Wikipedia articles.
+
+Given:
 - The user's original question.
 - Relevant facts or documents already gathered so far (if any).
 
-Your task:  
-Generate [k] concise, focused search queries that could be used to find specific information from Wikipedia to help answer the question.  
-- Make each query target a different aspect of the problem or missing information.  
-- Avoid duplicating information already in the context.  
+Your task:
+Generate [k] concise, focused search queries that could be used to find specific
+information from Wikipedia to help answer the question.
+- Make each query target a different aspect of the problem or missing information.
+- Avoid duplicating information already in the context.
 - Do not reference source filenames, document titles, or include any special characters.
 - Think step by step before writing each query.
 - List the missing pieces of information, then write k queries that could best retrieve them.
@@ -246,5 +337,73 @@ Generate [k] concise, focused search queries that could be used to find specific
 
 [Known Facts / Retrieved Documents:]
 {summarized_partial_context}
+```
+
+---
+
+## Evaluation
+
+`evaluate.py` runs an LLM judge against the result JSON, scoring each model
+answer against the gold answer. Configurable via:
+
+- `INFERENCE_JUDGE_URL` / `INFERENCE_JUDGE_MODEL` (config.sh)
+- `--judge-url` / `--judge-model` (CLI)
+- `--batch-size N` parallelism
+
+The default judge is `openai/gpt-oss-20b` via OpenRouter (set
+`OPENROUTER_API_KEY`). Bigger judges produce more accurate scores; the 20B
+judge has known length-limit issues on long multi-hop questions.
+
+Results from any pipeline can be re-scored later:
+
+```bash
+python3 evaluate.py output_multi_shot_n50_w10_<timestamp>/result_multi_shot_n50.json
+```
+
+---
+
+## Outputs
+
+Each pipeline writes to a timestamped `output_<pipeline>_<tag>_<workers?>_<timestamp>/`
+directory containing:
 
 ```
+result_<pipeline>_<tag>.json    # retrieval results + generated answers
+score_<pipeline>_<tag>.txt      # LLM judge per-query scores + summary
+run.log                         # full stdout
+```
+
+Result schema:
+
+```json
+{
+    "query": "...",
+    "retrieved_urls": [...],
+    "correct_urls": [...],
+    "llm_answer": "...",
+    "ground_truth_answer": "..."
+}
+```
+
+---
+
+## Reference
+
+- `CLAUDE.md` — architectural details, parameter reference, accuracy
+  experiments and chunk-size studies.
+- `claude/design/config_layout.md` — `config.sh` design and resolution rules.
+- `claude/design/cross_vendor_plan.md` — cross-vendor refactor reasoning
+  (per step, why each decision was made).
+- `claude/README.md` — agent-notes for this repo (synced via git).
+
+---
+
+## TODO
+
+- Token-based chunking aligned with the e5-base-v2 512-token limit (current
+  default is 768-char fixed-length).
+- Configurable sentence-transformers `batch_size` (currently uses the SDK
+  default of 32).
+- GPU FAISS for index sizes that outgrow CPU.
+- Stronger judge model than gpt-oss-20b (current judge hits length limits on
+  complex multi-hop questions, capping accuracy measurements).

@@ -50,14 +50,14 @@ Example configs live under [endpoints/examples/08_Qwen3-VL-235B-A22B_Example](ht
 
 #### Fields that the submitter **should** update to match their server status:
 
-- Served model name:
+- Served model name (to match the actual, probably quantized, model checkpoint):
 
 ```yaml
 model_params:
   name: "Qwen/Qwen3-VL-235B-A22B-Instruct"
 ```
 
-- Endpoints url and port:
+- The URL and port number of the endpoint:
 
 ```yaml
 endpoint_config:
@@ -67,13 +67,8 @@ endpoint_config:
 
 #### Fields that the submitter **may** customize for performance tuning:
 
-- Target_qps (for server and interactive mode):
+- Target QPS (for the server and interactive scenarios):
 
-```yaml
-  load_pattern:
-    type: "poisson"
-    target_qps: 6.5
-```
 
 - Client worker related settings:
 
@@ -90,9 +85,9 @@ client:
 
 #### Fileds that the submitter **MUST NOT** change for valid results:
 
-- Sampling parameters that specified in scection [Reference Implementation Specification](#reference-implementation-specification)
+- Sampling parameters specified in the section [Reference Implementation Specification](#reference-implementation-specification)
 
-- Datasets (Neither performance or accuracy dataset)
+- Datasets (neither for performance evaluation nor for accuracy evaluation)
 
 ### Run the benchmark
 

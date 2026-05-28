@@ -27,7 +27,7 @@ class BackendTensorflow(backend.Backend):
         # NHWC)
         return "NHWC"
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, threads=None):
         # there is no input/output meta data i the graph so it need to come
         # from config.
         if not inputs:

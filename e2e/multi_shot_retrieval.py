@@ -268,7 +268,9 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                         logger: Optional[LLMLogger] = None,
                         component: str = "unknown",
                         hop_count: Optional[int] = None,
-                        context: Dict[str, Any] = None) -> str:
+                        context: Dict[str, Any] = None,
+                        perf_test_cache: Optional[Any] = None,
+                        query_id: Optional[str] = None) -> str:
     """Call OpenRouter API with proper authentication and logging.
 
     Default sampling parameters:
@@ -300,6 +302,16 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
         payload["repetition_penalty"] = repetition_penalty
 
     headers = get_chat_completions_headers(service_url)
+
+    # Performance test mode: check if we have cached response
+    cached_response = None
+    if perf_test_cache and query_id and component and hop_count is not None:
+        cached_response = perf_test_cache.get_response(query_id, component, hop_count)
+        if cached_response:
+            print(f"    [PERF TEST MODE] Will attempt real LLM call for performance measurement, but return cached response for deterministic pipeline")
+            print(f"    [PERF TEST MODE] CRITICAL: LLM call MUST succeed - test will STOP if LLM service is unavailable")
+        else:
+            print(f"    [WARNING] No cached response for {component} hop {hop_count}, will use real LLM response")
 
     for attempt in range(max_retries):
         start_time = time.time()
@@ -339,8 +351,16 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                     payload=payload,
                     response=result,
                     latency_ms=latency_ms,
-                    context=context or {}
+                    context=context or {},
+                    simulated_response=cached_response  # None in normal mode, cached value in perf test mode
                 )
+
+            # In perf test mode, return cached response instead of real LLM output
+            if cached_response:
+                print(f"    [PERF TEST MODE] Returning simulated response (LLM generated: {len(llm_output)} chars, Simulated: {len(cached_response)} chars)")
+                print(f"    [PERF TEST MODE] Real LLM output: {llm_output[:200]}{'...' if len(llm_output) > 200 else ''}")
+                print(f"    [PERF TEST MODE] Cached output (used in pipeline): {cached_response[:200]}{'...' if len(cached_response) > 200 else ''}")
+                return cached_response
 
             return llm_output
 
@@ -351,6 +371,15 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                 print(f"    Server error ({status}). Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait)
                 continue
+
+            # In perf test mode, LLM calls MUST succeed for valid benchmarking
+            if cached_response:
+                print(f"    ERROR [{component}]: HTTP {status}: {e}")
+                print(f"    [PERF TEST MODE FATAL] LLM call failed - cannot proceed with cached response")
+                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                print(f"    [PERF TEST MODE FATAL] Please ensure LLM service is running on {service_url}")
+                raise RuntimeError(f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
+
             print(f"    ERROR [{component}]: HTTP {status}: {e}")
             raise
         except requests.exceptions.Timeout:
@@ -359,13 +388,32 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                 print(f"    Timeout. Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait)
                 continue
+
+            # In perf test mode, LLM calls MUST succeed for valid benchmarking
+            if cached_response:
+                print(f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
+                print(f"    [PERF TEST MODE FATAL] LLM call timed out - cannot proceed with cached response")
+                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                raise RuntimeError(f"Perf test mode requires LLM service to respond. LLM call timed out for {component}")
+
             print(f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
             raise
         except Exception as e:
+            # In perf test mode, LLM calls MUST succeed for valid benchmarking
+            if cached_response:
+                print(f"    ERROR [{component}]: {e}")
+                print(f"    [PERF TEST MODE FATAL] LLM call failed with exception - cannot proceed with cached response")
+                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                print(f"    [PERF TEST MODE FATAL] Please ensure LLM service is running and accessible")
+                raise RuntimeError(f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
+
             print(f"    ERROR [{component}]: {e}")
             raise
 
     print(f"    ERROR [{component}]: Max retries ({max_retries}) exceeded")
+    if cached_response:
+        print(f"    [PERF TEST MODE] Real LLM call failed, returning cached response")
+        return cached_response
     raise RuntimeError(f"LLM call failed after {max_retries} retries")
 
 def evaluate_document_relevance(question: str,
@@ -373,7 +421,8 @@ def evaluate_document_relevance(question: str,
                                 kept_documents: List[tuple],
                                 llm_config: Optional[Dict[str, Any]] = None,
                                 logger: Optional[LLMLogger] = None,
-                                hop_count: int = 1) -> Dict[str, Any]:
+                                hop_count: int = 1,
+                                query_id: Optional[str] = None) -> Dict[str, Any]:
     """Simple binary relevance classification using the grader model."""
     if not new_documents:
         return {"relevance": []}
@@ -405,6 +454,9 @@ def evaluate_document_relevance(question: str,
 
     messages = [{"role": "user", "content": prompt}]
 
+    # Extract perf test cache if available
+    perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+
     try:
         llm_output = call_chat_completions(
             service_url=service_url,
@@ -423,7 +475,9 @@ def evaluate_document_relevance(question: str,
                 "num_documents_evaluated": len(new_documents),
                 "iteration_state": "evaluating_relevance",
                 "kept_docs_before": len(kept_documents)
-            }
+            },
+            perf_test_cache=perf_test_cache,
+            query_id=query_id
         )
 
         print(f"    [DEBUG] Relevance LLM raw output: {llm_output[:200]}...")
@@ -448,6 +502,12 @@ def evaluate_document_relevance(question: str,
         return {"relevance": relevance}
 
     except Exception as e:
+        # In perf test mode, propagate fatal errors (don't fallback)
+        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+            # This is a perf test mode fatal error - must propagate it
+            raise
+
         print(f"    Error in relevance check: {e}")
         return {"relevance": [1] * len(new_documents)}
 
@@ -458,7 +518,8 @@ def check_sufficiency(question: str,
                      max_iterations: int,
                      llm_config: Optional[Dict[str, Any]] = None,
                      logger: Optional[LLMLogger] = None,
-                     hop_count: int = 1) -> Dict[str, Any]:
+                     hop_count: int = 1,
+                     query_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Check if kept documents are sufficient to answer the question.
     Uses gpt-oss-120b model via OpenRouter.
@@ -497,6 +558,9 @@ def check_sufficiency(question: str,
 
     messages = [{"role": "user", "content": prompt}]
 
+    # Extract perf test cache if available
+    perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+
     try:
         llm_output = call_chat_completions(
             service_url=service_url,
@@ -516,7 +580,9 @@ def check_sufficiency(question: str,
                 "iteration": iteration,
                 "max_iterations": max_iterations,
                 "iteration_state": "checking_sufficiency"
-            }
+            },
+            perf_test_cache=perf_test_cache,
+            query_id=query_id
         )
 
         print(f"    [DEBUG] Sufficiency check raw output: {llm_output[:200]}...")
@@ -552,6 +618,12 @@ def check_sufficiency(question: str,
         return {"sufficient": sufficient, "reasoning": reasoning}
 
     except Exception as e:
+        # In perf test mode, propagate fatal errors (don't fallback)
+        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+            # This is a perf test mode fatal error - must propagate it
+            raise
+
         print(f"    Error in sufficiency check: {e}")
         # On final iteration, force sufficient
         if iteration >= max_iterations:
@@ -563,7 +635,8 @@ def generate_answer(question: str,
                    kept_documents: List[tuple],
                    llm_config: Optional[Dict[str, Any]] = None,
                    logger: Optional[LLMLogger] = None,
-                   hop_count: Optional[int] = None) -> str:
+                   hop_count: Optional[int] = None,
+                   query_id: Optional[str] = None) -> str:
     """
     Generate final answer from kept documents using gpt-oss-120b.
 
@@ -605,6 +678,9 @@ Answer:"""
 
     messages = [{"role": "user", "content": prompt}]
 
+    # Extract perf test cache if available
+    perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+
     try:
         llm_output = call_chat_completions(
             service_url=service_url,
@@ -623,7 +699,9 @@ Answer:"""
                 "num_documents_used": len(kept_documents),
                 "iteration_state": "generating_final_answer",
                 "retrieval_complete": True
-            }
+            },
+            perf_test_cache=perf_test_cache,
+            query_id=query_id
         )
 
         if not llm_output or not llm_output.strip():
@@ -632,6 +710,12 @@ Answer:"""
         return llm_output.strip()
 
     except Exception as e:
+        # In perf test mode, propagate fatal errors (don't fallback to "Unknown")
+        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+            # This is a perf test mode fatal error - must propagate it
+            raise
+
         print(f"    Error generating answer: {e}")
         return "Unknown"
 
@@ -644,7 +728,8 @@ def generate_search_queries(question: str,
                            feedback_history: Optional[List[str]] = None,
                            llm_config: Optional[Dict[str, Any]] = None,
                            logger: Optional[LLMLogger] = None,
-                           hop_count: int = 1) -> Dict[str, Any]:
+                           hop_count: int = 1,
+                           query_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Generate search queries using gpt-oss-120b via OpenRouter.
     """
@@ -682,6 +767,9 @@ def generate_search_queries(question: str,
 
     messages = [{"role": "user", "content": prompt}]
 
+    # Extract perf test cache if available
+    perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+
     try:
         llm_output = call_chat_completions(
             service_url=service_url,
@@ -700,7 +788,9 @@ def generate_search_queries(question: str,
                 "kept_docs_count": len(kept_documents),
                 "iteration_state": "generating_queries",
                 "query_history_length": len(query_history) if query_history else 0
-            }
+            },
+            perf_test_cache=perf_test_cache,
+            query_id=query_id
         )
 
         print(f"    [DEBUG] Query gen LLM raw output: {llm_output[:200]}...")
@@ -727,6 +817,12 @@ def generate_search_queries(question: str,
         }
 
     except Exception as e:
+        # In perf test mode, propagate fatal errors (don't fallback to original question)
+        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+            # This is a perf test mode fatal error - must propagate it
+            raise
+
         print(f"    Error in query generation: {e}")
         return {"queries": [question], "feedback": f"Error: {str(e)}"}
 
@@ -990,6 +1086,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          reasoning_effort: str = "medium",
                          llm_config: Optional[Dict[str, Any]] = None,
                          logger: Optional[LLMLogger] = None,
+                         query_id: Optional[str] = None,
                          **strategy_params) -> Dict[str, Any]:
     """
     Multi-shot retrieval with iterative query refinement and document evaluation.
@@ -1075,7 +1172,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 feedback_history=None,
                 llm_config=llm_config,
                 logger=logger,
-                hop_count=iteration
+                hop_count=iteration,
+                query_id=query_id
             )
 
             sub_queries = query_result.get("queries", [original_query])
@@ -1107,7 +1205,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     kept_documents=kept_docs,
                     llm_config=llm_config,
                     logger=logger,
-                    hop_count=iteration
+                    hop_count=iteration,
+                    query_id=query_id
                 )
                 relevance = relevance_result.get("relevance", [1] * len(new_docs))
 
@@ -1133,7 +1232,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     max_iterations=max_iterations,
                     llm_config=llm_config,
                     logger=logger,
-                    hop_count=iteration
+                    hop_count=iteration,
+                    query_id=query_id
                 )
 
                 sufficient = sufficiency_result.get("sufficient", False)
@@ -1158,7 +1258,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     kept_documents=kept_docs,
                     llm_config=llm_config,
                     logger=logger,
-                    hop_count=iteration
+                    hop_count=iteration,
+                    query_id=query_id
                 )
 
                 if verbose:
@@ -1184,7 +1285,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     feedback_history=feedback_history,
                     llm_config=llm_config,
                     logger=logger,
-                    hop_count=iteration
+                    hop_count=iteration,
+                    query_id=query_id
                 )
 
                 sub_queries = query_result.get("queries", [])
@@ -1201,10 +1303,13 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         # Add to feedback history if it's new and meaningful
         if current_feedback and current_feedback.strip() and current_feedback != previous_feedback:
             feedback_history.append(current_feedback.strip())
-        
+
         previous_feedback = current_feedback
-        
-        if verbose:
+
+        # Only print status for iteration 1 after we've printed the queries
+        # For iteration 2+, print status after CALL1/CALL2/CALL3
+        # Skip printing here for iteration 1 (will print later after retrieval/grading)
+        if verbose and iteration > 1:
             print(f"    Sufficient: {'yes' if sufficient else 'no'}")
             print(f"    Kept docs: {len(kept_docs)}")
             if new_docs:
@@ -1323,7 +1428,13 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         
         if verbose:
             print(f"  Total kept docs: {len(kept_docs)}, new docs to evaluate: {len(new_docs)}")
-        
+
+        # For iteration 1, print status summary now (after retrieval, before next iteration's grading)
+        if verbose and iteration == 1:
+            print(f"\n  Iteration 1 Summary:")
+            print(f"    Generated {len(sub_queries)} new queries")
+            print(f"    Feedback: {previous_feedback}")
+
         iteration_time = time.perf_counter() - iteration_start
         iteration_times.append(iteration_time)
         
@@ -1471,10 +1582,11 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
 
     def process_single_query(item):
         idx, prompt, expected_urls, expected_answer = item
+        query_id = str(idx)
         print(f"\n[Query {idx+1}/{max_queries}]")
 
         if logger:
-            logger.start_query(str(idx), prompt)
+            logger.start_query(query_id, prompt)
 
         metrics = multi_shot_retrieval(
             rag_db, prompt, expected_urls,
@@ -1489,6 +1601,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
             reasoning_effort=reasoning_effort,
             llm_config=llm_config,
             logger=logger,
+            query_id=query_id,
             **strategy_params
         )
 
@@ -1630,7 +1743,24 @@ if __name__ == "__main__":
     llm_config['temperature'] = args.temperature
     llm_config['max_retries'] = args.max_retries
     print(f"LLM Config: {llm_config}")
-    
+
+    # Performance test mode setup
+    if args.perf_test_mode:
+        from perf_test_cache import PerfTestCache
+        print(f"\n{'='*80}")
+        print(f"PERFORMANCE TEST MODE ENABLED")
+        print(f"{'='*80}")
+        print(f"Loading performance test cache from {args.perf_test_mode}")
+        llm_config['perf_test_cache'] = PerfTestCache(args.perf_test_mode)
+        stats = llm_config['perf_test_cache'].get_cache_stats()
+        print(f"  Cache loaded successfully:")
+        print(f"    - Total cached responses: {stats['total_responses']}")
+        print(f"    - Unique queries: {stats['unique_queries']}")
+        print(f"    - Unique components: {stats['unique_components']}")
+        print(f"{'='*80}\n")
+    else:
+        llm_config['perf_test_cache'] = None
+
     # Setup device-specific environment
     device_config = get_device_config()
     print(f"Device Config: {device_config}")
@@ -1780,7 +1910,8 @@ if __name__ == "__main__":
         print(f"\nRunning multi-shot retrieval for single query...")
 
         # Start logging for single query
-        llm_logger.start_query("0", args.query)
+        query_id = "0"
+        llm_logger.start_query(query_id, args.query)
 
         result = multi_shot_retrieval(
             rag_db, args.query, expected_urls=[],
@@ -1793,6 +1924,7 @@ if __name__ == "__main__":
             reasoning_effort=args.reasoning,
             llm_config=llm_config,
             logger=llm_logger,
+            query_id=query_id,
             **strategy_params
         )
 

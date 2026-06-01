@@ -17,8 +17,6 @@
 #   - OPENROUTER_API_KEY environment variable set
 #   - scripts/run_ingestion.sh has been run (vector DB exists)
 #
-# For strict memory binding, invoke under numactl:
-#   numactl --membind=0 bash scripts/run_multi_shot.sh ...
 # =============================================================================
 
 set -e
@@ -65,6 +63,7 @@ INFERENCE_SUFFICIENCY_URL="${INFERENCE_SUFFICIENCY_URL:-}"
 INFERENCE_SUFFICIENCY_MODEL="${INFERENCE_SUFFICIENCY_MODEL:-}"
 INFERENCE_JUDGE_URL="${INFERENCE_JUDGE_URL:-https://openrouter.ai/api/v1/chat/completions}"
 INFERENCE_JUDGE_MODEL="${INFERENCE_JUDGE_MODEL:-openai/gpt-oss-20b}"
+INFERENCE_PERF_TEST_MODE="${INFERENCE_PERF_TEST_MODE:-}"
 
 # Positional args override config.
 N_QUERIES="${1:-${INFERENCE_N_QUERIES}}"
@@ -120,6 +119,7 @@ python3 -u multi_shot_retrieval.py \
     ${INFERENCE_QUERY_URL:+--query-service-url "${INFERENCE_QUERY_URL}"} \
     ${INFERENCE_SUFFICIENCY_URL:+--sufficiency-service-url "${INFERENCE_SUFFICIENCY_URL}"} \
     ${INFERENCE_SUFFICIENCY_MODEL:+--sufficiency-model "${INFERENCE_SUFFICIENCY_MODEL}"} \
+    ${INFERENCE_PERF_TEST_MODE:+--perf-test-mode "${INFERENCE_PERF_TEST_MODE}"} \
     2>&1 | tee "${LOG_FILE}"
 
 if [[ -f "${OUTPUT_DIR}/result_multi_shot.json" ]]; then

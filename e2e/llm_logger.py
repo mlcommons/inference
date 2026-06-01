@@ -50,8 +50,14 @@ class LLMLogger:
                      payload: Dict,
                      response: Dict,
                      latency_ms: float,
-                     context: Dict[str, Any] = None):
-        """Log a single LLM call with full input/output"""
+                     context: Dict[str, Any] = None,
+                     simulated_response: Optional[str] = None):
+        """Log a single LLM call with full input/output
+
+        Args:
+            simulated_response: In perf test mode, the cached response that was returned
+                              to the pipeline (instead of the real LLM response)
+        """
 
         usage = response.get('usage', {})
         isl = usage.get('prompt_tokens', 0)
@@ -76,8 +82,10 @@ class LLMLogger:
                 }
             },
             "output": {
-                "response": self._extract_response_text(response),
+                "actual_output": self._extract_response_text(response),
+                "cached_output": simulated_response if simulated_response is not None else None,
                 "finish_reason": response.get('choices', [{}])[0].get('finish_reason') if response.get('choices') else None,
+                "note": "In perf test mode: actual_output is from real LLM (for measurement), cached_output is returned to pipeline (for determinism)" if simulated_response is not None else None
             },
             "metrics": {
                 "isl": isl,

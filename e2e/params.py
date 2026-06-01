@@ -255,6 +255,15 @@ COMMON_PARAMS = [
         category="common",
         applies_to=["both"]
     ),
+    ParamDef(
+        name="perf_test_mode",
+        arg_names=["--perf-test-mode"],
+        type=str,
+        default=None,
+        help="Path to LLM log file for performance testing (replays cached LLM responses)",
+        category="common",
+        applies_to=["both"]
+    ),
 ]
 
 # ============================================================================

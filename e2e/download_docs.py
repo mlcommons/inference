@@ -9,6 +9,7 @@ with robust error handling, retry logic, and concurrent processing.
 import asyncio
 import json
 import argparse
+import random
 import time
 import concurrent.futures
 from pathlib import Path
@@ -38,15 +39,26 @@ def fix_malformed_url(url: str) -> str:
     # Remove text fragments (everything after #:~:text=)
     if '#:~:text=' in url:
         url = url.split('#:~:text=')[0]
-    
+
+    # Fix double URL-encoding. The FRAMES dataset occasionally contains URLs
+    # whose percent signs were themselves percent-encoded, e.g. "%2527" should
+    # be "%27" (an apostrophe). Decode one extra layer when we see "%25" sequences
+    # followed by two hex digits.
+    if re.search(r'%25[0-9A-Fa-f]{2}', url):
+        url = re.sub(
+            r'%25([0-9A-Fa-f]{2})',
+            lambda m: '%' + m.group(1),
+            url,
+        )
+
     # Fix missing closing parentheses
     open_parens = url.count('(')
     close_parens = url.count(')')
-    
+
     if open_parens > close_parens:
         missing_closes = open_parens - close_parens
         url += ')' * missing_closes
-    
+
     return url
 
 
@@ -216,9 +228,13 @@ class BaseDownloader(ABC):
         if not failed_urls:
             return {"successful": 0, "still_failed": 0}
         
-        # Filter out failures that shouldn't be retried (permanent failures)
+        # Filter out failures that shouldn't be retried (permanent failures).
+        # Note: We intentionally do NOT include "HTTP error 4" here because that
+        # would also match retryable 429 (Too Many Requests) responses.
         permanent_failure_keywords = [
-            "404", "Page not found", "HTTP error 4", "Invalid or empty content"
+            "404", "Page not found",
+            "HTTP error 410", "HTTP error 451",
+            "Invalid or empty content",
         ]
         
         retryable_urls = []
@@ -357,6 +373,11 @@ class PDFDownloader(BaseDownloader):
 class HTMLDownloader(BaseDownloader):
     """Download web pages as HTML files using requests."""
     
+    # Per-process retry policy for transient errors (429, 5xx)
+    MAX_RETRIES = 5
+    BASE_BACKOFF = 2.0  # seconds; exponential: BASE_BACKOFF * 2**attempt
+    MAX_BACKOFF = 60.0  # cap on a single sleep
+
     def __init__(self, output_dir: str, processes: int = 4, delay: float = 1.0, timeout: int = 30):
         # HTML downloading can use parallel processes with rate limiting
         super().__init__(output_dir, processes=processes)
@@ -368,61 +389,115 @@ class HTMLDownloader(BaseDownloader):
         
         self.session = requests.Session()
         
-        # Set a user agent to avoid blocking
+        # Wikipedia's User-Agent policy asks for a descriptive UA that identifies
+        # the tool/operator and includes a contact URL or email. Generic browser
+        # UAs are aggressively rate-limited. Operators may override via the
+        # WIKIPEDIA_DOWNLOADER_UA env var.
+        # See https://meta.wikimedia.org/wiki/User-Agent_policy
+        default_ua = (
+            "mvrag-inference-e2e/1.0 "
+            "(https://github.com/; contact: rag-bench@local) "
+            "python-requests"
+        )
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': os.environ.get('WIKIPEDIA_DOWNLOADER_UA', default_ua),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
         })
     
     def get_file_extension(self) -> str:
         return ".html"
     
     
+    def _compute_backoff(self, attempt: int, retry_after_header: Optional[str]) -> float:
+        """Compute backoff delay honoring Retry-After if present, with jitter."""
+        if retry_after_header:
+            try:
+                # Retry-After is usually an integer number of seconds
+                return min(float(retry_after_header), self.MAX_BACKOFF)
+            except (TypeError, ValueError):
+                pass
+        # Exponential backoff with full jitter
+        cap = min(self.BASE_BACKOFF * (2 ** attempt), self.MAX_BACKOFF)
+        return random.uniform(self.BASE_BACKOFF, cap)
+
     def download_single_url(self, url: str, output_path: Path) -> Tuple[bool, str]:
         """Download a single URL as HTML using requests with try-fix-retry approach."""
         def attempt_download(target_url: str) -> Tuple[bool, str, bool]:
             """
-            Attempt to download a URL.
+            Attempt to download a URL, retrying transient errors (429, 5xx).
             Returns (success, error_message, is_404_like_error)
             """
-            try:
-                # Download the actual content
-                response = self.session.get(target_url, timeout=self.timeout)
-                response.raise_for_status()
-                
-                # Check if we got redirected to a different article
-                if response.url != target_url:
-                    print(f"Redirected from {target_url} to {response.url}")
-                
-                # Try to get encoding from headers
-                if 'charset' in response.headers.get('content-type', ''):
-                    encoding = response.encoding
-                else:
-                    encoding = 'utf-8'
-                    
-                html_content = response.content.decode(encoding, errors='ignore')
-                
-                # Basic check for valid Wikipedia content
-                if 'wikipedia' not in html_content.lower() or len(html_content) < 1000:
-                    return False, f"Invalid or empty content (length: {len(html_content)})", False
-                
-                # Save HTML content
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(html_content)
-                
-                # Add rate limiting after successful download
-                time.sleep(self.delay)
-                
-                return True, "Success", False
-                
-            except requests.HTTPError as e:
-                if e.response.status_code == 404:
-                    return False, f"Page not found (404): {target_url}", True
-                else:
-                    return False, f"HTTP error {e.response.status_code}: {str(e)[:100]}", False
-            except requests.RequestException as e:
-                return False, f"Request error: {str(e)[:100]}", False
-            except Exception as e:
-                return False, f"Exception: {str(e)[:100]}", False
+            last_error = "Unknown error"
+            for attempt in range(self.MAX_RETRIES):
+                try:
+                    response = self.session.get(target_url, timeout=self.timeout)
+
+                    # Retry on 429 (rate limit) and 5xx (server errors)
+                    if response.status_code == 429 or 500 <= response.status_code < 600:
+                        last_error = (
+                            f"HTTP error {response.status_code}: "
+                            f"{response.reason or 'transient error'}"
+                        )
+                        if attempt < self.MAX_RETRIES - 1:
+                            sleep_for = self._compute_backoff(
+                                attempt, response.headers.get('Retry-After')
+                            )
+                            print(
+                                f"⏳ {response.status_code} for {target_url} "
+                                f"(attempt {attempt + 1}/{self.MAX_RETRIES}); "
+                                f"sleeping {sleep_for:.1f}s before retry"
+                            )
+                            time.sleep(sleep_for)
+                            continue
+                        return False, last_error, False
+
+                    response.raise_for_status()
+
+                    # Check if we got redirected to a different article
+                    if response.url != target_url:
+                        print(f"Redirected from {target_url} to {response.url}")
+
+                    if 'charset' in response.headers.get('content-type', ''):
+                        encoding = response.encoding
+                    else:
+                        encoding = 'utf-8'
+
+                    html_content = response.content.decode(encoding, errors='ignore')
+
+                    if 'wikipedia' not in html_content.lower() or len(html_content) < 1000:
+                        return False, f"Invalid or empty content (length: {len(html_content)})", False
+
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(html_content)
+
+                    # Add rate limiting after successful download
+                    time.sleep(self.delay)
+
+                    return True, "Success", False
+
+                except requests.HTTPError as e:
+                    status = e.response.status_code if e.response is not None else None
+                    if status == 404:
+                        return False, f"Page not found (404): {target_url}", True
+                    last_error = f"HTTP error {status}: {str(e)[:100]}"
+                    return False, last_error, False
+                except requests.RequestException as e:
+                    last_error = f"Request error: {str(e)[:100]}"
+                    if attempt < self.MAX_RETRIES - 1:
+                        sleep_for = self._compute_backoff(attempt, None)
+                        print(
+                            f"⏳ Network error for {target_url} "
+                            f"(attempt {attempt + 1}/{self.MAX_RETRIES}); "
+                            f"sleeping {sleep_for:.1f}s before retry: {last_error}"
+                        )
+                        time.sleep(sleep_for)
+                        continue
+                    return False, last_error, False
+                except Exception as e:
+                    return False, f"Exception: {str(e)[:100]}", False
+
+            return False, last_error, False
         
         # Try original URL first
         success, error_msg, is_404 = attempt_download(url)
@@ -485,22 +560,50 @@ def download_frames_dataset(output_dir):
         return None
 
 
-def extract_wikipedia_links(item):
-    """Extract Wikipedia links from a FRAMES dataset item."""
-    # List may itself have a single string with multiple links, comma separated
-    # Hence, we use regex matching
+_WIKI_URL_PATTERN = re.compile(
+    # Match Wikipedia URLs, allowing commas that are part of the URL (e.g. in
+    # disambiguation suffixes like "Quincy,_Massachusetts") while still treating
+    # ", " / ",]" as list separators in the FRAMES dataset.
+    r'https://en\.wikipedia\.org/wiki/(?:[^\s\],]|,(?=[^\s\],]))+'
+)
 
-    # Convert string to proper list if needed
+
+def _strip_url_trailing_garbage(url: str) -> str:
+    """Strip artifacts that are clearly not part of a Wikipedia URL.
+
+    Wikipedia article titles legitimately end with characters that look like
+    sentence punctuation (e.g. "_F.C.", "_Sr.", "Yahoo!", "Tick,_Tick..._Boom!",
+    "Who's_Afraid_of_Virginia_Woolf%3F"), so we deliberately do NOT strip
+    trailing ".", "!", "?", ":", ";", or quotes.
+
+    The only artifact we strip is an unmatched trailing ")" that comes from
+    Markdown link syntax like "[label](https://...)". Disambiguation URLs such
+    as "/wiki/Quincy_(film)" keep their balanced parens intact.
+    """
+    while url.endswith(')') and url.count('(') < url.count(')'):
+        url = url[:-1]
+    return url
+
+
+def extract_wikipedia_links(item):
+    """Extract Wikipedia links from a FRAMES dataset item.
+
+    The dataset stores lists of URLs as comma-separated strings (sometimes inside
+    Markdown link syntax). Wikipedia URLs themselves can legitimately contain
+    commas — most commonly in disambiguation suffixes like
+    "Quincy,_Massachusetts" — so we cannot simply split on commas. Instead we
+    match URLs greedily but treat a comma followed by whitespace/"]"/another
+    comma as a list separator.
+    """
     if isinstance(item, str):
         item = ast.literal_eval(item)
 
-    # Results holder
     links = []
     for entry in item:
-        # Find all links, including in Markdown format, within the string
-        matches = re.findall(
-            r'https://en\.wikipedia\.org/wiki/[^\s,\]]+', entry)
-        links.extend(matches)
+        for match in _WIKI_URL_PATTERN.findall(entry):
+            cleaned = _strip_url_trailing_garbage(match)
+            if cleaned:
+                links.append(cleaned)
     return links
 
 
@@ -579,15 +682,18 @@ def main():
         '--processes',
         type=int,
         default=10,
-        help='Number of parallel processes for PDF (HTML is sequential) (default: 10)'
+        help='Number of parallel processes (default: 10). '
+             'Wikipedia rate-limits aggressive HTML scrapers; '
+             'consider --processes 4 for HTML.'
     )
     
     # HTML-specific options
     parser.add_argument(
         '--delay',
         type=float,
-        default=0.2,
-        help='Delay between HTML downloads in seconds (default: 0.2)'
+        default=1.0,
+        help='Per-process delay between HTML downloads in seconds (default: 1.0). '
+             'Effective request rate ~= processes / delay.'
     )
     parser.add_argument(
         '--timeout',

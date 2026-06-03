@@ -29,9 +29,9 @@ else
 fi
 
 if [ -z "$OPENROUTER_API_KEY" ]; then
-    echo "ERROR: OPENROUTER_API_KEY environment variable not set"
+    echo "WARNING: OPENROUTER_API_KEY environment variable not set"
     echo "Usage: OPENROUTER_API_KEY=\"sk-or-v1-YOUR_KEY_HERE\" bash $0"
-    exit 1
+    #exit 1
 fi
 
 # Architecture:

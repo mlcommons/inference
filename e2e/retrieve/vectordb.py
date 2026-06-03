@@ -1,4 +1,5 @@
 import os
+import sys
 import faiss
 import torch
 import numpy as np
@@ -8,6 +9,46 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from typing import List
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from .ragdb import RagDB
+
+
+def _alias_missing_faiss_swigfaiss_modules() -> None:
+    """Make all FAISS SWIG submodules resolve to whichever build is available.
+
+    `langchain_community.FAISS.serialize_to_bytes` pickles the FAISS index using
+    Python's pickle protocol, which stores fully-qualified class paths like
+    "faiss.swigfaiss_avx512.IndexHNSWFlat". When a `.db` file is loaded on a
+    machine whose installed `faiss-cpu` wheel does not ship that exact SWIG
+    submodule (different version, ARM build, conda build, CPU without AVX-512,
+    etc.), unpickling fails with `ModuleNotFoundError: No module named
+    'faiss.swigfaiss_avx512'`.
+
+    All FAISS SWIG submodules expose the same class names (the AVX variants
+    are SIMD-optimized builds of the same C++ classes), so we can safely alias
+    any missing submodule to the one that did get built. This keeps existing
+    serialized databases loadable across heterogeneous installs without
+    rebuilding them.
+    """
+    candidates = ("swigfaiss_avx512_spr", "swigfaiss_avx512", "swigfaiss_avx2", "swigfaiss")
+    available = None
+    for name in candidates:
+        full = f"faiss.{name}"
+        if full in sys.modules:
+            available = sys.modules[full]
+            break
+        try:
+            available = __import__(full, fromlist=[name])
+            break
+        except ImportError:
+            continue
+    if available is None:
+        return  # Nothing we can do; let pickle raise the original error.
+    for name in candidates:
+        full = f"faiss.{name}"
+        if full not in sys.modules:
+            try:
+                __import__(full)
+            except ImportError:
+                sys.modules[full] = available
 
 # Worker function for parallel embedding generation (must be at module level for multiprocessing)
 def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue,
@@ -754,6 +795,10 @@ class VectorDB(RagDB):
 
     def from_serialized(self, path: str):
         assert len(self._vector_store.index_to_docstore_id) == 0, "Vector store already has documents"
+        # Pickled FAISS indexes reference a specific SWIG submodule (e.g.
+        # `faiss.swigfaiss_avx512`). Alias any missing submodules so DBs built
+        # on one host load on hosts with a different faiss-cpu build.
+        _alias_missing_faiss_swigfaiss_modules()
         with open(path, "rb") as f:
             data = f.read()
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,

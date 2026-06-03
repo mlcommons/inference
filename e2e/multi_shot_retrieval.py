@@ -1117,6 +1117,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     """
     
     start_time = time.perf_counter()
+    llm_start_time = None  # set just before first generate_search_queries call
+    llm_end_time = None    # set just after generate_answer returns
     
     # Track iteration history
     query_history = []
@@ -1163,6 +1165,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 print(f"  [ITERATION 1] Decomposing original query into sub-queries via generate_search_queries...")
 
             # Use generate_search_queries for initial decomposition (uses query_model_name / gpt-oss-120b)
+            if llm_start_time is None:
+                llm_start_time = time.perf_counter()
             query_result = generate_search_queries(
                 question=original_query,
                 kept_documents=[],
@@ -1261,6 +1265,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     hop_count=iteration,
                     query_id=query_id
                 )
+                llm_end_time = time.perf_counter()
 
                 if verbose:
                     print(f"    Generated answer: {final_answer[:200]}...")
@@ -1463,8 +1468,10 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     metrics = calculate_retrieval_metrics(list(expected_set), retrieved_urls)
     
     # Add iteration statistics
+    query_llm_time = (llm_end_time - llm_start_time) if (llm_start_time is not None and llm_end_time is not None) else total_time
     metrics.update({
         'total_time': total_time,
+        'query_llm_time': query_llm_time,
         'num_iterations': iteration,
         'total_queries': len(query_history),
         'final_docs_count': len(retrieved_urls),
@@ -1564,6 +1571,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         print(f"Difficulty filter: >= {difficulty} answer links")
     print(f"{'='*80}\n")
     
+    eval_wall_start = time.perf_counter()
     total_metrics = {}
     valid_queries = 0
     all_query_metrics = []  # For detailed analysis
@@ -1605,6 +1613,9 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
             **strategy_params
         )
 
+        query_wall_time = metrics.get('total_time', 0.0)
+        print(f"  [QUERY TIMING] Query {idx+1}/{max_queries}: {query_wall_time:.2f}s")
+
         if logger:
             logger.end_query(
                 retrieval_results={
@@ -1617,7 +1628,8 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                 answer_results={
                     "llm_answer": metrics.get('llm_answer', ''),
                     "ground_truth_answer": expected_answer
-                }
+                },
+                wall_time_s=query_wall_time
             )
 
         result = {
@@ -1688,6 +1700,11 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         if avg_metrics.get('reranking_time', 0.0) > 0:
             print(f"  Avg Reranking Time:         {avg_metrics.get('reranking_time', 0.0)*1000:.1f}ms")
         print(f"  Avg Total Time:             {avg_metrics.get('total_time', 0.0)*1000:.1f}ms")
+        print(f"  Avg Query LLM Time:         {avg_metrics.get('query_llm_time', 0.0)*1000:.1f}ms")
+        eval_wall_time = time.perf_counter() - eval_wall_start
+        qps = valid_queries / eval_wall_time if eval_wall_time > 0 else 0.0
+        print(f"  Total Wall Time:            {eval_wall_time:.1f}s")
+        print(f"  Throughput:                 {qps:.3f} queries/sec")
         print(f"{'='*80}\n")
         
         # Print detailed analysis if requested
@@ -1940,7 +1957,8 @@ if __name__ == "__main__":
             answer_results={
                 "llm_answer": result.get('llm_answer', ''),
                 "ground_truth_answer": ""
-            }
+            },
+            wall_time_s=result.get('total_time')
         )
 
         # Finalize LLM logs (update metadata with final values)

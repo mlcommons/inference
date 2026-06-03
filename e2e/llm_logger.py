@@ -191,7 +191,7 @@ class LLMLogger:
 
         return experiment_summary
 
-    def end_query(self, retrieval_results: Dict = None, answer_results: Dict = None):
+    def end_query(self, retrieval_results: Dict = None, answer_results: Dict = None, wall_time_s: float = None):
         """Finish logging current query, compute summary, and write to file"""
         if self.current_query:
             self.current_query["timestamp_end"] = datetime.utcnow().isoformat() + "Z"
@@ -200,7 +200,7 @@ class LLMLogger:
             llm_calls = self.current_query["llm_calls"]
             hop_counts = [c["hop_count"] for c in llm_calls if c["hop_count"] is not None]
 
-            self.current_query["summary"] = {
+            summary = {
                 "total_llm_calls": len(llm_calls),
                 "total_hops": max(hop_counts) if hop_counts else 0,
                 "total_input_tokens": sum(c["metrics"]["isl"] for c in llm_calls),
@@ -210,6 +210,9 @@ class LLMLogger:
                 "average_tokens_per_second": round(sum(c["metrics"]["tokens_per_second"] for c in llm_calls) / len(llm_calls), 2) if llm_calls else 0,
                 "components_used": list(set(c["component"] for c in llm_calls))
             }
+            if wall_time_s is not None:
+                summary["total_wall_time_ms"] = round(wall_time_s * 1000, 2)
+            self.current_query["summary"] = summary
 
             if retrieval_results:
                 self.current_query["retrieval_results"] = retrieval_results
@@ -263,5 +266,19 @@ class LLMLogger:
         if experiment_summary:
             print(f"Total LLM calls: {experiment_summary.get('total_llm_calls', 0)}")
             print(f"Total tokens: {experiment_summary.get('total_tokens', 0):,} (input: {experiment_summary.get('total_input_tokens', 0):,}, output: {experiment_summary.get('total_output_tokens', 0):,})")
-            print(f"Total latency: {experiment_summary.get('total_latency_ms', 0)/1000:.2f}s")
+            # Per-query latency distribution (wall time: query to answer)
+            per_query_latencies = sorted(
+                (q["summary"].get("total_wall_time_ms") or q["summary"].get("total_latency_ms", 0)) / 1000
+                for q in self.queries
+                if "summary" in q
+            )
+            n = len(per_query_latencies)
+            if n > 0:
+                mean_lat = sum(per_query_latencies) / n
+                median_lat = per_query_latencies[n // 2] if n % 2 == 1 else (per_query_latencies[n // 2 - 1] + per_query_latencies[n // 2]) / 2
+                p90_lat = per_query_latencies[int(n * 0.90)] if n >= 10 else per_query_latencies[-1]
+                p99_lat = per_query_latencies[int(n * 0.99)] if n >= 100 else per_query_latencies[-1]
+                total_latency_s = sum(per_query_latencies)
+                print(f"Per-query latency (query-to-answer):  mean={mean_lat:.2f}s  median={median_lat:.2f}s  p90={p90_lat:.2f}s  p99={p99_lat:.2f}s")
+                print(f"Throughput:    {n / total_latency_s:.4f} queries/sec  ({total_latency_s / n:.2f}s per query)")
         print(f"{'='*80}\n")

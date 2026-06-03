@@ -29,9 +29,9 @@ else
 fi
 
 if [ -z "$OPENROUTER_API_KEY" ]; then
-    echo "WARNING: OPENROUTER_API_KEY environment variable not set"
+    echo "ERROR: OPENROUTER_API_KEY environment variable not set"
     echo "Usage: OPENROUTER_API_KEY=\"sk-or-v1-YOUR_KEY_HERE\" bash $0"
-    #exit 1
+    exit 1
 fi
 
 # Architecture:
@@ -48,6 +48,7 @@ INFERENCE_TOP_K_RETRIEVER="${INFERENCE_TOP_K_RETRIEVER:-15}"
 INFERENCE_MAX_ITERATIONS="${INFERENCE_MAX_ITERATIONS:-5}"
 INFERENCE_MAX_SUB_QUERIES="${INFERENCE_MAX_SUB_QUERIES:-3}"
 INFERENCE_TEMPERATURE="${INFERENCE_TEMPERATURE:-1.0}"
+INFERENCE_REASONING="${INFERENCE_REASONING:-medium}"
 INFERENCE_MAX_RETRIES="${INFERENCE_MAX_RETRIES:-5}"
 INFERENCE_N_QUERIES="${INFERENCE_N_QUERIES:-5}"
 INFERENCE_NUM_WORKERS="${INFERENCE_NUM_WORKERS:-1}"
@@ -91,6 +92,7 @@ echo "  DB:          ${INFERENCE_DB}"
 echo "  Workers:     ${NUM_WORKERS}"
 echo "  Queries:     ${N_QUERIES}"
 echo "  Device:      ${INFERENCE_DEVICE} (embedding=${INFERENCE_EMBEDDING_DEVICE}, reranker=${INFERENCE_RERANKER_DEVICE})"
+echo "  Temperature: ${INFERENCE_TEMPERATURE}  Reasoning: ${INFERENCE_REASONING}"
 echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
@@ -109,6 +111,7 @@ python3 -u multi_shot_retrieval.py \
     --generate-answer \
     --num-workers "${NUM_WORKERS}" \
     --temperature "${INFERENCE_TEMPERATURE}" \
+    --reasoning "${INFERENCE_REASONING}" \
     --max-retries "${INFERENCE_MAX_RETRIES}" \
     --output-dir "${OUTPUT_DIR}" \
     --llm_model "${INFERENCE_MODEL}" \

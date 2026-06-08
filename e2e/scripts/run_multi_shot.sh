@@ -14,7 +14,8 @@
 #   e.g.:  INFERENCE_DEVICE=cpu bash scripts/run_multi_shot.sh 50
 #
 # Prerequisites:
-#   - OPENROUTER_API_KEY environment variable set
+#   - Local vLLM server running on port 8123 (default)
+#   - OR set OPENROUTER_API_KEY environment variable to use OpenRouter
 #   - scripts/run_ingestion.sh has been run (vector DB exists)
 #
 # =============================================================================
@@ -26,12 +27,6 @@ if [[ -f "${CONFIG}" ]]; then
     source "${CONFIG}"
 else
     echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
-fi
-
-if [ -z "$OPENROUTER_API_KEY" ]; then
-    echo "ERROR: OPENROUTER_API_KEY environment variable not set"
-    echo "Usage: OPENROUTER_API_KEY=\"sk-or-v1-YOUR_KEY_HERE\" bash $0"
-    exit 1
 fi
 
 # Architecture:
@@ -62,8 +57,8 @@ INFERENCE_GRADER_MODEL="${INFERENCE_GRADER_MODEL:-}"
 INFERENCE_QUERY_URL="${INFERENCE_QUERY_URL:-}"
 INFERENCE_SUFFICIENCY_URL="${INFERENCE_SUFFICIENCY_URL:-}"
 INFERENCE_SUFFICIENCY_MODEL="${INFERENCE_SUFFICIENCY_MODEL:-}"
-INFERENCE_JUDGE_URL="${INFERENCE_JUDGE_URL:-https://openrouter.ai/api/v1/chat/completions}"
-INFERENCE_JUDGE_MODEL="${INFERENCE_JUDGE_MODEL:-openai/gpt-oss-20b}"
+INFERENCE_JUDGE_URL="${INFERENCE_JUDGE_URL:-http://127.0.0.1:8123/v1/chat/completions}"
+INFERENCE_JUDGE_MODEL="${INFERENCE_JUDGE_MODEL:-gpt-oss-20b}"
 INFERENCE_PERF_TEST_MODE="${INFERENCE_PERF_TEST_MODE:-}"
 
 # Positional args override config.

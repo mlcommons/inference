@@ -23,9 +23,9 @@ from typing import Optional
 import pandas as pd
 import requests
 
-# OpenRouter configuration
-DEFAULT_JUDGE_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_JUDGE_MODEL = "openai/gpt-oss-20b"
+# LLM judge configuration (defaults to local vLLM)
+DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "gpt-oss-20b"
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 

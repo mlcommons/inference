@@ -226,7 +226,10 @@ class E2ESUT:
             log.info(f"Processing query {sample_id} (QID: {query_id})")
 
             # Start logging for this query
-            self.llm_logger.start_query(str(query_id), query_text)
+            # Note: Use sample_id for perf_test_cache consistency (stable across runs)
+            # Use query_id for loadgen tracking (unique per run)
+            cache_key = str(sample_id)  # Stable dataset index for cache lookup
+            self.llm_logger.start_query(cache_key, query_text)
 
             try:
                 # Run multi-shot retrieval
@@ -245,7 +248,7 @@ class E2ESUT:
                     reasoning_effort=self.reasoning_effort,
                     llm_config=self.llm_config,
                     logger=self.llm_logger,
-                    query_id=str(query_id),
+                    query_id=cache_key,  # Use stable sample_id for cache consistency
                     **self.strategy_params
                 )
 

@@ -28,10 +28,10 @@ export OUTPUT_DIR=${WORKSPACE_DIR}/output
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Accuracy testing - use all queries (or specify subset)
-export PERF_COUNT=${PERF_COUNT:-}  # Empty = all queries
+export PERF_COUNT=${PERF_COUNT:-824}  # Empty = all queries
 
 # Multi-shot retrieval parameters
-export MAX_ITERATIONS=${MAX_ITERATIONS:-10}
+export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
 export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
@@ -39,15 +39,15 @@ export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
 export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
 
-# LLM service URLs (force OpenRouter for now)
-# Export OPENROUTER_API_KEY if not already set (from run_perf_test.sh)
-export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-*****}
+# LLM service configuration
+# Default to local vLLM server (set OPENROUTER_API_KEY to use OpenRouter instead)
+export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
-# Always use OpenRouter
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-https://openrouter.ai/api/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-openai/gpt-oss-20b}
-export QUERY_MODEL=${QUERY_MODEL:-openai/gpt-oss-120b}
-echo "  Using OpenRouter for LLM calls (API key: ${OPENROUTER_API_KEY:0:20}...)"
+# Default to local vLLM server
+export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
+echo "  LLM Service URL: ${LLM_SERVICE_URL}"
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"

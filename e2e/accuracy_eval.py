@@ -32,10 +32,11 @@ import requests
 
 
 # OpenRouter configuration
-DEFAULT_JUDGE_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_JUDGE_MODEL = "openai/gpt-oss-20b"
-# Use hardcoded key if not in environment (for now, force OpenRouter)
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', 'sk-or-v1-*****')
+DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "gpt-oss-20b"
+# Masked API key (set OPENROUTER_API_KEY environment variable to use OpenRouter)
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY',
+    'sk-or-v1-****')
 
 
 JUDGE_PROMPT = """You are an expert evaluator comparing LLM-generated answers to ground truth answers.

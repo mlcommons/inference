@@ -123,6 +123,25 @@ def get_args():
         help='Max retries for LLM calls (default: 5)'
     )
 
+    # Judge service configuration for accuracy evaluation
+    parser.add_argument(
+        '--judge_service_url',
+        default='http://127.0.0.1:8125/v1/chat/completions',
+        help='Judge LLM service URL for accuracy evaluation (default: local vLLM)'
+    )
+    parser.add_argument(
+        '--judge_model',
+        default='meta-llama/Llama-3.1-8B-Instruct',
+        help='Judge LLM model name (default: Llama-3.1-8B-Instruct)'
+    )
+
+    # Query service configuration (separate from main LLM service)
+    parser.add_argument(
+        '--query_service_url',
+        default=None,
+        help='Query generation service URL (if different from main LLM service)'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -235,7 +254,9 @@ def main():
             "accuracy_eval.py",
             "--log_dir", args.log_dir,
             "--results_file", results_path,
-            "--dataset_path", args.dataset_path
+            "--dataset_path", args.dataset_path,
+            "--judge_service_url", args.judge_service_url,
+            "--judge_model", args.judge_model
         ]
         print(f"Command: {' '.join(cmd)}")
         subprocess.check_call(cmd)

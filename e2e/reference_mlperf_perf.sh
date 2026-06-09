@@ -43,10 +43,15 @@ export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
 # Default to local vLLM server (set OPENROUTER_API_KEY to use OpenRouter instead)
 export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
-# Default to local vLLM server
+# Separate service endpoints for each LLM component
 export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
+
+export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8124/v1/chat/completions}
 export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
+
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
@@ -59,7 +64,10 @@ echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
 echo "  RERANKER_MODEL: ${RERANKER_MODEL}"
 echo "  LLM_SERVICE_URL: ${LLM_SERVICE_URL}"
 echo "  LLM_MODEL: ${LLM_MODEL}"
+echo "  QUERY_SERVICE_URL: ${QUERY_SERVICE_URL}"
 echo "  QUERY_MODEL: ${QUERY_MODEL}"
+echo "  JUDGE_SERVICE_URL: ${JUDGE_SERVICE_URL}"
+echo "  JUDGE_MODEL: ${JUDGE_MODEL}"
 
 # Run loadgen performance test
 python3 reference_mlperf.py \
@@ -76,6 +84,9 @@ python3 reference_mlperf.py \
     --reranker_model ${RERANKER_MODEL} \
     --llm_service_url ${LLM_SERVICE_URL} \
     --llm_model ${LLM_MODEL} \
-    --query_model ${QUERY_MODEL}
+    --query_service_url ${QUERY_SERVICE_URL} \
+    --query_model ${QUERY_MODEL} \
+    --judge_service_url ${JUDGE_SERVICE_URL} \
+    --judge_model ${JUDGE_MODEL}
 
 echo "Time Stop: $(date +%s)"

@@ -5,7 +5,6 @@ on:
     branches: ["master", "main"]
 
 env:
-  SCANOSS_KEY: ${{ secrets.SCANOSS_KEY }}
   REPORTS_DIR: scanoss-reports
 
 jobs:
@@ -33,14 +32,12 @@ jobs:
         run: |
           scanoss-py scan \
             -o ${{ env.REPORTS_DIR }}/results.json \
-            -k ${{ env.SCANOSS_KEY }} \
             .
 
       - name: Generate CycloneDX BOM
         run: |
           scanoss-py scan \
             -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json \
-            -k ${{ env.SCANOSS_KEY }} \
             --format cyclonedx \
             .
 

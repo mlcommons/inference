@@ -3,11 +3,6 @@
     "skip": {
       "patterns": {},
       "sizes": {}
-    },
-    "file_snippet": {
-      "min_snippet_lines": 15,
-      "ranking_enabled": true,
-      "ranking_threshold": 5
     }
   },
   "bom": {

@@ -42,10 +42,10 @@ echo "NUM_INSTS: ${NUM_INSTS}"
 echo "START_CORES: ${START_CORES}"
 
 python reference_mlperf.py \
-    --dataset_dir ${DATA_DIR} \
-    --manifest ${MANIFEST_FILE} \
-    --scenario ${SCENARIO} \
-    --log_dir ${RUN_LOGS} \
-    --num_workers ${NUM_INSTS} 
+	--dataset_dir ${DATA_DIR} \
+	--manifest ${MANIFEST_FILE} \
+	--scenario ${SCENARIO} \
+	--log_dir ${RUN_LOGS} \
+	--num_workers ${NUM_INSTS}
 
 echo "Time Stop: $(date +%s)"

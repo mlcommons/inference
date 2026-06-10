@@ -192,7 +192,7 @@ EXTRA_MOUNT_OPTS=""
 if [[ -n "$EXTRA_MOUNTS" ]]; then
 	echo "Processing extra mounts: $EXTRA_MOUNTS"
 	# Split the comma-separated mount pairs
-	IFS=',' read -ra MOUNT_PAIRS <<< "$EXTRA_MOUNTS"
+	IFS=',' read -ra MOUNT_PAIRS <<<"$EXTRA_MOUNTS"
 	for mount_pair in "${MOUNT_PAIRS[@]}"; do
 		# Trim whitespace
 		mount_pair=$(echo "$mount_pair" | xargs)
@@ -244,11 +244,11 @@ else
 fi
 
 # Run the Docker container with all mounts (same as main docker setup)
-docker run $DOCKER_RUN_OPTS $DOCKER_RUN_ARGS \
-	$GPU_OPTS \
+docker run "$DOCKER_RUN_OPTS" "$DOCKER_RUN_ARGS" \
+	"$GPU_OPTS" \
 	-v /home/mlperf_inference_storage:/home/mlperf_inference_storage \
-	$MODEL_CACHE_MOUNT \
-	$EXTRA_MOUNT_OPTS \
+	"$MODEL_CACHE_MOUNT" \
+	"$EXTRA_MOUNT_OPTS" \
 	-e HISTFILE="${WORK_DIR}/.bash_history" \
 	--env "CCACHE_DIR=${CCACHE_DIR}" \
 	--env "USER=${USER_NAME}" \
@@ -257,8 +257,8 @@ docker run $DOCKER_RUN_OPTS $DOCKER_RUN_ARGS \
 	--env "HUGGINGFACE_HUB_CACHE=/raid/data/${USER_NAME}/.cache" \
 	--workdir /work \
 	-v "${WORK_DIR}:/work" \
-	$INFERENCE_MOUNT \
+	"$INFERENCE_MOUNT" \
 	--hostname "$(hostname)-docker" \
 	--name "${CONTAINER_NAME}-${RANDOM_NUM}-${USER_NAME}" \
 	--tmpfs /tmp:exec \
-	"$FINAL_IMAGE" $RUN_CMD
+	"$FINAL_IMAGE" "$RUN_CMD"

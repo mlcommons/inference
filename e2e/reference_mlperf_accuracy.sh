@@ -27,6 +27,9 @@ export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export OUTPUT_DIR=${WORKSPACE_DIR}/output
 export SCENARIO="${SCENARIO:-Offline}"
 
+# Threading configuration
+export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
+
 # Accuracy testing - use all queries (or specify subset)
 export PERF_COUNT=${PERF_COUNT:-824}  # Empty = all queries
 
@@ -54,6 +57,7 @@ echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
 echo "  PERF_COUNT: ${PERF_COUNT:-all queries}"
+echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (threading)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
 echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
@@ -64,6 +68,9 @@ PERF_COUNT_ARG=""
 if [ -n "${PERF_COUNT}" ]; then
     PERF_COUNT_ARG="--perf_count ${PERF_COUNT}"
 fi
+
+# Update user.conf with threading configuration
+sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
 # Run loadgen accuracy test
 python3 reference_mlperf.py \

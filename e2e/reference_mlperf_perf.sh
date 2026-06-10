@@ -27,6 +27,9 @@ export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export OUTPUT_DIR=${WORKSPACE_DIR}/output
 export SCENARIO="${SCENARIO:-Offline}"
 
+# Threading configuration
+export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
+
 # Performance testing - limit queries
 export PERF_COUNT=${PERF_COUNT:-824}
 
@@ -58,6 +61,7 @@ echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
 echo "  PERF_COUNT: ${PERF_COUNT}"
+echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (threading)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
 echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
@@ -68,6 +72,9 @@ echo "  QUERY_SERVICE_URL: ${QUERY_SERVICE_URL}"
 echo "  QUERY_MODEL: ${QUERY_MODEL}"
 echo "  JUDGE_SERVICE_URL: ${JUDGE_SERVICE_URL}"
 echo "  JUDGE_MODEL: ${JUDGE_MODEL}"
+
+# Update user.conf with threading configuration
+sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
 # Run loadgen performance test
 python3 reference_mlperf.py \

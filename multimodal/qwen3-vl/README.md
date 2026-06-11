@@ -196,7 +196,7 @@ mlcr get-dataset-mlperf-inference-shopify-catalogue,_mlc,_r2-downloader --outdir
 
 ## Calibration Dataset
 
-Submitters who reuse the performance-measurement dataset (`Shopify/product-catalogue`) for model calibration or quantization may use the 20 samples below. This number of samples follows the approach used in the [Qwen3-VL-MoE calibration example](https://github.com/vllm-project/llm-compressor/blob/main/examples/quantization_w4a4_fp4/qwen3_vl_moe_w4a4_fp4.py#L18) from [llm-compressor](https://github.com/vllm-project/llm-compressor).
+Submitters who reuse the performance-measurement dataset (`Shopify/product-catalogue`) for model calibration or quantization must use the 20 samples below. This number of samples follows the approach used in the [Qwen3-VL-MoE calibration example](https://github.com/vllm-project/llm-compressor/blob/main/examples/quantization_w4a4_fp4/qwen3_vl_moe_w4a4_fp4.py#L18) from [llm-compressor](https://github.com/vllm-project/llm-compressor).
 
 | Rank | Full HF index | Split | Split index | ISL | Product title |
 | ---: | ---: | :---: | ---: | ---: | :--- |

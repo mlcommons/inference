@@ -194,6 +194,38 @@ mlcr get-ml-model-qwen3-vl,_mlc,_r2-downloader,_235b-a22b --outdirname=<Download
 mlcr get-dataset-mlperf-inference-shopify-catalogue,_mlc,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
+## Calibration Dataset
+
+Submitters who reuse the performance-measurement dataset (`Shopify/product-catalogue`) for model calibration or quantization must use the 20 samples below. This number of samples follows the approach used in the [Qwen3-VL-MoE calibration example](https://github.com/vllm-project/llm-compressor/blob/main/examples/quantization_w4a4_fp4/qwen3_vl_moe_w4a4_fp4.py#L18) from [llm-compressor](https://github.com/vllm-project/llm-compressor).
+
+| Rank | Full HF index | Split | Split index | ISL | Product title |
+| ---: | ---: | :---: | ---: | ---: | :--- |
+| 0 | 20232 | train | 20232 | 809 | Financial Times USA 27 January, 2023 |
+| 1 | 21162 | train | 21162 | 1366 | Powertip PC1602ARS-H Alphanumeric LCD Display |
+| 2 | 33584 | train | 33584 | 1520 | Panini 2023 Football Donruss Optic H2 Hobby Box |
+| 3 | 46825 | test | 8194 | 1677 | October Edibles Cardinal |
+| 4 | 45190 | test | 6559 | 1946 | Glass Screen Protector for Nintendo Switch |
+| 5 | 46143 | test | 7512 | 2355 | Contact™ Nipple Shields |
+| 6 | 14189 | train | 14189 | 2436 | MV - GYO Bags - 1258 |
+| 7 | 16658 | train | 16658 | 2922 | Chic Suede Contrast PU Straight Leg Pants |
+| 8 | 26406 | train | 26406 | 3145 | Startveer passend op STIHL TS410/TS420 |
+| 9 | 9565 | train | 9565 | 3738 | 4 Pcs Massage Scratcher Telescoping Back Massager |
+| 10 | 33733 | train | 33733 | 4398 | The Carter Carbon Fiber Cigar Accessories Box |
+| 11 | 31057 | train | 31057 | 4518 | Histology glass knife strips |
+| 12 | 47465 | test | 8834 | 4876 | Unimom Forte Electronic Breast Pump |
+| 13 | 33503 | train | 33503 | 5409 | Tennis skort - Maternity & Postpartum |
+| 14 | 42293 | test | 3662 | 6778 | Cible d'Entraînement pour But de Football |
+| 15 | 7768 | train | 7768 | 6902 | Slipstop Puddle Jumper 3-6 jaar |
+| 16 | 1962 | train | 1962 | 9279 | Marks & Spencer - Wild Fruits - Gravy Boat |
+| 17 | 39746 | test | 1115 | 11008 | 58.5"-60" Aluminum Track Sliding Semi-Frameless Shower |
+| 18 | 13568 | train | 13568 | 16176 | kleankin Modern Bathroom Sink Cabinet |
+| 19 | 22527 | train | 22527 | 61566 | Baby Blues Healing by Donald P. |
+
+- **Full HF index**: row index in the concatenated `train+test` HuggingFace dataset.
+- **Split index**: row index within the named split.
+- **ISL**: input sequence length in tokens for the formatted benchmark prompt.
+
+
 ## Quick Start
 
 This guide demonstrates how you can run the benchmark on your local machine.

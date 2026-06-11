@@ -4,10 +4,6 @@ We assume that loadgen's query index is in the same order as
 the images in coco's annotations/instances_val2017.json.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import argparse
 import json
 import os

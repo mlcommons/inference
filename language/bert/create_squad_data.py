@@ -15,10 +15,6 @@
 # This file is identical to DeepLearningExamples/TensorFlow/LanguageModeling/BERT/utils/create_squad_data.py
 # except that the dependency on horovod is removed.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 import json
 import tokenization

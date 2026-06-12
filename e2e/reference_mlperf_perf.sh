@@ -29,9 +29,13 @@ export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
 export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
+export MAX_WORKERS=${MAX_WORKERS:-10}
 
 # Performance testing - limit queries
 export PERF_COUNT=${PERF_COUNT:-824}
+
+# Performance cache file (for cached LLM responses)
+export PERF_CACHE_FILE=${PERF_CACHE_FILE:-logs_result.json}
 
 # Multi-shot retrieval parameters
 export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
@@ -61,7 +65,9 @@ echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
 echo "  PERF_COUNT: ${PERF_COUNT}"
-echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (threading)"
+echo "  PERF_CACHE_FILE: ${PERF_CACHE_FILE}"
+echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (loadgen query dispatch)"
+echo "  MAX_WORKERS: ${MAX_WORKERS} (SUT thread pool)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
 echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
@@ -76,6 +82,15 @@ echo "  JUDGE_MODEL: ${JUDGE_MODEL}"
 # Update user.conf with threading configuration
 sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
+# Build perf cache argument if file exists
+PERF_CACHE_ARG=""
+if [ -f "${PERF_CACHE_FILE}" ]; then
+    PERF_CACHE_ARG="--perf-test-mode ${PERF_CACHE_FILE}"
+    echo "  Using cached LLM responses from: ${PERF_CACHE_FILE}"
+else
+    echo "  No cache file found, will make real LLM calls"
+fi
+
 # Run loadgen performance test
 python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
@@ -87,6 +102,7 @@ python3 reference_mlperf.py \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
+    --max_workers ${MAX_WORKERS} \
     --retriever_model ${RETRIEVER_MODEL} \
     --reranker_model ${RERANKER_MODEL} \
     --llm_service_url ${LLM_SERVICE_URL} \
@@ -94,6 +110,7 @@ python3 reference_mlperf.py \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
-    --judge_model ${JUDGE_MODEL}
+    --judge_model ${JUDGE_MODEL} \
+    ${PERF_CACHE_ARG}
 
 echo "Time Stop: $(date +%s)"

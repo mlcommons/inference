@@ -142,6 +142,14 @@ def get_args():
         help='Query generation service URL (if different from main LLM service)'
     )
 
+    # Threading configuration for parallel query processing
+    parser.add_argument(
+        '--max_workers',
+        type=int,
+        default=10,
+        help='Maximum number of worker threads for parallel query processing (default: 10)'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -183,6 +191,7 @@ def main():
         temperature=args.temperature,
         max_retries=args.max_retries,
         output_dir=args.output_dir,
+        max_workers=args.max_workers,
         args=args,  # Pass full args for additional params
     )
 

@@ -28,6 +28,7 @@ import threading
 import queue
 from datetime import datetime
 from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
 import mlperf_loadgen as lg
 
@@ -64,6 +65,7 @@ class E2ESUT:
         temperature: float = 1.0,
         max_retries: int = 5,
         output_dir: str = ".",
+        max_workers: int = 10,
         args: Any = None,  # Full args object for additional params
     ):
         """
@@ -85,6 +87,7 @@ class E2ESUT:
             temperature: LLM temperature
             max_retries: Max LLM call retries
             output_dir: Output directory for logs
+            max_workers: Maximum number of worker threads for parallel query processing
             args: Full args namespace for additional parameters
         """
         self.dataset_path = dataset_path
@@ -204,116 +207,142 @@ class E2ESUT:
         self.results = {}
         self.results_lock = threading.Lock()
 
+        # Thread pool for parallel query processing
+        # Use max_workers based on loadgen max_async_queries setting
+        self.max_workers = max_workers
+        self.thread_pool = ThreadPoolExecutor(max_workers=self.max_workers)
+        log.info(f"Thread pool initialized with {self.max_workers} workers")
+
         # Construct loadgen SUT
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         log.info("SUT initialized successfully")
+
+    def _process_single_query(self, query_sample):
+        """
+        Process a single query sample.
+        Called by thread pool workers.
+        """
+        sample_id = query_sample.index
+        query_id = query_sample.id
+
+        # Get query data from QSL
+        sample = self.qsl[sample_id]
+        query_text = sample['query']
+        expected_urls = sample['expected_urls']
+        ground_truth_answer = sample['ground_truth']
+
+        log.info(f"Processing query {sample_id} (QID: {query_id})")
+
+        # Start logging for this query
+        # Note: Use sample_id for perf_test_cache consistency (stable across runs)
+        # Use query_id for loadgen tracking (unique per run)
+        cache_key = str(sample_id)  # Stable dataset index for cache lookup
+        self.llm_logger.start_query(cache_key, query_text)
+
+        try:
+            # Run multi-shot retrieval
+            result = multi_shot_retrieval(
+                self.rag_db,
+                query_text,
+                expected_urls=expected_urls,
+                expected_answer=ground_truth_answer,
+                max_sub_queries=self.max_sub_queries,
+                top_k_retriever=self.top_k_retriever,
+                top_k_reranking=self.top_k_reranking,
+                max_iterations=self.max_iterations,
+                no_rerank=self.no_rerank,
+                retrieval_strategy=self.retrieval_strategy,
+                verbose=False,  # Reduce verbosity for loadgen
+                reasoning_effort=self.reasoning_effort,
+                llm_config=self.llm_config,
+                logger=self.llm_logger,
+                query_id=cache_key,  # Use stable sample_id for cache consistency
+                **self.strategy_params
+            )
+
+            # Extract answer
+            answer = result.get('llm_answer', 'Unknown')
+
+            # End logging for this query
+            self.llm_logger.end_query(
+                retrieval_results={
+                    "retrieved_urls": result.get('retrieved_urls', []),
+                    "correct_urls": expected_urls,
+                    "precision": result.get('precision', 0),
+                    "recall": result.get('recall', 0),
+                    "f1": result.get('f1', 0)
+                },
+                answer_results={
+                    "llm_answer": answer,
+                    "ground_truth_answer": ground_truth_answer
+                }
+            )
+
+            # Store result
+            with self.results_lock:
+                self.results[query_id] = {
+                    'query': query_text,
+                    'answer': answer,
+                    'ground_truth': ground_truth_answer,
+                    'retrieved_urls': result.get('retrieved_urls', []),
+                    'expected_urls': expected_urls,
+                    'metrics': {
+                        'precision': result.get('precision', 0),
+                        'recall': result.get('recall', 0),
+                        'f1': result.get('f1', 0)
+                    }
+                }
+
+        except Exception as e:
+            log.error(f"Error processing query {sample_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            answer = "Error"
+
+            # Store error result
+            with self.results_lock:
+                self.results[query_id] = {
+                    'query': query_text,
+                    'answer': answer,
+                    'error': str(e)
+                }
+
+        # Convert answer to byte array for loadgen
+        answer_bytes = answer.encode('utf-8')
+        response_array = array.array('B', answer_bytes)
+        bi = response_array.buffer_info()
+
+        # Send response to loadgen
+        response = lg.QuerySampleResponse(
+            query_id,
+            bi[0],
+            bi[1] * response_array.itemsize,
+            len(answer_bytes)
+        )
+        lg.QuerySamplesComplete([response])
+
+        log.info(f"Completed query {sample_id} (QID: {query_id})")
 
     def issue_queries(self, query_samples):
         """
         Issue queries to the SUT.
         Called by loadgen for each query batch.
+        Processes queries in parallel using thread pool.
         """
-        for query_sample in query_samples:
-            sample_id = query_sample.index
-            query_id = query_sample.id
+        num_queries = len(query_samples)
+        log.info(f"Received batch of {num_queries} queries from loadgen")
 
-            # Get query data from QSL
-            sample = self.qsl[sample_id]
-            query_text = sample['query']
-            expected_urls = sample['expected_urls']
-            ground_truth_answer = sample['ground_truth']
+        # Submit all queries to thread pool
+        futures = [self.thread_pool.submit(self._process_single_query, query_sample)
+                   for query_sample in query_samples]
 
-            log.info(f"Processing query {sample_id} (QID: {query_id})")
-
-            # Start logging for this query
-            # Note: Use sample_id for perf_test_cache consistency (stable across runs)
-            # Use query_id for loadgen tracking (unique per run)
-            cache_key = str(sample_id)  # Stable dataset index for cache lookup
-            self.llm_logger.start_query(cache_key, query_text)
-
+        # Wait for all queries in this batch to complete
+        # This is important for loadgen synchronization
+        for future in futures:
             try:
-                # Run multi-shot retrieval
-                result = multi_shot_retrieval(
-                    self.rag_db,
-                    query_text,
-                    expected_urls=expected_urls,
-                    expected_answer=ground_truth_answer,
-                    max_sub_queries=self.max_sub_queries,
-                    top_k_retriever=self.top_k_retriever,
-                    top_k_reranking=self.top_k_reranking,
-                    max_iterations=self.max_iterations,
-                    no_rerank=self.no_rerank,
-                    retrieval_strategy=self.retrieval_strategy,
-                    verbose=False,  # Reduce verbosity for loadgen
-                    reasoning_effort=self.reasoning_effort,
-                    llm_config=self.llm_config,
-                    logger=self.llm_logger,
-                    query_id=cache_key,  # Use stable sample_id for cache consistency
-                    **self.strategy_params
-                )
-
-                # Extract answer
-                answer = result.get('llm_answer', 'Unknown')
-
-                # End logging for this query
-                self.llm_logger.end_query(
-                    retrieval_results={
-                        "retrieved_urls": result.get('retrieved_urls', []),
-                        "correct_urls": expected_urls,
-                        "precision": result.get('precision', 0),
-                        "recall": result.get('recall', 0),
-                        "f1": result.get('f1', 0)
-                    },
-                    answer_results={
-                        "llm_answer": answer,
-                        "ground_truth_answer": ground_truth_answer
-                    }
-                )
-
-                # Store result
-                with self.results_lock:
-                    self.results[query_id] = {
-                        'query': query_text,
-                        'answer': answer,
-                        'ground_truth': ground_truth_answer,
-                        'retrieved_urls': result.get('retrieved_urls', []),
-                        'expected_urls': expected_urls,
-                        'metrics': {
-                            'precision': result.get('precision', 0),
-                            'recall': result.get('recall', 0),
-                            'f1': result.get('f1', 0)
-                        }
-                    }
-
+                future.result()
             except Exception as e:
-                log.error(f"Error processing query {sample_id}: {e}")
-                import traceback
-                traceback.print_exc()
-                answer = "Error"
-
-                # Store error result
-                with self.results_lock:
-                    self.results[query_id] = {
-                        'query': query_text,
-                        'answer': answer,
-                        'error': str(e)
-                    }
-
-            # Convert answer to byte array for loadgen
-            answer_bytes = answer.encode('utf-8')
-            response_array = array.array('B', answer_bytes)
-            bi = response_array.buffer_info()
-
-            # Send response to loadgen
-            response = lg.QuerySampleResponse(
-                query_id,
-                bi[0],
-                bi[1] * response_array.itemsize,
-                len(answer_bytes)
-            )
-            lg.QuerySamplesComplete([response])
-
-            log.info(f"Completed query {sample_id} (QID: {query_id})")
+                log.error(f"Thread pool execution error: {e}")
 
     def flush_queries(self):
         """Flush any pending queries."""
@@ -335,6 +364,10 @@ class E2ESUT:
         })
         self.llm_logger.save()
         log.info("LLM logs finalized")
+
+        # Shutdown thread pool
+        self.thread_pool.shutdown(wait=True)
+        log.info("Thread pool shutdown complete")
 
         # Cleanup reranker
         self.rag_db.shutdown_reranker()

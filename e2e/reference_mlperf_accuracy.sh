@@ -29,6 +29,7 @@ export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
 export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
+export MAX_WORKERS=${MAX_WORKERS:-10}
 
 # Accuracy testing - use all queries (or specify subset)
 export PERF_COUNT=${PERF_COUNT:-824}  # Empty = all queries
@@ -57,7 +58,8 @@ echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
 echo "  PERF_COUNT: ${PERF_COUNT:-all queries}"
-echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (threading)"
+echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (loadgen query dispatch)"
+echo "  MAX_WORKERS: ${MAX_WORKERS} (SUT thread pool)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
 echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
@@ -83,6 +85,7 @@ python3 reference_mlperf.py \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
+    --max_workers ${MAX_WORKERS} \
     --retriever_model ${RETRIEVER_MODEL} \
     --reranker_model ${RERANKER_MODEL} \
     --llm_service_url ${LLM_SERVICE_URL} \

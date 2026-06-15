@@ -504,9 +504,9 @@ def get_model_name_from_service(service_url: str) -> str:
         for field in ["id", "model", "name", "model_name"]:
             if field in model_info:
                 return model_info[field]
-    
-    # Default fallback
-    return "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
+
+    # Default fallback - generic model name
+    return "llama"
 
 
 def get_max_tokens_from_service(service_url: str) -> int:

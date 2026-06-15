@@ -5,8 +5,6 @@ End-to-end retrieval-augmented generation benchmark for multi-hop QA on the
 dataset. Supports BM25 and dense vector retrieval, optional ColBERTv2 reranking,
 and iterative multi-shot retrieval with LLM-driven query decomposition.
 
-This is a WIP proposal and will undergo changes.
-
 ---
 
 ## Benchmark flow
@@ -386,24 +384,3 @@ Result schema:
 ```
 
 ---
-
-## Reference
-
-- `CLAUDE.md` — architectural details, parameter reference, accuracy
-  experiments and chunk-size studies.
-- `claude/design/config_layout.md` — `config.sh` design and resolution rules.
-- `claude/design/cross_vendor_plan.md` — cross-vendor refactor reasoning
-  (per step, why each decision was made).
-- `claude/README.md` — agent-notes for this repo (synced via git).
-
----
-
-## TODO
-
-- Token-based chunking aligned with the e5-base-v2 512-token limit (current
-  default is 768-char fixed-length).
-- Configurable sentence-transformers `batch_size` (currently uses the SDK
-  default of 32).
-- GPU FAISS for index sizes that outgrow CPU.
-- Stronger judge model than gpt-oss-20b (current judge hits length limits on
-  complex multi-hop questions, capping accuracy measurements).

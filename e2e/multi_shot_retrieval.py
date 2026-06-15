@@ -950,7 +950,7 @@ def query_rewriter(question: str, new_documents: List[tuple],
         service_url = llm_config["service_url"]
         max_tokens = llm_config["max_tokens"]
     else:
-        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
+        model_name = "gpt-oss-120B"
         service_url = "http://127.0.0.1:8123/v1/chat/completions"
         max_tokens = 10240
 

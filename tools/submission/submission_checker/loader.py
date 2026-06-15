@@ -2,6 +2,7 @@ import os
 from .constants import *
 from .utils import list_dir
 from .parsers.loadgen_parser import LoadgenParser
+from .parsers.endpoints_parser import EndpointsParser
 from typing import Generator, Literal
 from .utils import *
 from .configuration.configuration import Config
@@ -82,6 +83,18 @@ class Loader:
         self.acc_json_path = os.path.join(
             self.root, ACCURACY_JSON_PATH.get(
                 version, ACCURACY_JSON_PATH["default"]))
+        self.perf_endpoints_path = os.path.join(
+            self.root, PERFORMANCE_ENDPOINTS_PATH.get(
+                version, PERFORMANCE_ENDPOINTS_PATH["default"]))
+        self.perf_endpoints_config_path = os.path.join(
+            self.root, PERFORMANCE_CONFIG_ENDPOINTS_PATH.get(
+                version, PERFORMANCE_CONFIG_ENDPOINTS_PATH["default"]))
+        self.acc_endpoints_path = os.path.join(
+            self.root, ACCURACY_ENDPOINTS_PATH.get(
+                version, ACCURACY_ENDPOINTS_PATH["default"]))
+        self.acc_endpoints_config_path = os.path.join(
+            self.root, ACCURACY_CONFIG_ENDPOINTS_PATH.get(
+                version, ACCURACY_CONFIG_ENDPOINTS_PATH["default"]))
         self.system_log_path = os.path.join(
             self.root, SYSTEM_PATH.get(
                 version, SYSTEM_PATH["default"]))
@@ -182,7 +195,7 @@ class Loader:
         accuracy results as line lists, etc.
 
         Args:
-            path (str): Filesystem path to the log file.
+            path (str or List[str]): Filesystem path to the log file.
             log_type (str): Type of log to load, determining parsing method.
 
         Returns:
@@ -190,7 +203,9 @@ class Loader:
                 if loading fails.
         """
         log = None
-        if os.path.exists(path):
+        if log_type in ["Endpoints"]:
+            log = EndpointsParser(path)
+        elif os.path.exists(path):
             self.logger.info("Loading %s log from %s", log_type, path)
             if log_type in ["Performance", "Accuracy", "Test"]:
                 log = LoadgenParser(path)
@@ -294,6 +309,30 @@ class Loader:
                                 system=system,
                                 benchmark=benchmark,
                                 scenario=scenario)
+                            perf_endpoints_path = self.perf_endpoints_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            perf_endpoints_config_path = self.perf_endpoints_config_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            acc_endpoints_path = self.acc_endpoints_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
+                            acc_endpoints_config_path = self.acc_endpoints_config_path.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
                             acc_result_path = self.acc_result_path.format(
                                 division=division,
                                 submitter=submitter,
@@ -388,7 +427,8 @@ class Loader:
                             src_path = self.src_path.format(
                                 division=division, submitter=submitter)
 
-                            # Load logs
+                            # Load logs loadgen
+                            is_endpoints_submission = False
                             perf_log = self.load_single_log(
                                 perf_path, "Performance")
                             acc_log = self.load_single_log(
@@ -399,6 +439,17 @@ class Loader:
                                 acc_json_path, "AccuracyJSON")
                             measurements_json = self.load_single_log(
                                 measurements_path, "Measurements")
+                            if perf_log is None and acc_log is None:
+                                is_endpoints_submission = True
+                                perf_log = self.load_single_log(
+                                    [perf_endpoints_path,
+                                        perf_endpoints_config_path],
+                                    "Endpoints"
+                                )
+                                acc_log = self.load_single_log(
+                                    [acc_endpoints_path, acc_endpoints_config_path],
+                                    "Endpoints"
+                                )
 
                             # Load test logs
                             test01_perf_log = self.load_single_log(
@@ -429,6 +480,7 @@ class Loader:
                                 "system": system,
                                 "benchmark": benchmark,
                                 "scenario": scenario,
+                                "is_endpoints_submission": is_endpoints_submission,
                                 # Submission paths
                                 "perf_path": perf_path,
                                 "acc_path": acc_path,

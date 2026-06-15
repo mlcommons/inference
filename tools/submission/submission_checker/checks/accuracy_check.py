@@ -83,6 +83,7 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
         self.checks.append(self.extra_files_check)
+        self.apply_checks = set(self.checks)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.

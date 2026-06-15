@@ -62,6 +62,7 @@ class ComplianceCheck(BaseCheck):
         self.checks.append(self.performance_check)
         self.checks.append(self.accuracy_check)
         self.checks.append(self.compliance_performance_check)
+        self.apply_checks = set(self.checks)
 
     def get_test_list(self, model):
         """Return the list of compliance tests applicable to `model`.
@@ -322,8 +323,8 @@ class ComplianceCheck(BaseCheck):
                     first_token_pass and eos_pass and length_check_pass)
                 if not is_valid:
                     self.log.error(
-                        f"TEST06 accuracy check failed. first_token_check:" +
-                        f" {first_token_pass} eos_check:" +
+                        f"TEST06 accuracy check failed. first_token_check: " +
+                        f"{first_token_pass} eos_check: " +
                         f"{eos_pass} length_check: {length_check_pass}."
                     )
             elif test == "TEST07":

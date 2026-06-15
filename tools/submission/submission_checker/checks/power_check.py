@@ -68,6 +68,7 @@ class PowerCheck(BaseCheck):
         self.checks.append(self.required_files_check)
         self.checks.append(self.external_power_check)
         self.checks.append(self.get_power_metric_check)
+        self.apply_checks = set(self.checks)
 
     def required_files_check(self):
         """Verify required files exist in power-related directories.

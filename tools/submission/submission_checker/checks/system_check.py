@@ -59,6 +59,7 @@ class SystemCheck(BaseCheck):
         self.checks.append(self.submitter_check)
         self.checks.append(self.division_check)
         self.checks.append(self.nameplate_power_check)
+        self.apply_checks = set(self.checks)
 
     def missing_check(self):
         """Ensure the system JSON file was provided.

@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-06-15 00:17:46",
+  "mode": "complete_pipeline",
+  "input_documents": "doc_html",
+  "input_passages": "passages_doc_html_len768_ov32_word.json",
+  "database_file": "vector_html_hnsw_len768_ov32_word.db",
+  "vector_count": 107597,
+  "chunking": {
+    "enabled": true,
+    "total_time_seconds": 202.96,
+    "documents_processed": 2503,
+    "passages_generated": 107597,
+    "chunk_size": 768,
+    "chunk_overlap": 32,
+    "text_boundary": "word",
+    "processes": 4
+  },
+  "data_setup_time_seconds": 1444.57,
+  "throughput_passages_per_second": 74.48,
+  "validation": {
+    "status": "success",
+    "validation_passed": true,
+    "vector_count": 107597,
+    "docstore_count": 107597,
+    "index_type": "FAISS-IndexHNSWFlat",
+    "index_dimension": 768,
+    "errors": []
+  },
+  "configuration": {
+    "vector_index_method": "hnsw",
+    "embedding_model": "/data/model/e5-base-v2",
+    "device": "auto",
+    "num_embedding_devices": 1,
+    "hierarchical": false,
+    "load_embeddings_cache": false
+  }
+}

@@ -498,7 +498,7 @@ class DocumentProcessor:
 
         # Finalize monitoring and report
         self._report_processing_performance()
-        
+
         # Save JSON file if requested
         if json_file and all_passages:
             json_path = Path(json_file)
@@ -510,8 +510,22 @@ class DocumentProcessor:
             }
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
-            
+
             print(f"Saved {len(all_passages)} passages to {json_file}")
+
+        # Return detailed metrics including HTML parsing time
+        result = {
+            'documents_processed': len(document_files),
+            'passages_generated': len(all_passages)
+        }
+
+        # Add component-level timing if monitoring was enabled
+        if self.benchmark and self.monitor:
+            for component_name, metrics in self.monitor.components.items():
+                result[f'{component_name}_time_seconds'] = round(metrics.duration, 2)
+                result[f'{component_name}_throughput_mb_per_sec'] = round(metrics.throughput_mb_per_sec, 2)
+
+        return result
     
     def _process_document(self, doc_file: Path, file_extension: str) -> Optional[str]:
         """Process a single document with optional monitoring."""

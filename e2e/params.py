@@ -552,22 +552,12 @@ VECTOR_PARAMS = [
         name="vector_index_method",
         arg_names=["--vector_index_method"],
         type=str,
-        default="flat",
-        help="FAISS index method (flat, hnsw, ivf)",
+        default="hnsw",
+        help="FAISS index method (flat, hnsw, ivf) - default: hnsw",
         choices=["flat", "hnsw", "ivf"],
         category="vector",
         applies_to=["vector"],
         optuna_suggest={'type': 'categorical', 'choices': ["flat", "hnsw", "ivf"]}
-    ),
-    ParamDef(
-        name="ivf_nprobe",
-        arg_names=["--ivf_nprobe"],
-        type=int,
-        default=10,
-        help="Number of clusters to probe for IVF index",
-        category="vector",
-        applies_to=["vector"],
-        optuna_suggest={'type': 'int', 'min': 1, 'max': 100, 'step': 1}
     ),
     ParamDef(
         name="hierarchical",

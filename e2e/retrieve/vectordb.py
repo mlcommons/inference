@@ -128,7 +128,6 @@ class VectorDB(RagDB):
             reranker_model: str = None,
             device: str = "auto",
             vector_index_method: str = "hnsw",
-            ivf_nprobe: int = 10,
             load_embeddings: bool = True,
             num_embedding_devices: int = 1,
             benchmark: bool = False,
@@ -141,7 +140,6 @@ class VectorDB(RagDB):
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
         self._vector_index_method = vector_index_method
-        self._ivf_nprobe = ivf_nprobe
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
         self._hierarchical = hierarchical
@@ -316,11 +314,11 @@ class VectorDB(RagDB):
         
         print(f"Training IVF index on {n_samples} samples...")
         self._index.train(embeddings_array)
-        
+
         # Set nprobe (number of clusters to search) for better accuracy
-        self._index.nprobe = self._ivf_nprobe
-        print(f"IVF index trained successfully with {self._index.nlist} clusters, nprobe={self._ivf_nprobe}")
-        print(f"  → Will search {self._ivf_nprobe} clusters per query (~{100*self._ivf_nprobe/self._index.nlist:.1f}% of clusters)")
+        self._index.nprobe = 10
+        print(f"IVF index trained successfully with {self._index.nlist} clusters, nprobe=10")
+        print(f"  → Will search 10 clusters per query (~{100*10/self._index.nlist:.1f}% of clusters)")
     
     def _get_embeddings_cache_path(self, passages_path: str) -> str:
         """Get the cache path for embeddings based on passages file path."""
@@ -807,8 +805,8 @@ class VectorDB(RagDB):
 
         # If it's an IVF index, restore nprobe setting
         if self._vector_index_method == "ivf" and hasattr(self._vector_store.index, 'nprobe'):
-            self._vector_store.index.nprobe = self._ivf_nprobe
-            print(f"Restored IVF index with nprobe={self._ivf_nprobe}")
+            self._vector_store.index.nprobe = 10
+            print(f"Restored IVF index with nprobe=10")
 
         # Load parent map if hierarchical mode
         if self._hierarchical:

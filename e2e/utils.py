@@ -263,12 +263,17 @@ def apply_numa_pinning() -> None:
 
 
 def apply_cpu_threading_env() -> None:
-    """Pin CPU affinity to a NUMA node and configure OpenMP env vars.
+    """Configure OpenMP env vars for CPU threading.
 
     Only call this when a model is actually being placed on CPU.
     Never overwrites a user-set env var.
+
+    NOTE: Does NOT set CPU affinity - let the user control this via numactl.
+    The code will detect available cores via sched_getaffinity() which respects
+    affinity set by numactl or taskset.
     """
-    apply_numa_pinning()
+    # Skip NUMA pinning - let user control with numactl
+    # apply_numa_pinning()
 
     if "OMP_NUM_THREADS" not in os.environ:
         override = os.environ.get("CPU_OMP_NUM_THREADS")

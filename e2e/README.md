@@ -280,7 +280,7 @@ indices, and probe-query top-K results. Tolerances:
 |---|---|---|
 | `flat` (L2) | O(n) | <10K passages |
 | `hnsw` | O(log n) | balanced, default |
-| `ivf` | O(√n) | >1M passages, configurable `--ivf_nprobe` |
+| `ivf` | O(√n) | >1M passages |
 
 ---
 

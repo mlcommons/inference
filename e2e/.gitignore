@@ -1,7 +1,13 @@
 *.db
 output_*
+output/
+run_output/
+subsample_variation_results/
+variance_test_*/
 passages/
 data/
 run_container.sh
 .claude/
 config.sh
+*.log
+third_party/

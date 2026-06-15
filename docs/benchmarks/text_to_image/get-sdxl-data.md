@@ -35,12 +35,12 @@ Get the Official MLPerf Stable Diffusion Model
     === "FP 16"
         ### Pytorch
         ```
-        mlcr get,ml-model,sdxl,_pytorch,_fp16 -j
+        mlcr get,ml-model,sdxl,_pytorch,_fp16,_r2-downloader -j
         ```
     === "FP 32"
         ### Pytorch
         ```
-        mlcr get,ml-model,sdxl,_pytorch,_fp32 -j
+        mlcr get,ml-model,sdxl,_pytorch,_fp32,_r2-downloader -j
         ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_SDXL_MODEL>` could be provided to download the model to a specific location.

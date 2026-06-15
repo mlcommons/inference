@@ -19,10 +19,10 @@ def get_args():
         '--input',
         required=True,
         help='results csv from checker')
-    parser.add_argument('--version', default='5.1', help='mlperf version')
+    parser.add_argument('--version', default='6.0', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_v5.1',
+        default='submissions_inference_v6.0',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',
@@ -55,6 +55,7 @@ def main():
             "host_processor_model_name": "Processor",
             "accelerator_model_name": "Accelerator",
             "accelerators_per_node": "a#",
+            "total_accelerators": "Total Accelerators",
             "notes": "Notes",
             "framework": "Software",
         },
@@ -92,10 +93,20 @@ def main():
     # code url
     df["Code"] = df.apply(
         lambda x: '=HYPERLINK("{}","code")'.format(
-            "/".join([base_url, x["Category"], x["Submitter"], "code"])
+            "/".join([base_url, x["Category"], x["Submitter"], "src"])
         ),
         axis=1,
     )
+    # Scenario
+    scenario_map = {
+        "singlestream": "SingleStream",
+        "multistream": "MultiStream",
+        "server": "Server",
+        "interactive": "Interactive",
+        "offline": "Offline",
+    }
+    df["Scenario"] = df["Scenario"].apply(
+        lambda x: scenario_map.get(str(x).lower(), x))
 
     output = args.input[:-4]
     writer = pd.ExcelWriter(output + ".xlsx", engine="xlsxwriter")
@@ -114,6 +125,7 @@ def main():
         "p#",
         "Accelerator",
         "a#",
+        "Total Accelerators",
         "Software",
         "Notes",
     ]
@@ -134,11 +146,11 @@ def main():
         ["Result"],
         [
             "resnet",
-            "retinanet",
+            "yolo-95",
+            "yolo-99",
             "bert-99",
             "bert-99.9",
-            "dlrm-v2-99",
-            "dlrm-v2-99.9",
+            "dlrm-v3",
             "3d-unet-99",
             "3d-unet-99.9",
             "llama3.1-8b",
@@ -151,11 +163,15 @@ def main():
             "rgat",
             "pointpainting",
             "deepseek-r1",
-            "whisper"
+            "whisper",
+            "wan-2.2-t2v-a14b",
+            "qwen3-vl-235b-a22b",
+            "gpt-oss-120b",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
             "Latency (ms)",
+            "Latency (s)",
             "Samples/s",
             "Queries/s",
             "Tokens/s",
@@ -164,7 +180,54 @@ def main():
         ],
     ]
 
-    if args.version == "5.0":
+    if args.version == "6.0":
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": [],
+                "yolo-95": [],
+                "yolo-99": [],
+                "bert-99": [],
+                "bert-99.9": [],
+                "stable-diffusion-xl": [],
+                "pointpainting": [],
+                "dlrm-v3": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "llama2-70b-99": ["Server", "Offline", "Interactive"],
+                "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
+                "mixtral-8x7b": ["Server", "Offline"],
+                "rgat": ["Offline"],
+                "llama3.1-8b": ["Server", "Offline", "Interactive"],
+                "llama3.1-405b": ["Server", "Offline", "Interactive"],
+                "deepseek-r1": ["Server", "Offline", "Interactive"],
+                "whisper": ["Offline"],
+                "gpt-oss-120b": ["Offline", "Interactive", "Server"],
+                "qwen3-vl-235b-a22b": ["Server", "Offline", "Interactive"],
+                "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+                "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": ["SingleStream", "Offline"],
+                "dlrm-v2-99": [],
+                "dlrm-v2-99.9": [],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "llama2-70b-interactive-99": [],
+                "llama2-70b-interactive-99.9": [],
+                "llama3.1-405b": [],
+                "llama3.1-8b-edge": ["SingleStream", "Offline"],
+                "rgat": [],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
+                "whisper": ["Offline"]
+            },
+        }
+    elif args.version == "5.0":
         filter_scenarios = {
             "datacenter": {
                 "resnet": ["Server", "Offline"],
@@ -185,7 +248,11 @@ def main():
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
                 "llama3.1-405b": ["Offline", "Server"],
-                "pointpainting": []
+                "rgat": ["Offline"],
+                "pointpainting": [],
+                "gpt-oss-120b": ["Offline"],
+                "qwen3-vl-235b-a22b": ["Server", "Offline"],
+                "dlrm-v3": ["Server", "Offline"],
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -429,7 +496,7 @@ def main():
     with open(f"{output}_results.json", "w") as f:
         f.write(json.dumps(outjsondata, indent=2))
 
-    score_format = writer.book.add_format({"num_format": "#,##0.00"})
+    score_format = writer.book.add_format({"num_format": "#,##0.000"})
     bg_format = writer.book.add_format({"bg_color": "#efefef"})
     for ws in writer.book.worksheets():
         ws.set_column(1, 1, None, None, {"hidden": 1})

@@ -13,6 +13,14 @@ You can also do pip install mlc-scripts and then use `mlcr` commands for downloa
 - DeepSeek-R1 model is automatically downloaded as part of setup
 - Checkpoint conversion is done transparently when needed.
 
+**Using MLCFlow Automation**
+
+Download the model using the MLCFlow Automation:
+
+```
+mlcr get,ml-model,deepseek-r1,_r2-downloader,_mlc --outdirname=<path to download> -j
+```
+
 **Using the MLC R2 Downloader**
 
 Download the model using the MLCommons R2 Downloader:
@@ -23,6 +31,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 ```
 
 To specify a custom download directory, use the `-d` flag:
+
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
@@ -53,6 +62,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 This will download the full preprocessed dataset file (`mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`) and the calibration dataset file (`mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`).
 
 To specify a custom download directory, use the `-d` flag:
+
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
@@ -103,6 +113,8 @@ Launch a Docker container with your preferred backend:
 - **vllm**: vLLM's LLM api-based inference
 - **sglang**: sglang's OpenAI endpoint-based inference
 
+**NOTE**: `sglang` backend uses `sglang==0.5.4` installed into `lmsysorg/sglang:v0.5.2-cu129-b200` base image.
+
 ## Backend-Specific Setup
 
 After launching any Docker container, run the setup script which automatically detects your backend:
@@ -115,6 +127,7 @@ setup.sh
 The setup script creates a virtual environment and configures it differently based on the backend:
 
 #### All Backends
+
 - Virtual environment is **activated** after `setup.sh`
 - Activate backend-specific venv using `source .venv_[pytorch|vllm|sglang]/bin/activate`
 - All commands are to be run using the virtual environment
@@ -159,6 +172,7 @@ The reference implementation includes full support for MLPerf inference benchmar
 ### Running MLPerf Benchmarks
 
 #### Offline Scenario
+
 ```bash
 (.venv_BACKEND) $ python run_mlperf.py \
     --mode offline \
@@ -167,12 +181,24 @@ The reference implementation includes full support for MLPerf inference benchmar
 ```
 
 #### Server Scenario
+
 ```bash
 (.venv_BACKEND) $ python run_mlperf.py \
     --mode server \
     --input-file <input_dataset>.pkl \
     --output-dir mlperf_results
 ```
+
+#### Interactive Scenario
+
+```bash
+(.venv_BACKEND) $ python run_mlperf.py \
+    --mode interactive \
+    --input-file <input_dataset>.pkl \
+    --output-dir mlperf_results
+```
+
+**NOTE:** to enable Speculative Decoding for Sglang Backend, toggle `BACKEND_REGISTRY['sglang']['enable_speculative_decode']` in `utils/backend_registry.py` (disabled by default).
 
 #### Pytorch Backend for Mlperf
 
@@ -188,23 +214,35 @@ PyTorch backend uses distributed execution with `torchrun` and `run_mlperf_mpi.p
 
 ### MLPerf Command Line Options
 
-| Option         | Description                    | Default          |
-| -------------- | ------------------------------ | ---------------- |
-| `--mode`       | Scenario mode (offline/server) | `offline`        |
-| `--accuracy`   | Run accuracy test              | `False`          |
-| `--output-dir` | Output directory for results   | `mlperf_results` |
+| Option         | Description                                | Default          |
+| -------------- | ------------------------------------------ | ---------------- |
+| `--mode`       | Scenario mode (offline/server/interactive) | `offline`        |
+| `--accuracy`   | Run accuracy test                          | `False`          |
+| `--output-dir` | Output directory for results               | `mlperf_results` |
 
 ### Backend Support Matrix
 
 The following table shows which backends support different evaluation and MLPerf operations:
 
-| Backend     | `run_eval.py` | `run_mlperf.py --mode=offline` | `run_mlperf.py --mode=server` |
-| ----------- | ------------- | ------------------------------ | ----------------------------- |
-| pytorch-fp8 | x             | x                              |                               |
-| vllm-fp8    | x             | x                              |                               |
-| sglang-fp8  | x             | x                              | x                             |
+| Backend     | `run_eval.py` | `run_mlperf.py --mode=offline` | `run_mlperf.py --mode=server` | `run_mlperf.py --mode=interactive` |
+| ----------- | ------------- | ------------------------------ | ----------------------------- | ---------------------------------- |
+| pytorch-fp8 | x             | x                              |                               |                                    |
+| vllm-fp8    | x             | x                              |                               |                                    |
+| sglang-fp8  | x             | x                              | x                             | x                                  |
 
 > **Note**: For PyTorch backend, use the `_mpi` versions with `torchrun`. For vLLM and SGLang backends, use the single-process versions without `_mpi`.
+
+## Speculative Decoding
+
+For the DeepSeek-R1 Interactive Scenario, users can enable Speculative Decoding Optimization for the SGLANG Backend by setting the `enable_speculative_decode` flag to `True` in `language/deepseek-r1/utils/backend_registry.py`.
+
+When Enabled, SGLANG backend will run the allowed configuration as per [Inference Policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) (appendix-speculative-decoding):
+
+| Benchmark   | Scenario    | Speculative Decoding Algorithm                             | Configuration                                           | MTP Head                                       |
+| :---------- | :---------- | :--------------------------------------------------------- | :------------------------------------------------------ | :--------------------------------------------- |
+| DeepSeek-r1 | Interactive | EAGLE-style decoding with deepseek-ai/deepseek-r1 MTP head | `speculative-num-steps=3`, `speculative-eagle-topk=1.0` | https://huggingface.co/deepseek-ai/DeepSeek-R1 |
+
+> Note: ONLY Sglang backend supports speculative-decoding
 
 ## Accuracy Evaluation
 

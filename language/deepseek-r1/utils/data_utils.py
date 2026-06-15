@@ -110,7 +110,9 @@ def save_results(df: pd.DataFrame,
         output_file = f"{base_name}_{timestamp_suffix}{ext}"
 
     # Ensure output directory exists
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    output_dir = os.path.dirname(output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     print(f"Saving results to {output_file}...")
 

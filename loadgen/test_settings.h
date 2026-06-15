@@ -234,10 +234,6 @@ struct TestSettings {
   uint64_t test05_qsl_rng_seed = 0;
   uint64_t test05_sample_index_rng_seed = 0;
   uint64_t test05_schedule_rng_seed = 0;
-
-  /// \brief Load mlperf parameter config from file.
-  int FromConfig(const std::string &path, const std::string &model,
-                 const std::string &scenario, int conf_type = 1);
   /**@}*/
 
   // ==================================
@@ -263,6 +259,11 @@ struct TestSettings {
   uint64_t performance_issue_same_index = 0;
   /// \brief Overrides QSL->PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;
+  /// \brief Specifies the number of samples for accuracy evaluation.
+  /// When non-zero, accuracy mode generates sample indices [0,
+  /// accuracy_sample_count_override). When zero (default), uses
+  /// performance_sample_count.
+  uint64_t accuracy_sample_count_override = 0;
   /// \brief Measure token latencies
   bool use_token_latencies = false;
   /// Token latency parameters
@@ -272,6 +273,10 @@ struct TestSettings {
   bool infer_token_latencies = false;
   uint64_t token_latency_scaling_factor;
   /**@}*/
+
+  /// \brief Load mlperf parameter config from file.
+  int FromConfig(const std::string &path, const std::string &model,
+                 const std::string &scenario, int conf_type = 1);
 };
 
 ///

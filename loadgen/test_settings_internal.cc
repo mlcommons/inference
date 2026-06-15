@@ -25,7 +25,8 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, size_t qsl_performance_sample_count)
+    const TestSettings &requested_settings, size_t qsl_performance_sample_count,
+    size_t qsl_total_sample_count)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -123,6 +124,11 @@ TestSettingsInternal::TestSettingsInternal(
   performance_sample_count = (requested.performance_sample_count_override == 0)
                                  ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
+
+  // Accuracy Sample Count: Override -> qsl_total_sample_count (default)
+  accuracy_sample_count = (requested.accuracy_sample_count_override == 0)
+                              ? qsl_total_sample_count
+                              : requested.accuracy_sample_count_override;
 
   // Sample by concatentating several permutations of the dataset
   // sample_concatenate_permutation
@@ -336,6 +342,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "requested_performance_sample_count_override",
                s.performance_sample_count_override);
+    MLPERF_LOG(detail, "requested_accuracy_sample_count_override",
+               s.accuracy_sample_count_override);
     MLPERF_LOG(detail, "requested_sample_concatenate_permutation",
                s.sample_concatenate_permutation);
     // Token latencies specific values
@@ -407,6 +415,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
     detail("performance_sample_count_override : ",
            s.performance_sample_count_override);
+    detail("accuracy_sample_count_override : ",
+           s.accuracy_sample_count_override);
     detail("");
 #endif
   });
@@ -450,6 +460,8 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "effective_performance_sample_count",
                s.performance_sample_count);
+    MLPERF_LOG(detail, "effective_accuracy_sample_count",
+               s.accuracy_sample_count);
     MLPERF_LOG(detail, "effective_sample_concatenate_permutation",
                s.sample_concatenate_permutation);
 #else
@@ -481,6 +493,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
     detail("performance_sample_count : ", s.performance_sample_count);
+    detail("accuracy_sample_count : ", s.accuracy_sample_count);
 #endif
   });
 }
@@ -515,6 +528,7 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("performance_issue_same : ", performance_issue_same);
   summary("performance_issue_same_index : ", performance_issue_same_index);
   summary("performance_sample_count : ", performance_sample_count);
+  summary("accuracy_sample_count : ", accuracy_sample_count);
   if (sample_concatenate_permutation) {
     summary(
         "WARNING: sample_concatenate_permutation was set to true. \n"
@@ -779,6 +793,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
+  lookupkv(model, scenario, "accuracy_sample_count_override",
+           &accuracy_sample_count_override, nullptr);
   lookupkv(model, "SingleStream", "target_latency", nullptr,
            &single_stream_expected_latency_ns, 1000 * 1000);
   lookupkv(model, "MultiStream", "target_latency", nullptr,

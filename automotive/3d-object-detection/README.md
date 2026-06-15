@@ -18,7 +18,7 @@ You can also do `pip install mlc-scripts` and then use `mlcr` commands for downl
 > By default, the waymo dataset is downloaded from the mlcommons official drive. One has to accept the [MLCommons Waymo Open Dataset EULA](https://waymo.mlcommons.org/) to access the dataset files.
 
 ```
-mlcr get,ml-model,pointpainting --outdirname=<path_to_download> -j
+mlcr get,ml-model,pointpainting,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Download dataset through MLCFlow Automation
@@ -26,8 +26,15 @@ mlcr get,ml-model,pointpainting --outdirname=<path_to_download> -j
 > [!Note]
 > By default, the waymo dataset is downloaded from the mlcommons official drive. One has to accept the [MLCommons Waymo Open Dataset EULA](https://waymo.mlcommons.org/) to access the dataset files.
 
+**Includes validation and calibration dataset**
 ```
-mlcr get,dataset,waymo --outdirname=<path_to_download> -j
+mlcr get,dataset,waymo,_r2-downloader,_mlc --outdirname=<path_to_download> -j
+```
+
+**Includes only calibration dataset**
+
+```
+mlcr get,dataset,waymo,calibration,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ## Downloading the dataset and model checkpoints

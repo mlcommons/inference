@@ -36,7 +36,7 @@ Get the Official MLPerf GPT-J Model
 
     ### Pytorch
     ```
-    mlcr get,ml-model,gptj,_pytorch -j
+    mlcr get,ml-model,gptj,_fp32,_pytorch,_r2-downloader -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_GPTJ_MODEL>` could be provided to download the model to a specific location.

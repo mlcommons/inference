@@ -6,7 +6,7 @@
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
-        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
+        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/TEST06/)
 
 
 ## Automated command to run the benchmark via MLCFlow
@@ -25,7 +25,7 @@ conda activate Mixtral-8x7B
 
 # Install packages
 conda install pybind11==2.10.4 -c conda-forge -y
-python -m pip install torch==2.2.0.dev20231006+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+python -m pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 pip install transformers==4.31.0 nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0
 pip install git+https://github.com/amazon-science/mxeval.git@e09974f990eeaf0c0e8f2b5eaff4be66effb2c86
 
@@ -73,26 +73,19 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,mixtral --outdirname=<path_to_download> -j
+mlcr get,ml-model,mixtral,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Get Checkpoint
 
-#### Using Rclone
+#### Using the MLCommons R2 Downloader
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+(More information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org))
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7b-instruct-v0.1 ./mixtral-8x7b-instruct-v0.1 -P
+Navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+
+``` bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-model-checkpoint.uri
 ```
 
 ## Get Dataset
@@ -102,30 +95,23 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7
 **Validation**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_r2-downloader,_validation --outdirname=<path to download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration,_r2-downloader --outdirname=<path to download> -j
 ```
-
-- Adding `_wget` tag to the run command will change the download tool from `rclone` to `wget`.
 
 ### Preprocessed
 
-#### Using Rclone
-We make many of the MLPerf infernce models and datasets available using Rclone. In order to keep compatibility, you can use Rclone to get the preprocessed dataset:
+#### Using the MLCommons R2 Downloader
+We make many of the MLPerf infernce models and datasets available using the MLC R2 Downloader (more information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org)). In order to keep compatibility, you can use the MLC R2 Downloader to get the preprocessed dataset:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
+`cd` into the folder where you want to place the dataset and run:
 ```bash
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, cd into the folder where you want to place the dataset and run:
-```bash
-rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_mintoken2_v1.pkl ./ -a -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-validation-dataset.uri
 ```
 #### Using wget
 
@@ -138,10 +124,11 @@ wget https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_m
 
 ### Calibration dataset
 
-#### Using Rclone
-Rclone is installed, cd into the folder where you want to place the dataset and run:
+#### Using the MLCommons R2 Downloader
+
+`cd` into the folder where you want to place the dataset and run:
 ```bash
-rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_calibration_v4.pkl ./ -a -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-calibration-dataset.uri
 ```
 
 #### Using wget

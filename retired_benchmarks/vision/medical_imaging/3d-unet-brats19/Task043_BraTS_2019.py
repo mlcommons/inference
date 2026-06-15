@@ -29,7 +29,7 @@ try:
     import shutil
     import SimpleITK as sitk
     from nnunet.paths import nnUNet_raw_data
-    from batchgenerators.utilities.file_and_folder_operations import *
+    from batchgenerators.utilities.file_and_folder_operations import join, subdirs, isfile, maybe_mkdir_p, save_json
 except BaseException:
     raise Exception("Error importing local modules")
 

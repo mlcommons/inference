@@ -5,7 +5,7 @@
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
-        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
+        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/TEST06/)
 
 
 ## Automated command to run the benchmark via MLCFlow
@@ -24,7 +24,7 @@ conda activate llama2-70b
 
 # Install packages
 conda install pybind11==2.10.4 -c conda-forge -y
-python -m pip install torch==2.2.0.dev20231006+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+python -m pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 pip install transformers==4.31.0 nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0
 
 export CUR_DIR=${PWD}
@@ -66,13 +66,13 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 ## Get Model
 ### MLCommons Members Download
-MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
+MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a page containing download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
 
 
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<Download path> -j
+mlcr get,ml-model,llama2-70b,_pytorch,_r2-downloader,_70b,_mlc --outdirname=<Download path> -j
 ```
 
 ### External Download (Not recommended for official submission)
@@ -82,7 +82,6 @@ mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<Download path> -j
 export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
 git lfs install
 git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PATH}
-
 ```
 
 ## Get Dataset
@@ -92,13 +91,13 @@ git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PAT
 **Validation**
 
 ```
-mlcr get,dataset,preprocessed,openorca,_validation --outdirname=<path_to_download> -j
+mlcr get,dataset,preprocessed,openorca,_validation,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset,preprocessed,openorca,_calibration --outdirname=<path_to_download> -j
+mlcr get,dataset,preprocessed,openorca,_calibration,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Download Unprocessed dataset through MLCFlow Automation
@@ -117,21 +116,12 @@ mlcr get,dataset,openorca,_calibration --outdirname=<path_to_download> -j
 
 ### Preprocessed
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+You can use the MLCommons R2 Downloader to download the preprocessed dataset from a Cloudflare R2 bucket (more information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org)).
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+Navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/llama-2-70b-open-orca-dataset.uri
 ```
 
 ### Unprocessed

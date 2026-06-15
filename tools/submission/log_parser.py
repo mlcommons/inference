@@ -32,14 +32,27 @@ class MLPerfLog:
         """
         Helper class to parse the detail logs.
         log_path: path to the detail log.
-        strict: whether to ignore lines with :::MLLOG prefix but with invalid JSON format.
+        strict: whether to ignore lines with :::MLLOG or :::ENDPTS
+        prefix but with invalid JSON format.
         """
-        self.marker = ":::MLLOG"
+        self.loadgen_marker = ":::MLLOG"
+        self.endpoints_marker = ":::ENDPTS"
+        self.marker = ""
+        self.log_is_endpoints = False
         self.logger = logging.getLogger("MLPerfLog")
         self.messages = []
         with open(log_path, "r", encoding="utf-8") as f:
-            for line in f:
+            for i, line in enumerate(f):
                 line = line.rstrip()
+                if i == 0:
+                    if line.find(self.loadgen_marker) == 0:
+                        self.marker = self.loadgen_marker
+                    elif line.find(self.endpoints_marker) == 0:
+                        self.marker = self.endpoints_marker
+                        self.log_is_endpoints = True
+                    else:
+                        raise RuntimeError(
+                            "Marker not found in first line: {:}".format(line))
                 if line.find(self.marker) == 0:
                     try:
                         self.messages.append(

@@ -106,6 +106,8 @@ install_evaluation_requirements() {
 	echo "Installing evaluation requirements..."
 	if [ -f "/work/docker/evaluation_requirements.txt" ]; then
 		VIRTUAL_ENV=$VENV_DIR uv pip install -r /work/docker/evaluation_requirements.txt
+		echo "Override datasets==3.0.0 (LiveCodeBench/code-generation-lite is not updated for datasets 3.2.0)..."
+		VIRTUAL_ENV=$VENV_DIR uv pip install --upgrade "datasets==3.0.0"
 		echo "Evaluation requirements installed successfully!"
 	else
 		echo "Warning: evaluation_requirements.txt not found at /work/docker/evaluation_requirements.txt"
@@ -146,11 +148,11 @@ install_mlperf_loadgen() {
 	# Check if force rebuild is requested
 	if [ "$FORCE_REBUILD" = "true" ]; then
 		echo "Force rebuild requested. Removing cached wheels for backend $BACKEND..."
-		rm -f $WHEEL_DIR/mlcommons_loadgen*_${BACKEND}.whl
+		rm -f $WHEEL_DIR/mlcommons_loadgen*_"${BACKEND}".whl
 	fi
 
 	# Check if we already have a built wheel for this backend
-	if ls $WHEEL_DIR/mlcommons_loadgen*_${BACKEND}.whl 1>/dev/null 2>&1; then
+	if ls $WHEEL_DIR/mlcommons_loadgen*_"${BACKEND}".whl 1>/dev/null 2>&1; then
 		echo "Found existing MLPerf LoadGen wheel for backend $BACKEND in $WHEEL_DIR"
 
 		# Get Python version info for compatibility check
@@ -158,7 +160,7 @@ install_mlperf_loadgen() {
 		PLATFORM=$(python3 -c "import platform; print(platform.machine())")
 
 		# Check if the wheel is compatible with current Python version
-		WHEEL_FILE=$(ls $WHEEL_DIR/mlcommons_loadgen*_${BACKEND}.whl | head -n1)
+		WHEEL_FILE=$(ls $WHEEL_DIR/mlcommons_loadgen*_"${BACKEND}".whl | head -n1)
 		WHEEL_NAME=$(basename "$WHEEL_FILE")
 
 		echo "Current Python version tag: $PYTHON_VERSION"
@@ -183,7 +185,7 @@ install_mlperf_loadgen() {
 			return 0
 		else
 			echo "Installation verification failed. Will rebuild..."
-			rm -f $WHEEL_DIR/mlcommons_loadgen*_${BACKEND}.whl
+			rm -f $WHEEL_DIR/mlcommons_loadgen*_"${BACKEND}".whl
 			NEED_BUILD=true
 		fi
 	else

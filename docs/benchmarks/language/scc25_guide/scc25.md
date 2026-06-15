@@ -62,6 +62,8 @@ You will need to submit the following files:
 
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "nvidia", fixed_scenarios=["Offline"], categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
+* If you want to download the official MLPerf model and dataset for Llama2-70b you can follow [this README](../get-llama2-70b-data.md).
+
 ## Submission Commands
 
 ### Generate actual submission tree
@@ -85,20 +87,10 @@ mlcr generate,inference,submission,_wg-inference \
 
 ### Submit Results
 
-> **Note:**
-Further instructions on the final submission will be published as the deadline approaches.
+MLCommons provides students with a [Submission UI](https://submissions-ui.mlcommons.org/index), where they can upload the generated **.tar** file using their assigned submission ID.
 
-<!-- Fork the `mlperf-inference-results-scc25` branch of the repository URL at [mlperf-automations](https://github.com/mlcommons/mlperf-automations). 
+The deadline for submitting results is 6:00 PM CDT on November 17 (Monday), 2025.
 
-Run the following command after **replacing `--repo_url` with your GitHub fork URL**.
+Alternatively, students may use the Submission CLI provided through the MLCFlow automation. To do this, first follow the installation steps in this [guide](../../../install/index.md).
+After installing, follow the instructions under [**Upload the final submission**](https://docs.mlcommons.org/inference/submission/#upload-the-final-submission).
 
-```bash
-mlcr push,github,mlperf,inference,submission \
-   --repo_url=https://github.com/<myfork>/mlperf-automations \
-   --repo_branch=mlperf-inference-results-scc25 \
-   --commit_message="Results on system <HW Name>" \
-   --quiet
-```
-
-Once uploaded give a Pull Request to the origin repository. Github action will be running there and once 
-finished you can see your submitted results at [https://docs.mlcommons.org/mlperf-automations](https://docs.mlcommons.org/mlperf-automations). -->

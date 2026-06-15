@@ -1,0 +1,20 @@
+# Inference Configuration File
+# All generation parameters for T2V inference
+
+height: 720
+width: 1280
+num_frames: 81
+fps: 16
+sample_steps: 20
+seed: 42
+guidance_scale: 4.0
+guidance_scale_2: 3.0
+boundary_ratio: 0.875
+negative_prompt: |
+  vivid colors, overexposed, static, blurry details, subtitles, style,
+  work of art, painting, picture, still, overall grayish, worst quality,
+  low quality, JPEG artifacts, ugly, deformed, extra fingers, poorly drawn hands,
+  poorly drawn face, deformed, disfigured, deformed limbs, fused fingers,
+  static image, cluttered background, three legs, many people in the background,
+  walking backwards
+

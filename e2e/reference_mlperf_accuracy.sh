@@ -51,7 +51,14 @@ export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
 export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
+
+# Judge LLM configuration (for accuracy evaluation)
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
+
 echo "  LLM Service URL: ${LLM_SERVICE_URL}"
+echo "  Judge Service URL: ${JUDGE_SERVICE_URL}"
+echo "  Judge Model: ${JUDGE_MODEL}"
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
@@ -91,6 +98,8 @@ python3 reference_mlperf.py \
     --llm_service_url ${LLM_SERVICE_URL} \
     --llm_model ${LLM_MODEL} \
     --query_model ${QUERY_MODEL} \
+    --judge_service_url ${JUDGE_SERVICE_URL} \
+    --judge_model ${JUDGE_MODEL} \
     --accuracy
 
 echo "Time Stop: $(date +%s)"

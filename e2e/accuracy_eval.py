@@ -127,7 +127,9 @@ def calculate_retrieval_metrics(retrieved_urls: List[str], expected_urls: List[s
     }
 
 
-def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4) -> Dict:
+def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
+                    judge_service_url: str = DEFAULT_JUDGE_URL,
+                    judge_model: str = DEFAULT_JUDGE_MODEL) -> Dict:
     """
     Evaluate loadgen results.
 
@@ -135,6 +137,8 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4) -> 
         results: Dict mapping query_id -> result_dict
         dataset_path: Path to frames_dataset.tsv
         num_workers: Number of parallel judge workers
+        judge_service_url: Judge LLM service URL
+        judge_model: Judge LLM model name
 
     Returns:
         Dict with aggregate metrics
@@ -159,6 +163,7 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4) -> 
                     query_to_gt[query]['expected_urls'].append(url)
 
     print(f"Evaluating {len(results)} queries...")
+    print(f"Using judge: {judge_model} at {judge_service_url}")
 
     # Metrics accumulators
     total_retrieval_precision = 0.0
@@ -188,7 +193,9 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4) -> 
         retrieval_metrics = calculate_retrieval_metrics(retrieved_urls, expected_urls)
 
         # Judge answer correctness
-        judge_result = call_judge(query, ground_truth, llm_answer)
+        judge_result = call_judge(query, ground_truth, llm_answer,
+                                 service_url=judge_service_url,
+                                 model_name=judge_model)
         answer_correct = judge_result.get('correct', False)
 
         return {
@@ -256,6 +263,8 @@ def main():
     parser.add_argument('--dataset_path', required=True, help='Path to frames_dataset.tsv')
     parser.add_argument('--num_workers', type=int, default=4, help='Number of parallel judge workers')
     parser.add_argument('--output', default='accuracy_results.json', help='Output file for detailed results')
+    parser.add_argument('--judge_service_url', default=DEFAULT_JUDGE_URL, help='Judge LLM service URL')
+    parser.add_argument('--judge_model', default=DEFAULT_JUDGE_MODEL, help='Judge LLM model name')
     args = parser.parse_args()
 
     # Load results
@@ -266,7 +275,9 @@ def main():
     print(f"Loaded {len(results)} results")
 
     # Evaluate
-    metrics = evaluate_results(results, args.dataset_path, args.num_workers)
+    metrics = evaluate_results(results, args.dataset_path, args.num_workers,
+                               judge_service_url=args.judge_service_url,
+                               judge_model=args.judge_model)
 
     # Print summary
     print("\n" + "="*80)

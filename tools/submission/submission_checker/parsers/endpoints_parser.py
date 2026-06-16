@@ -108,6 +108,23 @@ class EndpointsParser(BaseParser):
                 entry = {"key": inferred, "value": value}
                 self.messages.setdefault(inferred, []).append(entry)
 
+        # Temporary solution: Hardcoded inferred values
+        if self.__getitem__("generated_query_duration") and self.__getitem__(
+                "generated_query_count"):
+            key = "result_samples_per_second" if self.__getitem__(
+                "effective_scenario").lower() == "offline" else "result_completed_samples_per_sec"
+            value = self.__getitem__(
+                "generated_query_count") / self.__getitem__("generated_query_duration")
+            entry = {"key": key, "value": value}
+            self.messages.setdefault(key, []).append(entry)
+
+        # Extract accuracy scores if possible
+        if "accuracy_scores" in json_data:
+            for dataset_name, result in json_data["accuracy_scores"].items():
+                value = result.get("score", None)
+                entry = {"key": "accuracy_score", "value": value}
+                self.messages.setdefault("accuracy_score", []).append(entry)
+
         self.keys = set(self.messages.keys())
         self.logger.info(
             "Successfully loaded endpoints log from %s.",
@@ -125,13 +142,20 @@ class EndpointsParser(BaseParser):
         return results[0]["value"]
 
     def get(self, key):
-        return self.messages[key]
+        return self[key]
 
     def get_messages(self):
         return self.messages
 
     def get_keys(self):
         return self.keys
+
+    def num_errors(self):
+        return self.get("num_errors")
+
+    def has_error(self):
+        """Check if the log contains any errors."""
+        return self.num_errors() != 0
 
 
 def main():

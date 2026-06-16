@@ -70,6 +70,8 @@ class AccuracyCheck(BaseCheck):
             "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.setup_checks()
 
     def setup_checks(self):
@@ -84,6 +86,8 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.dataset_check)
         self.checks.append(self.extra_files_check)
         self.apply_checks = set(self.checks)
+        if self.is_endpoints:
+            self.apply_checks.remove(self.accuracy_json_check)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.
@@ -97,6 +101,13 @@ class AccuracyCheck(BaseCheck):
             bool: True if accuracy checks passed (or division is 'open'),
                 False otherwise.
         """
+
+        if self.is_endpoints:
+            if self.mlperf_log["accuracy_score"] is not None:
+                self.submission_logs.loader_data["accuracy_metrics"] = self.mlperf_log["accuracy_score"]
+                return True
+            self.log.error("%s accuracy score not found", self.path)
+            return False
 
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
             self.model

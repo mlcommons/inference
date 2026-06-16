@@ -42,6 +42,8 @@ class SystemCheck(BaseCheck):
         self.system_json = self.submission_logs.system_json
         self.submitter = self.submission_logs.loader_data.get("submitter", "")
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.config = config
         self.setup_checks()
 

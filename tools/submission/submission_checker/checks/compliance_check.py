@@ -50,6 +50,8 @@ class ComplianceCheck(BaseCheck):
         self.model = self.config.get_mlperf_model(
             self.model, self.model_mapping)
         self.test_list = self.get_test_list(self.model)
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.setup_checks()
 
     def setup_checks(self):
@@ -63,6 +65,9 @@ class ComplianceCheck(BaseCheck):
         self.checks.append(self.accuracy_check)
         self.checks.append(self.compliance_performance_check)
         self.apply_checks = set(self.checks)
+        # No compliance tests for endpoints for now
+        if self.is_endpoints:
+            self.apply_checks = set()
 
     def get_test_list(self, model):
         """Return the list of compliance tests applicable to `model`.

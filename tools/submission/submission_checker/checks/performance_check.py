@@ -396,8 +396,9 @@ class PerformanceCheck(BaseCheck):
             # (must include "Network SUT" in name)
             if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
                 self.log.error(
-                    f"{self.path} invalid sut name for network mode. expecting the substring '{
-                        NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
+                    f"{self.path} invalid sut name for network mode." +
+                    f"expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}'" +
+                    f" got '{sut_name}'"
                 )
                 return False
 
@@ -468,7 +469,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                    ) not in list_inferred:
+                ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -563,12 +564,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (scenario_fixed in ["Offline"]
-            ) and scenario in ["MultiStream"]:
+                ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (scenario_fixed in ["MultiStream"]
-            ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -585,6 +586,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (scenario_fixed in ["Interactive"]
-            ) and scenario not in ["Server"]:
+                ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

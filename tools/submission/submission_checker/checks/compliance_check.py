@@ -328,8 +328,9 @@ class ComplianceCheck(BaseCheck):
                     first_token_pass and eos_pass and length_check_pass)
                 if not is_valid:
                     self.log.error(
-                        f"TEST06 accuracy check failed. first_token_check: {
-                            first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}."
+                        f"TEST06 accuracy check failed. first_token_check:" +
+                        f"{first_token_pass} eos_check: " +
+                        f"{eos_pass} length_check: {length_check_pass}."
                     )
             elif test == "TEST07":
                 # TEST07: Verify accuracy in performance mode

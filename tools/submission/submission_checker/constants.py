@@ -1816,7 +1816,7 @@ ENDPOINTS_MAPPINGS = {
     "generated_query_duration": "generated_query_duration",
     "target_qps (results_summary.json)": "effective_target_qps",
     "result_scheduled_samples_per_sec": "result_scheduled_samples_per_sec",
-    "qps ": "result_completed_samples_per_sec",
+    "qps": "result_completed_samples_per_sec",
     "effective_target_latency_ns": "effective_target_latency_ns",
     "effective_target_latency_percentile": "effective_target_latency_percentile",
     "latency.min ": "result_min_latency_ns",
@@ -1845,7 +1845,7 @@ ENDPOINTS_MAPPINGS = {
     "tpot.avg": "result_time_to_output_token_mean",
     "tps": "result_completed_tokens_per_second",
     "result.total": "result_query_count",
-    "result.failed": "num_errors"
+    "result.failed": "num_errors",
 }
 
 

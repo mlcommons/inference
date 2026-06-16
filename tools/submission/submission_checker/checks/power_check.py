@@ -68,6 +68,8 @@ class PowerCheck(BaseCheck):
         self.checks.append(self.required_files_check)
         self.checks.append(self.external_power_check)
         self.checks.append(self.get_power_metric_check)
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.apply_checks = set(self.checks)
 
     def required_files_check(self):
@@ -227,7 +229,7 @@ class PowerCheck(BaseCheck):
                     samples_per_query = 8
 
                 if (self.scenario_fixed.lower() in ["multistream"]
-                    ) and scenario.lower() in ["singlestream"]:
+                        ) and scenario.lower() in ["singlestream"]:
                     power_metric = (
                         avg_power * power_duration * samples_per_query * 1000 / num_queries
                     )

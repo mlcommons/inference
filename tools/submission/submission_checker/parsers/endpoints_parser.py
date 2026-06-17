@@ -108,15 +108,17 @@ class EndpointsParser(BaseParser):
                 entry = {"key": inferred, "value": value}
                 self.messages.setdefault(inferred, []).append(entry)
 
-        # Temporary solution: Hardcoded inferred values
+        # Infer QPS from sample count / duration when not directly available.
+        # generated_query_duration is in nanoseconds; divide by 1e9 for seconds.
         if self.__getitem__("generated_query_duration") and self.__getitem__(
                 "generated_query_count"):
             key = "result_samples_per_second" if self.__getitem__(
                 "effective_scenario").lower() == "offline" else "result_completed_samples_per_sec"
-            value = self.__getitem__(
-                "generated_query_count") / self.__getitem__("generated_query_duration")
-            entry = {"key": key, "value": value}
-            self.messages.setdefault(key, []).append(entry)
+            duration_s = self.__getitem__("generated_query_duration") / 1e9
+            value = self.__getitem__("generated_query_count") / duration_s
+            if key not in self.messages:
+                entry = {"key": key, "value": value}
+                self.messages[key] = [entry]
 
         # Extract accuracy scores if possible
         if "accuracy_scores" in json_data:

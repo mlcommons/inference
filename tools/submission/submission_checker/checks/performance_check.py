@@ -415,6 +415,25 @@ class PerformanceCheck(BaseCheck):
                 False otherwise.
         """
         if self.model in self.config.get_llm_models():
+            if self.is_endpoints:
+                # Endpoints don't use the loadgen use_token_latencies flag;
+                # check TTFT/TPOT directly from the endpoints result JSON.
+                if self.scenario not in ["Server", "Interactive"]:
+                    return True
+                limits = LLM_LATENCY_LIMITS[self.model][self.scenario]
+                ttft = self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+                tpot = self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+                if ttft is None or tpot is None:
+                    self.log.warning(
+                        "%s TTFT or TPOT percentile data missing for endpoints LLM check",
+                        self.path)
+                    return True
+                if ttft < limits["ttft"] and tpot < limits["tpot"]:
+                    return True
+                self.log.error(
+                    'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+                    ttft, tpot, limits["ttft"], limits["tpot"])
+                return False
             if self.mlperf_log["requested_use_token_latencies"]:
                 if self.scenario not in ["Server", "Interactive"]:
                     # For offline, singlestream and multistream no further checks are
@@ -504,7 +523,8 @@ class PerformanceCheck(BaseCheck):
 
         res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
         if (
-            version in RESULT_FIELD_BENCHMARK_OVERWRITE
+            not self.is_endpoints
+            and version in RESULT_FIELD_BENCHMARK_OVERWRITE
             and self.model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
             and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][self.model]
         ):

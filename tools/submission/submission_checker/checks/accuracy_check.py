@@ -1,5 +1,5 @@
 from .base import BaseCheck
-from ..constants import *
+from ..constants import MAX_ACCURACY_LOG_SIZE
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 from ..utils import check_extra_files

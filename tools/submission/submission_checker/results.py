@@ -1,9 +1,8 @@
-
 from .loader import SubmissionLogs
 from .configuration.configuration import Config
 import os
 import csv
-from .constants import *
+from .constants import UNIT_DICT, POWER_UNIT_DICT, SPECIAL_UNIT_DICT
 import json
 
 

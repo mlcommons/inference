@@ -1,9 +1,9 @@
 from .base import BaseCheck
-from ..constants import *
+from ..constants import REQUIRED_PERF_FILES, REQUIRED_PERF_POWER_FILES, REQUIRED_POWER_FILES, OPTIONAL_PERF_FILES
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 from .power.power_checker import check as check_power_more
-from ..utils import *
+from ..utils import files_diff, list_files
 import os
 import sys
 import datetime

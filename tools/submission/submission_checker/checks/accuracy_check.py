@@ -1,3 +1,5 @@
+""" Module for performing accuracy-related checks on MLPerf submission artifacts. """
+
 from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs

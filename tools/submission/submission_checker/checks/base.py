@@ -1,3 +1,4 @@
+""" Define a base Checker class for MLPerf submission checks. """
 from abc import ABC, abstractmethod
 
 
@@ -8,6 +9,12 @@ class BaseCheck(ABC):
     """
 
     def __init__(self, log, path):
+        """Initialize checker
+
+        Args:
+            log (Logger): A logger instance for logging check results and errors.
+            path (str): A path to the submission artifact being checked.
+        """
         self.checks = []
         self.log = log
         self.path = path

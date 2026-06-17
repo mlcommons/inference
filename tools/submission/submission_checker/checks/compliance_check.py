@@ -1,4 +1,4 @@
-
+""" Module for performing compliance checks on MLPerf submission artifacts. """
 from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs

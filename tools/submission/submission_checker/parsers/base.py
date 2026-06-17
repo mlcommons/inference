@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseParser:
+    """Base class for parsing the detailed logs."""
     def __init__(self, log_path):
         """
         Helper class to parse the detail logs.

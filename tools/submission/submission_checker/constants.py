@@ -1635,18 +1635,11 @@ PERFORMANCE_SUMMARY_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
 }
 
-PERFORMANCE_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-}
-
-PERFORMANCE_CONFIG_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
+PERFORMANCE_ENDPOINTS_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
 }
 
 ACCURACY_LOG_PATH = {
@@ -1670,19 +1663,13 @@ ACCURACY_JSON_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
 
-ACCURACY_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
+ACCURACY_ENDPOINTS_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
 }
 
-ACCURACY_CONFIG_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-}
 
 POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
@@ -1809,12 +1796,11 @@ ENDPOINTS_MAPPINGS = {
     "min_sample_count": "effective_min_query_count",
     "effective_sample_index_rng_seed": "effective_sample_index_rng_seed",
     "effective_schedule_rng_seed": "effective_schedule_rng_seed",
-    "min_sample_count (runtime_settings.json)": "effective_min_sample_count",
     "effective_sample_concatenate_permutation": "effective_sample_concatenate_permutation",
     "effective_samples_per_query": "effective_samples_per_query",
     "generated_query_count": "generated_query_count",
     "generated_query_duration": "generated_query_duration",
-    "target_qps (results_summary.json)": "effective_target_qps",
+    "target_qps": "effective_target_qps",
     "result_scheduled_samples_per_sec": "result_scheduled_samples_per_sec",
     "qps": "result_completed_samples_per_sec",
     "effective_target_latency_ns": "effective_target_latency_ns",
@@ -1840,9 +1826,9 @@ ENDPOINTS_MAPPINGS = {
     "tpot.percentiles.95.0": "result_time_per_output_token_95.00_percentile_ns",
     "tpot.percentiles.99.0": "result_time_per_output_token_99.00_percentile_ns",
     "tpot.percentiles.99.9": "result_time_per_output_token_99.90_percentile_ns",
-    "tpot.min": "result_time_to_output_token_min",
-    "tpot.max": "result_time_to_output_token_max",
-    "tpot.avg": "result_time_to_output_token_mean",
+    "tpot.min": "result_time_per_output_token_min",
+    "tpot.max": "result_time_per_output_token_max",
+    "tpot.avg": "result_time_per_output_token_mean",
     "tps": "result_completed_tokens_per_second",
     "result.total": "result_query_count",
     "result.failed": "num_errors",
@@ -1860,8 +1846,7 @@ ENDPOINTS_YAML_FIELD_MAP = {
     "max_duration_ms": "settings.runtime.max_duration_ms",
     "effective_sample_index_rng_seed": "settings.runtime.dataloader_random_seed",
     "effective_schedule_rng_seed": "settings.runtime.scheduler_random_seed",
-    "target_qps (results_summary.json)": "settings.load_pattern.target_qps",
-    "min_sample_count (runtime_settings.json)": "settings.runtime.n_samples_to_issue",
+    "target_qps": "settings.load_pattern.target_qps",
     "min_sample_count": "settings.runtime.n_samples_to_issue",
 }
 

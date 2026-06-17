@@ -81,7 +81,6 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.get_performance_metric_check)
         self.apply_checks = set(self.checks)
         if self.is_endpoints:
-            self.apply_checks.remove(self.seeds_check)
             self.apply_checks.remove(self.performance_sample_count_check)
             self.apply_checks.remove(self.min_query_count_check)
 
@@ -210,14 +209,16 @@ class PerformanceCheck(BaseCheck):
         sample_index_rng_seed = self.mlperf_log["effective_sample_index_rng_seed"]
         schedule_rng_seed = self.mlperf_log["effective_schedule_rng_seed"]
         is_valid = True
-        if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
-            self.log.error(
-                "%s qsl_rng_seed is wrong, expected=%s, found=%s",
-                self.path,
-                config_seeds["qsl_rng_seed"],
-                qsl_rng_seed,
-            )
-            is_valid = False
+        if not self.is_endpoints:
+            # This seed does not exists for endpoints runs
+            if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
+                self.log.error(
+                    "%s qsl_rng_seed is wrong, expected=%s, found=%s",
+                    self.path,
+                    config_seeds["qsl_rng_seed"],
+                    qsl_rng_seed,
+                )
+                is_valid = False
         if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
             self.log.error(
                 "%s sample_index_rng_seed is wrong, expected=%s, found=%s",

@@ -5,7 +5,12 @@ import sys
 import yaml
 
 from .base import BaseParser
-from ..constants import ENDPOINTS_YAML_FIELD_MAP, ENDPOINTS_JSON_ALT_PATHS, ENDPOINTS_MAPPINGS, ENDPOINTS_INFERRED_FIELDS
+from ..constants import (
+    ENDPOINTS_YAML_FIELD_MAP,
+    ENDPOINTS_JSON_ALT_PATHS,
+    ENDPOINTS_MAPPINGS,
+    ENDPOINTS_INFERRED_FIELDS,
+)
 
 _FIELDS_MAP_DIR = os.path.join(
     os.path.dirname(__file__),
@@ -18,6 +23,10 @@ _SAMPLE_LOGS_DIR = os.path.join(
     "helper",
     "sample_logs")
 
+_RESULT_SUMMARY_FILE = "result_summary.json"
+_RESULTS_FILE = "results.json"
+_CONFIG_FILES = ("config.yaml", "config.yml")
+
 
 def _load_field_map(filename):
     with open(os.path.join(_FIELDS_MAP_DIR, filename), "r", encoding="utf-8") as f:
@@ -29,6 +38,9 @@ def _get_nested(data, dotted_key):
 
     Uses a greedy left-to-right match so dotted numeric keys like '99.9' are
     handled correctly: the longest matching key at each level wins.
+
+    Also handles float-formatted integer keys: '50.0' resolves to key '50'
+    (common in the ENDPOINTS_MAPPINGS percentile entries).
     """
     if not isinstance(data, dict):
         return None
@@ -37,6 +49,10 @@ def _get_nested(data, dotted_key):
     i = 0
     while i < len(parts):
         if not isinstance(current, dict):
+            # Trailing '.0' on a float-formatted integer key: treat as
+            # consumed.
+            if parts[i:] == ["0"] and not isinstance(current, (dict, list)):
+                return current
             return None
         found = False
         for j in range(len(parts), i, -1):
@@ -53,85 +69,112 @@ def _get_nested(data, dotted_key):
     return current
 
 
+def _resolve_value(stripped, summary_data, results_data, yaml_data):
+    """Look up a field in three data sources in priority order.
+
+    Priority: result_summary.json > results.json > config.yaml
+    Within each JSON source, a direct dot-notation path is tried first,
+    then the alternative paths from ENDPOINTS_JSON_ALT_PATHS.
+    For the YAML source, the explicit path overrides in ENDPOINTS_YAML_FIELD_MAP
+    are tried first, then a direct dot-notation path.
+    """
+    for data in (summary_data, results_data):
+        value = _get_nested(data, stripped)
+        if value is None and stripped in ENDPOINTS_JSON_ALT_PATHS:
+            value = _get_nested(data, ENDPOINTS_JSON_ALT_PATHS[stripped])
+        if value is not None:
+            return value
+
+    # YAML: explicit path map first, then direct
+    if stripped in ENDPOINTS_YAML_FIELD_MAP:
+        value = _get_nested(yaml_data, ENDPOINTS_YAML_FIELD_MAP[stripped])
+        if value is not None:
+            return value
+    return _get_nested(yaml_data, stripped)
+
+
 class EndpointsParser(BaseParser):
-    def __init__(self, log_paths):
+    def __init__(self, run_dir):
         """
-        log_paths: [json_path, yaml_path]
-          json_path - path to the JSON results file (result_summary.json or results.json)
-          yaml_path - path to the YAML config file (config.yaml)
+        run_dir: path to the run directory containing:
+          - result_summary.json  (highest priority)
+          - results.json
+          - config.yaml / config.yml  (lowest priority)
         """
-        json_path, yaml_path = log_paths
-        super().__init__(json_path)
+        super().__init__(run_dir)
 
         self.logger = logging.getLogger("MLPerfLog")
         self.messages = {}
 
-        with open(json_path, "r", encoding="utf-8") as f:
-            json_data = json.load(f)
+        summary_data = self._load_json(
+            os.path.join(run_dir, _RESULT_SUMMARY_FILE))
+        results_data = self._load_json(os.path.join(run_dir, _RESULTS_FILE))
+        yaml_data = self._load_yaml(run_dir)
 
-        with open(yaml_path, "r", encoding="utf-8") as f:
-            yaml_data = yaml.safe_load(f)
-
-        forwards_map = ENDPOINTS_MAPPINGS
-
-        for endpoints_key, loadgen_key in forwards_map.items():
+        for endpoints_key, loadgen_key in ENDPOINTS_MAPPINGS.items():
             stripped = endpoints_key.strip()
-            value = None
-
-            # 1. Direct dot-notation path in the JSON result file
-            value = _get_nested(json_data, stripped)
-
-            # 2. Alternative JSON paths for known structural mismatches
-            if value is None and stripped in ENDPOINTS_JSON_ALT_PATHS:
-                value = _get_nested(
-                    json_data, ENDPOINTS_JSON_ALT_PATHS[stripped])
-
-            # 3. Explicit YAML field path overrides
-            if value is None and stripped in ENDPOINTS_YAML_FIELD_MAP:
-                value = _get_nested(
-                    yaml_data, ENDPOINTS_YAML_FIELD_MAP[stripped])
-
-            # 4. Fallback: direct dot-notation path in the YAML config
-            if value is None:
-                value = _get_nested(yaml_data, stripped)
-
+            value = _resolve_value(
+                stripped, summary_data, results_data, yaml_data)
             if value is not None:
-                entry = {"key": loadgen_key, "value": value}
-                self.messages.setdefault(loadgen_key, []).append(entry)
+                self.messages.setdefault(loadgen_key, []).append(
+                    {"key": loadgen_key, "value": value}
+                )
 
         self.keys = set(self.messages.keys())
-        # Additional values that can be inferred from other values
-        inferred_map = ENDPOINTS_INFERRED_FIELDS
-        for inferred, key in inferred_map.items():
-            value = self.__getitem__(key)
+
+        # Inferred fields: copy the value of one loadgen key to another
+        for inferred_key, source_key in ENDPOINTS_INFERRED_FIELDS.items():
+            value = self[source_key]
             if value is not None:
-                entry = {"key": inferred, "value": value}
-                self.messages.setdefault(inferred, []).append(entry)
+                self.messages.setdefault(inferred_key, []).append(
+                    {"key": inferred_key, "value": value}
+                )
 
-        # Infer QPS from sample count / duration when not directly available.
-        # generated_query_duration is in nanoseconds; divide by 1e9 for
-        # seconds.
-        if self.__getitem__("generated_query_duration") and self.__getitem__(
-                "generated_query_count"):
-            key = "result_samples_per_second" if self.__getitem__(
-                "effective_scenario").lower() == "offline" else "result_completed_samples_per_sec"
-            duration_s = self.__getitem__("generated_query_duration") / 1e9
-            value = self.__getitem__("generated_query_count") / duration_s
-            if key not in self.messages:
-                entry = {"key": key, "value": value}
-                self.messages[key] = [entry]
+        # Infer QPS from count / duration when not directly available
+        duration_ns = self["generated_query_duration"]
+        count = self["generated_query_count"]
+        scenario = self["effective_scenario"]
+        if duration_ns and count and scenario:
+            qps_key = (
+                "result_samples_per_second"
+                if scenario.lower() == "offline"
+                else "result_completed_samples_per_sec"
+            )
+            if qps_key not in self.messages:
+                qps = count / (duration_ns / 1e9)
+                self.messages[qps_key] = [{"key": qps_key, "value": qps}]
 
-        # Extract accuracy scores if possible
-        if "accuracy_scores" in json_data:
-            for dataset_name, result in json_data["accuracy_scores"].items():
-                value = result.get("score", None)
-                entry = {"key": "accuracy_score", "value": value}
-                self.messages.setdefault("accuracy_score", []).append(entry)
+        # Expose accuracy scores stored in results.json
+        for result in results_data.get("accuracy_scores", {}).values():
+            score = result.get("score")
+            if score is not None:
+                self.messages.setdefault("accuracy_score", []).append(
+                    {"key": "accuracy_score", "value": score}
+                )
 
         self.keys = set(self.messages.keys())
-        self.logger.info(
-            "Successfully loaded endpoints log from %s.",
-            json_path)
+        self.logger.info("Successfully loaded endpoints log from %s.", run_dir)
+
+    def _load_json(self, path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except BaseException:
+            self.logger.error("Could not load json file from %s", path)
+            return {}
+        return {}
+
+    def _load_yaml(self, run_dir):
+        for name in _CONFIG_FILES:
+            path = os.path.join(run_dir, name)
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        return yaml.safe_load(f) or {}
+                except BaseException:
+                    pass
+        self.logger.error("Yaml file not found in directory %s", run_dir)
+        return {}
 
     def __getitem__(self, key):
         if key not in self.keys:
@@ -154,10 +197,9 @@ class EndpointsParser(BaseParser):
         return self.keys
 
     def num_errors(self):
-        return self.get("num_errors")
+        return self["num_errors"]
 
     def has_error(self):
-        """Check if the log contains any errors."""
         return self.num_errors() != 0
 
 
@@ -170,37 +212,30 @@ def main():
 
     backwards_map = _load_field_map("backwards.json")
 
-    # Collect all (json_file, yaml_file) pairs from leaf subdirectories
-    pairs = []
+    # Collect all run directories (those containing at least one JSON and one
+    # YAML)
+    run_dirs = []
     for root, _dirs, files in os.walk(_SAMPLE_LOGS_DIR):
-        json_files = sorted(f for f in files if f.endswith(".json"))
-        yaml_files = sorted(f for f in files if f.endswith(
-            ".yaml") or f.endswith(".yml"))
-        if json_files and yaml_files:
-            pairs.append(
-                (
-                    os.path.join(root, json_files[0]),
-                    os.path.join(root, yaml_files[0]),
-                )
-            )
+        has_json = any(f.endswith(".json") for f in files)
+        has_yaml = any(f.endswith(".yaml") or f.endswith(".yml")
+                       for f in files)
+        if has_json and has_yaml:
+            run_dirs.append(root)
 
-    if not pairs:
-        logger.error("No JSON+YAML pairs found under %s.", _SAMPLE_LOGS_DIR)
+    if not run_dirs:
+        logger.error("No run directories found under %s.", _SAMPLE_LOGS_DIR)
         return 1
 
-    for json_path, yaml_path in sorted(pairs):
-        folder = os.path.relpath(os.path.dirname(json_path), _SAMPLE_LOGS_DIR)
+    for run_dir in sorted(run_dirs):
+        folder = os.path.relpath(run_dir, _SAMPLE_LOGS_DIR)
         print(f"\n{'=' * 70}")
-        print(f"Folder : {folder}")
-        print(f"JSON   : {os.path.basename(json_path)}")
-        print(f"YAML   : {os.path.basename(yaml_path)}")
+        print(f"Directory: {folder}")
         print(f"{'=' * 70}")
 
-        parser = EndpointsParser([json_path, yaml_path])
+        parser = EndpointsParser(run_dir)
 
         found = []
         not_found = []
-
         for loadgen_key, endpoints_key in backwards_map.items():
             value = parser[loadgen_key]
             if value is not None:

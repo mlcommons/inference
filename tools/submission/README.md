@@ -32,7 +32,7 @@ The input submission directory is modified with empty directories removed and lo
 ## `submission_checker/main.py` (Mandatory)
 ### Inputs
 **input**: Path to the directory containing one or several submissions.<br>
-**version**: Checker version. E.g v1.1, v2.0, v2.1, v3.0, v3.1. <br>
+**version**: Checker version. E.g v5.0, v5.1, v6.0, v6.1. <br>
 **submitter**: Filter submitters and only run the checks for some specific submitter. <br>
 **csv**: Output path where the csv with the results will be stored. E.g `results/summary.csv`. <br>
 **skip_compliance**: Flag to skip compliance checks. <br>
@@ -71,25 +71,34 @@ python3 -m inference.tools.submission.submission_checker.main
     [--skip-calibration-check]
 ```
 
-### implemented checks
-**performance:**
+### Implemented checks
+**performance (loadgen):**
 - Check performance detailed log exists
 - Check for loadgen errors
 - Check for equal issue mode when it is required
 - Check the performance sample count used for running the benchmark
 - Check loadgen seeds are correct
-- Check latency constrain is met
-- Check minimun query count is met
-- Check minimun duration is met
+- Check latency constraint is met
+- Check minimum query count is met
+- Check minimum duration is met
 - Check network requirements
-- Check LLM latencies are met (if applies)
+- Check LLM TTFT/TPOT latencies are met via `use_token_latencies` flag (if applies)
 - Check loadgen scenario matches with submission scenario or that result can be inferred
+
+**performance (endpoints):**
+- Check result_summary.json and config.yaml exist
+- Check latency p99 constraint is met (from `latency.percentiles.99.0` in result_summary.json)
+- Check minimum duration is met (from `settings.runtime.min_duration_ms` in config.yaml)
+- Check LLM TTFT/TPOT p99 limits directly from result_summary.json for Server/Interactive scenarios
+- Extract primary metric as QPS (inferred from `n_samples_issued / duration_s` if not in results)
+- Skips: sample count check, seed check, min query count check (not applicable to endpoints)
 
 **accuracy**
 - Check the accuracy metric is correct and over the expected threshold (or within a range if applies)
-- Check accuracy json exists and is truncated
+- Check accuracy json exists and is truncated (loadgen only)
 - Check for loadgen error
 - Check full dataset is used for the accuracy run
+- Check `accuracy_scores` field is present and non-null (endpoints only)
 
 **compliance**
 - Check compliance directory exists
@@ -112,10 +121,9 @@ python3 -m inference.tools.submission.submission_checker.main
 - Check availability is valid
 - Check system type is valid
 - Check network fields
-- Check required fields are include in system json file
+- Check required fields are included in system json file
 - Check submitter is correct
 - Check division is correct
-
 
 ### Outputs
 - CSV file containing all the valid results in the directory.

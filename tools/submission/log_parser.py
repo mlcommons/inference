@@ -14,18 +14,12 @@
 
 import argparse
 import json
-import logging
+from loguru import logger
 import os
 import re
 import sys
 
 # pylint: disable=missing-docstring
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s",
-)
-
 
 class MLPerfLog:
     def __init__(self, log_path, strict=True):
@@ -39,7 +33,7 @@ class MLPerfLog:
         self.endpoints_marker = ":::ENDPTS"
         self.marker = ""
         self.log_is_endpoints = False
-        self.logger = logging.getLogger("MLPerfLog")
+        self.logger = logger
         self.messages = []
         with open(log_path, "r", encoding="utf-8") as f:
             for i, line in enumerate(f):

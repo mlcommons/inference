@@ -122,10 +122,10 @@ class AccuracyCheck(BaseCheck):
                 elif acc is not None:
                     all_accuracy_valid = False
                     self.log.warning(
-                        "%s accuracy not met: expected=%f, found=%s",
-                        self.path,
-                        acc_target,
-                        acc,
+                        "{path} accuracy not met: expected={acc_target}, found={acc}",
+                        path=self.path,
+                        acc_target=acc_target,
+                        acc=acc,
                     )
                 if acc:
                     result_acc[acc_type] = acc
@@ -147,10 +147,10 @@ class AccuracyCheck(BaseCheck):
                     ):
                         acc_limit_check = False
                         self.log.warning(
-                            "%s accuracy not met: upper limit=%f, found=%s",
-                            self.path,
-                            acc_limit,
-                            acc,
+                            "{path} accuracy not met: upper limit={acc_limit}, found={acc}",
+                            path=self.path,
+                            acc_limit=acc_limit,
+                            acc=acc,
                         )
                     acc = None
             if all(acc_seen) and hash_val:
@@ -159,7 +159,9 @@ class AccuracyCheck(BaseCheck):
         if acc_upper_limit is not None:
             is_valid &= acc_limit_check
         if not hash_val:
-            self.log.error("%s not hash value for accuracy.txt", self.path)
+            self.log.error(
+                "{path} not hash value for accuracy.txt",
+                path=self.path)
             is_valid = False
         self.submission_logs.loader_data["accuracy_metrics"] = result_acc
         if self.division.lower() == "open":
@@ -174,11 +176,15 @@ class AccuracyCheck(BaseCheck):
                 exceed `MAX_ACCURACY_LOG_SIZE`, False otherwise.
         """
         if not os.path.exists(self.accuracy_json):
-            self.log.error("%s is missing", self.accuracy_json)
+            self.log.error(
+                "{accuracy_json} is missing",
+                accuracy_json=self.accuracy_json)
             return False
         else:
             if os.stat(self.accuracy_json).st_size > MAX_ACCURACY_LOG_SIZE:
-                self.log.error("%s is not truncated", self.accuracy_json)
+                self.log.error(
+                    "{accuracy_json} is not truncated",
+                    accuracy_json=self.accuracy_json)
                 return False
         return True
 
@@ -198,13 +204,13 @@ class AccuracyCheck(BaseCheck):
                 for error in self.mlperf_log.get_errors():
                     if "Loadgen built with uncommitted changes!" not in error["value"]:
                         has_other_errors = True
-            self.log.error("%s contains errors:", self.path)
+            self.log.error("{path} contains errors:", path=self.path)
             for error in self.mlperf_log.get_errors():
-                self.log.error("%s", error["value"])
+                self.log.error("{error_value}", error_value=error["value"])
 
             if not self.config.ignore_uncommited or has_other_errors:
                 self.log.error(
-                    "%s has loadgen errors, number of errors: %s", self.path, self.mlperf_log.num_errors()
+                    "{path} has loadgen errors, number of errors: {num_errors}", path=self.path, num_errors=self.mlperf_log.num_errors()
                 )
                 return False
         return True
@@ -223,7 +229,7 @@ class AccuracyCheck(BaseCheck):
         """
         if self.config.skip_dataset_size_check:
             self.log.info(
-                "%s Skipping dataset size check", self.path
+                "{path} Skipping dataset size check", path=self.path
             )
             return True
         expected_qsl_total_count = self.config.get_accuracy_sample_count(
@@ -235,7 +241,7 @@ class AccuracyCheck(BaseCheck):
 
         if qsl_total_count != expected_qsl_total_count:
             self.log.error(
-                "%s accurcy run does not cover all dataset, accuracy samples: %s, dataset size: %s", self.path, qsl_total_count, expected_qsl_total_count
+                "{path} accuracy run does not cover all dataset, accuracy samples: {qsl_total_count}, dataset size: {expected_qsl_total_count}", path=self.path, qsl_total_count=qsl_total_count, expected_qsl_total_count=expected_qsl_total_count
             )
             return False
         return True

@@ -3,17 +3,13 @@ Tool to infer scenario results and cleanup submission tree
 """
 
 import argparse
-import logging
+from loguru import logger as log
 import os
 import sys
 import shutil
 import json
 
 import submission_checker_old as checker
-
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("main")
 
 
 HELP_TEXT = """
@@ -92,7 +88,7 @@ def delete_empty_dirs(src):
         return False
     if all([delete_empty_dirs(os.path.join(src, file))
            for file in os.listdir(src)]):
-        log.info("Removing empty dir: (%s)", src)
+        log.info("Removing empty dir: {src}", src=src)
         os.rmdir(src)
         return True
 
@@ -388,15 +384,14 @@ def infer_scenario_results(args, config):
             for directory in ["results"]:
                 log_path = os.path.join(division, submitter, directory)
                 if not os.path.exists(log_path):
-                    log.error("no submission in %s", log_path)
+                    log.error("no submission in {log_path}", log_path=log_path)
                     continue
 
                 for system_desc in list_dir(log_path):
                     system_id_json = os.path.join(division, submitter, "systems",
                                                   system_desc + ".json")
                     if not os.path.exists(system_id_json):
-                        log.error("no system_desc for %s/%s/%s", division, submitter,
-                                  system_desc)
+                        log.error("no system_desc for {division}/{submitter}/{system_desc}", division=division, submitter=submitter, system_desc=system_desc)
                         continue
 
                     with open(system_id_json) as system_info:
@@ -405,9 +400,9 @@ def infer_scenario_results(args, config):
                     valid_system_types = ["datacenter", "edge",
                                           "datacenter,edge", "edge,datacenter"]
                     if system_type not in valid_system_types:
-                        log.error("Division %s, submitter %s, "
-                                  "system %s has invalid system type (%s)",
-                                  division, submitter, system_id_json, system_type)
+                        log.error("Division {division}, submitter {submitter}, "
+                                  "system {system_id_json} has invalid system type ({system_type})",
+                                  division=division, submitter=submitter, system_id_json=system_id_json, system_type=system_type)
 
                     config.set_type(system_type)
 
@@ -422,9 +417,9 @@ def infer_scenario_results(args, config):
                         mlperf_model = config.get_mlperf_model(
                             model, extra_model_mapping)
                         if not mlperf_model:
-                            log.error("Division %s, submitter %s, system %s has "
-                                      "invalid model (%s)", division, submitter,
-                                      system_id_json, model)
+                            log.error("Division {division}, submitter {submitter}, system {system_id_json} has "
+                                      "invalid model ({model})", division=division, submitter=submitter,
+                                      system_id_json=system_id_json, model=model)
                             continue
 
                         if mlperf_model not in config.required:
@@ -485,11 +480,11 @@ def infer_scenario_results(args, config):
                                     for tobeinferredpath in tobeinferredpaths:
                                         inferred_scenario = os.path.basename(
                                             tobeinferredpath)
-                                        log.info("Division %s, submitter %s, system %s, "
-                                                 "model %s: \
-                                                inferring %s results from %s",
-                                                 division, submitter, system_desc, model,
-                                                 inferred_scenario, "singlestream")
+                                        log.info("Division {division}, submitter {submitter}, system {system_desc}, "
+                                                 "model {model}: "
+                                                 "inferring {inferred_scenario} results from {singlestream}",
+                                                 division=division, submitter=submitter, system_desc=system_desc, model=model,
+                                                 inferred_scenario=inferred_scenario, singlestream="singlestream")
                                         shutil.copytree(
                                             scenario_path, tobeinferredpath)
 
@@ -498,9 +493,9 @@ def infer_scenario_results(args, config):
                                     # infer MS from SS
                                     for tobeinferredpath in [
                                             multistream_scenario_path]:
-                                        log.info("Division %s, submitter %s, system %s, model %s: \
-                                                inferring %s results from %s", division, submitter,
-                                                 system_desc, model, "multistream", "singlestream")
+                                        log.info("Division {division}, submitter {submitter}, system {system_desc}, model {model}: \
+                                                inferring {inferred_scenario} results from {singlestream}", division=division, submitter=submitter, system_desc=system_desc, model=model,
+                                                 inferred_scenario="multistream", singlestream="singlestream")
                                         shutil.copytree(
                                             scenario_path, multistream_scenario_path)
                                 elif not os.path.exists(offline_scenario_path):
@@ -519,9 +514,9 @@ def infer_scenario_results(args, config):
                                 for tobeinferredpath in [
                                         offline_scenario_path]:
                                     if not os.path.exists(tobeinferredpath):
-                                        log.info("Division %s, submitter %s, system %s, model %s: \
-                                                inferring %s results from %s", division, submitter,
-                                                 system_desc, model, "offline", "multistream")
+                                        log.info("Division {division}, submitter {submitter}, system {system_desc}, model {model}: \
+                                                inferring {inferred_scenario} results from {multistream}", division=division, submitter=submitter, system_desc=system_desc, model=model,
+                                                 inferred_scenario="offline", multistream="multistream")
 
                                         shutil.copytree(
                                             scenario_path, tobeinferredpath)
@@ -538,9 +533,8 @@ def infer_scenario_results(args, config):
                                 low_accuracy_model_path = os.path.join(log_path, system_desc,
                                                                        low_accuracy_model)
                                 if not os.path.exists(low_accuracy_model_path):
-                                    log.info("Division %s, submitter %s, system %s: \
-                                            copying %s results to %s", division, submitter,
-                                             system_desc, model, low_accuracy_model)
+                                    log.info("Division {division}, submitter {submitter}, system {system_desc}: \
+                                            copying {model} results to {low_accuracy_model}", division=division, submitter=submitter, system_desc=system_desc, model=model, low_accuracy_model=low_accuracy_model)
 
                                     shutil.copytree(high_accuracy_model_path,
                                                     low_accuracy_model_path)

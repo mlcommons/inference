@@ -2,6 +2,14 @@
 
 Please follow the [official submission automation page](https://docs.mlcommons.org/inference/submission/) for doing a submission. It wraps all the submission related files listed below. 
 
+# Installation
+
+Install the prerequisites for the submission checker using the provided `requirements.txt` file:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## `truncate_accuracy_log.py` (Mandatory)
 
 ### Inputs

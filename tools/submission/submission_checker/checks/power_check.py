@@ -81,7 +81,7 @@ class PowerCheck(BaseCheck):
         if not self.has_power:
             return True
 
-        self.log.info("Checking necessary power files for %s", self.path)
+        self.log.info("Checking necessary power files for {path}", path=self.path)
         is_valid = True
         required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
         diff = files_diff(
@@ -90,9 +90,9 @@ class PowerCheck(BaseCheck):
             OPTIONAL_PERF_FILES)
         if diff:
             self.log.error(
-                "%s has file list mismatch (%s)",
-                self.testing_path,
-                diff)
+                "{path} has file list mismatch ({diff})",
+                path=self.testing_path,
+                diff=diff)
             is_valid = False
         diff = files_diff(
             list_files(self.ranging_path),
@@ -100,16 +100,16 @@ class PowerCheck(BaseCheck):
             OPTIONAL_PERF_FILES)
         if diff:
             self.log.error(
-                "%s has file list mismatch (%s)",
-                self.ranging_path,
-                diff)
+                "{path} has file list mismatch ({diff})",
+                path=self.ranging_path,
+                diff=diff)
             is_valid = False
         diff = files_diff(list_files(self.power_path), REQUIRED_POWER_FILES)
         if diff:
             self.log.error(
-                "%s has file list mismatch (%s)",
-                self.power_path,
-                diff)
+                "{path} has file list mismatch ({diff})",
+                path=self.power_path,
+                diff=diff)
             is_valid = False
         return is_valid
 
@@ -124,7 +124,7 @@ class PowerCheck(BaseCheck):
                 False otherwise.
         """
         if not self.config.skip_power_check and self.has_power:
-            self.log.info("Running external power checks for %s", self.path)
+            self.log.info("Running external power checks for {path}", path=self.path)
             python_version_major = int(sys.version.split(" ")[0].split(".")[0])
             python_version_minor = int(sys.version.split(" ")[0].split(".")[1])
             assert python_version_major == 3 and python_version_minor >= 7, (
@@ -136,8 +136,8 @@ class PowerCheck(BaseCheck):
             sys.stderr.flush()
             if check_power_result != 0:
                 self.log.error(
-                    "Power WG power_checker.py did not pass for: %s",
-                    perf_path)
+                    "Power WG power_checker.py did not pass for: {path}",
+                    path=perf_path)
                 return False
         return True
 
@@ -192,10 +192,10 @@ class PowerCheck(BaseCheck):
 
         if len(power_list) == 0:
             self.log.error(
-                "%s has no power samples falling in power range: %s - %s",
-                spl_fname,
-                power_begin,
-                power_end,
+                "{spl_fname} has no power samples falling in power range: {power_begin} - {power_end}",
+                spl_fname=spl_fname,
+                power_begin=power_begin,
+                power_end=power_end,
             )
             is_valid = False
         else:

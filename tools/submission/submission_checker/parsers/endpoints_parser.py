@@ -109,7 +109,8 @@ class EndpointsParser(BaseParser):
                 self.messages.setdefault(inferred, []).append(entry)
 
         # Infer QPS from sample count / duration when not directly available.
-        # generated_query_duration is in nanoseconds; divide by 1e9 for seconds.
+        # generated_query_duration is in nanoseconds; divide by 1e9 for
+        # seconds.
         if self.__getitem__("generated_query_duration") and self.__getitem__(
                 "generated_query_count"):
             key = "result_samples_per_second" if self.__getitem__(

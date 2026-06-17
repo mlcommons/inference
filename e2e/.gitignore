@@ -34,3 +34,4 @@ result_*.json
 *.swp
 *.swo
 *~
+temp_complete_kpi_*.json

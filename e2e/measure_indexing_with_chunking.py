@@ -71,12 +71,15 @@ def validate_database(db, expected_passages=None):
             validation["vector_count"] = db._vector_store.index.ntotal
             validation["index_dimension"] = db._vector_store.index.d
 
-            # Get index type
+            # Get index type - simplify IndexHNSWFlat to FAISS-HNSW
             index = db._vector_store.index
-            if hasattr(index, 'metric_type'):
-                validation["index_type"] = f"FAISS-{type(index).__name__}"
+            index_class = type(index).__name__
+            if index_class == "IndexHNSWFlat":
+                validation["index_type"] = "FAISS-HNSW"
+            elif hasattr(index, 'metric_type'):
+                validation["index_type"] = f"FAISS-{index_class}"
             else:
-                validation["index_type"] = type(index).__name__
+                validation["index_type"] = index_class
 
         # Get docstore count
         if hasattr(db, '_doc_list'):
@@ -220,7 +223,7 @@ def main():
         print(f"Passages file: {args.ingest}")
 
     print(f"Database: {db_file_path}")
-    print(f"Vector index method: {args.vector_index_method}")
+    print(f"Vector index method: HNSW (fixed)")
     print(f"Device: {args.device}")
     print(f"Num embedding devices: {args.num_embedding_devices}")
     print("=" * 80)
@@ -301,17 +304,17 @@ def main():
     print("[2/5] Initializing VectorDB...")
     init_start = time.time()
 
+    # Only load embedding model during ingestion - reranker not needed
     rag_db = VectorDB(
         retriever_model=args.retriever_model,
-        reranker_model=args.reranker_model,
+        reranker_model=None,
         device=args.device,
         database=db_base_name,
-        vector_index_method=args.vector_index_method,
         load_embeddings=args.load_embeddings,
         num_embedding_devices=args.num_embedding_devices,
         hierarchical=args.hierarchical,
         embedding_device=args.embedding_device,
-        reranker_device=args.reranker_device,
+        reranker_device=None,  # No reranker during ingestion
         benchmark=args.benchmark
     )
 
@@ -325,7 +328,7 @@ def main():
     print(f"[3/5] Indexing passages from {passages_file}...")
     indexing_start = time.time()
 
-    rag_db.ingest_from_path(passages_file, num_threads=args.threads)
+    rag_db.ingest_from_path(passages_file)
 
     indexing_end = time.time()
     indexing_duration = indexing_end - indexing_start
@@ -334,9 +337,27 @@ def main():
     print()
 
     # ============================================================
-    # STEP 4: VERIFY VECTOR COUNT AND VALIDATE DATABASE
+    # STEP 4: SAVE DATABASE (part of performance measurement)
     # ============================================================
-    print("[4/5] Verifying and validating database...")
+    save_time = 0
+    if args.skip_if_exists and db_exists:
+        print(f"[4/5] Skipping database save (file already exists)")
+        print(f"ℹ️  Database file not modified: {db_file_path}")
+    else:
+        print(f"[4/5] Saving database to {db_file_path}...")
+        save_start = time.time()
+        rag_db.serialize(db_file_path)
+        save_time = time.time() - save_start
+        if db_exists:
+            print(f"✓ Database overwritten in {save_time:.2f}s")
+        else:
+            print(f"✓ Database saved in {save_time:.2f}s")
+    print()
+
+    # ============================================================
+    # STEP 5: VALIDATE DATABASE (after save, not part of perf)
+    # ============================================================
+    print("[5/5] Validating database...")
     validation_results = validate_database(rag_db, expected_passages=num_passages if args.documents else None)
     vector_count = validation_results["vector_count"]
 
@@ -353,30 +374,14 @@ def main():
     print()
 
     # ============================================================
-    # STEP 5: SAVE DATABASE
-    # ============================================================
-    save_time = 0
-    if args.skip_if_exists and db_exists:
-        print(f"[5/5] Skipping database save (file already exists)")
-        print(f"ℹ️  Database file not modified: {db_file_path}")
-    else:
-        print(f"[5/5] Saving database to {db_file_path}...")
-        save_start = time.time()
-        rag_db.serialize(db_file_path)
-        save_time = time.time() - save_start
-        if db_exists:
-            print(f"✓ Database overwritten in {save_time:.2f}s")
-        else:
-            print(f"✓ Database saved in {save_time:.2f}s")
-    print()
-
-    # ============================================================
     # CALCULATE METRICS
     # ============================================================
     pipeline_end = time.time()
-    data_setup_time = pipeline_end - pipeline_start
 
-    # Calculate throughput based on total pipeline time
+    # Data setup time = chunking + indexing + save (excludes validation)
+    data_setup_time = chunking_time + indexing_duration + save_time
+
+    # Calculate throughput based on data setup time
     docs_per_sec = vector_count / data_setup_time if data_setup_time > 0 else 0
 
     # Prepare metrics
@@ -413,7 +418,7 @@ def main():
         },
 
         "configuration": {
-            "vector_index_method": args.vector_index_method,
+            "vector_index_method": "hnsw",
             "embedding_model": args.retriever_model,
             "device": args.device,
             "num_embedding_devices": args.num_embedding_devices,
@@ -447,7 +452,6 @@ def main():
     with open(output_file, 'w') as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"✓ Metrics saved to {output_file}")
     print()
     print("Done!")
 

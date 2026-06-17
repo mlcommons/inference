@@ -595,9 +595,9 @@ class DocumentProcessor:
     
     def _report_processing_performance(self):
         """Report processing performance if monitoring is enabled."""
-        if self.benchmark and self.monitor:
-            print("\n=== Document Processing Performance ===")
-            self.monitor.print_summary()
+        # Suppress the detailed benchmark summary - metrics are tracked internally
+        # and will be reported by the calling script (measure_indexing_with_chunking.py)
+        pass
 
 
 def main():

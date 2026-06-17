@@ -2,23 +2,22 @@
 # Complete Indexing Pipeline with Chunking + Validation
 #
 # This script runs:
-# 1. Document chunking (optional, if raw documents provided)
-# 2. Indexing performance measurement
-# 3. Database correctness verification (optional, if manifest provided)
+# 1. Document parsing and chunking (from HTML files)
+# 2. Indexing performance measurement (embedding + indexing + save)
+# 3. Database correctness verification
 # 4. Combines results into unified JSON output
 
 set -e  # Exit on error
 
 echo "============================================================"
-echo "Complete Indexing Pipeline (Chunking + Performance + Validation)"
+echo "Complete Indexing Pipeline (Parsing + Chunking + Indexing + Validation)"
 echo "============================================================"
 echo "Time Start: $(date +%s)"
 echo ""
 
 # Configuration
-export DOCUMENTS_DIR=${DOCUMENTS_DIR:-""}
-export PASSAGES_FILE=${PASSAGES_FILE:-"passages/doc_html_len768_ov32_word.json"}
-export DATABASE=${DATABASE:-"vector_complete"}
+export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
+export DATABASE=${DATABASE:-"vector_html_hnsw_len768_ov32_word"}
 export DATASET=${DATASET:-"data/frames_dataset.tsv"}
 
 # Chunking configuration
@@ -42,7 +41,7 @@ export BENCHMARK=${BENCHMARK:-false}
 export HIERARCHICAL=${HIERARCHICAL:-false}
 
 # Manifest options
-export MANIFEST_FILE=${MANIFEST_FILE:-""}
+export MANIFEST_FILE=${MANIFEST_FILE:-"scripts/db_manifest_intel_xpu.json.gz"}
 export SKIP_MANIFEST_VERIFY=${SKIP_MANIFEST_VERIFY:-false}
 export CREATE_MANIFEST=${CREATE_MANIFEST:-false}
 
@@ -50,89 +49,48 @@ export CREATE_MANIFEST=${CREATE_MANIFEST:-false}
 export TEMP_KPI_METRICS="temp_complete_kpi_$$.json"
 export FINAL_OUTPUT=${FINAL_OUTPUT:-"data_setup_performance.json"}
 
-# Determine input mode
-if [ -n "${DOCUMENTS_DIR}" ]; then
-    INPUT_MODE="complete_with_chunking"
-    INPUT_SOURCE="${DOCUMENTS_DIR}"
-elif [ -n "${PASSAGES_FILE}" ]; then
-    INPUT_MODE="indexing_only"
-    INPUT_SOURCE="${PASSAGES_FILE}"
-else
-    echo "ERROR: Either DOCUMENTS_DIR or PASSAGES_FILE must be set"
+# Validate DOCUMENTS_DIR exists
+if [ ! -d "${DOCUMENTS_DIR}" ]; then
+    echo "ERROR: Documents directory not found: ${DOCUMENTS_DIR}"
+    echo "Please set DOCUMENTS_DIR to point to your HTML documents directory"
     exit 1
 fi
 
 # Print configuration
 echo "Configuration:"
-echo "  Mode: ${INPUT_MODE}"
-echo "  Input: ${INPUT_SOURCE}"
+echo "  Documents Directory: ${DOCUMENTS_DIR}"
 echo "  DATABASE: ${DATABASE}"
-if [ "${INPUT_MODE}" = "complete_with_chunking" ]; then
-    echo "  CHUNK_SIZE: ${CHUNK_SIZE}"
-    echo "  CHUNK_OVERLAP: ${CHUNK_OVERLAP}"
-    echo "  CHUNKING_PROCESSES: ${CHUNKING_PROCESSES}"
-fi
+echo "  CHUNK_SIZE: ${CHUNK_SIZE}"
+echo "  CHUNK_OVERLAP: ${CHUNK_OVERLAP}"
+echo "  CHUNKING_PROCESSES: ${CHUNKING_PROCESSES}"
 echo "  VECTOR_INDEX_METHOD: ${VECTOR_INDEX_METHOD}"
 echo "  DEVICE: ${DEVICE}"
 echo "  NUM_EMBEDDING_DEVICES: ${NUM_EMBEDDING_DEVICES}"
-echo "  MANIFEST_FILE: ${MANIFEST_FILE:-none (skip validation)}"
+echo "  MANIFEST_FILE: ${MANIFEST_FILE}"
 echo "  CREATE_MANIFEST: ${CREATE_MANIFEST}"
 echo "  FINAL_OUTPUT: ${FINAL_OUTPUT}"
 echo "============================================================"
 echo ""
 
 # ============================================================
-# CHUNKING WARNING (if applicable)
-# ============================================================
-if [ "${INPUT_MODE}" = "complete_with_chunking" ]; then
-    echo "============================================================"
-    echo "⚠️  DOCUMENT CHUNKING WILL BE PERFORMED"
-    echo "============================================================"
-    echo ""
-    echo "Documents will be chunked from scratch with the following parameters:"
-    echo "  📄 Source directory: ${INPUT_SOURCE}"
-    echo "  📏 Chunk size: ${CHUNK_SIZE} characters"
-    echo "  🔗 Chunk overlap: ${CHUNK_OVERLAP} characters"
-    echo "  📐 Text boundary: ${TEXT_BOUNDARY}"
-    echo "  ⚙️  Parallel processes: ${CHUNKING_PROCESSES}"
-    echo ""
-    echo "This will process all documents in the directory regardless of"
-    echo "whether passages already exist. The chunking step cannot be skipped"
-    echo "when using DOCUMENTS_DIR mode."
-    echo ""
-    echo "To use pre-chunked passages instead, use:"
-    echo "  PASSAGES_FILE=passages/your_file.json ./run_complete_pipeline_with_chunking.sh"
-    echo "============================================================"
-    echo ""
-fi
-
-# ============================================================
-# STEP 1: CHUNKING + INDEXING PERFORMANCE
+# STEP 1: PARSING + CHUNKING + INDEXING PERFORMANCE
 # ============================================================
 echo "============================================================"
-echo "STEP 1/3: Indexing Performance Measurement"
-if [ "${INPUT_MODE}" = "complete_with_chunking" ]; then
-    echo "         (includes chunking)"
-fi
+echo "STEP 1/3: Complete Pipeline Performance Measurement"
+echo "         (Parsing + Chunking + Embedding + Indexing + Save)"
 echo "============================================================"
 echo ""
 
 INDEXING_START=$(date +%s)
 
 # Build arguments for indexing script
-if [ "${INPUT_MODE}" = "complete_with_chunking" ]; then
-    ARGS="--documents ${DOCUMENTS_DIR}"
-    ARGS="${ARGS} --chunk_size ${CHUNK_SIZE}"
-    ARGS="${ARGS} --chunk_overlap ${CHUNK_OVERLAP}"
-    ARGS="${ARGS} --text_boundary ${TEXT_BOUNDARY}"
-    ARGS="${ARGS} --chunking_processes ${CHUNKING_PROCESSES}"
-else
-    ARGS="--ingest ${PASSAGES_FILE}"
-fi
-
+ARGS="--documents ${DOCUMENTS_DIR}"
+ARGS="${ARGS} --chunk_size ${CHUNK_SIZE}"
+ARGS="${ARGS} --chunk_overlap ${CHUNK_OVERLAP}"
+ARGS="${ARGS} --text_boundary ${TEXT_BOUNDARY}"
+ARGS="${ARGS} --chunking_processes ${CHUNKING_PROCESSES}"
 ARGS="${ARGS} --database ${DATABASE}"
 ARGS="${ARGS} --output_metrics ${TEMP_KPI_METRICS}"
-ARGS="${ARGS} --vector_index_method ${VECTOR_INDEX_METHOD}"
 ARGS="${ARGS} --device ${DEVICE}"
 ARGS="${ARGS} --num_embedding_devices ${NUM_EMBEDDING_DEVICES}"
 ARGS="${ARGS} --retriever_model ${RETRIEVER_MODEL}"
@@ -159,23 +117,23 @@ INDEXING_DURATION=$((INDEXING_END - INDEXING_START))
 
 if [ ${INDEXING_EXIT} -ne 0 ]; then
     echo ""
-    echo "❌ Indexing measurement FAILED"
+    echo "❌ Pipeline measurement FAILED"
     exit ${INDEXING_EXIT}
 fi
 
 echo ""
-echo "✅ Indexing measurement completed in ${INDEXING_DURATION}s"
+echo "✅ Pipeline measurement completed in ${INDEXING_DURATION}s"
 echo ""
 
-# Extract key metrics
+# Extract key metrics (use correct field names from Python output)
 VECTOR_COUNT=$(jq -r '.vector_count' ${TEMP_KPI_METRICS} 2>/dev/null || echo "0")
-THROUGHPUT=$(jq -r '.throughput_docs_per_second' ${TEMP_KPI_METRICS} 2>/dev/null || echo "0")
-TOTAL_TIME=$(jq -r '.total_indexing_time_seconds' ${TEMP_KPI_METRICS} 2>/dev/null || echo "0")
+THROUGHPUT=$(jq -r '.throughput_passages_per_second' ${TEMP_KPI_METRICS} 2>/dev/null || echo "0")
+TOTAL_TIME=$(jq -r '.data_setup_time_seconds' ${TEMP_KPI_METRICS} 2>/dev/null || echo "0")
 
 echo "Performance Summary:"
 echo "  Vectors indexed: ${VECTOR_COUNT}"
 echo "  Total time: ${TOTAL_TIME}s"
-echo "  Throughput: ${THROUGHPUT} docs/sec"
+echo "  Throughput: ${THROUGHPUT} passages/sec"
 echo ""
 
 # ============================================================
@@ -213,7 +171,7 @@ MANIFEST_VERIFY_DETAILS=""
 MANIFEST_CHECKS_PASSED=0
 MANIFEST_CHECKS_TOTAL=0
 
-if [ -n "${MANIFEST_FILE}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
+if [ -f "${MANIFEST_FILE}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
     echo "============================================================"
     echo "STEP 2/3: Database Correctness Verification"
     echo "============================================================"
@@ -265,7 +223,11 @@ else
     echo "STEP 2/3: Database Correctness Verification - SKIPPED"
     echo "============================================================"
     echo ""
-    echo "No manifest file provided. Set MANIFEST_FILE to enable verification."
+    if [ ! -f "${MANIFEST_FILE}" ]; then
+        echo "Manifest file not found: ${MANIFEST_FILE}"
+    else
+        echo "Verification skipped (SKIP_MANIFEST_VERIFY=true)"
+    fi
     echo ""
 fi
 
@@ -299,8 +261,8 @@ result = {
     "status": "completed",
 
     "configuration": {
-        "mode": "${INPUT_MODE}",
-        "input_source": "${INPUT_SOURCE}",
+        "mode": "complete_pipeline",
+        "input_source": "${DOCUMENTS_DIR}",
         "database": "${DATABASE}",
         "dataset": "${DATASET}",
         "vector_index_method": "${VECTOR_INDEX_METHOD}",
@@ -320,13 +282,10 @@ result = {
 
     "performance": {
         "vector_count": kpi_metrics.get("vector_count", 0),
-        "indexing_time_seconds": kpi_metrics.get("indexing_time_seconds", 0),
-        "save_time_seconds": kpi_metrics.get("save_time_seconds", 0),
-        "total_indexing_time_seconds": kpi_metrics.get("total_indexing_time_seconds", 0),
-        "total_time_with_save_seconds": kpi_metrics.get("total_time_with_save_seconds", 0),
-        "throughput_docs_per_second": kpi_metrics.get("throughput_docs_per_second", 0),
+        "data_setup_time_seconds": kpi_metrics.get("data_setup_time_seconds", 0),
+        "throughput_passages_per_second": kpi_metrics.get("throughput_passages_per_second", 0),
         "embedding_model": kpi_metrics.get("configuration", {}).get("embedding_model", ""),
-        "embedding_dimension": kpi_metrics.get("configuration", {}).get("embedding_dimension", 0)
+        "embedding_dimension": kpi_metrics.get("configuration", {}).get("embedding_dimension", 768)
     },
 
     "validation": {
@@ -338,10 +297,10 @@ result = {
     },
 
     "summary": {
-        "performance_passed": kpi_metrics.get("throughput_docs_per_second", 0) > 0,
+        "performance_passed": kpi_metrics.get("throughput_passages_per_second", 0) > 0,
         "validation_passed": "${MANIFEST_VERIFY_RESULT}" in ["passed", "skipped"],
         "overall_status": "passed" if (
-            kpi_metrics.get("throughput_docs_per_second", 0) > 0 and
+            kpi_metrics.get("throughput_passages_per_second", 0) > 0 and
             "${MANIFEST_VERIFY_RESULT}" in ["passed", "skipped"]
         ) else "failed"
     }

@@ -1805,7 +1805,7 @@ ENDPOINTS_MAPPINGS = {
     "qps": "result_completed_samples_per_sec",
     "effective_target_latency_ns": "effective_target_latency_ns",
     "effective_target_latency_percentile": "effective_target_latency_percentile",
-    "latency.min ": "result_min_latency_ns",
+    "latency.min": "result_min_latency_ns",
     "latency.max": "result_max_latency_ns",
     "latency.avg": "result_mean_latency_ns",
     "latency.percentiles.50.0": "result_50.00_percentile_latency_ns",

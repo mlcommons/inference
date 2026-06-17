@@ -192,6 +192,7 @@ class ComplianceCheck(BaseCheck):
                     "model_mapping": self.submission_logs.loader_data.get("model_mapping", {}),
                     "check_scenarios": True,
                     "compliance_skip": True,
+                    "is_endpoints_submission": self.submission_logs.loader_data.get("is_endpoints_submission", False),
                 }
                 test_logs = SubmissionLogs(
                     self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, None, test_data)

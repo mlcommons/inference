@@ -48,8 +48,6 @@ echo "=== Step 2: Build FAISS HNSW vector index ==="
 python3 -u single_shot_retrieval.py \
     --ingest "${INGESTION_PASSAGES_JSON}" \
     --db "${INGESTION_DB}" \
-    --retrieval_method vector \
-    --vector_index_method hnsw \
     --device "${INGESTION_DEVICE}" \
     --embedding-device "${INGESTION_EMBEDDING_DEVICE}" \
     --retriever_model "${INGESTION_RETRIEVER_MODEL}" \

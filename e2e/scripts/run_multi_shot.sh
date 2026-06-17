@@ -92,7 +92,6 @@ echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
 python3 -u multi_shot_retrieval.py \
-    --retrieval_method vector \
     --db "${INFERENCE_DB}" \
     ${EVAL_FLAG} \
     --max-iterations "${INFERENCE_MAX_ITERATIONS}" \

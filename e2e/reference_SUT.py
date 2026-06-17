@@ -34,7 +34,7 @@ import mlperf_loadgen as lg
 
 from QSL import E2EQSLInMemory
 from multi_shot_retrieval import multi_shot_retrieval
-from retrieve import VectorDB, BM25DB
+from retrieve import VectorDB
 from utils import setup_llm_config, get_device_config
 from llm_logger import LLMLogger
 
@@ -52,7 +52,6 @@ class E2ESUT:
         self,
         dataset_path: str,
         db_path: str,
-        retrieval_method: str = "vector",
         max_sub_queries: int = 3,
         top_k_retriever: int = 10,
         top_k_reranking: int = 10,
@@ -74,7 +73,6 @@ class E2ESUT:
         Args:
             dataset_path: Path to frames_dataset.tsv
             db_path: Path to database file
-            retrieval_method: 'vector' or 'bm25'
             max_sub_queries: Max sub-queries per iteration
             top_k_retriever: Number of docs to retrieve per query
             top_k_reranking: Number of docs after reranking
@@ -92,7 +90,6 @@ class E2ESUT:
         """
         self.dataset_path = dataset_path
         self.db_path = db_path
-        self.retrieval_method = retrieval_method
         self.max_sub_queries = max_sub_queries
         self.top_k_retriever = top_k_retriever
         self.top_k_reranking = top_k_reranking
@@ -132,21 +129,11 @@ class E2ESUT:
 
         # Initialize database
         log.info("Initializing RAG database...")
-        if retrieval_method == "bm25":
-            db_class = BM25DB
-        else:
-            db_class = VectorDB
-
-        # Extract database parameters from args
-        self.rag_db = db_class(
+        self.rag_db = VectorDB(
             retriever_model=args.retriever_model if hasattr(args, 'retriever_model') else 'BAAI/bge-base-en-v1.5',
             reranker_model=args.reranker_model if hasattr(args, 'reranker_model') else 'BAAI/bge-reranker-base',
             device=device,
-            k1=args.bm25_k1 if hasattr(args, 'bm25_k1') else 1.5,
-            b=args.bm25_b if hasattr(args, 'bm25_b') else 0.75,
-            method=args.bm25_method if hasattr(args, 'bm25_method') else 'lucene',
             database=db_path.replace('.db', ''),
-            vector_index_method=args.vector_index_method if hasattr(args, 'vector_index_method') else 'hnsw',
             num_embedding_devices=args.num_embedding_devices if hasattr(args, 'num_embedding_devices') else 1,
             benchmark=args.benchmark if hasattr(args, 'benchmark') else False
         )
@@ -189,7 +176,6 @@ class E2ESUT:
             experiment_metadata={
                 "experiment_name": f"loadgen_{db_base_name}",
                 "timestamp_start": experiment_start_time.isoformat(),
-                "retrieval_method": retrieval_method,
                 "retrieval_mode": "multi_shot",
                 "max_iterations": max_iterations,
                 "max_sub_queries": max_sub_queries,

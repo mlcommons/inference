@@ -143,7 +143,6 @@ class VectorDB(RagDB):
             retriever_model: str = None,
             reranker_model: str = None,
             device: str = "auto",
-            vector_index_method: str = "hnsw",
             load_embeddings: bool = True,
             num_embedding_devices: int = 1,
             benchmark: bool = False,
@@ -155,7 +154,6 @@ class VectorDB(RagDB):
         super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
-        self._vector_index_method = vector_index_method
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
         self._hierarchical = hierarchical
@@ -213,7 +211,7 @@ class VectorDB(RagDB):
 
         # The index defines the algorithm used for the similarity search
         # Support multiple vector index types (currently FAISS-based)
-        self._index = self._create_vector_index(self._vector_index_method, self._embedding_dimension)
+        self._index = self._create_vector_index(self._embedding_dimension)
 
         # The docstore is used to store the documents and their metadata
         self._docstore = InMemoryDocstore()
@@ -225,117 +223,30 @@ class VectorDB(RagDB):
             index_to_docstore_id={}, # This will be populated as documents are added
         )
         
-        # Keep track of ingested documents for consistency with BM25DB
+        # Keep track of ingested documents
         self._doc_list = []
     
-    def _create_vector_index(self, method: str, dimension: int):
-        """Create a vector index based on the specified method.
-        
-        Currently uses FAISS backend, but abstracted to allow future support
-        for other vector databases (e.g., Milvus, Qdrant, Weaviate).
-        
-        Args:
-            method: Index method - 'flat', 'hnsw', or 'ivf'
-            dimension: Embedding dimension
-            
-        Returns:
-            Vector index object (FAISS index)
-            
-        Index Method Details:
-        
-        1. FLAT (IndexFlatL2):
-           - Exact brute-force search using L2 distance
-           - Pros: Perfect accuracy, simple
-           - Cons: O(N) search time, slow for large datasets
-           - Best for: Small datasets (<10K), when accuracy is critical
-        
-        2. HNSW (Hierarchical Navigable Small World):
-           - Graph-based approximate nearest neighbor search
-           - Pros: Very fast search O(log N), excellent recall, no training needed
-           - Cons: Higher memory usage (stores graph), slower indexing
-           - Best for: Most use cases, default choice
-        
-        3. IVF (Inverted File):
-           - Clustering-based approximate search
-           - Parameters:
-             * nlist: number of clusters (auto-adjusted to ~2*sqrt(N))
-             * nprobe: clusters to search per query (default: 10)
-               - nprobe=1: fastest but lowest accuracy (~80-90%)
-               - nprobe=10: good balance (~95-98% accuracy)
-               - nprobe=50: high accuracy (~99%) but slower
-           - Pros: Memory efficient, good for large datasets, faster than flat
-           - Cons: Requires training, slightly lower recall than HNSW
-           - Best for: Very large datasets (>1M), when memory is limited
-        """
-        if method == "flat":
-            return faiss.IndexFlatL2(dimension)
-        elif method == "hnsw":
-            # M: number of connections per layer (higher = better recall, more memory)
-            # efConstruction: quality of index construction (higher = better quality, slower build)
-            M = 32  # Default: 32, good balance
-            index = faiss.IndexHNSWFlat(dimension, M)
-            index.hnsw.efConstruction = 200  # Default: 40
-            index.hnsw.efSearch = 100  # Search-time parameter, can be adjusted later
-            return index
-        elif method == "ivf":
-            # nlist: number of clusters/cells (sqrt(N) is a good heuristic for N docs)
-            nlist = 100  # Will be adjusted based on dataset size during training
-            quantizer = faiss.IndexFlatL2(dimension)
-            index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
-            # Note: IVF index needs training before use (will be done during ingest)
-            return index
-        else:
-            raise ValueError(f"Unknown vector index method: {method}. Choose 'flat', 'hnsw', or 'ivf'.")
-    
-    def _train_vector_index(self, index, embeddings: np.ndarray):
-        """Train IVF index on embeddings if needed.
-        
-        IVF (Inverted File Index) requires a one-time training phase to:
-        1. Cluster the embedding space into nlist regions using k-means
-        2. Build an inverted index mapping cluster_id -> vector_ids
-        
-        After training, search works by:
-        1. Finding the nprobe nearest cluster centroids to the query
-        2. Searching only within those clusters (much faster than full scan)
-        
-        Note: In incremental scenarios, this trains on the FIRST batch only.
-        Subsequent batches are assigned to existing clusters without retraining.
-        For production systems handling continuous data growth, consider:
-        - Periodic retraining when dataset size doubles
-        - Using all accumulated data for retraining
-        - Online clustering algorithms that adapt to new data
-        
-        Args:
-            index: FAISS index (only IVF types need training)
-            embeddings: Numpy array of embeddings to train on
-        """
-        import numpy as np
-        
-        # Convert embeddings to numpy array
-        embeddings_array = np.array(embeddings).astype('float32')
-        
-        # Adjust nlist (number of clusters) based on dataset size
-        # Rule of thumb: nlist = sqrt(N) to 4*sqrt(N)
-        n_samples = len(embeddings)
-        optimal_nlist = max(10, min(int(np.sqrt(n_samples) * 2), 1000))
-        
-        # Update nlist if different from default
-        if optimal_nlist != self._index.nlist:
-            print(f"Adjusting IVF nlist from {self._index.nlist} to {optimal_nlist} based on {n_samples} samples")
-            # Need to recreate index with new nlist
-            quantizer = faiss.IndexFlatL2(self._embedding_dimension)
-            self._index = faiss.IndexIVFFlat(quantizer, self._embedding_dimension, optimal_nlist)
-            # Update vector store's index
-            self._vector_store.index = self._index
-        
-        print(f"Training IVF index on {n_samples} samples...")
-        self._index.train(embeddings_array)
+    def _create_vector_index(self, dimension: int):
+        """Create a FAISS HNSW vector index.
 
-        # Set nprobe (number of clusters to search) for better accuracy
-        self._index.nprobe = 10
-        print(f"IVF index trained successfully with {self._index.nlist} clusters, nprobe=10")
-        print(f"  → Will search 10 clusters per query (~{100*10/self._index.nlist:.1f}% of clusters)")
-    
+        HNSW (Hierarchical Navigable Small World):
+        - Graph-based approximate nearest neighbor search
+        - Very fast search O(log N), excellent recall, no training needed
+        - Higher memory usage (stores graph), slower indexing
+
+        Args:
+            dimension: Embedding dimension
+
+        Returns:
+            FAISS HNSW index
+        """
+        # M: number of connections per layer (higher = better recall, more memory)
+        # efConstruction: quality of index construction (higher = better quality, slower build)
+        M = 32  # Default: 32, good balance
+        index = faiss.IndexHNSWFlat(dimension, M)
+        index.hnsw.efConstruction = 200  # Default: 40
+        index.hnsw.efSearch = 100  # Search-time parameter, can be adjusted later
+        return index
     def _get_embeddings_cache_path(self, passages_path: str) -> str:
         """Get the cache path for embeddings based on passages file path."""
         from pathlib import Path
@@ -510,7 +421,6 @@ class VectorDB(RagDB):
         """
         from pathlib import Path
         
-        # VectorDB uses serialize path, not _database_name like BM25
         if not hasattr(self, '_serialize_path') or not self._serialize_path:
             return 0
         
@@ -528,7 +438,7 @@ class VectorDB(RagDB):
         - passages: list of child passage texts (for embedding)
         - metadatas: list of dicts with 'parent_passage' key (for retrieval)
         """
-        # Handle BM25-specific parameters gracefully
+        # Handle unused parameters
         if 'num_threads' in kwargs:
             print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
 
@@ -566,11 +476,8 @@ class VectorDB(RagDB):
                 embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
                                                   lambda: self._embedding_model.embed_documents(passages),
                                                   is_pipeline_input=True)
-        
-        # Train IVF index if needed (before adding any embeddings)
-        if self._vector_index_method == "ivf" and not self._index.is_trained:
-            self._train_vector_index(self._index, embeddings)
-        
+
+
         # Determine batch size: single batch for small datasets, multiple batches for scaling analysis
         track_incremental = self._benchmark and self._monitor and len(passages) >= 500
         if track_incremental:
@@ -731,7 +638,7 @@ class VectorDB(RagDB):
         Returns list of (document, score) tuples.
 
         Note: FAISS returns L2 distances (lower is better), but we convert to
-        similarity scores (higher is better) for consistency with BM25.
+        similarity scores (higher is better).
         """
         if self._embedding_lock:
             with self._embedding_lock:
@@ -742,7 +649,6 @@ class VectorDB(RagDB):
 
         # FAISS returns (document, distance) where distance is L2 distance (lower is better)
         # Convert to similarity score (higher is better) by negating
-        # This makes it consistent with BM25 scores for filtering algorithms
         results_with_similarity = [(doc, -distance) for doc, distance in results_with_scores]
 
         # In hierarchical mode: replace child passages with parents, deduplicate
@@ -818,11 +724,6 @@ class VectorDB(RagDB):
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
             serialized=data,
             allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
-
-        # If it's an IVF index, restore nprobe setting
-        if self._vector_index_method == "ivf" and hasattr(self._vector_store.index, 'nprobe'):
-            self._vector_store.index.nprobe = 10
-            print(f"Restored IVF index with nprobe=10")
 
         # Load parent map if hierarchical mode
         if self._hierarchical:

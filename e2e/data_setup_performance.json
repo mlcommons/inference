@@ -1,37 +1,52 @@
 {
-  "timestamp": "2026-06-15 00:17:46",
-  "mode": "complete_pipeline",
-  "input_documents": "doc_html",
-  "input_passages": "passages_doc_html_len768_ov32_word.json",
-  "database_file": "vector_html_hnsw_len768_ov32_word.db",
-  "vector_count": 107597,
-  "chunking": {
-    "enabled": true,
-    "total_time_seconds": 202.96,
-    "documents_processed": 2503,
-    "passages_generated": 107597,
-    "chunk_size": 768,
-    "chunk_overlap": 32,
-    "text_boundary": "word",
-    "processes": 4
-  },
-  "data_setup_time_seconds": 1444.57,
-  "throughput_passages_per_second": 74.48,
-  "validation": {
-    "status": "success",
-    "validation_passed": true,
-    "vector_count": 107597,
-    "docstore_count": 107597,
-    "index_type": "FAISS-IndexHNSWFlat",
-    "index_dimension": 768,
-    "errors": []
-  },
+  "pipeline_version": "2.0",
+  "timestamp": "2026-06-17T01:39:51.390923",
+  "hostname": "gnr630032.jf.intel.com",
+  "status": "completed",
   "configuration": {
+    "mode": "indexing_only",
+    "input_source": "passages/doc_html_len768_ov32_word.json",
+    "database": "vector_complete",
+    "dataset": "data/frames_dataset.tsv",
     "vector_index_method": "hnsw",
-    "embedding_model": "/data/model/e5-base-v2",
     "device": "auto",
     "num_embedding_devices": 1,
-    "hierarchical": false,
-    "load_embeddings_cache": false
+    "retriever_model": "/data/model/e5-base-v2",
+    "reranker_model": "/data/model/colbertv2.0",
+    "load_embeddings": false,
+    "benchmark": false,
+    "hierarchical": false
+  },
+  "chunking": {
+    "enabled": false,
+    "total_time_seconds": 0,
+    "documents_processed": null,
+    "passages_generated": null,
+    "chunk_size": null,
+    "chunk_overlap": null,
+    "text_boundary": null,
+    "processes": null
+  },
+  "performance": {
+    "vector_count": 107484,
+    "indexing_time_seconds": 0,
+    "save_time_seconds": 0,
+    "total_indexing_time_seconds": 0,
+    "total_time_with_save_seconds": 0,
+    "throughput_docs_per_second": 0,
+    "embedding_model": "/data/model/e5-base-v2",
+    "embedding_dimension": 0
+  },
+  "validation": {
+    "status": "skipped",
+    "manifest_file": null,
+    "checks_passed": 0,
+    "checks_total": 0,
+    "details": null
+  },
+  "summary": {
+    "performance_passed": false,
+    "validation_passed": true,
+    "overall_status": "failed"
   }
 }

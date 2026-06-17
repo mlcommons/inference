@@ -46,7 +46,7 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 # Get OpenRouter API key from environment
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
-from retrieve import VectorDB, BM25DB
+from retrieve import VectorDB
 from evaluation import evaluate_retrieval_query, run_evaluation
 from utils import (set_deterministic_seeds, filter_dataset_by_difficulty,
                    setup_llm_config, get_device_config)
@@ -1799,27 +1799,17 @@ if __name__ == "__main__":
     print(f"Device Config: {device_config}")
     
     # Initialize database
-    if args.retrieval_method == "bm25":
-        db_class = BM25DB
-    else:
-        db_class = VectorDB
-    
     if args.database is None:
-        args.database = db_class.get_default_db_name()
-    
+        args.database = VectorDB.get_default_db_name()
+
     db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
     db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
-    
-    rag_db = db_class(
-        retriever_model=args.retriever_model, 
-        reranker_model=args.reranker_model, 
+
+    rag_db = VectorDB(
+        retriever_model=args.retriever_model,
+        reranker_model=args.reranker_model,
         device=args.device,
-        k1=args.bm25_k1, b=args.bm25_b, method=args.bm25_method, 
         database=db_base_name,
-        delta=args.bm25_delta, backend=args.bm25_backend,
-        stopwords=args.bm25_stopwords,
-        show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer,
-        vector_index_method=args.vector_index_method,
         load_embeddings=args.load_embeddings,
         num_embedding_devices=args.num_embedding_devices,
         embedding_device=args.embedding_device,
@@ -1861,7 +1851,6 @@ if __name__ == "__main__":
             "experiment_name": f"multi_shot_{db_base_name}_n{{queries}}",  # Will be updated
             "timestamp_start": experiment_start_time.isoformat(),
             "timestamp_end": "in_progress",
-            "retrieval_method": args.retrieval_method,
             "retrieval_mode": "multi_shot",
             "max_iterations": args.max_iterations,
             "max_sub_queries": args.max_sub_queries,

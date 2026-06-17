@@ -229,7 +229,7 @@ def filter(rag_db, query: str, method: str = "top_p",
     Perform adaptive retrieval using score-based filtering.
     
     Args:
-        rag_db: RAG database instance (BM25DB or VectorDB)
+        rag_db: RAG database instance (VectorDB)
         query: Search query
         method: Filtering method ("top_p", "score_threshold", "relative", "elbow", "percentile")
         max_results: Maximum results to retrieve initially
@@ -254,7 +254,7 @@ def filter(rag_db, query: str, method: str = "top_p",
         return top_p_filter(results_with_scores, p)
     
     elif method == "score_threshold":
-        threshold = kwargs.get("threshold", 5.0)  # Default for BM25
+        threshold = kwargs.get("threshold", 5.0)
         return score_threshold_filter(results_with_scores, threshold)
     
     elif method == "relative":

@@ -60,7 +60,6 @@ echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
 python3 -u single_shot_retrieval.py \
-    --retrieval_method vector \
     --db "${INFERENCE_DB}" \
     ${EVAL_FLAG} \
     --device "${INFERENCE_DEVICE}" \

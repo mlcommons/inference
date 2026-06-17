@@ -61,8 +61,8 @@ class ParamDef:
             choices: Valid choices (for categorical parameters)
             nargs: argparse nargs value
             action: argparse action (e.g., 'store_true', 'store_false')
-            category: Parameter category (general, bm25, vector, strategy, reranking)
-            applies_to: List of methods this applies to (['bm25', 'vector', 'both'])
+            category: Parameter category (general, vector, strategy, reranking)
+            applies_to: List of methods this applies to (['vector', 'both'])
             optuna_suggest: Optuna suggestion config (type, min, max, step, etc.)
         """
         self.name = name
@@ -204,16 +204,6 @@ COMMON_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
-        name="retrieval_method",
-        arg_names=["--retrieval_method"],
-        type=str,
-        default="vector",
-        help="Retrieval method: 'bm25' for BM25 lexical search, 'vector' for dense vector search",
-        choices=["bm25", "vector"],
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
         name="load_embeddings",
         arg_names=["--load-embeddings"],
         type=bool,
@@ -316,15 +306,6 @@ GENERAL_PARAMS = [
         choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
         category="general",
         applies_to=["both"]
-    ),
-    ParamDef(
-        name="threads",
-        arg_names=["--threads"],
-        type=int,
-        default=None,
-        help="Number of threads for BM25 retrieval (default: CPU count)",
-        category="general",
-        applies_to=["bm25"]
     ),
     ParamDef(
         name="num_embedding_devices",
@@ -464,117 +445,12 @@ GENERAL_PARAMS = [
 # BM25 Parameters
 # ============================================================================
 
-BM25_PARAMS = [
-    ParamDef(
-        name="bm25_k1",
-        arg_names=["--bm25_k1"],
-        type=float,
-        default=1.2,
-        help="BM25 k1 parameter (term frequency saturation)",
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'float', 'min': 0.5, 'max': 3.0, 'step': 0.1}
-    ),
-    ParamDef(
-        name="bm25_b",
-        arg_names=["--bm25_b"],
-        type=float,
-        default=0.75,
-        help="BM25 b parameter (document length normalization)",
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'float', 'min': 0.0, 'max': 1.0, 'step': 0.1}
-    ),
-    ParamDef(
-        name="bm25_method",
-        arg_names=["--bm25_method"],
-        type=str,
-        default="lucene",
-        help="BM25 variant to use",
-        choices=["lucene", "robertson", "bm25+"],
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'categorical', 'choices': ["lucene", "robertson", "bm25+"]}
-    ),
-    ParamDef(
-        name="bm25_delta",
-        arg_names=["--bm25_delta"],
-        type=float,
-        default=0.5,
-        help="BM25+ delta parameter (lower bound for term weights)",
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'float', 'min': 0.0, 'max': 2.0, 'step': 0.1}
-    ),
-    ParamDef(
-        name="bm25_stemmer",
-        arg_names=["--bm25_stemmer"],
-        type=str,
-        default=None,
-        help="Stemmer to use for BM25 (None, porter, snowball, lancaster, pystemmer)",
-        choices=[None, "porter", "snowball", "lancaster", "pystemmer"],
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'categorical', 'choices': [None, "porter", "snowball", "lancaster", "pystemmer"]}
-    ),
-    ParamDef(
-        name="bm25_stopwords",
-        arg_names=["--bm25_stopwords"],
-        type=str,
-        default="en",
-        help="Stopwords language (en, None for no stopwords)",
-        category="bm25",
-        applies_to=["bm25"]
-    ),
-    ParamDef(
-        name="no_stopwords",
-        arg_names=["--no-stopwords"],
-        type=bool,
-        default=False,
-        help="Disable stopwords filtering",
-        action="store_true",
-        category="bm25",
-        applies_to=["bm25"]
-    ),
-    ParamDef(
-        name="bm25_backend",
-        arg_names=["--bm25_backend"],
-        type=str,
-        default="numba",
-        help="BM25 computation backend (numpy, numba)",
-        choices=["numpy", "numba"],
-        category="bm25",
-        applies_to=["bm25"],
-        optuna_suggest={'type': 'categorical', 'choices': ["numpy", "numba"]}
-    ),
-    ParamDef(
-        name="bm25_show_progress",
-        arg_names=["--bm25_show_progress"],
-        type=bool,
-        default=False,
-        help="Show progress bars during BM25 indexing",
-        action="store_true",
-        category="bm25",
-        applies_to=["bm25"]
-    ),
-]
 
 # ============================================================================
 # Vector Parameters
 # ============================================================================
 
 VECTOR_PARAMS = [
-    ParamDef(
-        name="vector_index_method",
-        arg_names=["--vector_index_method"],
-        type=str,
-        default="hnsw",
-        help="FAISS index method (flat, hnsw, ivf) - default: hnsw",
-        choices=["flat", "hnsw", "ivf"],
-        category="vector",
-        applies_to=["vector"],
-        optuna_suggest={'type': 'categorical', 'choices': ["flat", "hnsw", "ivf"]}
-    ),
     ParamDef(
         name="hierarchical",
         arg_names=["--hierarchical"],
@@ -659,7 +535,6 @@ RERANKING_PARAMS = [
 ALL_PARAMS = (
     COMMON_PARAMS +
     GENERAL_PARAMS +
-    BM25_PARAMS +
     VECTOR_PARAMS +
     STRATEGY_PARAMS +
     RERANKING_PARAMS
@@ -676,7 +551,6 @@ for p in ALL_PARAMS:
 PARAMS_BY_CATEGORY = {
     "common": COMMON_PARAMS,
     "general": GENERAL_PARAMS,
-    "bm25": BM25_PARAMS,
     "vector": VECTOR_PARAMS,
     "strategy": STRATEGY_PARAMS,
     "reranking": RERANKING_PARAMS,
@@ -852,7 +726,7 @@ def print_param_info(method: Optional[str] = None):
         by_category[param.category].append(param)
     
     # Print
-    for category in ["common", "general", "bm25", "vector", "strategy", "reranking"]:
+    for category in ["common", "general", "vector", "strategy", "reranking"]:
         if category not in by_category:
             continue
         

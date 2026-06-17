@@ -74,7 +74,7 @@ def get_args():
     )
 
     # Add all standard e2e parameters from params.py first
-    # This includes --database, --device, --retrieval_method, etc.
+    # This includes --database, --device, etc.
     add_all_args(parser)
 
     # E2E workload arguments (non-conflicting with params.py)
@@ -178,7 +178,6 @@ def main():
     sut = E2ESUT(
         dataset_path=args.dataset_path,
         db_path=args.database,
-        retrieval_method=args.retrieval_method,
         max_sub_queries=args.max_sub_queries,
         top_k_retriever=args.top_k_retriever,
         top_k_reranking=args.top_k_reranking,

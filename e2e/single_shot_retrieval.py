@@ -21,7 +21,7 @@ import os
 import requests
 from pathlib import Path
 from functools import lru_cache
-from retrieve import VectorDB, BM25DB
+from retrieve import VectorDB
 from evaluation import evaluate_retrieval_query, run_evaluation
 from utils import set_deterministic_seeds, setup_llm_config
 from params import add_all_args
@@ -185,26 +185,17 @@ if __name__ == "__main__":
     llm_config = setup_llm_config(args) if args.generate_answer else None
     doc_base_dir = args.base_doc_dir
 
-    # Initialize the appropriate database class
-    if args.retrieval_method == "bm25":
-        db_class = BM25DB
-    else:
-        db_class = VectorDB
-
-    # Set default database path based on database class if not provided
+    # Set default database path if not provided
     if args.database is None:
-        args.database = db_class.get_default_db_name()
-    
+        args.database = VectorDB.get_default_db_name()
+
     # Normalize database path: ensure .db extension for file operations
     db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
     db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
 
-    # Create database instance (pass base name without .db)
-    rag_db = db_class(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device,
-                        k1=args.bm25_k1, b=args.bm25_b, method=args.bm25_method, database=db_base_name,
-                        delta=args.bm25_delta, backend=args.bm25_backend, stopwords=args.bm25_stopwords,
-                        show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer,
-                        vector_index_method=args.vector_index_method,
+    # Create VectorDB instance (pass base name without .db)
+    rag_db = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device,
+                        database=db_base_name,
                         load_embeddings=args.load_embeddings, num_embedding_devices=args.num_embedding_devices,
                         hierarchical=args.hierarchical,
                         embedding_device=args.embedding_device,
@@ -221,7 +212,7 @@ if __name__ == "__main__":
         
         # Ingest from file or folder
         tic = time.time()
-        rag_db.ingest_from_path(args.ingest, num_threads=args.threads)
+        rag_db.ingest_from_path(args.ingest)
         
         # Get number of passages for timing calculation
         num_passages = len(rag_db._doc_list)  # This should be available after ingestion

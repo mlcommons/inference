@@ -35,3 +35,5 @@ result_*.json
 *.swo
 *~
 temp_complete_kpi_*.json
+run_output_datasetup_accuracy/
+run_output_datasetup/

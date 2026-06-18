@@ -1,0 +1,227 @@
+LOG_FILE_1: 824 queries . output_multi_shot_full_w20_20260520_030222/llm_logs_multi_shot_20260520_030228.json
+Experiment: multi_shot_vector_html_hnsw_len768_ov32_word_n824
+Models: grader=openai/gpt-oss-20b, query=openai/gpt-oss-120b, sufficiency=openai/gpt-oss-120b
+Block size: 16
+
+
+
+==========================================================================================
+Table 1: Input/Output Sequence Length Statistics
+------------------------------------------------------------------------------------------
+Component                         N      ISL (min/avg/max/eff)         OSL (min/avg/max)  
+------------------------------------------------------------------------------------------
+check_sufficiency              2402     264 /   851 /  3564 /   373      45 /   369 /  2276
+generate_search_queries        2570     386 /   908 /  3315 /   596      16 /   453 /  2702
+evaluate_document_relevance    1883     356 /  1236 /  3693 /  1130      35 /   810 /  5022
+answer_generator                794     211 /   763 /  3418 /   708       1 /   221 /  2829
+
+
+
+===========================================================================
+Table 2: Prefix Cache Hit Rate (weighted by ISL)
+---------------------------------------------------------------------------
+Component                             Hop 2   Hop 3   Hop 4   Hop 5     Avg
+---------------------------------------------------------------------------
+check_sufficiency                     8.20%  68.49%  79.40%  81.45%  56.11%
+generate_search_queries              10.17%  47.40%  54.31%  29.93%  34.28%
+evaluate_document_relevance           5.88%  10.74%  11.47%  11.53%   8.57%
+answer_generator                      7.25%   6.59%   6.68%   7.26%   7.20%
+---------------------------------------------------------------------------
+Overall                                                              29.96%
+
+
+
+===========================================================================
+Table 3: Prefix Cache Hit Rate by Model Endpoint (weighted by ISL)
+---------------------------------------------------------------------------
+  openai/gpt-oss-120b             39.94%  (ISL=4,984,719, Cached=1,990,978)
+  openai/gpt-oss-20b               8.57%  (ISL=2,327,454, Cached=199,522)
+  Overall                         29.96%  (ISL=7,312,173, Cached=2,190,500)
+
+
+
+
+
+LOG_FILE_2: 824 queries . output_multi_shot_full_w20_20260520_134446/llm_logs_multi_shot_20260520_134452.json
+
+
+
+Experiment: multi_shot_vector_html_hnsw_len768_ov32_word_n824
+Models: grader=openai/gpt-oss-20b, query=openai/gpt-oss-120b, sufficiency=openai/gpt-oss-120b
+Block size: 16
+
+
+
+==========================================================================================
+Table 1: Input/Output Sequence Length Statistics
+------------------------------------------------------------------------------------------
+Component                         N      ISL (min/avg/max/eff)         OSL (min/avg/max)  
+------------------------------------------------------------------------------------------
+check_sufficiency              2407       0 /   891 /  3848 /   384       0 /   436 /  2752
+generate_search_queries        2534       0 /   935 /  4125 /   612       0 /   535 /  3132
+evaluate_document_relevance    1905     270 /  1237 /  3747 /  1132      83 /   826 /  8326
+answer_generator                805       0 /   789 /  3706 /   729       0 /   258 /  2001
+
+
+
+===========================================================================
+Table 2: Prefix Cache Hit Rate (weighted by ISL)
+---------------------------------------------------------------------------
+Component                             Hop 2   Hop 3   Hop 4   Hop 5     Avg
+---------------------------------------------------------------------------
+check_sufficiency                     9.16%  68.35%  78.96%  81.29%  56.84%
+generate_search_queries              10.42%  47.85%  54.91%  29.82%  34.58%
+evaluate_document_relevance           5.84%  10.35%  11.55%  11.31%   8.49%
+answer_generator                      8.68%   6.61%   6.95%   7.29%   7.51%
+---------------------------------------------------------------------------
+Overall                                                              30.46%
+
+
+
+===========================================================================
+Table 3: Prefix Cache Hit Rate by Model Endpoint (weighted by ISL)
+---------------------------------------------------------------------------
+  openai/gpt-oss-120b             40.51%  (ISL=5,151,220, Cached=2,086,898)
+  openai/gpt-oss-20b               8.49%  (ISL=2,356,689, Cached=199,976)
+  Overall                         30.46%  (ISL=7,507,909, Cached=2,286,874)
+
+
+
+
+
+LOG_FILE_3: 824 queries . output_multi_shot_full_w20_20260520_153456/llm_logs_multi_shot_20260520_153501.json
+Experiment: multi_shot_vector_html_hnsw_len768_ov32_word_n824
+Models: grader=openai/gpt-oss-20b, query=openai/gpt-oss-120b, sufficiency=openai/gpt-oss-120b
+Block size: 16
+
+
+
+==========================================================================================
+Table 1: Input/Output Sequence Length Statistics
+------------------------------------------------------------------------------------------
+Component                         N      ISL (min/avg/max/eff)         OSL (min/avg/max)  
+------------------------------------------------------------------------------------------
+check_sufficiency              2390     283 /   869 /  3941 /   378       5 /   441 /  3243
+generate_search_queries        2491       0 /   925 /  4058 /   609       0 /   548 /  3779
+evaluate_document_relevance    1861     304 /  1237 /  4001 /  1133      58 /   817 /  4096
+answer_generator                810     147 /   765 /  3795 /   704       1 /   273 /  2204
+
+
+
+===========================================================================
+Table 2: Prefix Cache Hit Rate (weighted by ISL)
+---------------------------------------------------------------------------
+Component                             Hop 2   Hop 3   Hop 4   Hop 5     Avg
+---------------------------------------------------------------------------
+check_sufficiency                     8.90%  69.82%  76.94%  83.13%  56.40%
+generate_search_queries              10.32%  49.36%  52.61%  30.61%  34.20%
+evaluate_document_relevance           5.78%  10.64%  11.17%  11.90%   8.45%
+answer_generator                      8.92%   7.73%   6.67%   7.65%   7.93%
+---------------------------------------------------------------------------
+Overall                                                              30.17%
+
+
+
+===========================================================================
+Table 3: Prefix Cache Hit Rate by Model Endpoint (weighted by ISL)
+---------------------------------------------------------------------------
+  openai/gpt-oss-120b             40.16%  (ISL=5,003,389, Cached=2,009,458)
+  openai/gpt-oss-20b               8.45%  (ISL=2,303,691, Cached=194,727)
+  Overall                         30.17%  (ISL=7,307,080, Cached=2,204,185)
+
+
+
+
+
+LOG_FILE_4: 824 queries . output_multi_shot_full_w20_20260520_173627/llm_logs_multi_shot_20260520_173633.json
+
+
+
+Experiment: multi_shot_vector_html_hnsw_len768_ov32_word_n824
+Models: grader=openai/gpt-oss-20b, query=openai/gpt-oss-120b, sufficiency=openai/gpt-oss-120b
+Block size: 16
+
+
+
+==========================================================================================
+Table 1: Input/Output Sequence Length Statistics
+------------------------------------------------------------------------------------------
+Component                         N      ISL (min/avg/max/eff)         OSL (min/avg/max)  
+------------------------------------------------------------------------------------------
+check_sufficiency              2398       0 /   858 /  3034 /   381       0 /   371 /  2244
+generate_search_queries        2486       0 /   912 /  3351 /   604       0 /   456 /  3259
+evaluate_document_relevance    1842     255 /  1230 /  3700 /  1127      75 /   826 /  4096
+answer_generator                813     112 /   763 /  2847 /   711       1 /   211 /  1913
+
+
+
+===========================================================================
+Table 2: Prefix Cache Hit Rate (weighted by ISL)
+---------------------------------------------------------------------------
+Component                             Hop 2   Hop 3   Hop 4   Hop 5     Avg
+---------------------------------------------------------------------------
+check_sufficiency                     7.97%  68.41%  78.47%  81.17%  55.58%
+generate_search_queries               9.99%  47.68%  53.90%  28.63%  33.76%
+evaluate_document_relevance           5.81%  10.45%  11.38%  11.42%   8.40%
+answer_generator                      7.37%   6.33%   7.18%   6.67%   6.83%
+---------------------------------------------------------------------------
+Overall                                                              29.70%
+
+
+
+===========================================================================
+Table 3: Prefix Cache Hit Rate by Model Endpoint (weighted by ISL)
+---------------------------------------------------------------------------
+  openai/gpt-oss-120b             39.46%  (ISL=4,949,599, Cached=1,952,918)
+  openai/gpt-oss-20b               8.40%  (ISL=2,266,351, Cached=190,346)
+  Overall                         29.70%  (ISL=7,215,950, Cached=2,143,264)
+
+
+
+
+
+LOG_FILE_5: 824 queries . output_multi_shot_full_w20_20260519_231636/llm_logs_multi_shot_20260519_231642.jsonExperiment: multi_shot_vector_html_hnsw_len768_ov32_word_n824
+Models: grader=openai/gpt-oss-20b, query=openai/gpt-oss-120b, sufficiency=openai/gpt-oss-120b
+Block size: 16
+
+
+
+==========================================================================================
+Table 1: Input/Output Sequence Length Statistics
+------------------------------------------------------------------------------------------
+Component                         N      ISL (min/avg/max/eff)         OSL (min/avg/max)  
+------------------------------------------------------------------------------------------
+check_sufficiency              2409     305 /   848 /  2940 /   373      39 /   376 /  2398
+generate_search_queries        2549     384 /   908 /  3256 /   600      18 /   452 /  2656
+evaluate_document_relevance    1881     256 /  1231 /  3603 /  1127      53 /   822 /  5831
+answer_generator                799     114 /   757 /  2785 /   703       1 /   214 /  1678
+
+
+
+===========================================================================
+Table 2: Prefix Cache Hit Rate (weighted by ISL)
+---------------------------------------------------------------------------
+Component                             Hop 2   Hop 3   Hop 4   Hop 5     Avg
+---------------------------------------------------------------------------
+check_sufficiency                     8.32%  68.42%  77.40%  81.68%  55.98%
+generate_search_queries              10.04%  47.73%  53.42%  28.37%  33.89%
+evaluate_document_relevance           5.90%  10.41%  11.44%  11.33%   8.50%
+answer_generator                      8.17%   6.48%   5.29%   6.94%   7.13%
+---------------------------------------------------------------------------
+Overall                                                              29.79%
+
+
+
+===========================================================================
+Table 3: Prefix Cache Hit Rate by Model Endpoint (weighted by ISL)
+---------------------------------------------------------------------------
+  openai/gpt-oss-120b             39.73%  (ISL=4,966,464, Cached=1,972,977)
+  openai/gpt-oss-20b               8.50%  (ISL=2,317,083, Cached=196,976)
+  Overall                         29.79%  (ISL=7,283,547, Cached=2,169,953)
+
+
+
+
+
+
+

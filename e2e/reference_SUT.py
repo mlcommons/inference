@@ -318,9 +318,13 @@ class E2ESUT:
         num_queries = len(query_samples)
         log.info(f"Received batch of {num_queries} queries from loadgen")
 
+        # Sort samples by index to maintain consistency across runs
+        # (loadgen shuffles samples, but we want deterministic submission order)
+        sorted_samples = sorted(query_samples, key=lambda s: s.index)
+
         # Submit all queries to thread pool
         futures = [self.thread_pool.submit(self._process_single_query, query_sample)
-                   for query_sample in query_samples]
+                   for query_sample in sorted_samples]
 
         # Wait for all queries in this batch to complete
         # This is important for loadgen synchronization

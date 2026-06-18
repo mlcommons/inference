@@ -176,8 +176,12 @@ class DatasetupSUT:
         if self.start_time is None:
             self.start_time = time.time()
 
+        # Sort samples by index to maintain consistency across runs
+        # (loadgen shuffles samples, but we want deterministic processing order)
+        sorted_samples = sorted(query_samples, key=lambda s: s.index)
+
         futures = []
-        for sample in query_samples:
+        for sample in sorted_samples:
             future = self.thread_pool.submit(self._process_document, sample)
             futures.append(future)
 

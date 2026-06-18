@@ -2003,25 +2003,6 @@ PERFORMANCE_SUMMARY_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
 }
 
-<<<<<<< Updated upstream
-=======
-PERFORMANCE_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/result_summary.json",
-}
-
-PERFORMANCE_CONFIG_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/config.yaml",
-}
-
->>>>>>> Stashed changes
 ACCURACY_LOG_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
@@ -2046,25 +2027,6 @@ ACCURACY_JSON_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
 
-<<<<<<< Updated upstream
-=======
-ACCURACY_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/results.json",
-}
-
-ACCURACY_CONFIG_ENDPOINTS_PATH = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/config.yaml",
-}
-
->>>>>>> Stashed changes
 POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",

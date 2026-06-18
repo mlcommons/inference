@@ -158,7 +158,8 @@ MODEL_CONFIG = {
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
-            # TODO: Set e2e accuracy threshold once reference score is established
+            # TODO: Set e2e accuracy threshold once reference score is
+            # established
             "e2e": ("E2E_ACCURACY", ""),
         },
         "accuracy-upper-limit": {

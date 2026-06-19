@@ -7,6 +7,7 @@ from .utils import *
 from .configuration.configuration import Config
 import logging
 import json
+import yaml
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,7 +24,8 @@ class SubmissionLogs:
     """
 
     def __init__(self, performance_log=None, accuracy_log=None, accuracy_result=None,
-                 accuracy_json=None, system_json=None, measurements_json=None, loader_data={}) -> None:
+                 accuracy_json=None, system_json=None, measurements_json=None,
+                 nameplate_power_yaml=None, loader_data={}) -> None:
         """Initialize the submission logs container.
 
         Args:
@@ -42,6 +44,7 @@ class SubmissionLogs:
         self.system_json = system_json
         self.loader_data = loader_data
         self.measurements_json = measurements_json
+        self.nameplate_power_yaml = nameplate_power_yaml
 
 
 class Loader:
@@ -127,6 +130,10 @@ class Loader:
         self.src_path = os.path.join(
             self.root, SRC_PATH.get(
                 version, SRC_PATH["default"]))
+        nameplate_power_path_template = NAMEPLATE_POWER_PATH.get(version)
+        self.nameplate_power_path = os.path.join(
+            self.root, nameplate_power_path_template
+        ) if nameplate_power_path_template else None
         self.filter_submitter = self.config.get_submitter()
 
     def get_measurement_path(self, path, division,
@@ -197,6 +204,9 @@ class Loader:
             elif log_type in ["System", "Measurements"]:
                 with open(path) as f:
                     log = json.load(f)
+            elif log_type in ["Nameplate"]:
+                with open(path) as f:
+                    log = yaml.safe_load(f)
             elif log_type in ["AccuracyResult"]:
                 with open(path) as f:
                     log = f.readlines()
@@ -271,6 +281,14 @@ class Loader:
                     system_json = self.load_single_log(
                         system_json_path, "System")
                     system_type = system_json.get("system_type")
+                    if self.nameplate_power_path:
+                        nameplate_power_path = self.nameplate_power_path.format(
+                            division=division, submitter=submitter, system=system)
+                        nameplate_power_yaml = self.load_single_log(
+                            nameplate_power_path, "Nameplate")
+                    else:
+                        nameplate_power_path = None
+                        nameplate_power_yaml = None
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
                         if division.lower() in ["closed", "network"]:
@@ -438,6 +456,7 @@ class Loader:
                                 "compliance_path": compliance_path,
                                 "model_mapping": model_mapping,
                                 "power_dir_path": power_dir_path,
+                                "nameplate_power_path": nameplate_power_path,
                                 "src_path": src_path,
                                 "check_scenarios": check_scenarios,
                                 "unknown_scenarios": unknown_scenarios,
@@ -465,4 +484,4 @@ class Loader:
                                 "TEST07_acc_result": test07_acc_result,
                                 "TEST09_acc_result": test09_acc_result,
                             }
-                            yield SubmissionLogs(perf_log, acc_log, acc_result, acc_json, system_json, measurements_json, loader_data)
+                            yield SubmissionLogs(perf_log, acc_log, acc_result, acc_json, system_json, measurements_json, nameplate_power_yaml, loader_data)

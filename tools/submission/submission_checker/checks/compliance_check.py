@@ -188,7 +188,7 @@ class ComplianceCheck(BaseCheck):
                     "compliance_skip": True,
                 }
                 test_logs = SubmissionLogs(
-                    self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)
+                    self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, None, test_data)
                 perf_check = PerformanceCheck(self.log, os.path.join(
                     self.compliance_dir, test), self.config, test_logs)
                 is_valid &= perf_check()
@@ -322,7 +322,9 @@ class ComplianceCheck(BaseCheck):
                     first_token_pass and eos_pass and length_check_pass)
                 if not is_valid:
                     self.log.error(
-                        f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}."
+                        f"TEST06 accuracy check failed. first_token_check:" +
+                        f" {first_token_pass} eos_check:" +
+                        f"{eos_pass} length_check: {length_check_pass}."
                     )
             elif test == "TEST07":
                 # TEST07: Verify accuracy in performance mode

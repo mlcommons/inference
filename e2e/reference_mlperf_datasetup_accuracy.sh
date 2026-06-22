@@ -31,9 +31,9 @@ export CHUNK_SIZE=${CHUNK_SIZE:-768}
 export CHUNK_OVERLAP=${CHUNK_OVERLAP:-32}
 export TEXT_BOUNDARY=${TEXT_BOUNDARY:-"word"}
 
-# Model paths (use local cached models)
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
+# Model paths (use local downloaded models)
+export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # Device configuration
 export DEVICE=${DEVICE:-"auto"}

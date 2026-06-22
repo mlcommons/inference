@@ -18,7 +18,7 @@ echo ""
 # Configuration
 export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
 export DATABASE=${DATABASE:-"vector_html_hnsw_len768_ov32_word"}
-export DATASET=${DATASET:-"data/frames_dataset.tsv"}
+export DATASET=${DATASET:-"frames-benchmark-dataset/frames_dataset.tsv"}
 
 # Chunking configuration
 export CHUNK_SIZE=${CHUNK_SIZE:-768}
@@ -31,9 +31,9 @@ export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
 export DEVICE=${DEVICE:-"auto"}
 export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
 
-# Model paths
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
+# Model paths (use local downloaded models)
+export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # Performance options
 export LOAD_EMBEDDINGS=${LOAD_EMBEDDINGS:-false}

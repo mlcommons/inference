@@ -684,8 +684,8 @@ def main():
     )
     parser.add_argument(
         '--data-dir',
-        default='data',
-        help='Directory for dataset files (default: data)'
+        default='frames-benchmark-dataset',
+        help='Directory for dataset files (default: frames-benchmark-dataset)'
     )
     
     # Processing options

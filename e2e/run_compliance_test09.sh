@@ -34,7 +34,7 @@ TEST09_VERIFICATION="${SCRIPT_DIR}/third_party/mlperf-inference/compliance/TEST0
 
 # Directories
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"${SCRIPT_DIR}"}
-export DATA_DIR=${DATA_DIR:-"data"}
+export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
 export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_test09

@@ -106,12 +106,12 @@ def get_args():
     # Model paths
     parser.add_argument(
         "--retriever_model",
-        default="/data/model/e5-base-v2",
+        default="intfloat_e5-base-v2/e5-base-v2",
         help="Path to retriever/embedding model"
     )
     parser.add_argument(
         "--reranker_model",
-        default="/data/model/colbertv2.0",
+        default="colbert-ir_colbertv2.0/colbertv2.0",
         help="Path to reranker model"
     )
 

@@ -20,7 +20,7 @@ echo "Time Start: $(date +%s)"
 
 # Configuration
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
-export DATA_DIR=${DATA_DIR:-"data"}
+export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
 export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output
@@ -39,9 +39,9 @@ export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
 export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
-# Model paths (use local cached models)
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
+# Model paths (use local downloaded models)
+export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
 # Default to local vLLM server (set OPENROUTER_API_KEY to use OpenRouter instead)

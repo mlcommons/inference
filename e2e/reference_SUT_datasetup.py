@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-System Under Test (SUT) for E2E-RAG-Datasetup workload.
+System Under Test (SUT) for RAG DB workload.
 Processes HTML documents, chunks them, generates embeddings, and indexes them.
 """
 
@@ -52,7 +52,7 @@ log = logging.getLogger("DatasetupSUT")
 
 class DatasetupSUT:
     """
-    System Under Test for E2E-RAG-Datasetup workload.
+    System Under Test for RAG DB workload.
     Handles loadgen document samples and indexes them one-by-one.
     """
 

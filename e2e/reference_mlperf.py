@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-MLPerf Loadgen entry point for E2E DocGrader workload.
+MLPerf Loadgen entry point for RAG-QnA workload.
 Initializes QSL/SUT, configures loadgen settings, and runs the test.
 """
 
@@ -32,7 +32,7 @@ def get_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="MLPerf Loadgen for E2E DocGrader Multi-hop RAG Benchmark"
+        description="MLPerf Loadgen for RAG-QnA Multi-hop RAG Benchmark"
     )
 
     # Loadgen-specific arguments
@@ -172,7 +172,7 @@ def main():
 
     # Initialize SUT
     print("\n" + "="*80)
-    print("Initializing E2E DocGrader SUT...")
+    print("Initializing RAG-QnA SUT...")
     print("="*80)
 
     sut = E2ESUT(
@@ -204,7 +204,7 @@ def main():
 
     # Load config files
     if os.path.exists(args.user_conf):
-        settings.FromConfig(args.user_conf, "e2e", args.scenario)
+        settings.FromConfig(args.user_conf, "rag-qna", args.scenario)
         print(f"Loaded user config from {args.user_conf}")
     else:
         print(f"Warning: User config not found: {args.user_conf}")

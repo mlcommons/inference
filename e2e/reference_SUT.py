@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-System Under Test (SUT) for E2E DocGrader workload.
+System Under Test (SUT) for RAG-QnA workload.
 Wraps multi_shot_retrieval logic and processes loadgen queries.
 """
 
@@ -44,7 +44,7 @@ log = logging.getLogger("E2ESUT")
 
 class E2ESUT:
     """
-    System Under Test for E2E DocGrader workload.
+    System Under Test for RAG-QnA workload.
     Handles loadgen queries and runs multi-shot retrieval.
     """
 

@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-Query Sample Library for E2E-RAG-Datasetup workload.
+Query Sample Library for RAG DB workload.
 Loads HTML document file paths and provides them to MLPerf Loadgen for indexing.
 """
 
@@ -24,7 +24,7 @@ import mlperf_loadgen as lg
 
 
 class DatasetupQSL:
-    """Query Sample Library for E2E-RAG-Datasetup benchmark."""
+    """Query Sample Library for RAG DB benchmark."""
 
     def __init__(self, documents_dir, skip_qsl=False):
         """

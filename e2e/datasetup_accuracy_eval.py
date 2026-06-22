@@ -15,7 +15,7 @@
 # =============================================================================
 
 """
-Accuracy Evaluation for E2E-RAG-Datasetup Workload
+Accuracy Evaluation for RAG DB Workload
 
 This script evaluates the accuracy of the datasetup workload by:
 1. Reading the loadgen accuracy logs (mlperf_log_accuracy.json)
@@ -282,7 +282,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
         dict: Accuracy results
     """
     print("="*80)
-    print("E2E-RAG-Datasetup Accuracy Evaluation")
+    print("RAG DB Accuracy Evaluation")
     print("="*80)
     print(f"Started: {datetime.now().isoformat()}")
     print()
@@ -452,7 +452,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
     accuracy_txt_path = os.path.join(log_dir, "accuracy.txt")
     with open(accuracy_txt_path, 'w') as f:
         f.write("="*80 + "\n")
-        f.write("E2E-RAG-Datasetup Accuracy Report\n")
+        f.write("RAG DB Accuracy Report\n")
         f.write("="*80 + "\n")
         f.write(f"Timestamp: {datetime.now().isoformat()}\n")
         f.write(f"Database: {database_path}\n")
@@ -500,7 +500,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate accuracy for E2E-RAG-Datasetup workload"
+        description="Evaluate accuracy for RAG DB workload"
     )
 
     parser.add_argument(

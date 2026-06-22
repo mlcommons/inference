@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-Query Sample Library for E2E DocGrader workload.
+Query Sample Library for RAG-QnA workload.
 Loads queries from frames_dataset.tsv and provides them to MLPerf Loadgen.
 """
 
@@ -24,7 +24,7 @@ import mlperf_loadgen as lg
 
 
 class E2EQSL:
-    """Query Sample Library for E2E DocGrader multi-hop RAG benchmark."""
+    """Query Sample Library for RAG-QnA multi-hop RAG benchmark."""
 
     def __init__(self, dataset_path, perf_count=None, skip_qsl=False):
         """
@@ -162,7 +162,7 @@ class E2EQSLInMemory(E2EQSL):
 # =============================================================================
 
 """
-Query Sample Library for E2E DocGrader workload.
+Query Sample Library for RAG-QnA workload.
 Loads queries from frames_dataset.tsv and provides them to MLPerf Loadgen.
 """
 
@@ -172,7 +172,7 @@ import mlperf_loadgen as lg
 
 
 class E2EQSL:
-    """Query Sample Library for E2E DocGrader multi-hop RAG benchmark."""
+    """Query Sample Library for RAG-QnA multi-hop RAG benchmark."""
 
     def __init__(self, dataset_path, perf_count=None, skip_qsl=False):
         """

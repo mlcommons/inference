@@ -15,7 +15,7 @@
 # =============================================================================
 
 """
-Accuracy evaluation script for E2E DocGrader loadgen results.
+Accuracy evaluation script for RAG-QnA loadgen results.
 Evaluates both retrieval accuracy and answer quality using LLM judge.
 """
 
@@ -257,7 +257,7 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate E2E DocGrader loadgen accuracy")
+    parser = argparse.ArgumentParser(description="Evaluate RAG-QnA loadgen accuracy")
     parser.add_argument('--log_dir', required=True, help='Loadgen log directory')
     parser.add_argument('--results_file', required=True, help='SUT results JSON file')
     parser.add_argument('--dataset_path', required=True, help='Path to frames_dataset.tsv')

@@ -165,7 +165,7 @@ def call_judge(session: requests.Session, service_url: str, model: str, question
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
-            "X-Title": "E2E DocGrader Evaluation"
+            "X-Title": "RAG-QnA Evaluation"
         }
 
     response = session.post(service_url, json=payload, headers=headers, timeout=120)

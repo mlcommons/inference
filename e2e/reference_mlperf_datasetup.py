@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-MLPerf Loadgen entry point for E2E-RAG-Datasetup workload.
+MLPerf Loadgen entry point for RAG DB workload.
 Initializes QSL/SUT for datasetup, configures loadgen settings, and runs the test.
 """
 
@@ -30,7 +30,7 @@ def get_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="MLPerf Loadgen for E2E-RAG-Datasetup Benchmark"
+        description="MLPerf Loadgen for RAG DB Benchmark"
     )
 
     # Loadgen-specific arguments
@@ -172,7 +172,7 @@ def main():
 
     # Initialize SUT
     print("\n" + "="*80)
-    print("Initializing E2E-RAG-Datasetup SUT...")
+    print("Initializing RAG DB SUT...")
     print("="*80)
 
     sut = DatasetupSUT(
@@ -210,7 +210,7 @@ def main():
 
     # Load config files
     if os.path.exists(args.user_conf):
-        settings.FromConfig(args.user_conf, "e2e-datasetup", args.scenario)
+        settings.FromConfig(args.user_conf, "rag-db", args.scenario)
         print(f"Loaded user config from {args.user_conf}")
     else:
         print(f"Warning: User config not found: {args.user_conf}")

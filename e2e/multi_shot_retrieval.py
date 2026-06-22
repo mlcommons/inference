@@ -268,7 +268,7 @@ def get_chat_completions_headers(service_url: str):
         return {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "HTTP-Referer": "https://github.com/anthropics/e2e-docgrader",
-            "X-Title": "E2E DocGrader Multi-Shot Retrieval"
+            "X-Title": "RAG-QnA Multi-Shot Retrieval"
         }
     return {}
 

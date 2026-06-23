@@ -325,7 +325,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -333,6 +333,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
             avg_power_efficiency = (samples_per_query * 1000) / power_metric
 
     return is_valid, power_metric, scenario, avg_power_efficiency
+
 
 _ADJECTIVES = [
     "amber", "azure", "bold", "brave", "calm", "clear", "cool", "crisp",
@@ -362,4 +363,3 @@ def generate_private_id(system_id: str) -> str:
     noun = _NOUNS[h[1] % len(_NOUNS)]
     suffix = h[2:4].hex()
     return f"{adj}-{noun}-{suffix}"
-

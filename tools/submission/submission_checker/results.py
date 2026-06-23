@@ -55,6 +55,7 @@ class ResultExporter:
             "has_power",
             "Units",
             "weight_data_types",
+            "PrivateID",
         ]
         self.rows = []
         self.csv_path = csv_path
@@ -124,6 +125,7 @@ class ResultExporter:
         )
         row["Units"] = unit
         row["weight_data_types"] = submission_logs.measurements_json["weight_data_types"]
+        row["PrivateID"] = submission_logs.loader_data.get("private_id", "")
         self.rows.append(row.copy())
         if row["has_power"]:
             row["Result"] = submission_logs.loader_data["power_metric"]

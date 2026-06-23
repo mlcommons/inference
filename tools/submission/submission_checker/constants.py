@@ -20,8 +20,8 @@ MODEL_CONFIG = {
             "dlrm-v3",
             "yolo-95",
             "yolo-99",
-            "e2e",
-            "e2e_vectorDB"
+            "rag-qna",
+            "rag-db"
         ],
         "required-scenarios-datacenter": {
             "dlrm-v3": ["Server", "Offline"],
@@ -36,8 +36,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
             "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
-            "e2e": ["Offline"],
-            "e2e_vectorDB": ["Offline"]
+            "rag-qna": ["Offline"],
+            "rag-db": ["Offline"]
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -160,10 +160,10 @@ MODEL_CONFIG = {
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
-            # TODO: Set e2e accuracy threshold once reference score is
+            # TODO: Set rag-qna accuracy threshold once reference score is
             # established
-            "e2e": ("E2E_ACCURACY", ""),
-            "e2e_vectorDB": ("E2E_ACCURACY", ""),
+            "rag-qna": ("E2E_ACCURACY", ""),
+            "rag-db": ("E2E_ACCURACY", ""),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -202,8 +202,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
-            "e2e": 824,
-            "e2e_vectorDB": 824
+            "rag-qna": 824,
+            "rag-db": 2503
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
@@ -229,8 +229,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
-            "e2e": 824,
-            "e2e_vectorDB": 824,
+            "rag-qna": 824,
+            "rag-db": 2503,
         },
         "model_mapping": {
             "ssd-resnet34": "retinanet",
@@ -290,8 +290,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "e2e": {"Offline": 824},
-            "e2e_vectorDB": {"Offline": 824},
+            "rag-qna": {"Offline": 824},
+            "rag-db": {"Offline": 2503},
         },
         "models_TEST01": [
             "resnet",
@@ -1485,7 +1485,7 @@ REQUIRED_ACC_BENCHMARK = {
             ]
         },
     },
-    "e2e_vectorDB": {
+    "rag-db": {
         "v6.1": {
             "results": [
                 # TODO: update name if needed
@@ -1540,8 +1540,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 50,
-    "e2e": 824,
-    "e2e_vectorDB": 824
+    "rag-qna": 824,
+    "rag-db": 824
 }
 
 SCENARIO_MAPPING = {

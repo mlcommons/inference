@@ -14,7 +14,7 @@
 # =============================================================================
 
 """
-MLPerf Loadgen entry point for RAG DB workload.
+MLPerf Loadgen entry point for RAG-DB workload.
 Initializes QSL/SUT for datasetup, configures loadgen settings, and runs the test.
 """
 
@@ -30,7 +30,7 @@ def get_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="MLPerf Loadgen for RAG DB Benchmark"
+        description="MLPerf Loadgen for RAG-DB Benchmark"
     )
 
     # Loadgen-specific arguments
@@ -172,7 +172,7 @@ def main():
 
     # Initialize SUT
     print("\n" + "="*80)
-    print("Initializing RAG DB SUT...")
+    print("Initializing RAG-DB SUT...")
     print("="*80)
 
     sut = DatasetupSUT(

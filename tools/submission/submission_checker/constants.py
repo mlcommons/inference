@@ -1452,6 +1452,20 @@ REQUIRED_ACC_BENCHMARK = {
                 "2289",
             ]
         },
+        "v6.1": {
+            "images": [
+                "4475",
+                "3627",
+                "1046",
+                "4937",
+                "3867",
+                "1671",
+                "3789",
+                "1206",
+                "4111",
+                "3093",
+            ]
+        }
     },
     "wan-2.2-t2v-a14b": {
         "v6.0": {
@@ -1484,14 +1498,6 @@ REQUIRED_ACC_BENCHMARK = {
             ]
         },
     },
-    "rag-db": {
-        "v6.1": {
-            "results": [
-                # TODO: update name if needed
-                "results.json"
-            ]
-        },
-    }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]

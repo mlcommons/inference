@@ -69,6 +69,7 @@ python3 -m inference.tools.submission.submission_checker.main
     [--scenarios-to-skip]
     [--skip-all-systems-have-results-check]
     [--skip-calibration-check]
+    [--private-ids]
 ```
 
 ### implemented checks

@@ -29,7 +29,7 @@ Based on 5 production runs (4021 total answer_generator invocations):
 Use the automated compliance test script that handles setup, run, verification, and cleanup:
 
 ```bash
-cd /data2/mkankana/e2e_docGrader_fix/inference/e2e
+cd inference/e2e
 
 # Run TEST09 only
 bash run_compliance_test09.sh
@@ -64,7 +64,7 @@ bash run_compliance_test09.sh
 Copy the audit.config to your working directory:
 
 ```bash
-cd /data2/mkankana/e2e_docGrader_fix/inference/e2e
+cd inference/e2e-rag
 cp ../compliance/TEST09/e2e-rag/audit.config ./
 ```
 
@@ -92,7 +92,7 @@ python3 reference_mlperf.py \
 ### Part III: Run Verification
 
 ```bash
-python3 /data2/mkankana/e2e_docGrader_fix/inference/e2e/third_party/mlperf-inference/compliance/TEST09/run_verification.py \
+python3 inference/e2e/third_party/mlperf-inference/compliance/TEST09/run_verification.py \
     -c run_output_test09 \
     -o submission/compliance/e2e-rag/Offline \
     --audit-config ../compliance/TEST09/e2e-rag/audit.config

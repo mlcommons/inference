@@ -301,7 +301,7 @@ class Loader:
                             private_id_json = self.load_single_log(
                                 private_id_json_path, "System")
                             private_id = private_id_json[system]
-                        except:
+                        except BaseException:
                             self.logger.warning(
                                 "%s Private id not cached for system %s",
                                 system_path,
@@ -315,7 +315,7 @@ class Loader:
                                 system_path,
                                 private_id_json_path
                             )
-                    
+
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
                         if division.lower() in ["closed", "network"]:

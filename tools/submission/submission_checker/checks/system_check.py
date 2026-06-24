@@ -58,6 +58,7 @@ class SystemCheck(BaseCheck):
         self.checks.append(self.required_fields_check)
         self.checks.append(self.submitter_check)
         self.checks.append(self.division_check)
+        self.checks.append(self.nameplate_power_check)
 
     def missing_check(self):
         """Ensure the system JSON file was provided.
@@ -218,3 +219,87 @@ class SystemCheck(BaseCheck):
             )
             return False
         return True
+
+    def nameplate_power_check(self):
+        """Check for nameplate power YAML, load it, and sum PowerCapacityWatts.
+
+        Only runs for systems with a power submission. The nameplate power YAML
+        is required in that case — missing or unloadable file is an error.
+        Non-power submissions are skipped entirely.
+
+        If present and loaded, recursively sums all PowerCapacityWatts values
+        and stores the total as 'design_power_watts' in loader_data.
+
+        Returns:
+            bool: False if the file is required but missing or unloadable,
+                True otherwise.
+        """
+        import os
+        nameplate_power_path = self.submission_logs.loader_data.get(
+            "nameplate_power_path")
+        nameplate_power_yaml = self.submission_logs.nameplate_power_yaml
+        has_power = os.path.exists(
+            self.submission_logs.loader_data.get("power_dir_path", ""))
+
+        if not nameplate_power_path:
+            return True
+
+        if not has_power:
+            self.submission_logs.loader_data["design_power_watts"] = None
+            return True
+
+        if not os.path.exists(nameplate_power_path):
+            self.submission_logs.loader_data["design_power_watts"] = None
+            self.log.error(
+                "%s has a power submission but nameplate power YAML not found at %s",
+                self.path,
+                nameplate_power_path,
+            )
+            return False
+
+        if nameplate_power_yaml is None:
+            self.submission_logs.loader_data["design_power_watts"] = None
+            self.log.error(
+                "%s nameplate power YAML exists but could not be loaded: %s",
+                self.path,
+                nameplate_power_path,
+            )
+            return False
+
+        design_power_watts = _sum_power_capacity_watts(nameplate_power_yaml)
+        self.submission_logs.loader_data["design_power_watts"] = design_power_watts
+        self.log.info(
+            "%s design_power_watts = %s W",
+            self.path,
+            design_power_watts,
+        )
+        return True
+
+
+def _sum_power_capacity_watts(data):
+    """Calculate total design power from the nameplate YAML structure.
+
+    Traverses the hierarchy of submitter-defined component labels. A node is
+    a leaf when it contains both 'PSUs' and 'Min PSUs Needed'; design power
+    for that component is the sum of the minimum required PSUs' capacities
+    (redundant PSUs beyond Min PSUs Needed are excluded). All other nodes are
+    intermediate and are recursed into.
+    """
+    if isinstance(data, dict):
+        keys_lower = {k.lower(): k for k in data}
+        if "psus" in keys_lower and "min psus needed" in keys_lower:
+            min_psus = data[keys_lower["min psus needed"]]
+            psus = data[keys_lower["psus"]]
+            capacities = sorted(
+                [psu.get("PowerCapacityWatts", 0) for psu in psus],
+                reverse=True,
+            )
+            return sum(capacities[:min_psus])
+        return sum(
+            _sum_power_capacity_watts(v)
+            for v in data.values()
+            if isinstance(v, (dict, list))
+        )
+    elif isinstance(data, list):
+        return sum(_sum_power_capacity_watts(item) for item in data)
+    return 0

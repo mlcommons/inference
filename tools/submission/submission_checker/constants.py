@@ -1742,6 +1742,10 @@ SYSTEM_PATH = {
     "default": "{division}/{submitter}/systems/{system}.json",
 }
 
+NAMEPLATE_POWER_PATH = {
+    "v6.1": "{division}/{submitter}/systems/{system}_power.yaml",
+}
+
 SRC_PATH = {
     "v5.0": "{division}/{submitter}/code",
     "v5.1": "{division}/{submitter}/code",

@@ -1,6 +1,6 @@
 import os
 from .constants import *
-from .utils import list_dir
+from .utils import list_dir, generate_private_id
 from .parsers.loadgen_parser import LoadgenParser
 from typing import Generator, Literal
 from .utils import *
@@ -134,6 +134,9 @@ class Loader:
         self.nameplate_power_path = os.path.join(
             self.root, nameplate_power_path_template
         ) if nameplate_power_path_template else None
+        self.private_id_path = os.path.join(
+            self.root, PRIVATE_ID_PATH.get(
+                version, PRIVATE_ID_PATH["default"]))
         self.filter_submitter = self.config.get_submitter()
 
     def get_measurement_path(self, path, division,
@@ -289,6 +292,30 @@ class Loader:
                     else:
                         nameplate_power_path = None
                         nameplate_power_yaml = None
+
+                    private_id = ""
+                    if self.config.private_ids:
+                        private_id_json_path = self.private_id_path.format(
+                            division=division, submitter=submitter, system=system)
+                        try:
+                            private_id_json = self.load_single_log(
+                                private_id_json_path, "System")
+                            private_id = private_id_json[system]
+                        except:
+                            self.logger.warning(
+                                "%s Private id not cached for system %s",
+                                system_path,
+                                system
+                            )
+                            private_id = generate_private_id(system)
+                            with open(private_id_json_path, "w") as f:
+                                json.dump({system: private_id}, f, indent=4)
+                            self.logger.warning(
+                                "%s Private id generated and saved at %s",
+                                system_path,
+                                private_id_json_path
+                            )
+                    
                     for benchmark in list_dir(system_path):
                         benchmark_path = os.path.join(system_path, benchmark)
                         if division.lower() in ["closed", "network"]:
@@ -483,5 +510,7 @@ class Loader:
                                 "TEST08_acc_result": test08_acc_result,
                                 "TEST07_acc_result": test07_acc_result,
                                 "TEST09_acc_result": test09_acc_result,
+                                # Private ID
+                                "private_id": private_id
                             }
                             yield SubmissionLogs(perf_log, acc_log, acc_result, acc_json, system_json, measurements_json, nameplate_power_yaml, loader_data)

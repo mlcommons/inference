@@ -1752,3 +1752,10 @@ SRC_PATH = {
     "v6.0": "{division}/{submitter}/src",
     "default": "{division}/{submitter}/src",
 }
+
+PRIVATE_ID_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/privateid.json",
+    "v5.1": "{division}/{submitter}/results/{system}/privateid.json",
+    "v6.0": "{division}/{submitter}/results/{system}/privateid.json",
+    "default": "{division}/{submitter}/results/{system}/privateid.json",
+}

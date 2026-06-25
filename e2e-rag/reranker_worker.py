@@ -100,7 +100,8 @@ def _reranker_worker_main(
             response_q.put((request_id, None, repr(e)))
 
 
-def _do_rerank(model, tokenizer, device: str, query: str, passages: List[str]) -> List[Tuple[str, float]]:
+def _do_rerank(model, tokenizer, device: str, query: str,
+               passages: List[str]) -> List[Tuple[str, float]]:
     """ColBERT late-interaction reranking with MaxSim scoring."""
     import torch
 
@@ -180,10 +181,12 @@ class RerankerQueue:
         self._process.start()
 
         if not self._ready_event.wait(timeout=300):
-            raise RuntimeError("reranker child failed to become ready within 300s")
+            raise RuntimeError(
+                "reranker child failed to become ready within 300s")
 
         self._dispatcher_running = True
-        self._dispatcher_thread = threading.Thread(target=self._dispatcher_loop, daemon=True)
+        self._dispatcher_thread = threading.Thread(
+            target=self._dispatcher_loop, daemon=True)
         self._dispatcher_thread.start()
 
     def stop(self):
@@ -215,12 +218,14 @@ class RerankerQueue:
                 continue
             event, container = slot
             if err is not None:
-                container["error"] = RuntimeError(f"reranker child error: {err}")
+                container["error"] = RuntimeError(
+                    f"reranker child error: {err}")
             else:
                 container["result"] = result
             event.set()
 
-    def submit(self, query: str, passages: List[str]) -> List[Tuple[str, float]]:
+    def submit(self, query: str,
+               passages: List[str]) -> List[Tuple[str, float]]:
         if self._process is None or not self._process.is_alive():
             raise RuntimeError("reranker process is not running")
 

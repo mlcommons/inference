@@ -112,8 +112,10 @@ class E2ESUT:
         # Performance test mode
         if hasattr(args, 'perf_test_mode') and args.perf_test_mode:
             from perf_test_cache import PerfTestCache
-            log.info(f"Loading performance test cache from {args.perf_test_mode}")
-            self.llm_config['perf_test_cache'] = PerfTestCache(args.perf_test_mode)
+            log.info(
+                f"Loading performance test cache from {args.perf_test_mode}")
+            self.llm_config['perf_test_cache'] = PerfTestCache(
+                args.perf_test_mode)
         else:
             self.llm_config['perf_test_cache'] = None
 
@@ -130,11 +132,14 @@ class E2ESUT:
         # Initialize database
         log.info("Initializing RAG database...")
         self.rag_db = VectorDB(
-            retriever_model=args.retriever_model if hasattr(args, 'retriever_model') else 'BAAI/bge-base-en-v1.5',
-            reranker_model=args.reranker_model if hasattr(args, 'reranker_model') else 'BAAI/bge-reranker-base',
+            retriever_model=args.retriever_model if hasattr(
+                args, 'retriever_model') else 'BAAI/bge-base-en-v1.5',
+            reranker_model=args.reranker_model if hasattr(
+                args, 'reranker_model') else 'BAAI/bge-reranker-base',
             device=device,
             database=db_path.replace('.db', ''),
-            num_embedding_devices=args.num_embedding_devices if hasattr(args, 'num_embedding_devices') else 1,
+            num_embedding_devices=args.num_embedding_devices if hasattr(
+                args, 'num_embedding_devices') else 1,
             benchmark=args.benchmark if hasattr(args, 'benchmark') else False
         )
 

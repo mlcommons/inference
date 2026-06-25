@@ -34,9 +34,10 @@ import requests
 # OpenRouter configuration
 DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
 DEFAULT_JUDGE_MODEL = "gpt-oss-20b"
-# Masked API key (set OPENROUTER_API_KEY environment variable to use OpenRouter)
+# Masked API key (set OPENROUTER_API_KEY environment variable to use
+# OpenRouter)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY',
-    'sk-or-v1-****')
+                                    'sk-or-v1-****')
 
 
 JUDGE_PROMPT = """You are an expert evaluator comparing LLM-generated answers to ground truth answers.
@@ -83,7 +84,11 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
     }
 
     try:
-        response = requests.post(service_url, json=payload, headers=headers, timeout=60)
+        response = requests.post(
+            service_url,
+            json=payload,
+            headers=headers,
+            timeout=60)
         response.raise_for_status()
         result = response.json()
 
@@ -105,7 +110,8 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
         return {"correct": False, "reasoning": f"Judge error: {e}"}
 
 
-def calculate_retrieval_metrics(retrieved_urls: List[str], expected_urls: List[str]) -> Dict:
+def calculate_retrieval_metrics(
+        retrieved_urls: List[str], expected_urls: List[str]) -> Dict:
     """Calculate precision, recall, F1 for retrieval."""
 
     retrieved_set = set(retrieved_urls)
@@ -118,7 +124,8 @@ def calculate_retrieval_metrics(retrieved_urls: List[str], expected_urls: List[s
 
     precision = len(correct) / len(retrieved_set) if retrieved_set else 0.0
     recall = len(correct) / len(expected_set) if expected_set else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    f1 = 2 * precision * recall / \
+        (precision + recall) if (precision + recall) > 0 else 0.0
 
     return {
         "precision": precision,
@@ -128,8 +135,8 @@ def calculate_retrieval_metrics(retrieved_urls: List[str], expected_urls: List[s
 
 
 def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
-                    judge_service_url: str = DEFAULT_JUDGE_URL,
-                    judge_model: str = DEFAULT_JUDGE_MODEL) -> Dict:
+                     judge_service_url: str = DEFAULT_JUDGE_URL,
+                     judge_model: str = DEFAULT_JUDGE_MODEL) -> Dict:
     """
     Evaluate loadgen results.
 
@@ -190,12 +197,13 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
         expected_urls = gt_data['expected_urls']
 
         # Calculate retrieval metrics
-        retrieval_metrics = calculate_retrieval_metrics(retrieved_urls, expected_urls)
+        retrieval_metrics = calculate_retrieval_metrics(
+            retrieved_urls, expected_urls)
 
         # Judge answer correctness
         judge_result = call_judge(query, ground_truth, llm_answer,
-                                 service_url=judge_service_url,
-                                 model_name=judge_model)
+                                  service_url=judge_service_url,
+                                  model_name=judge_model)
         answer_correct = judge_result.get('correct', False)
 
         return {
@@ -229,7 +237,8 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
                     total_queries += 1
 
                     if total_queries % 10 == 0:
-                        print(f"  Evaluated {total_queries}/{len(results)} queries...")
+                        print(
+                            f"  Evaluated {total_queries}/{len(results)} queries...")
             except Exception as e:
                 print(f"Error evaluating query: {e}")
 
@@ -257,14 +266,37 @@ def evaluate_results(results: Dict, dataset_path: str, num_workers: int = 4,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate RAG-QnA loadgen accuracy")
-    parser.add_argument('--log_dir', required=True, help='Loadgen log directory')
-    parser.add_argument('--results_file', required=True, help='SUT results JSON file')
-    parser.add_argument('--dataset_path', required=True, help='Path to frames_dataset.tsv')
-    parser.add_argument('--num_workers', type=int, default=4, help='Number of parallel judge workers')
-    parser.add_argument('--output', default='accuracy_results.json', help='Output file for detailed results')
-    parser.add_argument('--judge_service_url', default=DEFAULT_JUDGE_URL, help='Judge LLM service URL')
-    parser.add_argument('--judge_model', default=DEFAULT_JUDGE_MODEL, help='Judge LLM model name')
+    parser = argparse.ArgumentParser(
+        description="Evaluate RAG-QnA loadgen accuracy")
+    parser.add_argument(
+        '--log_dir',
+        required=True,
+        help='Loadgen log directory')
+    parser.add_argument(
+        '--results_file',
+        required=True,
+        help='SUT results JSON file')
+    parser.add_argument(
+        '--dataset_path',
+        required=True,
+        help='Path to frames_dataset.tsv')
+    parser.add_argument(
+        '--num_workers',
+        type=int,
+        default=4,
+        help='Number of parallel judge workers')
+    parser.add_argument(
+        '--output',
+        default='accuracy_results.json',
+        help='Output file for detailed results')
+    parser.add_argument(
+        '--judge_service_url',
+        default=DEFAULT_JUDGE_URL,
+        help='Judge LLM service URL')
+    parser.add_argument(
+        '--judge_model',
+        default=DEFAULT_JUDGE_MODEL,
+        help='Judge LLM model name')
     args = parser.parse_args()
 
     # Load results
@@ -280,9 +312,9 @@ def main():
                                judge_model=args.judge_model)
 
     # Print summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("ACCURACY EVALUATION RESULTS")
-    print("="*80)
+    print("=" * 80)
     print(f"Total Queries:        {metrics['total_queries']}")
     print(f"\nRetrieval Metrics:")
     print(f"  Precision@N:        {metrics['retrieval_precision']:.3f}")
@@ -290,7 +322,7 @@ def main():
     print(f"  F1@N:               {metrics['retrieval_f1']:.3f}")
     print(f"\nAnswer Quality:")
     print(f"  LLM Judge Accuracy: {metrics['answer_accuracy']:.3f}")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Save detailed results
     with open(args.output, 'w') as f:

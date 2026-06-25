@@ -44,7 +44,11 @@ def _alias_missing_faiss_swigfaiss_modules() -> None:
     serialized databases loadable across heterogeneous installs without
     rebuilding them.
     """
-    candidates = ("swigfaiss_avx512_spr", "swigfaiss_avx512", "swigfaiss_avx2", "swigfaiss")
+    candidates = (
+        "swigfaiss_avx512_spr",
+        "swigfaiss_avx512",
+        "swigfaiss_avx2",
+        "swigfaiss")
     available = None
     for name in candidates:
         full = f"faiss.{name}"
@@ -66,7 +70,10 @@ def _alias_missing_faiss_swigfaiss_modules() -> None:
             except ImportError:
                 sys.modules[full] = available
 
-# Worker function for parallel embedding generation (must be at module level for multiprocessing)
+# Worker function for parallel embedding generation (must be at module
+# level for multiprocessing)
+
+
 def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue,
                            model_name, encode_kwargs, base_device, numa_plan=None):
     """Worker function to generate embeddings on a specific device.
@@ -120,9 +127,11 @@ def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_
             encode_kwargs=encode_kwargs
         )
 
-        print(f"✓ Device {device}: Loaded model, processing {len(input_chunks)} input chunk(s)")
+        print(
+            f"✓ Device {device}: Loaded model, processing {len(input_chunks)} input chunk(s)")
 
-        for input_chunk_idx, input_chunk in zip(input_chunk_indices, input_chunks):
+        for input_chunk_idx, input_chunk in zip(
+                input_chunk_indices, input_chunks):
             embeddings = embedder.embed_documents(input_chunk)
             result_queue.put((input_chunk_idx, embeddings))
 
@@ -133,24 +142,25 @@ def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_
         for input_chunk_idx in input_chunk_indices:
             result_queue.put((input_chunk_idx, None))
 
+
 class VectorDB(RagDB):
     @classmethod
     def get_default_db_name(cls) -> str:
         """Get the default database filename for VectorDB."""
         return "vector.db"
-    
+
     def __init__(self,
-            retriever_model: str = None,
-            reranker_model: str = None,
-            device: str = "auto",
-            load_embeddings: bool = True,
-            num_embedding_devices: int = 1,
-            benchmark: bool = False,
-            hierarchical: bool = False,
-            embedding_device: str = None,
-            reranker_device: str = None,
-            **kwargs
-        ):
+                 retriever_model: str = None,
+                 reranker_model: str = None,
+                 device: str = "auto",
+                 load_embeddings: bool = True,
+                 num_embedding_devices: int = 1,
+                 benchmark: bool = False,
+                 hierarchical: bool = False,
+                 embedding_device: str = None,
+                 reranker_device: str = None,
+                 **kwargs
+                 ):
         super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
@@ -159,7 +169,8 @@ class VectorDB(RagDB):
         self._hierarchical = hierarchical
         self._embedding_lock = None
         # Embedding device defaults to inheriting from --device.
-        self._embedding_device = self._determine_device(embedding_device) if embedding_device else self._device
+        self._embedding_device = self._determine_device(
+            embedding_device) if embedding_device else self._device
 
         # For hierarchical mode: map child_index -> parent_passage
         self._parent_map = {}
@@ -175,7 +186,8 @@ class VectorDB(RagDB):
         # For single-device embedding, allocate one GPU now so the reranker
         # (allocated later) can't pick the same one. Multi-device path
         # allocates inside _embed_documents_parallel.
-        if num_embedding_devices == 1 and self._embedding_device in ("cuda", "xpu"):
+        if num_embedding_devices == 1 and self._embedding_device in (
+                "cuda", "xpu"):
             from utils import resolve_gpu_device
             self._embedding_device = resolve_gpu_device(
                 self._embedding_device, name="embedding",
@@ -183,27 +195,32 @@ class VectorDB(RagDB):
             )
 
         # Initialize embedding model with device configuration
-        model_kwargs = {'device': self._embedding_device, 'local_files_only': True}
+        model_kwargs = {
+            'device': self._embedding_device,
+            'local_files_only': True}
         encode_kwargs = {'normalize_embeddings': True}
-        
+
         self._embedding_model = HuggingFaceEmbeddings(
             model_name=self._retriever_model_name,
             model_kwargs=model_kwargs,
             encode_kwargs=encode_kwargs
         )
-        self._embedding_dimension = len(self._embedding_model.embed_query("hello world"))
-        
+        self._embedding_dimension = len(
+            self._embedding_model.embed_query("hello world"))
+
         # Check the dtype of the embedding without using numpy
         test_embedding_raw = self._embedding_model.embed_query("test")
-        
+
         # Calculate dtype and itemsize from Python native list
-        if isinstance(test_embedding_raw, list) and len(test_embedding_raw) > 0:
+        if isinstance(test_embedding_raw, list) and len(
+                test_embedding_raw) > 0:
             test_element = test_embedding_raw[0]
             embedding_dtype = type(test_element)
             embedding_itemsize = test_element.__sizeof__()  # Size in bytes of one element
             self._embedding_bytes_per_element = embedding_itemsize
         else:
-            raise ValueError("Embedding query did not return a valid list of floats.")
+            raise ValueError(
+                "Embedding query did not return a valid list of floats.")
 
         if self._benchmark:
             print(f"   Embedding element type: {embedding_dtype}")
@@ -220,12 +237,12 @@ class VectorDB(RagDB):
             embedding_function=self._embedding_model,
             index=self._index,
             docstore=self._docstore,
-            index_to_docstore_id={}, # This will be populated as documents are added
+            index_to_docstore_id={},  # This will be populated as documents are added
         )
-        
+
         # Keep track of ingested documents
         self._doc_list = []
-    
+
     def _create_vector_index(self, dimension: int):
         """Create a FAISS HNSW vector index.
 
@@ -241,12 +258,14 @@ class VectorDB(RagDB):
             FAISS HNSW index
         """
         # M: number of connections per layer (higher = better recall, more memory)
-        # efConstruction: quality of index construction (higher = better quality, slower build)
+        # efConstruction: quality of index construction (higher = better
+        # quality, slower build)
         M = 32  # Default: 32, good balance
         index = faiss.IndexHNSWFlat(dimension, M)
         index.hnsw.efConstruction = 200  # Default: 40
         index.hnsw.efSearch = 100  # Search-time parameter, can be adjusted later
         return index
+
     def _get_embeddings_cache_path(self, passages_path: str) -> str:
         """Get the cache path for embeddings based on passages file path."""
         from pathlib import Path
@@ -254,15 +273,16 @@ class VectorDB(RagDB):
         # Replace extension with .emb.pkl
         cache_path = passages_path.with_suffix('.emb.pkl')
         return str(cache_path)
-    
+
     def _save_embeddings_cache(self, embeddings: list, passages_path: str):
         """Save embeddings to a pickle file for reuse."""
-        import os, pickle
+        import os
+        import pickle
         from pathlib import Path
-        
+
         cache_path = self._get_embeddings_cache_path(passages_path)
         Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
-        
+
         if os.path.exists(cache_path):
             print(f"Embeddings cache exists: {cache_path}")
             return
@@ -270,16 +290,16 @@ class VectorDB(RagDB):
         with open(cache_path, 'wb') as f:
             pickle.dump(embeddings, f)
         print(f"💾 Saved embeddings cache to {cache_path}")
-    
+
     def _load_embeddings_cache(self, passages_path: str) -> list:
         """Load embeddings from cache if available."""
         import pickle
         from pathlib import Path
-        
+
         cache_path = self._get_embeddings_cache_path(passages_path)
         if not Path(cache_path).exists():
             return None
-        
+
         try:
             with open(cache_path, 'rb') as f:
                 embeddings = pickle.load(f)
@@ -288,7 +308,7 @@ class VectorDB(RagDB):
         except Exception as e:
             print(f"⚠️  Failed to load embeddings cache: {e}")
             return None
-    
+
     def _build_numa_plans(self, num_workers: int):
         """Parse INFERENCE_EMBEDDING_NUMA_NODES into per-worker (node, cpu_set).
 
@@ -319,22 +339,23 @@ class VectorDB(RagDB):
 
     def _embed_documents_parallel(self, passages: List[str]) -> list:
         """Generate embeddings using multiple devices in parallel.
-        
+
         Uses the device type from --device option and spawns multiple workers.
-        
+
         Args:
             passages: List of text passages to embed
-            
+
         Returns:
             List of embeddings (one per passage)
         """
         import torch
         import multiprocessing as mp
-        
+
         # Use the embedding device (may differ from the global --device).
         # Strip any GPU index already allocated for the single-device path so
         # the parallel allocator gets a clean device-type string.
-        base_device = self._embedding_device.split(":")[0]  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
+        base_device = self._embedding_device.split(
+            ":")[0]  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
 
         num_workers = min(self._num_embedding_devices, len(passages))
 
@@ -350,7 +371,8 @@ class VectorDB(RagDB):
                 override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
             )
         else:
-            # CPU / HPU: workers use the same device string; index field is ignored.
+            # CPU / HPU: workers use the same device string; index field is
+            # ignored.
             device_indices = list(range(num_workers))
 
         # Set spawn method for device compatibility (required for XPU/CUDA)
@@ -360,16 +382,19 @@ class VectorDB(RagDB):
             # Already set, ignore
             pass
 
-        print(f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
+        print(
+            f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
 
         # Optional per-worker NUMA pinning (CPU + memory + OMP).
         numa_plans = self._build_numa_plans(num_workers)
 
         # Split passages into per-worker input chunks.
         input_chunk_size = (len(passages) + num_workers - 1) // num_workers
-        input_chunks = [passages[i:i + input_chunk_size] for i in range(0, len(passages), input_chunk_size)]
+        input_chunks = [passages[i:i + input_chunk_size]
+                        for i in range(0, len(passages), input_chunk_size)]
 
-        print(f"   Split {len(passages)} passages into {len(input_chunks)} input chunk(s) (~{input_chunk_size} passages/device)")
+        print(
+            f"   Split {len(passages)} passages into {len(input_chunks)} input chunk(s) (~{input_chunk_size} passages/device)")
 
         result_queue = mp.Queue()
         processes = []
@@ -379,11 +404,12 @@ class VectorDB(RagDB):
         # input_chunk_idx is the position in `input_chunks`; device_id is the GPU
         # index from the allocator. They differ when the allocator returns
         # non-contiguous indices.
-        for input_chunk_idx, device_id in enumerate(device_indices[:len(input_chunks)]):
+        for input_chunk_idx, device_id in enumerate(
+                device_indices[:len(input_chunks)]):
             numa_plan = numa_plans[input_chunk_idx] if numa_plans else None
             p = mp.Process(target=_parallel_embed_worker,
-                       args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
-                             self._retriever_model_name, encode_kwargs, base_device, numa_plan))
+                           args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
+                                 self._retriever_model_name, encode_kwargs, base_device, numa_plan))
             p.start()
             processes.append(p)
 
@@ -401,36 +427,37 @@ class VectorDB(RagDB):
         for i in range(len(input_chunks)):
             if i in results:
                 all_embeddings.extend(results[i])
-        
-        print(f"✓ Generated {len(all_embeddings)} embeddings across {num_workers} devices")
-        
+
+        print(
+            f"✓ Generated {len(all_embeddings)} embeddings across {num_workers} devices")
+
         return all_embeddings
-    
+
     def _calculate_index_output_size(self):
         """Calculate the size of VectorDB output data (db file - metadata).
-        
+
         Returns the total size in bytes of the serialized database file,
         excluding configuration metadata overhead.
-        
+
         The .db file contains:
         - FAISS index (vectors)
         - Passages (docstore)
         - Metadata (small overhead)
-        
+
         We estimate metadata size and subtract it from total file size.
         """
         from pathlib import Path
-        
+
         if not hasattr(self, '_serialize_path') or not self._serialize_path:
             return 0
-        
+
         db_path = Path(self._serialize_path)
         if not db_path.exists():
             return 0
-        
+
         total_file_size = db_path.stat().st_size
         return total_file_size
-    
+
     def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
         """Ingest passages with performance monitoring.
 
@@ -457,7 +484,7 @@ class VectorDB(RagDB):
             print(f"  Stored {len(self._parent_map)} parent mappings")
 
         total_chars = sum(len(passage) for passage in passages)
-        
+
         # Handle embeddings: try to load from cache or generate new ones
         embeddings = None
 
@@ -468,44 +495,58 @@ class VectorDB(RagDB):
         if embeddings is None:
             if self._num_embedding_devices > 1:
                 # Use parallel embedding generation across multiple devices
-                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
-                                                  lambda: self._embed_documents_parallel(passages),
-                                                  is_pipeline_input=True)
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages),
+                                                   lambda: self._embed_documents_parallel(
+                                                       passages),
+                                                   is_pipeline_input=True)
             else:
                 # Single device embedding generation
-                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
-                                                  lambda: self._embedding_model.embed_documents(passages),
-                                                  is_pipeline_input=True)
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages),
+                                                   lambda: self._embedding_model.embed_documents(
+                                                       passages),
+                                                   is_pipeline_input=True)
 
-
-        # Determine batch size: single batch for small datasets, multiple batches for scaling analysis
-        track_incremental = self._benchmark and self._monitor and len(passages) >= 500
+        # Determine batch size: single batch for small datasets, multiple
+        # batches for scaling analysis
+        track_incremental = self._benchmark and self._monitor and len(
+            passages) >= 500
         if track_incremental:
-            batch_size = max(1000, len(passages) // 10)  # 10 batches, minimum 1000 docs per batch
-            print(f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
+            # 10 batches, minimum 1000 docs per batch
+            batch_size = max(1000, len(passages) // 10)
+            print(
+                f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
         else:
             batch_size = len(passages)  # Single batch
-        
+
         # Track total indexing time for component metrics
         import time
         indexing_component_start = time.perf_counter()
-        
+
         # Process in batches
         for i in range(0, len(passages), batch_size):
             batch_end = min(i + batch_size, len(passages))
-            self._ingest_single_batch(passages, metadatas, embeddings, i, batch_end, track_incremental)
-        
+            self._ingest_single_batch(
+                passages,
+                metadatas,
+                embeddings,
+                i,
+                batch_end,
+                track_incremental)
+
         indexing_component_end = time.perf_counter()
         indexing_component_duration = indexing_component_end - indexing_component_start
-        
+
         # Create component metrics for the entire indexing operation
         if not track_incremental:
-            # For single batch, component was tracked inside _ingest_single_batch
+            # For single batch, component was tracked inside
+            # _ingest_single_batch
             pass
         elif self._monitor:
-            # For incremental, create component metrics here for the entire operation
-            embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
-            
+            # For incremental, create component metrics here for the entire
+            # operation
+            embedding_bytes = len(
+                passages) * self._embedding_dimension * self._embedding_bytes_per_element
+
             from ingestion_monitor import ComponentMetrics
             self._monitor.components["faiss_indexing"] = ComponentMetrics(
                 name="faiss_indexing",
@@ -513,25 +554,27 @@ class VectorDB(RagDB):
                 input_size_bytes=embedding_bytes,
                 output_size_bytes=embedding_bytes,  # Vectors stored in FAISS index
                 items_processed=len(passages),
-                throughput_mb_per_sec=(embedding_bytes / (1024 * 1024)) / indexing_component_duration if indexing_component_duration > 0 else 0,
-                throughput_items_per_sec=len(passages) / indexing_component_duration if indexing_component_duration > 0 else 0,
+                throughput_mb_per_sec=(embedding_bytes / (1024 * 1024)) /
+                indexing_component_duration if indexing_component_duration > 0 else 0,
+                throughput_items_per_sec=len(
+                    passages) / indexing_component_duration if indexing_component_duration > 0 else 0,
                 is_pipeline_input=False,
                 is_pipeline_output=True
             )
-        
+
         # Store ingestion metrics for later reporting
         self._ingestion_start = ingestion_start
         self._ingestion_item_count = len(passages)
         self._ingestion_total_chars = total_chars
-        
-        # Save embeddings to cache 
+
+        # Save embeddings to cache
         if self._load_embeddings and passages_path:
             self._save_embeddings_cache(embeddings, passages_path)
 
     def _ingest_single_batch(self, passages: List[str], metadatas: List[dict], embeddings: list,
-                            batch_start: int, batch_end: int, track_incremental: bool):
+                             batch_start: int, batch_end: int, track_incremental: bool):
         """Ingest a batch of passages. Can be used for single or incremental indexing.
-        
+
         Args:
             passages: All passages
             metadatas: All metadata
@@ -541,40 +584,42 @@ class VectorDB(RagDB):
             track_incremental: Whether to track this batch for incremental analysis
         """
         import time
-        
+
         # Extract batch data
         batch_passages = passages[batch_start:batch_end]
-        batch_metadatas = metadatas[batch_start:batch_end] if metadatas else [{}] * (batch_end - batch_start)
+        batch_metadatas = metadatas[batch_start:batch_end] if metadatas else [
+            {}] * (batch_end - batch_start)
         batch_embeddings = embeddings[batch_start:batch_end]
-        
+
         # Track DB size before adding (for incremental tracking)
         db_size_before = len(self._doc_list) if track_incremental else 0
-        
+
         # Calculate embedding size for this batch
-        batch_embedding_bytes = len(batch_passages) * self._embedding_dimension * self._embedding_bytes_per_element
-        
+        batch_embedding_bytes = len(
+            batch_passages) * self._embedding_dimension * self._embedding_bytes_per_element
+
         # Time and execute indexing operation
         indexing_start = time.perf_counter()
-        
+
         if track_incremental:
             # For incremental: just add embeddings without component tracking
             self._vector_store.add_embeddings(
-                list(zip(batch_passages, batch_embeddings)), 
+                list(zip(batch_passages, batch_embeddings)),
                 batch_metadatas
             )
         else:
             # For single batch: use component tracking
             self._track_component("faiss_indexing", batch_embedding_bytes, len(batch_passages),
-                                 lambda: self._vector_store.add_embeddings(
-                                     list(zip(batch_passages, batch_embeddings)), batch_metadatas),
-                                 is_pipeline_output=True)
-        
+                                  lambda: self._vector_store.add_embeddings(
+                list(zip(batch_passages, batch_embeddings)), batch_metadatas),
+                is_pipeline_output=True)
+
         indexing_end = time.perf_counter()
         indexing_time = indexing_end - indexing_start
-        
+
         # Update document list
         self._doc_list.extend(batch_passages)
-        
+
         # Track for incremental analysis if requested
         if track_incremental and self._monitor:
             self._monitor.track_incremental_indexing(
@@ -582,7 +627,7 @@ class VectorDB(RagDB):
                 batch_size=len(batch_passages),
                 indexing_time=indexing_time
             )
-    
+
     def enable_threading(self):
         """Enable thread-safe access to the embedding model."""
         import threading
@@ -598,9 +643,11 @@ class VectorDB(RagDB):
                 embedding = self.embed_query(query)
         else:
             embedding = self.embed_query(query)
-        results = self._vector_store.similarity_search_by_vector(embedding, k=k)
+        results = self._vector_store.similarity_search_by_vector(
+            embedding, k=k)
 
-        # In hierarchical mode: replace child passages with parents, deduplicate
+        # In hierarchical mode: replace child passages with parents,
+        # deduplicate
         if self._hierarchical and self._parent_map:
             parent_docs = []
             seen_parents = set()
@@ -631,7 +678,7 @@ class VectorDB(RagDB):
             return parent_docs
 
         return results
-    
+
     def lookup_with_scores(self, query: str, k: int):
         """
         Lookup documents with similarity scores.
@@ -645,13 +692,16 @@ class VectorDB(RagDB):
                 embedding = self.embed_query(query)
         else:
             embedding = self.embed_query(query)
-        results_with_scores = self._vector_store.similarity_search_with_score_by_vector(embedding, k=k)
+        results_with_scores = self._vector_store.similarity_search_with_score_by_vector(
+            embedding, k=k)
 
         # FAISS returns (document, distance) where distance is L2 distance (lower is better)
         # Convert to similarity score (higher is better) by negating
-        results_with_similarity = [(doc, -distance) for doc, distance in results_with_scores]
+        results_with_similarity = [(doc, -distance)
+                                   for doc, distance in results_with_scores]
 
-        # In hierarchical mode: replace child passages with parents, deduplicate
+        # In hierarchical mode: replace child passages with parents,
+        # deduplicate
         if self._hierarchical and self._parent_map:
             parent_results = []
             seen_parents = set()
@@ -683,8 +733,6 @@ class VectorDB(RagDB):
 
         return results_with_similarity
 
-
-
     def serialize(self, path: str):
         # Store path for output size calculation
         self._serialize_path = path
@@ -700,21 +748,27 @@ class VectorDB(RagDB):
             parent_map_path = Path(path).with_suffix('.parent_map.pkl')
             with open(parent_map_path, 'wb') as f:
                 pickle.dump(self._parent_map, f)
-            print(f"💾 Saved parent map ({len(self._parent_map)} entries) to {parent_map_path}")
+            print(
+                f"💾 Saved parent map ({len(self._parent_map)} entries) to {parent_map_path}")
 
         # Update output size after serialization (now file exists)
         if self._benchmark and self._monitor:
-            self._monitor.set_output_size_callback("faiss_indexing", self._calculate_index_output_size)
+            self._monitor.set_output_size_callback(
+                "faiss_indexing", self._calculate_index_output_size)
 
         # Report performance after serialization if benchmarking
-        if self._benchmark and self._monitor and hasattr(self, '_ingestion_start'):
+        if self._benchmark and self._monitor and hasattr(
+                self, '_ingestion_start'):
             # Determine db_type based on whether incremental was used
-            db_type = "VectorDB (Incremental)" if hasattr(self._monitor, 'indexing_trend') and len(self._monitor.indexing_trend) > 0 else "VectorDB"
+            db_type = "VectorDB (Incremental)" if hasattr(
+                self._monitor, 'indexing_trend') and len(
+                self._monitor.indexing_trend) > 0 else "VectorDB"
             self._report_performance(self._ingestion_start, self._ingestion_item_count,
-                                    self._ingestion_total_chars, db_type)
+                                     self._ingestion_total_chars, db_type)
 
     def from_serialized(self, path: str):
-        assert len(self._vector_store.index_to_docstore_id) == 0, "Vector store already has documents"
+        assert len(
+            self._vector_store.index_to_docstore_id) == 0, "Vector store already has documents"
         # Pickled FAISS indexes reference a specific SWIG submodule (e.g.
         # `faiss.swigfaiss_avx512`). Alias any missing submodules so DBs built
         # on one host load on hosts with a different faiss-cpu build.
@@ -722,8 +776,8 @@ class VectorDB(RagDB):
         with open(path, "rb") as f:
             data = f.read()
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
-            serialized=data,
-            allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
+                                                          serialized=data,
+                                                          allow_dangerous_deserialization=True)  # <--- USE WITH CAUTION - Only deserialize files you trust
 
         # Load parent map if hierarchical mode
         if self._hierarchical:
@@ -733,6 +787,8 @@ class VectorDB(RagDB):
             if parent_map_path.exists():
                 with open(parent_map_path, 'rb') as f:
                     self._parent_map = pickle.load(f)
-                print(f"✓ Loaded parent map ({len(self._parent_map)} entries) from {parent_map_path}")
+                print(
+                    f"✓ Loaded parent map ({len(self._parent_map)} entries) from {parent_map_path}")
             else:
-                print(f"⚠️  Warning: Hierarchical mode enabled but no parent map found at {parent_map_path}")
+                print(
+                    f"⚠️  Warning: Hierarchical mode enabled but no parent map found at {parent_map_path}")

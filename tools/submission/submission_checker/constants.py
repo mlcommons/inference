@@ -1742,9 +1742,20 @@ SYSTEM_PATH = {
     "default": "{division}/{submitter}/systems/{system}.json",
 }
 
+NAMEPLATE_POWER_PATH = {
+    "v6.1": "{division}/{submitter}/systems/{system}_power.yaml",
+}
+
 SRC_PATH = {
     "v5.0": "{division}/{submitter}/code",
     "v5.1": "{division}/{submitter}/code",
     "v6.0": "{division}/{submitter}/src",
     "default": "{division}/{submitter}/src",
+}
+
+PRIVATE_ID_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/privateid.json",
+    "v5.1": "{division}/{submitter}/results/{system}/privateid.json",
+    "v6.0": "{division}/{submitter}/results/{system}/privateid.json",
+    "default": "{division}/{submitter}/results/{system}/privateid.json",
 }

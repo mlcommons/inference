@@ -117,7 +117,8 @@ class DatasetupSUT:
 
         # Initialize HTML extractor
         if not HAVE_HTML:
-            raise RuntimeError("BeautifulSoup required for HTML processing. Install with: pip install beautifulsoup4")
+            raise RuntimeError(
+                "BeautifulSoup required for HTML processing. Install with: pip install beautifulsoup4")
 
         log.info("Initializing HTML extractor...")
         self.html_extractor = HTMLExtractor(
@@ -206,7 +207,8 @@ class DatasetupSUT:
         file_path = document_info['file_path']
         file_name = document_info['file_name']
 
-        log.info(f"Processing document {sample_id} (QID: {query_id}): {file_name}")
+        log.info(
+            f"Processing document {sample_id} (QID: {query_id}): {file_name}")
 
         start_time = time.time()
         success = 0  # 0 = failure, 1 = success
@@ -218,7 +220,8 @@ class DatasetupSUT:
 
             if not text or len(text.strip()) == 0:
                 # Empty file - create minimal passage with file name
-                log.warning(f"No text extracted from {file_name}, creating minimal passage")
+                log.warning(
+                    f"No text extracted from {file_name}, creating minimal passage")
                 text = f"Document: {file_name}"
 
             # Continue with text (even if minimal)
@@ -232,22 +235,28 @@ class DatasetupSUT:
             if not passages:
                 # Even after splitting, no passages - this shouldn't happen now
                 # but create one minimal passage as fallback
-                log.warning(f"No passages created from {file_name}, using text as-is")
+                log.warning(
+                    f"No passages created from {file_name}, using text as-is")
                 passages = [text]
 
             # Step 3: Generate embeddings (parallel, outside lock)
-            passage_metadata = [{'source': file_name, 'passage_id': i} for i in range(len(passages))]
+            passage_metadata = [{'source': file_name, 'passage_id': i}
+                                for i in range(len(passages))]
 
-            # Generate embeddings WITHOUT holding db_lock (allows parallel embedding generation)
-            log.info(f"Generating embeddings for {len(passages)} passages from {file_name}")
+            # Generate embeddings WITHOUT holding db_lock (allows parallel
+            # embedding generation)
+            log.info(
+                f"Generating embeddings for {len(passages)} passages from {file_name}")
             if self.rag_db._num_embedding_devices > 1:
                 embeddings = self.rag_db._embed_documents_parallel(passages)
             else:
-                embeddings = self.rag_db._embedding_model.embed_documents(passages)
+                embeddings = self.rag_db._embedding_model.embed_documents(
+                    passages)
 
             log.info(f"Embeddings generated for {file_name}, adding to index")
 
-            # Step 4: Add to index (thread-safe, holds lock only for index update)
+            # Step 4: Add to index (thread-safe, holds lock only for index
+            # update)
             with self.db_lock:
                 # Add embeddings and documents to vector store
                 ids = self.rag_db._vector_store.add_embeddings(
@@ -260,7 +269,8 @@ class DatasetupSUT:
                 self.total_passages_indexed += len(passages)
 
             success = 1
-            log.info(f"Successfully indexed {len(passages)} passages from {file_name}")
+            log.info(
+                f"Successfully indexed {len(passages)} passages from {file_name}")
 
             # Check if this is the last file to complete
             with self.completion_lock:
@@ -268,7 +278,8 @@ class DatasetupSUT:
                 is_last_file = (self.completed_count == len(self.qsl))
 
             if is_last_file:
-                log.info(f"Last file completed! Saving database and computing MD5...")
+                log.info(
+                    f"Last file completed! Saving database and computing MD5...")
                 # Save database
                 db_path = f"{self.database}.db"
                 save_start = time.time()
@@ -287,7 +298,8 @@ class DatasetupSUT:
                 self.db_md5 = md5_hash.hexdigest()
                 md5_end = time.time()
                 md5_duration = md5_end - md5_start
-                log.info(f"Database MD5: {self.db_md5} (computed in {md5_duration:.2f}s)")
+                log.info(
+                    f"Database MD5: {self.db_md5} (computed in {md5_duration:.2f}s)")
 
                 self.db_saved = True
 
@@ -317,7 +329,8 @@ class DatasetupSUT:
             }
 
         # Create response for loadgen
-        # For the last file, include MD5 hash; otherwise just success/failure byte
+        # For the last file, include MD5 hash; otherwise just success/failure
+        # byte
         if success and self.db_saved:
             # Last file: return MD5 hash as response
             response_bytes = self.db_md5.encode('utf-8')
@@ -339,7 +352,8 @@ class DatasetupSUT:
         )
         lg.QuerySamplesComplete([response])
 
-        log.info(f"Completed document {sample_id} (QID: {query_id}): {file_name}")
+        log.info(
+            f"Completed document {sample_id} (QID: {query_id}): {file_name}")
 
     def flush_queries(self):
         """
@@ -349,10 +363,12 @@ class DatasetupSUT:
         log.info("Flushing queries...")
 
         if self.db_saved:
-            log.info(f"Database already saved by last file. MD5: {self.db_md5}")
+            log.info(
+                f"Database already saved by last file. MD5: {self.db_md5}")
         else:
             # Fallback: save database if somehow not done yet
-            log.warning("Database not saved by last file - saving now as fallback")
+            log.warning(
+                "Database not saved by last file - saving now as fallback")
             db_path = f"{self.database}.db"
             save_start = time.time()
             self.rag_db.serialize(db_path)
@@ -379,13 +395,15 @@ class DatasetupSUT:
             failed_count = len(self.failed_documents)
             success_count = total_docs - failed_count
 
-            avg_time_per_doc = sum(self.processing_times) / total_docs if total_docs > 0 else 0
-            throughput_passages = self.total_passages_indexed / total_time if total_time > 0 else 0
+            avg_time_per_doc = sum(
+                self.processing_times) / total_docs if total_docs > 0 else 0
+            throughput_passages = self.total_passages_indexed / \
+                total_time if total_time > 0 else 0
             throughput_docs = total_docs / total_time if total_time > 0 else 0
 
-        log.info("="*80)
+        log.info("=" * 80)
         log.info("Datasetup Complete")
-        log.info("="*80)
+        log.info("=" * 80)
         log.info(f"Total documents processed: {total_docs}")
         log.info(f"Successful: {success_count}")
         log.info(f"Failed: {failed_count}")
@@ -394,10 +412,11 @@ class DatasetupSUT:
         log.info(f"Throughput: {throughput_passages:.2f} passages/sec")
         log.info(f"Throughput: {throughput_docs:.2f} docs/sec")
         log.info(f"Average time per document: {avg_time_per_doc:.2f}s")
-        log.info("="*80)
+        log.info("=" * 80)
 
         # Cleanup reranker queue if it exists
-        if hasattr(self.rag_db, '_reranker_queue') and self.rag_db._reranker_queue is not None:
+        if hasattr(
+                self.rag_db, '_reranker_queue') and self.rag_db._reranker_queue is not None:
             log.info("Shutting down reranker queue...")
             self.rag_db._reranker_queue.stop()
 
@@ -419,12 +438,14 @@ class DatasetupSUT:
             failed_count = len(self.failed_documents)
             success_count = total_docs - failed_count
 
-            throughput_passages = self.total_passages_indexed / total_time if total_time > 0 else 0
+            throughput_passages = self.total_passages_indexed / \
+                total_time if total_time > 0 else 0
             throughput_docs = total_docs / total_time if total_time > 0 else 0
 
         # Get vector count from database
         vector_count = 0
-        if hasattr(self.rag_db, '_vector_store') and hasattr(self.rag_db._vector_store, 'index'):
+        if hasattr(self.rag_db, '_vector_store') and hasattr(
+                self.rag_db._vector_store, 'index'):
             vector_count = self.rag_db._vector_store.index.ntotal
 
         output = {

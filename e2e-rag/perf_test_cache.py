@@ -89,7 +89,8 @@ class PerfTestCache:
 
         print(f"  Built cache index with {len(self.cache)} LLM responses")
 
-    def get_response(self, query_id: str, component: str, hop_count: int) -> Optional[str]:
+    def get_response(self, query_id: str, component: str,
+                     hop_count: int) -> Optional[str]:
         """
         Retrieve cached LLM response.
 
@@ -104,7 +105,8 @@ class PerfTestCache:
         key = (str(query_id), component, hop_count)
         return self.cache.get(key)
 
-    def has_response(self, query_id: str, component: str, hop_count: int) -> bool:
+    def has_response(self, query_id: str, component: str,
+                     hop_count: int) -> bool:
         """
         Check if cached response exists.
 

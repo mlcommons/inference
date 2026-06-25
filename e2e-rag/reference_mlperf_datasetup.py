@@ -171,9 +171,9 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Initialize SUT
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Initializing RAG-DB SUT...")
-    print("="*80)
+    print("=" * 80)
 
     sut = DatasetupSUT(
         documents_dir=args.documents_dir,
@@ -192,9 +192,9 @@ def main():
         args=args,
     )
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("SUT initialization complete")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Configure loadgen settings
     settings = lg.TestSettings()
@@ -225,9 +225,9 @@ def main():
     log_settings.log_output = log_output_settings
 
     # Run loadgen test
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Running MLPerf Loadgen test...")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     lg.StartTestWithLogSettings(
         sut.sut,
@@ -237,9 +237,9 @@ def main():
         args.audit_conf
     )
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Loadgen test complete")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Finalize SUT (batch index, save database, cleanup)
     sut.finalize()
@@ -249,9 +249,9 @@ def main():
     sut.save_results(results_path)
     print(f"Results saved to {results_path}")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Done!")
-    print("="*80)
+    print("=" * 80)
 
 
 if __name__ == "__main__":

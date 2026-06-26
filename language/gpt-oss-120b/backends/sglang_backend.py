@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import os
 import requests
 import time
 from typing import List, Dict, Any, Optional, AsyncIterator
@@ -123,14 +124,24 @@ class SGLangBackend(BaseBackend):
             }
         }
 
+        request_body = json.dumps(payload, separators=(',', ':'))
+        request_bytes = len(request_body.encode('utf-8'))
+
         try:
+            request_start = time.time()
             response = self.session.post(
                 f"{self.server_url}/generate",
                 json=payload,
                 timeout=self.timeout,
             )
+            request_time_ms = (time.time() - request_start) * 1000
+
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                response_bytes = len(response.text.encode('utf-8')) if hasattr(response, 'text') else 0
+                token_count = len(data.get('output_ids', [])) if isinstance(data, dict) else 0
+                self._log_payload(request_bytes, response_bytes, token_count)
+                return data
             else:
                 logger.error(
                     f"Request failed with status {response.status_code}: {response.text}"
@@ -139,6 +150,21 @@ class SGLangBackend(BaseBackend):
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
             return {"error": str(e)}
+
+    def _log_payload(self, request_bytes: int, response_bytes: int, token_count: int):
+        """Log HTTP payload sizes for communication analysis."""
+        try:
+            log_file = os.environ.get("HBM_LOG_FILE")
+            if not log_file:
+                return
+            with open(log_file, 'a') as f:
+                f.write(json.dumps({
+                    "request_bytes": request_bytes,
+                    "response_bytes": response_bytes,
+                    "token_count": token_count
+                }) + '\n')
+        except Exception:
+            pass
 
     def generate(
         self,

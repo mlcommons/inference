@@ -1635,6 +1635,14 @@ PERFORMANCE_SUMMARY_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
 }
 
+ENDPOINTS_ALLOWED_MODELS = [
+    "wan-2.2-t2v-a14b",
+    "qwen3-vl-235b-a22b",
+    "llama3.1-8b",
+    "llama3.1-8b-edge",
+    "gpt-oss-120b",
+]
+
 PERFORMANCE_ENDPOINTS_DIR = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",

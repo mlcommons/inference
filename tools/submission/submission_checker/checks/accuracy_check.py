@@ -85,9 +85,12 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
         self.checks.append(self.extra_files_check)
+        self.checks.append(self.endpoints_model_check)
         self.apply_checks = set(self.checks)
         if self.is_endpoints:
             self.apply_checks.remove(self.accuracy_json_check)
+        else:
+            self.apply_checks.remove(self.endpoints_model_check)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.
@@ -279,6 +282,24 @@ class AccuracyCheck(BaseCheck):
                 "%s expected to have the following extra files (%s)",
                 acc_dir,
                 missing_files,
+            )
+            return False
+        return True
+
+    def endpoints_model_check(self):
+        """Verify the model is allowed for endpoints submissions.
+
+        Returns:
+            bool: True if the model is in ENDPOINTS_ALLOWED_MODELS,
+                False otherwise.
+        """
+        if self.model not in ENDPOINTS_ALLOWED_MODELS:
+            self.log.error(
+                "%s endpoints submission uses disallowed model '%s', "
+                "must be one of: %s",
+                self.path,
+                self.model,
+                ENDPOINTS_ALLOWED_MODELS,
             )
             return False
         return True

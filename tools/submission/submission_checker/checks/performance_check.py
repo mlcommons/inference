@@ -79,10 +79,13 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.llm_check)
         self.checks.append(self.inferred_check)
         self.checks.append(self.get_performance_metric_check)
+        self.checks.append(self.endpoints_model_check)
         self.apply_checks = set(self.checks)
         if self.is_endpoints:
             self.apply_checks.remove(self.performance_sample_count_check)
             self.apply_checks.remove(self.min_query_count_check)
+        else:
+            self.apply_checks.remove(self.endpoints_model_check)
 
     def missing_check(self):
         """Ensure the performance log was provided.
@@ -544,6 +547,24 @@ class PerformanceCheck(BaseCheck):
             res, is_valid = self.get_inferred_result(res)
         self.submission_logs.loader_data["performance_metric"] = res
         return is_valid
+
+    def endpoints_model_check(self):
+        """Verify the model is allowed for endpoints submissions.
+
+        Returns:
+            bool: True if the model is in ENDPOINTS_ALLOWED_MODELS,
+                False otherwise.
+        """
+        if self.model not in ENDPOINTS_ALLOWED_MODELS:
+            self.log.error(
+                "%s endpoints submission uses disallowed model '%s', "
+                "must be one of: %s",
+                self.path,
+                self.model,
+                ENDPOINTS_ALLOWED_MODELS,
+            )
+            return False
+        return True
 
     def get_inferred_result(self, res):
         """Compute inferred performance result for cross-scenario reuse.

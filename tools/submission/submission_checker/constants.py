@@ -1471,25 +1471,16 @@ REQUIRED_ACC_BENCHMARK = {
         },
         "v6.1": {
             "videos": [
-                # TODO: update with new videos if needed
                 "130",
                 "106",
                 "84",
                 "59",
                 "12",
-                "31",
-                "86",
-                "122",
-                "233",
-                "96",
-            ]
-        },
-    },
-    "e2e_vectorDB": {
-        "v6.1": {
-            "results": [
-                # TODO: update name if needed
-                "results.json"
+                "123",
+                "43",
+                "22",
+                "238",
+                "32",
             ]
         },
     }

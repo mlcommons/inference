@@ -1,6 +1,7 @@
 import os
 from .constants import *
 from .parsers.loadgen_parser import LoadgenParser
+import hashlib
 
 
 def list_dir(*path):
@@ -324,7 +325,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -332,3 +333,33 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
             avg_power_efficiency = (samples_per_query * 1000) / power_metric
 
     return is_valid, power_metric, scenario, avg_power_efficiency
+
+
+_ADJECTIVES = [
+    "amber", "azure", "bold", "brave", "calm", "clear", "cool", "crisp",
+    "dark", "deep", "deft", "epic", "fair", "fast", "firm", "flat",
+    "free", "full", "gold", "gray", "hard", "high", "keen", "kind",
+    "lean", "light", "long", "loud", "mild", "mint", "neat", "noble",
+    "open", "pale", "pure", "quick", "quiet", "rare", "rich", "safe",
+    "sage", "slim", "slow", "soft", "star", "still", "stone", "sure",
+    "swift", "teal", "trim", "true", "vast", "warm", "wide", "wise",
+    "wood", "worn", "young", "zeal", "zinc", "zest", "blue", "core",
+]
+_NOUNS = [
+    "apex", "arch", "atom", "bay", "beam", "blade", "bloom", "bolt",
+    "bridge", "brook", "bud", "cap", "cedar", "cloud", "coral", "core",
+    "crest", "dawn", "delta", "dome", "dune", "echo", "edge", "elm",
+    "ember", "fern", "field", "flame", "flare", "fleet", "flow", "foam",
+    "ford", "forge", "frost", "gate", "glade", "glow", "grove", "helm",
+    "hill", "horn", "iris", "isle", "jade", "lake", "lark", "leaf",
+    "ledge", "lens", "lime", "lynx", "mast", "mesa", "mill", "moon",
+    "moor", "moss", "nook", "opal", "peak", "pine", "reef", "vale",
+]
+
+
+def generate_private_id(system_id: str) -> str:
+    h = hashlib.sha256(system_id.encode()).digest()
+    adj = _ADJECTIVES[h[0] % len(_ADJECTIVES)]
+    noun = _NOUNS[h[1] % len(_NOUNS)]
+    suffix = h[2:4].hex()
+    return f"{adj}-{noun}-{suffix}"

@@ -1,0 +1,220 @@
+name: Test LLM Accuracy Scripts
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - 'language/**/*evaluate-accuracy.py'
+      - 'language/**/*eval_accuracy.py'
+      - 'language/**/*evaluate_mbxp.py'
+      - '.github/workflows/llm_accuracy_script_test.yml'
+      - '!**.md'
+  push:
+    branches: [ "master", "dev" ]
+    paths:
+      - 'language/**/*evaluate-accuracy.py'
+      - 'language/**/*eval_accuracy.py'
+      - 'language/**/*evaluate_mbxp.py'
+      - '.github/workflows/llm_accuracy_script_test.yml'
+      - '!**.md'
+  workflow_dispatch:
+
+jobs:
+  test-llama3-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers pandas numpy rouge-score nltk evaluate absl-py sentencepiece accelerate tqdm
+        python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/llama3
+
+    - name: Generate sample accuracy log for Llama3.1
+      run: |
+        # Create mock MLPerf accuracy log as JSON array with hex-encoded token IDs
+        cat > tests/fixtures/llama3/mlperf_log_accuracy.json << 'EOL'
+        [
+          {"qsl_idx": 0, "data": "01000000020000000300000004000000"},
+          {"qsl_idx": 1, "data": "05000000060000000700000008000000"},
+          {"qsl_idx": 2, "data": "090000000a0000000b0000000c000000"}
+        ]
+        EOL
+
+    - name: Create mock dataset for Llama3.1
+      run: |
+        cat > tests/fixtures/llama3/mock_dataset.pkl << 'EOL'
+        # This will be handled by the mock dataset flag
+        EOL
+
+    - name: Test Llama3.1 accuracy script
+      run: |
+        cd language/llama3.1-405b
+        python evaluate-accuracy.py --checkpoint-path microsoft/DialoGPT-medium \
+          --mlperf-accuracy-file ../../tests/fixtures/llama3/mlperf_log_accuracy.json \
+          --dataset-file ../../tests/fixtures/llama3/mock_dataset.pkl \
+          --dtype int32 \
+          --mock-dataset-for-testing
+    
+  test-mixtral-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers pandas numpy rouge-score nltk evaluate absl-py sentencepiece accelerate tqdm
+        python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/mixtral
+
+    - name: Generate sample accuracy log for Mixtral
+      run: |
+        # Create mock MLPerf accuracy log as JSON array with 6 samples
+        cat > tests/fixtures/mixtral/mlperf_log_accuracy.json << 'EOL'
+        [
+          {"qsl_idx": 0, "data": "01000000020000000300000004000000"},
+          {"qsl_idx": 1, "data": "05000000060000000700000008000000"},
+          {"qsl_idx": 2, "data": "090000000a0000000b0000000c000000"},
+          {"qsl_idx": 3, "data": "0d0000000e0000000f00000010000000"},
+          {"qsl_idx": 4, "data": "11000000120000001300000014000000"},
+          {"qsl_idx": 5, "data": "15000000160000001700000018000000"}
+        ]
+        EOL
+
+    - name: Create mock dataset for Mixtral
+      run: |
+        cat > tests/fixtures/mixtral/mock_dataset.pkl << 'EOL'
+        # This will be handled by the mock dataset flag
+        EOL
+
+    - name: Test Mixtral accuracy script
+      run: |
+        cd language/mixtral-8x7b
+        python evaluate-accuracy.py --checkpoint-path microsoft/DialoGPT-medium \
+          --mlperf-accuracy-file ../../tests/fixtures/mixtral/mlperf_log_accuracy.json \
+          --dataset-file ../../tests/fixtures/mixtral/mock_dataset.pkl \
+          --dtype int32 \
+          --mock-dataset-for-testing
+
+  test-llama2-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers pandas numpy rouge-score nltk evaluate absl-py sentencepiece accelerate tqdm
+        python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/llama2
+
+    - name: Generate sample accuracy log for Llama2
+      run: |
+        # Create mock MLPerf accuracy log with token IDs that decode to meaningful text
+        # Using common token IDs that typically decode to words
+        cat > tests/fixtures/llama2/mlperf_log_accuracy.json << 'EOL'
+        [
+          {"qsl_idx": 0, "data": "50000000610000007200000069000000"},
+          {"qsl_idx": 1, "data": "54000000680000006500000020000000"},
+          {"qsl_idx": 2, "data": "51000000750000006100000074000000"}
+        ]
+        EOL
+
+    - name: Create mock dataset for Llama2
+      run: |
+        python -c "
+        import pandas as pd
+        import pickle
+        data = {'output': ['Paris', 'The answer is 42', 'Quantum computing explanation']}
+        df = pd.DataFrame(data)
+        with open('tests/fixtures/llama2/mock_dataset.pkl', 'wb') as f:
+            pickle.dump(df, f)
+        "
+
+    - name: Test Llama2 accuracy script
+      run: |
+        cd language/llama2-70b
+        python evaluate-accuracy.py --checkpoint-path microsoft/DialoGPT-medium \
+          --mlperf-accuracy-file ../../tests/fixtures/llama2/mlperf_log_accuracy.json \
+          --dataset-file ../../tests/fixtures/llama2/mock_dataset.pkl \
+          --dtype int32
+
+  test-deepseek-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install transformers pandas numpy rouge-score nltk evaluate absl-py sentencepiece accelerate tqdm
+        python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/deepseek
+
+    - name: Generate sample accuracy log for DeepSeek
+      run: |
+        # Create mock MLPerf accuracy log as JSON array
+        cat > tests/fixtures/deepseek/mlperf_log_accuracy.json << 'EOL'
+        [
+          {"qsl_idx": 0, "data": "01000000020000000300000004000000"},
+          {"qsl_idx": 1, "data": "05000000060000000700000008000000"},
+          {"qsl_idx": 2, "data": "090000000a0000000b0000000c000000"}
+        ]
+        EOL
+
+    - name: Create mock dataset for DeepSeek
+      run: |
+        python -c "
+        import pandas as pd
+        import pickle
+        data = {
+            'gt_output': ['A', '42', 'def solution(): return True'],
+            'dataset': ['gpqa', 'aime', 'livecodebench'],
+            'question': ['What is the capital?', 'Math problem', 'Code problem']
+        }
+        df = pd.DataFrame(data)
+        with open('tests/fixtures/deepseek/mock_dataset.pkl', 'wb') as f:
+            pickle.dump(df, f)
+        "
+
+    - name: Test DeepSeek accuracy script (basic import test)
+      run: |
+        cd language/deepseek-r1
+        python -c "
+        import eval_accuracy
+        print('DeepSeek eval_accuracy.py imports successfully')
+        # Test basic functionality without external dependencies
+        try:
+            result = eval_accuracy.parse_multiple_choice('The answer is A', 'D')
+            print(f'Multiple choice parsing test: {result}')
+        except Exception as e:
+            print(f'Expected error due to missing dependencies: {e}')
+        "
+

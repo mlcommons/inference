@@ -1,6 +1,8 @@
 # Submission directory structure
 
-The following diagram describes the submission structure 
+## Standard submission structure
+
+The following diagram describes the standard submission structure.
 
 ```
 ...
@@ -53,6 +55,51 @@ The following diagram describes the submission structure
 │   │
 ├── open
 │   ├── <submitter_name>                   
+│   │   ├── code
+│   │   ├── results
+│   │   ├── systems
+│   │   └── model_mapping.json (optional)
+...
+```
+
+## Endpoints submission structure
+
+For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. You can provide a performance+accuracy run in the performance folder or one performance run and one accuracy run
+
+```
+...
+├── closed
+│   ├── <submitter_name>
+│   │   ├── code
+│   │   │   └── <benchmark_name>
+│   │   ├── results
+│   │   │   ├── <system_desc_id_1>
+│   │   │   │   ├── <benchmark_name>
+│   │   │   │   │   ├── <scenario>
+│   │   │   │   │   │   ├── accuracy (optional)
+│   │   │   │   │   │   │   ├── config.yaml
+│   │   │   │   │   │   │   ├── results.json
+│   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   ├── performance
+│   │   │   │   │   │   │   ├── run_1
+│   │   │   │   │   │   │   │   ├── config.yaml
+│   │   │   │   │   │   │   │   ├── results.json
+│   │   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   ├── <TEST0X>
+│   │   │   │   │   │   │   ├── accuracy
+│   │   │   │   │   │   │   │   └── accuracy.txt
+│   │   │   │   │   │   ├── measurements.json
+│   │   │   │   │   │   ├── mlperf.conf (optional)
+│   │   │   │   │   │   └── user.conf
+│   │   │   ├── ...
+│   │   │   └── <system_desc_id_n>
+│   │   ├── systems
+│   │   │   ├── <system_desc_id_1>.json
+│   │   │   ├── ...
+│   │   │   └── <system_desc_id_n>.json
+│   │
+├── open
+│   ├── <submitter_name>
 │   │   ├── code
 │   │   ├── results
 │   │   ├── systems

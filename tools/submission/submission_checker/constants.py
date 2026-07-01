@@ -1604,6 +1604,8 @@ UNIT_DICT = {
     "server": "Queries/s",
     "interactive": "Queries/s",
 }
+
+
 POWER_UNIT_DICT = {
     "SingleStream": "millijoules",
     "MultiStream": "millijoules",
@@ -1633,6 +1635,21 @@ PERFORMANCE_SUMMARY_PATH = {
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
 }
 
+ENDPOINTS_ALLOWED_MODELS = [
+    "wan-2.2-t2v-a14b",
+    "qwen3-vl-235b-a22b",
+    "llama3.1-8b",
+    "llama3.1-8b-edge",
+    "gpt-oss-120b",
+]
+
+PERFORMANCE_ENDPOINTS_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+}
+
 ACCURACY_LOG_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
@@ -1653,6 +1670,14 @@ ACCURACY_JSON_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
+
+ACCURACY_ENDPOINTS_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+}
+
 
 POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
@@ -1758,4 +1783,94 @@ PRIVATE_ID_PATH = {
     "v5.1": "{division}/{submitter}/results/{system}/privateid.json",
     "v6.0": "{division}/{submitter}/results/{system}/privateid.json",
     "default": "{division}/{submitter}/results/{system}/privateid.json",
+}
+
+ENDPOINTS_MAPPINGS = {
+    "endpoints_version": "loadgen_version",
+    "endpoints_git_commit_date": "loadgen_git_commit_date",
+    "endpoints_git_commit_hash": "loadgen_git_commit_hash",
+    "test_datetime": "test_datetime",
+    "n_samples_issued": "qsl_reported_total_count",
+    "n_samples_from_dataset": "qsl_reported_performance_count",
+    "effective_scenario": "effective_scenario",
+    "mode": "effective_test_mode",
+    "streaming": "streaming",
+    "output_sequence_lengths.min": "min_output_tokens",
+    "output_sequence_lengths.max": "max_output_tokens",
+    "load_pattern": "load_pattern",
+    "min_duration_ms": "effective_min_duration_ms",
+    "max_duration_ms": "effective_max_duration_ms",
+    "effective_target_duration_ms": "effective_target_duration_ms",
+    "min_sample_count": "effective_min_query_count",
+    "effective_sample_index_rng_seed": "effective_sample_index_rng_seed",
+    "effective_schedule_rng_seed": "effective_schedule_rng_seed",
+    "effective_sample_concatenate_permutation": "effective_sample_concatenate_permutation",
+    "effective_samples_per_query": "effective_samples_per_query",
+    "generated_query_count": "generated_query_count",
+    "generated_query_duration": "generated_query_duration",
+    "target_qps": "effective_target_qps",
+    "result_scheduled_samples_per_sec": "result_scheduled_samples_per_sec",
+    "qps": "result_completed_samples_per_sec",
+    "effective_target_latency_ns": "effective_target_latency_ns",
+    "effective_target_latency_percentile": "effective_target_latency_percentile",
+    "latency.min": "result_min_latency_ns",
+    "latency.max": "result_max_latency_ns",
+    "latency.avg": "result_mean_latency_ns",
+    "latency.percentiles.50.0": "result_50.00_percentile_latency_ns",
+    "latency.percentiles.90.0": "result_90.00_percentile_latency_ns",
+    "latency.percentiles.95.0": "result_95.00_percentile_latency_ns",
+    "latency.percentiles.99.0": "result_99.00_percentile_latency_ns",
+    "latency.percentiles.99.9": "result_99.90_percentile_latency_ns",
+    "ttft.min": "result_first_token_min_latency_ns",
+    "ttft.max": "result_first_token_max_latency_ns",
+    "ttft.avg": "result_first_token_mean_latency_ns",
+    "ttft.percentiles.50.0": "result_first_token_50.00_percentile_latency_ns",
+    "ttft.percentiles.90.0": "result_first_token_90.00_percentile_latency_ns",
+    "ttft.percentiles.95.0": "result_first_token_95.00_percentile_latency_ns",
+    "ttft.percentiles.99.0": "result_first_token_99.00_percentile_latency_ns",
+    "ttft.percentiles.99.9": "result_first_token_99.90_percentile_latency_ns",
+    "tpot.percentiles.50.0": "result_time_per_output_token_50.00_percentile_ns",
+    "tpot.percentiles.90.0": "result_time_per_output_token_90.00_percentile_ns",
+    "tpot.percentiles.95.0": "result_time_per_output_token_95.00_percentile_ns",
+    "tpot.percentiles.99.0": "result_time_per_output_token_99.00_percentile_ns",
+    "tpot.percentiles.99.9": "result_time_per_output_token_99.90_percentile_ns",
+    "tpot.min": "result_time_per_output_token_min",
+    "tpot.max": "result_time_per_output_token_max",
+    "tpot.avg": "result_time_per_output_token_mean",
+    "tps": "result_completed_tokens_per_second",
+    "result.total": "result_query_count",
+    "result.failed": "num_errors",
+}
+
+
+# Maps endpoints field name (forwards.json key) to the dot-notation path
+# inside config.yaml
+ENDPOINTS_YAML_FIELD_MAP = {
+    "effective_scenario": "type",
+    "endpoints_version": "version",
+    "streaming": "model_params.streaming",
+    "load_pattern": "settings.load_pattern.type",
+    "min_duration_ms": "settings.runtime.min_duration_ms",
+    "max_duration_ms": "settings.runtime.max_duration_ms",
+    "effective_sample_index_rng_seed": "settings.runtime.dataloader_random_seed",
+    "effective_schedule_rng_seed": "settings.runtime.scheduler_random_seed",
+    "target_qps": "settings.load_pattern.target_qps",
+    "min_sample_count": "settings.runtime.n_samples_to_issue",
+}
+
+# Alternative JSON paths for endpoints keys that don't directly match the
+# JSON structure
+ENDPOINTS_JSON_ALT_PATHS = {
+    "result.total": "results.total",
+    "result.failed": "results.failed",
+    "qps": "results.qps",
+    "generated_query_count": "n_samples_issued",
+    "generated_query_duration": "duration_ns",
+    "test_datetime": "test_started_at",
+    "endpoints_git_commit_hash": "git_sha",
+    "n_samples_from_dataset": "n_samples_issued",
+}
+
+ENDPOINTS_INFERRED_FIELDS = {
+    "effective_accuracy_sample_count": "result_query_count"
 }

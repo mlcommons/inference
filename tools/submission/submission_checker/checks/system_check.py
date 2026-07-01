@@ -42,6 +42,8 @@ class SystemCheck(BaseCheck):
         self.system_json = self.submission_logs.system_json
         self.submitter = self.submission_logs.loader_data.get("submitter", "")
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.config = config
         self.setup_checks()
 
@@ -59,6 +61,7 @@ class SystemCheck(BaseCheck):
         self.checks.append(self.submitter_check)
         self.checks.append(self.division_check)
         self.checks.append(self.nameplate_power_check)
+        self.apply_checks = set(self.checks)
 
     def missing_check(self):
         """Ensure the system JSON file was provided.

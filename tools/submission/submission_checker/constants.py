@@ -1,4 +1,334 @@
 MODEL_CONFIG = {
+    "v6.1": {
+        "models": [
+            "resnet",
+            "bert-99",
+            "bert-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "llama3.1-8b",
+            "llama3.1-8b-edge",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "stable-diffusion-xl",
+            "rgat",
+            "deepseek-r1",
+            "whisper",
+            "gpt-oss-120b",
+            "wan-2.2-t2v-a14b",
+            "qwen3-vl-235b-a22b",
+            "dlrm-v3",
+            "yolo-95",
+            "yolo-99",
+            "e2e",
+            "e2e_vectorDB"
+        ],
+        "required-scenarios-datacenter": {
+            "dlrm-v3": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
+            "rgat": ["Offline"],
+            "whisper": ["Offline"],
+            "deepseek-r1": ["Offline"],
+            "gpt-oss-120b": ["Offline"],
+            "qwen3-vl-235b-a22b": ["Server", "Offline"],
+            "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
+            "e2e": ["Offline"],
+            "e2e_vectorDB": ["Offline"]
+        },
+        "optional-scenarios-datacenter": {
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
+            "deepseek-r1": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Interactive", "Server"],
+            "qwen3-vl-235b-a22b": ["Interactive"],
+        },
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline"],
+            "whisper": ["Offline"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
+            "rgat": ["Offline"],
+            "deepseek-r1": ["Offline"],
+            "whisper": ["Offline"],
+            "gpt-oss-120b": ["Offline"],
+            "qwen3-vl-235b-a22b": ["Offline"],
+            "dlrm-v3": ["Offline", "Server"],
+            "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+            "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
+            "deepseek-r1": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Interactive", "Server"],
+            "qwen3-vl-235b-a22b": ["Interactive", "Server"],
+        },
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+            "llama3.1-8b": (
+                "ROUGE1",
+                38.7792 * 0.99,
+                "ROUGE2",
+                15.9075 * 0.99,
+                "ROUGEL",
+                24.4957 * 0.99,
+                "ROUGELSUM",
+                35.793 * 0.99,
+                "GEN_LEN",
+                8167644 * 0.9,
+            ),
+            "llama3.1-8b-edge": (
+                "ROUGE1",
+                39.06 * 0.99,
+                "ROUGE2",
+                16.1147 * 0.99,
+                "ROUGEL",
+                24.6375 * 0.99,
+                "ROUGELSUM",
+                36.124 * 0.99,
+                "GEN_LEN",
+                3051113 * 0.9,
+            ),
+            "llama2-70b-99": (
+                "ROUGE1",
+                44.4312 * 0.99,
+                "ROUGE2",
+                22.0352 * 0.99,
+                "ROUGEL",
+                28.6162 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "llama2-70b-99.9": (
+                "ROUGE1",
+                44.4312 * 0.999,
+                "ROUGE2",
+                22.0352 * 0.999,
+                "ROUGEL",
+                28.6162 * 0.999,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.68631873,
+                "FID_SCORE",
+                23.01085758,
+            ),
+            "rgat": ("acc", 0.7286 * 0.99),
+            "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
+            "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
+            "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
+            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "dlrm-v3": (
+                "DLRM_NE",
+                0.86687 * 0.999,
+                "DLRM_ACC",
+                0.69651 * 0.999,
+                "DLRM_AUC",
+                0.78663 * 0.999,
+            ),
+            "yolo-95": ("mAP", 53.4 * 0.95),
+            "yolo-99": ("mAP", 53.4 * 0.99),
+            "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
+            # TODO: Set e2e accuracy threshold once reference score is
+            # established
+            "e2e": ("E2E_ACCURACY", ""),
+            "e2e_vectorDB": ("E2E_ACCURACY", ""),
+        },
+        "accuracy-upper-limit": {
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.81331801,
+                "FID_SCORE",
+                23.95007626,
+            ),
+            "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
+            "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
+            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3886.2274),
+            "gpt-oss-120b": ("TOKENS_PER_SAMPLE", 1.1 * 9999),
+        },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "rgat": 788379,
+            "deepseek-r1": 4388,
+            "whisper": 1633,
+            "gpt-oss-120b": 6396,
+            "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 50,
+            "dlrm-v3": 349823,
+            "yolo-95": 64,
+            "yolo-99": 64,
+            "e2e": 824,
+            "e2e_vectorDB": 824
+        },
+        "accuracy-sample-count": {
+            "gpt-oss-120b": 4395,
+            "wan-2.2-t2v-a14b": 248,
+        },
+        "dataset-size": {
+            "resnet": 50000,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "rgat": 788379,
+            "deepseek-r1": 4388,
+            "whisper": 1633,
+            "gpt-oss-120b": 6396,
+            "qwen3-vl-235b-a22b": 48289,
+            "wan-2.2-t2v-a14b": 248,
+            "dlrm-v3": 349823,
+            "yolo-95": 1525,
+            "yolo-99": 1525,
+            "e2e": 824,
+            "e2e_vectorDB": 824,
+        },
+        "model_mapping": {
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "llama3_1-405b": "llama3.1-405b",
+            "llama3_1-8b": "llama3.1-8b",
+            "llama3_1-8b-edge": "llama3.1-8b-edge",
+        },
+        "seeds": {
+            # TODO: Update seeds for v6.1
+            "qsl_rng_seed": 2465351861681999779,
+            "sample_index_rng_seed": 14276810075590677512,
+            "schedule_rng_seed": 3936089224930324775,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "retinanet": {"Server": 100000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "llama3.1-8b": {"Server": 20000000000},
+            "stable-diffusion-xl": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "deepseek-r1": {"Server": 60000000000},
+            "gpt-oss-120b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "dlrm-v3": {"Server": 60000000000},
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "bert-99": {"SingleStream": 1024, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-8b-edge": {"SingleStream": 1024, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "rgat": {"SingleStream": 1024, "Offline": 1},
+            "deepseek-r1": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "whisper": {"SingleStream": 1024, "Offline": 1},
+            "gpt-oss-120b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "qwen3-vl-235b-a22b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v3": {"Server": 270336, "Offline": 1},
+            "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
+            "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
+            "e2e": {"Offline": 824},
+            "e2e_vectorDB": {"Offline": 824},
+        },
+        "models_TEST01": [
+            "resnet",
+            "bert-99",
+            "bert-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "stable-diffusion-xl",
+            "rgat",
+            "whisper",
+            "yolo-99",
+            "yolo-95",
+        ],
+        "models_TEST04": [
+            "resnet",
+            "stable-diffusion-xl",
+            "wan-2.2-t2v-a14b",
+        ],
+        "models_TEST06": [
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
+            "llama3.1-8b",
+            "llama3.1-8b-interactive",
+            "deepseek-r1",
+        ],
+        "models_TEST07": [
+            "gpt-oss-120b",
+        ],
+        "models_TEST09": [
+            "gpt-oss-120b",
+        ],
+        "models_TEST08": [
+            "dlrm-v3",
+        ]
+    },
     "v6.0": {
         "models": [
             "resnet",
@@ -1139,6 +1469,20 @@ REQUIRED_ACC_BENCHMARK = {
                 "96",
             ]
         },
+        "v6.1": {
+            "videos": [
+                "130",
+                "106",
+                "84",
+                "59",
+                "12",
+                "123",
+                "43",
+                "22",
+                "238",
+                "32",
+            ]
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
@@ -1187,6 +1531,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 50,
+    "e2e": 824,
+    "e2e_vectorDB": 824
 }
 
 SCENARIO_MAPPING = {
@@ -1218,6 +1564,12 @@ RESULT_FIELD_NEW = {
         "Server": "result_completed_samples_per_sec",
     },
     "v6.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
+    "v6.1": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
@@ -1294,6 +1646,43 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         }
     },
     "v6.0": {
+        "gpt-oss-120b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b-edge": {
+            "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
+        },
+        "mixtral-8x7b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-405b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "deepseek-r1": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        },
+    },
+    "v6.1": {
         "gpt-oss-120b": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
@@ -1426,6 +1815,7 @@ ACC_PATTERN = {
     "exact_match": r".*'exact_match':\s([\d.]+).*",
     "vbench_score": r".*'vbench_score':\s([\d.]+).*",
     "F1_HIERARCHICAL": r'\{.*"f1":\s*([\d\.]+).*\}',
+    "E2E_ACCURACY": r"Accuracy:\s*([\d\.]+)",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1625,6 +2015,7 @@ PERFORMANCE_LOG_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
 }
 
@@ -1632,6 +2023,7 @@ PERFORMANCE_SUMMARY_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
 }
 
@@ -1654,6 +2046,7 @@ ACCURACY_LOG_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
 }
 
@@ -1661,6 +2054,7 @@ ACCURACY_RESULT_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
 }
 
@@ -1668,6 +2062,7 @@ ACCURACY_JSON_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
 
@@ -1683,6 +2078,7 @@ POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
 }
 
@@ -1690,6 +2086,7 @@ MEASUREMENTS_PATH = {
     "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}",
     "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{file}",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/measurements.json",
 }
 
@@ -1697,6 +2094,7 @@ TEST01_PERF_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
 }
 
@@ -1704,6 +2102,7 @@ TEST01_ACC_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/verify_accuracy.txt",
 }
 
@@ -1711,6 +2110,7 @@ TEST04_PERF_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/performance/run_1/mlperf_log_detail.txt",
 }
 
@@ -1718,6 +2118,7 @@ TEST04_ACC_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST04/verify_accuracy.txt",
 }
 
@@ -1725,38 +2126,33 @@ TEST06_ACC_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/verify_accuracy.txt",
 }
 
 TEST07_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
 }
 
 TEST09_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
 }
 
 TEST08_ACC_PATH = {
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST08/verify_accuracy.txt",
-}
-
-TEST07_ACC_PATH = {
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST07/verify_accuracy.txt",
-}
-
-TEST09_ACC_PATH = {
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST09/verify_output_len.txt",
 }
 
 COMPLIANCE_PATH = {
     "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/",
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
 }
 
@@ -1764,6 +2160,7 @@ SYSTEM_PATH = {
     "v5.0": "{division}/{submitter}/systems/{system}.json",
     "v5.1": "{division}/{submitter}/systems/{system}.json",
     "v6.0": "{division}/{submitter}/systems/{system}.json",
+    "v6.1": "{division}/{submitter}/systems/{system}.json",
     "default": "{division}/{submitter}/systems/{system}.json",
 }
 
@@ -1775,6 +2172,7 @@ SRC_PATH = {
     "v5.0": "{division}/{submitter}/code",
     "v5.1": "{division}/{submitter}/code",
     "v6.0": "{division}/{submitter}/src",
+    "v6.1": "{division}/{submitter}/src",
     "default": "{division}/{submitter}/src",
 }
 
@@ -1782,6 +2180,7 @@ PRIVATE_ID_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/privateid.json",
     "v5.1": "{division}/{submitter}/results/{system}/privateid.json",
     "v6.0": "{division}/{submitter}/results/{system}/privateid.json",
+    "v6.1": "{division}/{submitter}/results/{system}/privateid.json",
     "default": "{division}/{submitter}/results/{system}/privateid.json",
 }
 

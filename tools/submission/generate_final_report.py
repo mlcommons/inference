@@ -117,6 +117,7 @@ def main():
         "ID",
         "Unique ID (e.g. for Audit)",
         "ColorKey",
+        "PrivateID",
         "Submitter",
         "Availability",
         "System",

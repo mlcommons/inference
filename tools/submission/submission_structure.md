@@ -88,9 +88,7 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   └── accuracy.txt
-│   │   │   │   │   │   ├── measurements.json
-│   │   │   │   │   │   ├── mlperf.conf (optional)
-│   │   │   │   │   │   └── user.conf
+│   │   │   │   │   │   └── measurements.json
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>
 │   │   ├── systems

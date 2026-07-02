@@ -188,14 +188,17 @@ def main():
 
     # Validate required arguments
     if not args.documents and not args.ingest:
-        parser.error("Either --documents (for raw docs) or --ingest (for pre-chunked passages) is required")
+        parser.error(
+            "Either --documents (for raw docs) or --ingest (for pre-chunked passages) is required")
 
     # Set default database name if not provided
     if args.database is None:
         args.database = VectorDB.get_default_db_name()
 
-    db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
-    db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
+    db_file_path = args.database if args.database.endswith(
+        '.db') else f"{args.database}.db"
+    db_base_name = args.database.replace(
+        '.db', '') if args.database.endswith('.db') else args.database
 
     # Check if database already exists
     db_exists = Path(db_file_path).exists()
@@ -249,8 +252,10 @@ def main():
         if args.save_passages:
             passages_file = args.save_passages
         else:
-            # Generate filename based on source directory and chunking parameters
-            source_dir_name = os.path.basename(os.path.normpath(args.documents))
+            # Generate filename based on source directory and chunking
+            # parameters
+            source_dir_name = os.path.basename(
+                os.path.normpath(args.documents))
             passages_file = f"passages_{source_dir_name}_len{args.chunk_size}_ov{args.chunk_overlap}_{args.text_boundary}.json"
             print(f"  Auto-generated passages filename: {passages_file}")
 
@@ -358,7 +363,8 @@ def main():
     # STEP 5: VALIDATE DATABASE (after save, not part of perf)
     # ============================================================
     print("[5/5] Validating database...")
-    validation_results = validate_database(rag_db, expected_passages=num_passages if args.documents else None)
+    validation_results = validate_database(
+        rag_db, expected_passages=num_passages if args.documents else None)
     vector_count = validation_results["vector_count"]
 
     if validation_results["validation_passed"]:
@@ -460,7 +466,7 @@ def main():
         import shutil
         try:
             shutil.rmtree(temp_text_dir)
-        except:
+        except BaseException:
             pass
 
     return 0

@@ -1,0 +1,48 @@
+name: Trigger GPU Benchmark on PR
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      # Vision benchmarks
+      - 'vision/classification_and_detection/yolo/**'
+
+concurrency:
+  group: inference-gpu-benchmark-testing-pipeline
+  cancel-in-progress: false
+
+jobs:
+  capture_pr_info:
+    runs-on: ubuntu-latest
+    outputs:
+      base_sha: ${{ steps.shas.outputs.base_sha }}
+      head_sha: ${{ steps.shas.outputs.head_sha }}
+      pr_number: ${{ steps.shas.outputs.pr_number }}
+    steps:
+      - name: Capture PR commit SHAs and PR number
+        id: shas
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Pass FULL SHAs as outputs — trimming happens in private repo for display only
+          echo "base_sha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+          # Log short SHAs for readability
+          echo "Base SHA : ${BASE_SHA:0:7}"
+          echo "Head SHA : ${HEAD_SHA:0:7}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+
+  approval_gate:
+    needs: capture_pr_info
+    runs-on: ubuntu-latest
+    environment: self-hosted-runner-benchmark-approval
+    steps:
+      - name: Approved
+        run: |
+          echo "Approved by maintainer."
+          echo "PR     : #${{ needs.capture_pr_info.outputs.pr_number }}"
+          echo "Base   : ${{ needs.capture_pr_info.outputs.base_sha }}"
+          echo "Head   : ${{ needs.capture_pr_info.outputs.head_sha }}"

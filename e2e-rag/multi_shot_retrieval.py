@@ -28,6 +28,13 @@ Architecture:
     Prompt → Query Rewriter (LLM) → k Sub-queries → Retrieval → Reranking → Evaluation
 """
 
+import requests
+from llm_logger import LLMLogger
+from params import add_all_args
+from utils import (set_deterministic_seeds, filter_dataset_by_difficulty,
+                   setup_llm_config, get_device_config)
+from evaluation import evaluate_retrieval_query, run_evaluation
+from retrieve import VectorDB
 import argparse
 import json
 import re
@@ -46,13 +53,6 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 # Get OpenRouter API key from environment
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
-from retrieve import VectorDB
-from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import (set_deterministic_seeds, filter_dataset_by_difficulty,
-                   setup_llm_config, get_device_config)
-from params import add_all_args
-from llm_logger import LLMLogger
-import requests
 
 # Prompts
 
@@ -171,15 +171,15 @@ For each NEW document:
 
 **If there are NO NEW documents to evaluate, skip this task and go to TASK 3**
 
-SUMMARY REQUIREMENTS: 
+SUMMARY REQUIREMENTS:
 - Extract and preserve specific details
 - only facts from the document
 
 TASK 2: CHECK IF SUFFICIENT AND CONNECT INFORMATION
 Review ALL KEPT documents and summaries. Actively connect facts across documents:
-- Identify entities by matching names across summaries 
+- Identify entities by matching names across summaries
 - Chain relationships (A → B → C)
-- Cross-reference dates/events 
+- Cross-reference dates/events
 - Build complete chains: Person → Family member → Attribute, or Event → Year → Cross-reference
 If you can construct a complete answer chain with specific names/facts from kept documents, provide final answer.
 
@@ -204,7 +204,7 @@ STRATEGIC QUERY PATTERNS:
 
 **For People/Biography:**
 - Full article: Just the person's name "Harriet Lane"
-- Family: "Person X family", "Person X parents"  
+- Family: "Person X family", "Person X parents"
 - Specific relative: "Person X" then extract family, don't search "Person X mother" repeatedly
 
 **For Events/Dates:**
@@ -240,7 +240,7 @@ If not: {{"relevance": [1,0,1], "summaries": ["Person A served from dates, menti
 {{"relevance": [], "summaries": [], "queries": ["Nth position holder name", "specific event list"], "feedback": "Starting with direct entity/list searches."}}
 
 CRITICAL REQUIREMENTS:
-- If NO NEW documents: return empty arrays: "relevance": [], "summaries": []  
+- If NO NEW documents: return empty arrays: "relevance": [], "summaries": []
 - If {len_new_docs} NEW documents: return exactly {len_new_docs} relevance scores and {len_new_docs} summaries
 - For relevant docs (relevance=1): summary MUST extract specific facts (names, dates, relationships, family details from infobox/text)
 - For irrelevant docs (relevance=0): summary MUST be empty string ""
@@ -252,9 +252,6 @@ CRITICAL REQUIREMENTS:
 FORMAT VALIDATION: Array lengths MUST match document count - double check before responding!
 SEARCH STRATEGY: Simple entity names work better than complex descriptive queries!
 Respond only in JSON format"""
-
-
-
 
 
 def get_chat_completions_headers(service_url: str):
@@ -272,21 +269,22 @@ def get_chat_completions_headers(service_url: str):
         }
     return {}
 
+
 def call_chat_completions(service_url: str, model_name: str, messages: List[Dict],
-                        temperature: float = 1.0, max_tokens: int = 4096,
-                        top_p: float = 1.0,
-                        top_k: int = -1,
-                        reasoning_effort: str = "medium",
-                        frequency_penalty: float = 0.0,
-                        presence_penalty: float = 0.0,
-                        repetition_penalty: float = 1.0,
-                        max_retries: int = 5,
-                        logger: Optional[LLMLogger] = None,
-                        component: str = "unknown",
-                        hop_count: Optional[int] = None,
-                        context: Dict[str, Any] = None,
-                        perf_test_cache: Optional[Any] = None,
-                        query_id: Optional[str] = None) -> str:
+                          temperature: float = 1.0, max_tokens: int = 4096,
+                          top_p: float = 1.0,
+                          top_k: int = -1,
+                          reasoning_effort: str = "medium",
+                          frequency_penalty: float = 0.0,
+                          presence_penalty: float = 0.0,
+                          repetition_penalty: float = 1.0,
+                          max_retries: int = 5,
+                          logger: Optional[LLMLogger] = None,
+                          component: str = "unknown",
+                          hop_count: Optional[int] = None,
+                          context: Dict[str, Any] = None,
+                          perf_test_cache: Optional[Any] = None,
+                          query_id: Optional[str] = None) -> str:
     """Call OpenRouter API with proper authentication and logging.
 
     Default sampling parameters:
@@ -307,7 +305,8 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
     if reasoning_effort != "medium":
         payload["reasoning_effort"] = reasoning_effort
     else:
-        payload["reasoning_effort"] = reasoning_effort  # Always include for logging
+        # Always include for logging
+        payload["reasoning_effort"] = reasoning_effort
 
     # Add optional sampling parameters
     if frequency_penalty != 0.0:
@@ -322,22 +321,32 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
     # Performance test mode: check if we have cached response
     cached_response = None
     if perf_test_cache and query_id and component and hop_count is not None:
-        cached_response = perf_test_cache.get_response(query_id, component, hop_count)
+        cached_response = perf_test_cache.get_response(
+            query_id, component, hop_count)
         if cached_response:
             print(f"    [PERF TEST MODE] Will attempt real LLM call for performance measurement, but return cached response for deterministic pipeline")
-            print(f"    [PERF TEST MODE] CRITICAL: LLM call MUST succeed - test will STOP if LLM service is unavailable")
+            print(
+                f"    [PERF TEST MODE] CRITICAL: LLM call MUST succeed - test will STOP if LLM service is unavailable")
         else:
-            print(f"    [WARNING] No cached response for {component} hop {hop_count}, will use real LLM response")
+            print(
+                f"    [WARNING] No cached response for {component} hop {hop_count}, will use real LLM response")
 
     for attempt in range(max_retries):
         start_time = time.time()
         try:
-            response = requests.post(service_url, json=payload, headers=headers, timeout=120)
+            response = requests.post(
+                service_url,
+                json=payload,
+                headers=headers,
+                timeout=120)
 
             # Retry on rate limit
             if response.status_code == 429:
-                retry_after = int(response.headers.get('Retry-After', 2 ** attempt))
-                print(f"    Rate limited (429). Retrying in {retry_after}s (attempt {attempt+1}/{max_retries})")
+                retry_after = int(
+                    response.headers.get(
+                        'Retry-After', 2 ** attempt))
+                print(
+                    f"    Rate limited (429). Retrying in {retry_after}s (attempt {attempt+1}/{max_retries})")
                 time.sleep(retry_after)
                 continue
 
@@ -352,12 +361,14 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
             if not llm_output:
                 reasoning_content = message.get('reasoning_content') or ''
                 if reasoning_content:
-                    json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
+                    json_match = re.search(
+                        r'\{.*\}', reasoning_content, re.DOTALL)
                     if json_match:
                         llm_output = json_match.group(0)
 
             if not llm_output:
-                print(f"    WARNING [{component}]: LLM returned empty content. Raw response: {json.dumps(result)[:500]}")
+                print(
+                    f"    WARNING [{component}]: LLM returned empty content. Raw response: {json.dumps(result)[:500]}")
 
             # Log this call
             if logger:
@@ -368,14 +379,19 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                     response=result,
                     latency_ms=latency_ms,
                     context=context or {},
-                    simulated_response=cached_response  # None in normal mode, cached value in perf test mode
+                    # None in normal mode, cached value in perf test mode
+                    simulated_response=cached_response
                 )
 
-            # In perf test mode, return cached response instead of real LLM output
+            # In perf test mode, return cached response instead of real LLM
+            # output
             if cached_response:
-                print(f"    [PERF TEST MODE] Returning simulated response (LLM generated: {len(llm_output)} chars, Simulated: {len(cached_response)} chars)")
-                print(f"    [PERF TEST MODE] Real LLM output: {llm_output[:200]}{'...' if len(llm_output) > 200 else ''}")
-                print(f"    [PERF TEST MODE] Cached output (used in pipeline): {cached_response[:200]}{'...' if len(cached_response) > 200 else ''}")
+                print(
+                    f"    [PERF TEST MODE] Returning simulated response (LLM generated: {len(llm_output)} chars, Simulated: {len(cached_response)} chars)")
+                print(
+                    f"    [PERF TEST MODE] Real LLM output: {llm_output[:200]}{'...' if len(llm_output) > 200 else ''}")
+                print(
+                    f"    [PERF TEST MODE] Cached output (used in pipeline): {cached_response[:200]}{'...' if len(cached_response) > 200 else ''}")
                 return cached_response
 
             return llm_output
@@ -384,53 +400,70 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
             status = e.response.status_code if e.response is not None else None
             if status in (502, 503, 504) and attempt < max_retries - 1:
                 wait = 2 ** attempt
-                print(f"    Server error ({status}). Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
+                print(
+                    f"    Server error ({status}). Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait)
                 continue
 
             # In perf test mode, LLM calls MUST succeed for valid benchmarking
             if cached_response:
                 print(f"    ERROR [{component}]: HTTP {status}: {e}")
-                print(f"    [PERF TEST MODE FATAL] LLM call failed - cannot proceed with cached response")
-                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
-                print(f"    [PERF TEST MODE FATAL] Please ensure LLM service is running on {service_url}")
-                raise RuntimeError(f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
+                print(
+                    f"    [PERF TEST MODE FATAL] LLM call failed - cannot proceed with cached response")
+                print(
+                    f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                print(
+                    f"    [PERF TEST MODE FATAL] Please ensure LLM service is running on {service_url}")
+                raise RuntimeError(
+                    f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
 
             print(f"    ERROR [{component}]: HTTP {status}: {e}")
             raise
         except requests.exceptions.Timeout:
             if attempt < max_retries - 1:
                 wait = 2 ** attempt
-                print(f"    Timeout. Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
+                print(
+                    f"    Timeout. Retrying in {wait}s (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait)
                 continue
 
             # In perf test mode, LLM calls MUST succeed for valid benchmarking
             if cached_response:
-                print(f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
-                print(f"    [PERF TEST MODE FATAL] LLM call timed out - cannot proceed with cached response")
-                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
-                raise RuntimeError(f"Perf test mode requires LLM service to respond. LLM call timed out for {component}")
+                print(
+                    f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
+                print(
+                    f"    [PERF TEST MODE FATAL] LLM call timed out - cannot proceed with cached response")
+                print(
+                    f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                raise RuntimeError(
+                    f"Perf test mode requires LLM service to respond. LLM call timed out for {component}")
 
-            print(f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
+            print(
+                f"    ERROR [{component}]: Request timed out after {max_retries} attempts")
             raise
         except Exception as e:
             # In perf test mode, LLM calls MUST succeed for valid benchmarking
             if cached_response:
                 print(f"    ERROR [{component}]: {e}")
-                print(f"    [PERF TEST MODE FATAL] LLM call failed with exception - cannot proceed with cached response")
-                print(f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
-                print(f"    [PERF TEST MODE FATAL] Please ensure LLM service is running and accessible")
-                raise RuntimeError(f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
+                print(
+                    f"    [PERF TEST MODE FATAL] LLM call failed with exception - cannot proceed with cached response")
+                print(
+                    f"    [PERF TEST MODE FATAL] Performance benchmarking requires all LLM calls to succeed for run-to-run equivalency")
+                print(
+                    f"    [PERF TEST MODE FATAL] Please ensure LLM service is running and accessible")
+                raise RuntimeError(
+                    f"Perf test mode requires LLM service to be available. LLM call failed for {component}") from e
 
             print(f"    ERROR [{component}]: {e}")
             raise
 
     print(f"    ERROR [{component}]: Max retries ({max_retries}) exceeded")
     if cached_response:
-        print(f"    [PERF TEST MODE] Real LLM call failed, returning cached response")
+        print(
+            f"    [PERF TEST MODE] Real LLM call failed, returning cached response")
         return cached_response
     raise RuntimeError(f"LLM call failed after {max_retries} retries")
+
 
 def evaluate_document_relevance(question: str,
                                 new_documents: List[tuple],
@@ -512,15 +545,18 @@ def evaluate_document_relevance(question: str,
         relevance = relevance_result.get("relevance", [])
 
         if len(relevance) != len(new_documents):
-            print(f"    Warning: Relevance mismatch. Expected {len(new_documents)}, got {len(relevance)}")
+            print(
+                f"    Warning: Relevance mismatch. Expected {len(new_documents)}, got {len(relevance)}")
             return {"relevance": [1] * len(new_documents)}
 
         return {"relevance": relevance}
 
     except Exception as e:
         # In perf test mode, propagate fatal errors (don't fallback)
-        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
-        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+        perf_test_cache = llm_config.get(
+            'perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(
+                e, RuntimeError) and "Perf test mode requires" in str(e):
             # This is a perf test mode fatal error - must propagate it
             raise
 
@@ -529,13 +565,13 @@ def evaluate_document_relevance(question: str,
 
 
 def check_sufficiency(question: str,
-                     kept_documents: List[tuple],
-                     iteration: int,
-                     max_iterations: int,
-                     llm_config: Optional[Dict[str, Any]] = None,
-                     logger: Optional[LLMLogger] = None,
-                     hop_count: int = 1,
-                     query_id: Optional[str] = None) -> Dict[str, Any]:
+                      kept_documents: List[tuple],
+                      iteration: int,
+                      max_iterations: int,
+                      llm_config: Optional[Dict[str, Any]] = None,
+                      logger: Optional[LLMLogger] = None,
+                      hop_count: int = 1,
+                      query_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Check if kept documents are sufficient to answer the question.
     Uses gpt-oss-120b model via OpenRouter.
@@ -601,13 +637,15 @@ def check_sufficiency(question: str,
             query_id=query_id
         )
 
-        print(f"    [DEBUG] Sufficiency check raw output: {llm_output[:200]}...")
+        print(
+            f"    [DEBUG] Sufficiency check raw output: {llm_output[:200]}...")
 
         if not llm_output:
             print(f"    Warning: Sufficiency check returned empty")
             # On final iteration, force sufficient
             if iteration >= max_iterations:
-                return {"sufficient": True, "reasoning": "Max iterations reached"}
+                return {"sufficient": True,
+                        "reasoning": "Max iterations reached"}
             return {"sufficient": False, "reasoning": "LLM returned empty"}
 
         if llm_output.startswith("```"):
@@ -635,24 +673,27 @@ def check_sufficiency(question: str,
 
     except Exception as e:
         # In perf test mode, propagate fatal errors (don't fallback)
-        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
-        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+        perf_test_cache = llm_config.get(
+            'perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(
+                e, RuntimeError) and "Perf test mode requires" in str(e):
             # This is a perf test mode fatal error - must propagate it
             raise
 
         print(f"    Error in sufficiency check: {e}")
         # On final iteration, force sufficient
         if iteration >= max_iterations:
-            return {"sufficient": True, "reasoning": f"Max iterations reached (error: {str(e)})"}
+            return {"sufficient": True,
+                    "reasoning": f"Max iterations reached (error: {str(e)})"}
         return {"sufficient": False, "reasoning": f"Error: {str(e)}"}
 
 
 def generate_answer(question: str,
-                   kept_documents: List[tuple],
-                   llm_config: Optional[Dict[str, Any]] = None,
-                   logger: Optional[LLMLogger] = None,
-                   hop_count: Optional[int] = None,
-                   query_id: Optional[str] = None) -> str:
+                    kept_documents: List[tuple],
+                    llm_config: Optional[Dict[str, Any]] = None,
+                    logger: Optional[LLMLogger] = None,
+                    hop_count: Optional[int] = None,
+                    query_id: Optional[str] = None) -> str:
     """
     Generate final answer from kept documents using gpt-oss-120b.
 
@@ -726,9 +767,12 @@ Answer:"""
         return llm_output.strip()
 
     except Exception as e:
-        # In perf test mode, propagate fatal errors (don't fallback to "Unknown")
-        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
-        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+        # In perf test mode, propagate fatal errors (don't fallback to
+        # "Unknown")
+        perf_test_cache = llm_config.get(
+            'perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(
+                e, RuntimeError) and "Perf test mode requires" in str(e):
             # This is a perf test mode fatal error - must propagate it
             raise
 
@@ -737,15 +781,15 @@ Answer:"""
 
 
 def generate_search_queries(question: str,
-                           kept_documents: List[tuple],
-                           max_queries: int = 3,
-                           query_history: Optional[List[str]] = None,
-                           query_results: Optional[List[int]] = None,
-                           feedback_history: Optional[List[str]] = None,
-                           llm_config: Optional[Dict[str, Any]] = None,
-                           logger: Optional[LLMLogger] = None,
-                           hop_count: int = 1,
-                           query_id: Optional[str] = None) -> Dict[str, Any]:
+                            kept_documents: List[tuple],
+                            max_queries: int = 3,
+                            query_history: Optional[List[str]] = None,
+                            query_results: Optional[List[int]] = None,
+                            feedback_history: Optional[List[str]] = None,
+                            llm_config: Optional[Dict[str, Any]] = None,
+                            logger: Optional[LLMLogger] = None,
+                            hop_count: int = 1,
+                            query_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Generate search queries using gpt-oss-120b via OpenRouter.
     """
@@ -771,7 +815,8 @@ def generate_search_queries(question: str,
         history_text = "No queries yet"
 
     # Format feedback
-    feedback_text = "\n".join(feedback_history) if feedback_history else "Iteration 1 - Initial search"
+    feedback_text = "\n".join(
+        feedback_history) if feedback_history else "Iteration 1 - Initial search"
 
     prompt = QUERY_GENERATION_PROMPT.format(
         question=question,
@@ -833,9 +878,12 @@ def generate_search_queries(question: str,
         }
 
     except Exception as e:
-        # In perf test mode, propagate fatal errors (don't fallback to original question)
-        perf_test_cache = llm_config.get('perf_test_cache') if llm_config else None
-        if perf_test_cache and isinstance(e, RuntimeError) and "Perf test mode requires" in str(e):
+        # In perf test mode, propagate fatal errors (don't fallback to original
+        # question)
+        perf_test_cache = llm_config.get(
+            'perf_test_cache') if llm_config else None
+        if perf_test_cache and isinstance(
+                e, RuntimeError) and "Perf test mode requires" in str(e):
             # This is a perf test mode fatal error - must propagate it
             raise
 
@@ -854,7 +902,7 @@ def query_rewriter(question: str, new_documents: List[tuple],
                    llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Evaluates documents AND generates new queries in one LLM call.
-    
+
     Args:
         question: The user's original question
         new_documents: List of NEW document texts to evaluate
@@ -864,7 +912,7 @@ def query_rewriter(question: str, new_documents: List[tuple],
         query_history: List of previous search queries
         query_results: List of number of documents found for each query (parallel to query_history)
         previous_feedback: Feedback from previous iteration about what's missing
-        
+
     Returns:
         Dict with:
         - 'relevance' (list of 0/1 for ONLY new_documents)
@@ -879,18 +927,18 @@ def query_rewriter(question: str, new_documents: List[tuple],
             kept_context += f"\n[KEPT {i}] {doc[2]}\n"
     else:
         kept_context = "None"
-    
-    # Format NEW documents 
+
+    # Format NEW documents
     new_context = ""
     if new_documents:
         for i, doc in enumerate(new_documents, 1):
             new_context += f"\n[NEW {i}] {doc[1]}\n"
     else:
         new_context = "None"
-    
+
     # Combine for context
     context = f"KEPT DOCUMENTS (already relevant):\n{kept_context}\n\nNEW DOCUMENTS (evaluate these):\n{new_context}"
-    
+
     # Format query history with results - focus on failures for learning
     if query_history:
         failed_queries = []
@@ -901,31 +949,35 @@ def query_rewriter(question: str, new_documents: List[tuple],
                     failed_queries.append(q)
                 else:
                     successful_queries.append(f"{q} ({num_docs} docs)")
-        
+
         history_parts = []
         if failed_queries:
-            history_parts.append(f"FAILED: {', '.join(failed_queries)}")  # Last 3 failures
+            history_parts.append(
+                f"FAILED: {', '.join(failed_queries)}")  # Last 3 failures
         if successful_queries:
-            history_parts.append(f"SUCCESS: {', '.join(successful_queries)}")  # Last 2 successes
-        
-        history_text = "; ".join(history_parts) if history_parts else "No queries yet"
+            # Last 2 successes
+            history_parts.append(f"SUCCESS: {', '.join(successful_queries)}")
+
+        history_text = "; ".join(
+            history_parts) if history_parts else "No queries yet"
     else:
         history_text = "No queries yet"
-    
+
     # Build feedback history - show progression of what was tried and learned
     if feedback_history and len(feedback_history) > 0:
         unique_feedback = []
         for fb in reversed(feedback_history):
             if fb and fb not in unique_feedback:
                 unique_feedback.append(fb)
-        
+
         if unique_feedback:
-            feedback_text = "PREVIOUS ATTEMPTS: " + " → ".join(reversed(unique_feedback))
+            feedback_text = "PREVIOUS ATTEMPTS: " + \
+                " → ".join(reversed(unique_feedback))
         else:
             feedback_text = f"Iteration {len(query_history) + 1 if query_history else 1}"
     else:
         feedback_text = f"Iteration {len(query_history) + 1 if query_history else 1} - Initial search"
-    
+
     print(f"Context: {context}")
     print(f"History: {history_text}")
     print(f"Feedback: {feedback_text}")
@@ -938,12 +990,12 @@ def query_rewriter(question: str, new_documents: List[tuple],
         k=max_queries,
         len_new_docs=len(new_documents)
     )
-    
-    system_message = f"""You are an expert at multi-hop reasoning and strategic search. 
-                        CRITICAL: Never repeat failed queries. 
-                        Always try completely different approaches when queries return 0 docs. 
+
+    system_message = f"""You are an expert at multi-hop reasoning and strategic search.
+                        CRITICAL: Never repeat failed queries.
+                        Always try completely different approaches when queries return 0 docs.
                         Focus on atomic facts and progressive strategies."""
-    
+
     # Use LLM config if provided, otherwise use defaults
     if llm_config:
         model_name = llm_config["model_name"]
@@ -973,10 +1025,10 @@ def query_rewriter(question: str, new_documents: List[tuple],
         response = requests.post(service_url, json=payload, timeout=300)
         response.raise_for_status()
         result = response.json()
-        
+
         message = result['choices'][0]['message']
         llm_output = message.get('content')
-        
+
         # Fallback: use reasoning_content if content is empty (thinking models)
         reasoning_content = message.get('reasoning_content', '')
         if reasoning_content and not llm_output:
@@ -985,12 +1037,15 @@ def query_rewriter(question: str, new_documents: List[tuple],
             json_match = re.search(r'\{.*\}', reasoning_content, re.DOTALL)
             if json_match:
                 llm_output = json_match.group(0)
-                print(f"    DEBUG: Extracted JSON from reasoning_content ({len(llm_output)} chars)")
+                print(
+                    f"    DEBUG: Extracted JSON from reasoning_content ({len(llm_output)} chars)")
             else:
-                print(f"    DEBUG: No JSON found in reasoning_content snippet: {reasoning_content[:200]}")
+                print(
+                    f"    DEBUG: No JSON found in reasoning_content snippet: {reasoning_content[:200]}")
 
         if llm_output is None or not llm_output.strip():
-            print(f"    Warning: LLM returned empty content, using original query as fallback")
+            print(
+                f"    Warning: LLM returned empty content, using original query as fallback")
             # Always fall back to original query - never return empty queries
             return {
                 "relevance": [0] * len(new_documents),
@@ -999,25 +1054,25 @@ def query_rewriter(question: str, new_documents: List[tuple],
                 "feedback": "LLM returned empty response",
                 "answer": ""
             }
-        
+
         llm_output = llm_output.strip()
-        
+
         # Parse JSON output - handle markdown code blocks
         if llm_output.startswith("```"):
             llm_output = llm_output.split("```")[1]
             if llm_output.startswith("json"):
                 llm_output = llm_output[4:]
             llm_output = llm_output.strip()
-        
+
         result_data = json.loads(llm_output)
-        
-        # Validate format 
+
+        # Validate format
         required_fields = ["relevance"]
         for field in required_fields:
             if field not in result_data:
                 print(f"Warning: Missing required field '{field}' in response")
                 result_data[field] = [0] * len(new_documents)
-        
+
         # Ensure we have either "answer" OR "queries"+"feedback"
         if "answer" not in result_data:
             result_data["answer"] = ""
@@ -1027,37 +1082,47 @@ def query_rewriter(question: str, new_documents: List[tuple],
             result_data["feedback"] = ""
         if "summaries" not in result_data:
             result_data["summaries"] = [""] * len(new_documents)
-        
-        # Ensure relevance array matches NEW document count - fix mismatches by padding/truncating
+
+        # Ensure relevance array matches NEW document count - fix mismatches by
+        # padding/truncating
         if len(result_data["relevance"]) != len(new_documents):
-            print(f"Warning: Relevance array length mismatch. Expected {len(new_documents)}, got {len(result_data['relevance'])}. Auto-fixing.")
-            relevance = result_data["relevance"][:len(new_documents)]  # Truncate if too long
-            while len(relevance) < len(new_documents):  # Pad with 0s if too short
+            print(
+                f"Warning: Relevance array length mismatch. Expected {len(new_documents)}, got {len(result_data['relevance'])}. Auto-fixing.")
+            relevance = result_data["relevance"][:len(
+                new_documents)]  # Truncate if too long
+            while len(relevance) < len(
+                    new_documents):  # Pad with 0s if too short
                 relevance.append(0)
             result_data["relevance"] = relevance
             print(f"Fixed relevance array: {relevance}")
-        
-        # Ensure summaries array matches NEW document count - fix mismatches by padding/truncating  
+
+        # Ensure summaries array matches NEW document count - fix mismatches by
+        # padding/truncating
         if len(result_data["summaries"]) != len(new_documents):
-            print(f"Warning: Summaries array length mismatch. Expected {len(new_documents)}, got {len(result_data['summaries'])}. Auto-fixing.")
-            summaries = result_data["summaries"][:len(new_documents)]  # Truncate if too long
-            while len(summaries) < len(new_documents):  # Pad with empty strings if too short
+            print(
+                f"Warning: Summaries array length mismatch. Expected {len(new_documents)}, got {len(result_data['summaries'])}. Auto-fixing.")
+            summaries = result_data["summaries"][:len(
+                new_documents)]  # Truncate if too long
+            while len(summaries) < len(
+                    new_documents):  # Pad with empty strings if too short
                 summaries.append("")
             result_data["summaries"] = summaries
             print(f"Fixed summaries array length: {len(summaries)}")
-        
+
         # Validate that relevant documents have non-empty summaries
-        for i, (rel, summary) in enumerate(zip(result_data["relevance"], result_data["summaries"])):
+        for i, (rel, summary) in enumerate(
+                zip(result_data["relevance"], result_data["summaries"])):
             if rel == 1 and not summary.strip():
-                print(f"Warning: Document {i+1} marked relevant but has empty summary. This defeats the summarization purpose.")
+                print(
+                    f"Warning: Document {i+1} marked relevant but has empty summary. This defeats the summarization purpose.")
                 # Don't auto-fix here - let it be empty to debug the issue
-        
+
         # Ensure queries is a list
         if not isinstance(result_data["queries"], list):
             result_data["queries"] = []
-        
+
         return result_data
-        
+
     except requests.exceptions.RequestException as e:
         print(f"Error calling combined LLM: {e}")
         return {
@@ -1106,14 +1171,14 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          **strategy_params) -> Dict[str, Any]:
     """
     Multi-shot retrieval with iterative query refinement and document evaluation.
-    
+
     Algorithm:
     1. Generate initial search queries based on the original question
     2. Retrieve documents for each query
     3. Evaluate documents and check if sufficient to answer
     4. If not sufficient: generate new queries based on what's missing, go to step 2
     5. Repeat until sufficient or max_iterations reached
-    
+
     Args:
         rag_db: RAG database instance
         original_query: Original user question
@@ -1127,29 +1192,31 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         verbose: Print detailed information
         reasoning_effort: LLM reasoning level
         **strategy_params: Additional parameters for retrieval strategy
-        
+
     Returns:
         Dictionary containing evaluation metrics and iteration statistics
     """
-    
+
     start_time = time.perf_counter()
     llm_start_time = None  # set just before first generate_search_queries call
     llm_end_time = None    # set just after generate_answer returns
-    
+
     # Track iteration history
     query_history = []
     query_results = []  # Track how many docs each query found
-    kept_docs = []  # List of (url, content, summary) tuples that were marked relevant
-    new_docs = []   # List of (url, content) tuples just retrieved this iteration
+    # List of (url, content, summary) tuples that were marked relevant
+    kept_docs = []
+    # List of (url, content) tuples just retrieved this iteration
+    new_docs = []
     all_retrieved_urls = set()
     iteration_times = []
     previous_feedback = ""  # Feedback from previous iteration
     feedback_history = []  # Track all feedback to show progression
-    
+
     sufficient = False
     iteration = 0
     final_answer = ""
-    
+
     if verbose:
         print(f"\n{'='*80}")
         print(f"MULTI-SHOT RETRIEVAL")
@@ -1158,29 +1225,33 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         print(f"Max iterations: {max_iterations}")
         print(f"Max sub-queries per iteration: {max_sub_queries}")
         print(f"{'='*80}\n")
-    
+
     while not sufficient and iteration < max_iterations:
         iteration += 1
         iteration_start = time.perf_counter()
-        
+
         if verbose:
             print(f"\n{'─'*80}")
             print(f"ITERATION {iteration}/{max_iterations}")
             print(f"{'─'*80}")
-        
-        # Step 1: Use combined function to grade NEW docs AND generate new queries
+
+        # Step 1: Use combined function to grade NEW docs AND generate new
+        # queries
         if verbose:
             print(f"\n  Evaluating documents and generating queries...")
-        
-        # Aggressive summarization: use summaries after iteration 2 to improve information connection
+
+        # Aggressive summarization: use summaries after iteration 2 to improve
+        # information connection
         total_content_length = sum(len(doc[1]) for doc in kept_docs)
 
         # Special handling for iteration 1: decompose original query first
         if iteration == 1 and not new_docs and not kept_docs:
             if verbose:
-                print(f"  [ITERATION 1] Decomposing original query into sub-queries via generate_search_queries...")
+                print(
+                    f"  [ITERATION 1] Decomposing original query into sub-queries via generate_search_queries...")
 
-            # Use generate_search_queries for initial decomposition (uses query_model_name / gpt-oss-120b)
+            # Use generate_search_queries for initial decomposition (uses
+            # query_model_name / gpt-oss-120b)
             if llm_start_time is None:
                 llm_start_time = time.perf_counter()
             query_result = generate_search_queries(
@@ -1207,7 +1278,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
             sufficient = False
             final_answer = ""
-            current_feedback = query_result.get("feedback", "Initial query decomposition")
+            current_feedback = query_result.get(
+                "feedback", "Initial query decomposition")
             relevance = []
             summaries = []
             reasoning_steps = ""
@@ -1217,7 +1289,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             relevance = []
             if new_docs:
                 if verbose:
-                    print(f"  [CALL1] Evaluating {len(new_docs)} new documents with gpt-oss-20b...")
+                    print(
+                        f"  [CALL1] Evaluating {len(new_docs)} new documents with gpt-oss-20b...")
 
                 relevance_result = evaluate_document_relevance(
                     question=original_query,
@@ -1228,7 +1301,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     hop_count=iteration,
                     query_id=query_id
                 )
-                relevance = relevance_result.get("relevance", [1] * len(new_docs))
+                relevance = relevance_result.get(
+                    "relevance", [1] * len(new_docs))
 
                 # Add relevant docs to kept_docs IMMEDIATELY
                 for i, (url, content) in enumerate(new_docs):
@@ -1236,14 +1310,16 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                         kept_docs.append((url, content, content[:1000]))
 
                 if verbose:
-                    print(f"    Marked {sum(relevance)} of {len(new_docs)} docs as relevant")
+                    print(
+                        f"    Marked {sum(relevance)} of {len(new_docs)} docs as relevant")
                     print(f"    Relevance array: {relevance}")
                     print(f"    Total kept docs now: {len(kept_docs)}")
 
             # CALL 2: Check sufficiency - uses gpt-oss-120b
             if kept_docs:
                 if verbose:
-                    print(f"  [CALL2] Checking sufficiency with gpt-oss-120b (iteration {iteration}/{max_iterations})...")
+                    print(
+                        f"  [CALL2] Checking sufficiency with gpt-oss-120b (iteration {iteration}/{max_iterations})...")
 
                 sufficiency_result = check_sufficiency(
                     question=original_query,
@@ -1267,11 +1343,13 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 sufficient = False
                 sufficiency_reasoning = "No relevant documents kept yet"
 
-            # CALL 3a or 3b: Either generate answer (if sufficient) or generate queries (if not)
+            # CALL 3a or 3b: Either generate answer (if sufficient) or generate
+            # queries (if not)
             if sufficient:
                 # CALL 3a: Generate final answer - uses gpt-oss-120b
                 if verbose:
-                    print(f"  [CALL3a] Generating final answer with gpt-oss-120b...")
+                    print(
+                        f"  [CALL3a] Generating final answer with gpt-oss-120b...")
 
                 final_answer = generate_answer(
                     question=original_query,
@@ -1291,11 +1369,13 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             else:
                 # CALL 3b: Generate search queries - uses gpt-oss-120b
                 if verbose:
-                    print(f"  [CALL3b] Generating search queries with gpt-oss-120b...")
+                    print(
+                        f"  [CALL3b] Generating search queries with gpt-oss-120b...")
 
                 # Cap kept_docs sent to avoid context overflow
                 MAX_DOCS_FOR_QUERY_GEN = 12
-                docs_for_query_gen = kept_docs[-MAX_DOCS_FOR_QUERY_GEN:] if len(kept_docs) > MAX_DOCS_FOR_QUERY_GEN else kept_docs
+                docs_for_query_gen = kept_docs[-MAX_DOCS_FOR_QUERY_GEN:] if len(
+                    kept_docs) > MAX_DOCS_FOR_QUERY_GEN else kept_docs
 
                 query_result = generate_search_queries(
                     question=original_query,
@@ -1320,27 +1400,30 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             summaries = []
             reasoning_steps = ""
 
-        
         # Add to feedback history if it's new and meaningful
-        if current_feedback and current_feedback.strip() and current_feedback != previous_feedback:
+        if current_feedback and current_feedback.strip(
+        ) and current_feedback != previous_feedback:
             feedback_history.append(current_feedback.strip())
 
         previous_feedback = current_feedback
 
         # Only print status for iteration 1 after we've printed the queries
         # For iteration 2+, print status after CALL1/CALL2/CALL3
-        # Skip printing here for iteration 1 (will print later after retrieval/grading)
+        # Skip printing here for iteration 1 (will print later after
+        # retrieval/grading)
         if verbose and iteration > 1:
             print(f"    Sufficient: {'yes' if sufficient else 'no'}")
             print(f"    Kept docs: {len(kept_docs)}")
             if new_docs:
                 print(f"    New docs evaluated: {len(new_docs)}")
-                print(f"    Relevant new docs: {sum(relevance)}/{len(relevance)}")
+                print(
+                    f"    Relevant new docs: {sum(relevance)}/{len(relevance)}")
                 print(f"    Relevance array: {relevance}")
                 # Show summary quality
                 if summaries:
                     non_empty_summaries = [s for s in summaries if s.strip()]
-                    print(f"    Generated summaries: {len(non_empty_summaries)}/{len(summaries)} non-empty")
+                    print(
+                        f"    Generated summaries: {len(non_empty_summaries)}/{len(summaries)} non-empty")
                     for i, summary in enumerate(summaries):
                         if summary.strip() and relevance[i] == 1:
                             print(f"      Summary {i+1}: {summary}...")
@@ -1349,10 +1432,11 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             if not sufficient:
                 print(f"    Feedback: {previous_feedback}")
                 print(f"    Generated {len(sub_queries)} new queries")
-        
-        # Clear new_docs for next iteration (already added to kept_docs in CALL1 block above)
+
+        # Clear new_docs for next iteration (already added to kept_docs in
+        # CALL1 block above)
         new_docs = []
-        
+
         # If sufficient, we're done
         if sufficient:
             if verbose:
@@ -1361,21 +1445,22 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     print(f"  Answer: {final_answer[:200]}...")
             iteration_times.append(time.perf_counter() - iteration_start)
             break
-        
-        # If no queries generated, fall back to original query rather than stopping
+
+        # If no queries generated, fall back to original query rather than
+        # stopping
         if not sub_queries:
             if verbose:
                 print(f"\n  ⚠ No new queries generated, falling back to original query")
             sub_queries = [original_query]
-        
+
         if verbose:
             print(f"\n  New queries:")
             for i, q in enumerate(sub_queries, 1):
                 print(f"    {i}. {q}")
-        
+
         # Step 2: Retrieve for each sub-query and track results
         num_sub_queries = len(sub_queries)
-        #docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
+        # docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
         docs_per_subquery = max(1, top_k_retriever)
 
         iteration_results = []
@@ -1383,45 +1468,52 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
         # Calculate target docs per subquery after reranking
         target_docs_per_subquery = max(3, top_k_retriever // num_sub_queries)
-        
+
         for i, sub_query in enumerate(sub_queries, 1):
             if verbose:
                 print(f"\n  Retrieving for query {i}: {sub_query[:60]}...")
-            
+
             query_start_count = len(new_docs)  # Track docs before this query
-            
+
             # Retrieve
             if retrieval_strategy == "fixed_k":
                 results = rag_db.lookup(sub_query, k=docs_per_subquery)
             else:
                 from retrieve.filter import filter
                 original_max_results = strategy_params.get("max_results", 20)
-                #adjusted_max_results = max(1, original_max_results // num_sub_queries)
+                # adjusted_max_results = max(1, original_max_results // num_sub_queries)
                 adjusted_max_results = max(1, original_max_results)
                 strategy_params_copy = strategy_params.copy()
                 strategy_params_copy["max_results"] = adjusted_max_results
-                results = filter(rag_db, sub_query, method=retrieval_strategy, **strategy_params_copy)
-            
+                results = filter(
+                    rag_db,
+                    sub_query,
+                    method=retrieval_strategy,
+                    **strategy_params_copy)
+
             # Apply per-subquery reranking if enabled
             if not no_rerank and len(results) > target_docs_per_subquery:
                 if verbose:
-                    print(f"    Reranking {len(results)} docs for this subquery to top {target_docs_per_subquery}...")
-                
+                    print(
+                        f"    Reranking {len(results)} docs for this subquery to top {target_docs_per_subquery}...")
+
                 # Extract contents for reranking
                 contents = [r.page_content for r in results]
                 scored_passages = rag_db.rerank(sub_query, contents)
-                
+
                 # Reorder results by reranking scores and take top-k
-                reranked_indices = [i for i, _ in sorted(enumerate(scored_passages), 
+                reranked_indices = [i for i, _ in sorted(enumerate(scored_passages),
                                                          key=lambda x: x[1][1], reverse=True)]
-                results = [results[idx] for idx in reranked_indices[:target_docs_per_subquery]]
-                
+                results = [results[idx]
+                           for idx in reranked_indices[:target_docs_per_subquery]]
+
                 if verbose:
-                    print(f"    After reranking: keeping top {len(results)} docs")
+                    print(
+                        f"    After reranking: keeping top {len(results)} docs")
             elif len(results) > target_docs_per_subquery:
                 # No reranking, just limit to target
                 results = results[:target_docs_per_subquery]
-            
+
             # Add to new_docs for evaluation (avoid duplicates)
             for result in results:
                 if 'original_url' in result.metadata and result.metadata['original_url']:
@@ -1430,27 +1522,30 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                         all_retrieved_urls.add(url)
                         new_docs.append((url, result.page_content))
                         iteration_results.append(result)
-            
+
             # Track how many NEW docs this query found
             docs_found_by_query = len(new_docs) - query_start_count
             per_query_counts.append(docs_found_by_query)
-            
+
             if verbose:
-                print(f"    Retrieved {len(results)} docs, {docs_found_by_query} new unique docs from this query")
+                print(
+                    f"    Retrieved {len(results)} docs, {docs_found_by_query} new unique docs from this query")
                 for j, result in enumerate(results, 1):
                     url = result.metadata.get('original_url', 'N/A')
                     passage = result.page_content[:300].replace('\n', ' ')
                     print(f"      [{j}] {url}\n          {passage}...")
-        
+
         # Add queries and their results to history
         for sub_query, count in zip(sub_queries, per_query_counts):
             query_history.append(sub_query)
             query_results.append(count)
-        
-        if verbose:
-            print(f"  Total kept docs: {len(kept_docs)}, new docs to evaluate: {len(new_docs)}")
 
-        # For iteration 1, print status summary now (after retrieval, before next iteration's grading)
+        if verbose:
+            print(
+                f"  Total kept docs: {len(kept_docs)}, new docs to evaluate: {len(new_docs)}")
+
+        # For iteration 1, print status summary now (after retrieval, before
+        # next iteration's grading)
         if verbose and iteration == 1:
             print(f"\n  Iteration 1 Summary:")
             print(f"    Generated {len(sub_queries)} new queries")
@@ -1458,15 +1553,15 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
         iteration_time = time.perf_counter() - iteration_start
         iteration_times.append(iteration_time)
-        
+
         if iteration >= max_iterations:
             if verbose:
                 print(f"\n  ⚠ Maximum iterations reached")
             break
-    
+
     # Final processing
     total_time = time.perf_counter() - start_time
-    
+
     # Extract URLs from kept_docs
     retrieved_urls = []
     for doc in kept_docs:
@@ -1474,17 +1569,20 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             retrieved_urls.append(doc[0])  # url is first element
         elif len(doc) == 2:  # Handle old format for backward compatibility
             retrieved_urls.append(doc[0])  # url is first element
-    
+
     # Limit to top_k_reranking (reranking already done per-subquery)
     retrieved_urls = retrieved_urls[:top_k_reranking]
-    
+
     # Calculate metrics
     from evaluation import calculate_retrieval_metrics
     expected_set = set(url for url in expected_urls if url and url.strip())
     metrics = calculate_retrieval_metrics(list(expected_set), retrieved_urls)
-    
+
     # Add iteration statistics
-    query_llm_time = (llm_end_time - llm_start_time) if (llm_start_time is not None and llm_end_time is not None) else total_time
+    query_llm_time = (
+        llm_end_time -
+        llm_start_time) if (
+        llm_start_time is not None and llm_end_time is not None) else total_time
     metrics.update({
         'total_time': total_time,
         'query_llm_time': query_llm_time,
@@ -1495,7 +1593,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         'avg_iteration_time': sum(iteration_times) / len(iteration_times) if iteration_times else 0,
         'llm_answer': final_answer,
     })
-    
+
     # Print final results
     if verbose:
         print(f"\n{'='*80}")
@@ -1509,8 +1607,10 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             print(f"LLM Answer: {final_answer}")
         if expected_answer:
             print(f"Expected Answer: {expected_answer}")
-        print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
-        print(f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
+        print(
+            f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
+        print(
+            f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
         matches = len(expected_set.intersection(set(retrieved_urls)))
         print(f"Matches: {matches}")
         print(f"\nMetrics:")
@@ -1519,10 +1619,11 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         print(f"  F1@N: {metrics.get('f1@N', 0.0):.3f}")
         print(f"  MAP: {metrics.get('average_precision', 0.0):.3f}")
         print(f"\nTiming:")
-        print(f"  Avg per iteration: {metrics['avg_iteration_time']*1000:.1f}ms")
+        print(
+            f"  Avg per iteration: {metrics['avg_iteration_time']*1000:.1f}ms")
         print(f"  Total: {total_time*1000:.1f}ms")
         print(f"{'='*80}\n")
-    
+
     return metrics
 
 
@@ -1543,7 +1644,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
-    
+
     Args:
         rag_db: RAG database instance
         dataset_path: Path to dataset TSV file
@@ -1558,21 +1659,21 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         difficulty: Minimum number of answer links required (0 = no filtering)
         max_iterations: Maximum iterations for iterative retrieval (default: 10)
         **strategy_params: Additional parameters for retrieval strategy
-        
+
     Returns:
         Dictionary of averaged metrics
     """
-    
+
     df = pd.read_csv(dataset_path, sep='\t')
-    
+
     # Filter by difficulty if specified
     df = filter_dataset_by_difficulty(df, difficulty)
-    
+
     if isinstance(max_queries, int) and max_queries > 0:
         df = df.head(max_queries)
     else:
         max_queries = len(df)
-    
+
     print(f"\n{'='*80}")
     print(f"MULTI-SHOT EVALUATION")
     print(f"{'='*80}")
@@ -1586,7 +1687,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     if difficulty > 0:
         print(f"Difficulty filter: >= {difficulty} answer links")
     print(f"{'='*80}\n")
-    
+
     eval_wall_start = time.perf_counter()
     total_metrics = {}
     valid_queries = 0
@@ -1600,9 +1701,12 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         for col in df.columns:
             if col.startswith('wikipedia_link_') and pd.notna(row[col]):
                 expected_urls.append(row[col].strip())
-        expected_answer = row.get('Answer', '').strip() if 'Answer' in row and pd.notna(row.get('Answer')) else ""
+        expected_answer = row.get(
+            'Answer', '').strip() if 'Answer' in row and pd.notna(
+            row.get('Answer')) else ""
         if expected_urls:
-            work_items.append((idx, row['Prompt'], expected_urls, expected_answer))
+            work_items.append(
+                (idx, row['Prompt'], expected_urls, expected_answer))
 
     def process_single_query(item):
         idx, prompt, expected_urls, expected_answer = item
@@ -1630,7 +1734,8 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         )
 
         query_wall_time = metrics.get('total_time', 0.0)
-        print(f"  [QUERY TIMING] Query {idx+1}/{max_queries}: {query_wall_time:.2f}s")
+        print(
+            f"  [QUERY TIMING] Query {idx+1}/{max_queries}: {query_wall_time:.2f}s")
 
         if logger:
             logger.end_query(
@@ -1672,7 +1777,10 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         # Parallel execution with thread pool
         print(f"\n  Using {num_workers} parallel workers")
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            futures = {executor.submit(process_single_query, item): item for item in work_items}
+            futures = {
+                executor.submit(
+                    process_single_query,
+                    item): item for item in work_items}
             for future in as_completed(futures):
                 try:
                     idx, metrics, result = future.result()
@@ -1689,45 +1797,60 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                     print(f"  Error processing query: {e}")
                     import traceback
                     traceback.print_exc()
-    
+
     if valid_queries > 0:
         # Calculate averages
-        avg_metrics = {name: total / valid_queries for name, total in total_metrics.items()}
-        
+        avg_metrics = {
+            name: total /
+            valid_queries for name,
+            total in total_metrics.items()}
+
         # Print summary
         print(f"\n{'='*80}")
         print(f"MULTI-SHOT EVALUATION SUMMARY ({valid_queries} queries)")
         print(f"{'='*80}")
         print(f"\nPRECISION METRICS:")
-        print(f"  Precision@N:                {avg_metrics.get('precision@N', 0.0):.3f}")
+        print(
+            f"  Precision@N:                {avg_metrics.get('precision@N', 0.0):.3f}")
         print(f"\nRECALL METRICS:")
-        print(f"  Recall@N:                   {avg_metrics.get('recall@N', 0.0):.3f}")
+        print(
+            f"  Recall@N:                   {avg_metrics.get('recall@N', 0.0):.3f}")
         print(f"\nF1 METRICS:")
-        print(f"  F1@N:                       {avg_metrics.get('f1@N', 0.0):.3f}")
+        print(
+            f"  F1@N:                       {avg_metrics.get('f1@N', 0.0):.3f}")
         print(f"\nRANKING METRICS:")
-        print(f"  Mean Average Precision:     {avg_metrics.get('average_precision', 0.0):.3f}")
+        print(
+            f"  Mean Average Precision:     {avg_metrics.get('average_precision', 0.0):.3f}")
         print(f"\nRETRIEVAL STATISTICS:")
-        print(f"  Avg Sub-queries:            {avg_metrics.get('num_sub_queries', 0.0):.1f}")
-        print(f"  Avg Passages Retrieved:     {avg_metrics.get('retrieved_passages_count', 0.0):.1f}")
-        print(f"  Avg Unique Docs (N):        {avg_metrics.get('retrieved_docs_count', 0.0):.1f}")
+        print(
+            f"  Avg Sub-queries:            {avg_metrics.get('num_sub_queries', 0.0):.1f}")
+        print(
+            f"  Avg Passages Retrieved:     {avg_metrics.get('retrieved_passages_count', 0.0):.1f}")
+        print(
+            f"  Avg Unique Docs (N):        {avg_metrics.get('retrieved_docs_count', 0.0):.1f}")
         print(f"\nTIMING:")
-        print(f"  Avg Decomposition Time:     {avg_metrics.get('decomposition_time', 0.0)*1000:.1f}ms")
-        print(f"  Avg Retrieval Time:         {avg_metrics.get('retrieval_time', 0.0)*1000:.1f}ms")
+        print(
+            f"  Avg Decomposition Time:     {avg_metrics.get('decomposition_time', 0.0)*1000:.1f}ms")
+        print(
+            f"  Avg Retrieval Time:         {avg_metrics.get('retrieval_time', 0.0)*1000:.1f}ms")
         if avg_metrics.get('reranking_time', 0.0) > 0:
-            print(f"  Avg Reranking Time:         {avg_metrics.get('reranking_time', 0.0)*1000:.1f}ms")
-        print(f"  Avg Total Time:             {avg_metrics.get('total_time', 0.0)*1000:.1f}ms")
-        print(f"  Avg Query LLM Time:         {avg_metrics.get('query_llm_time', 0.0)*1000:.1f}ms")
+            print(
+                f"  Avg Reranking Time:         {avg_metrics.get('reranking_time', 0.0)*1000:.1f}ms")
+        print(
+            f"  Avg Total Time:             {avg_metrics.get('total_time', 0.0)*1000:.1f}ms")
+        print(
+            f"  Avg Query LLM Time:         {avg_metrics.get('query_llm_time', 0.0)*1000:.1f}ms")
         eval_wall_time = time.perf_counter() - eval_wall_start
         qps = valid_queries / eval_wall_time if eval_wall_time > 0 else 0.0
         print(f"  Total Wall Time:            {eval_wall_time:.1f}s")
         print(f"  Throughput:                 {qps:.3f} queries/sec")
         print(f"{'='*80}\n")
-        
+
         # Print detailed analysis if requested
         if detailed_analysis and all_query_metrics:
             from evaluation import _print_detailed_analysis
             _print_detailed_analysis(df, all_query_metrics, valid_queries)
-        
+
         avg_metrics['_per_query_results'] = all_results
         return avg_metrics
     else:
@@ -1738,26 +1861,26 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
 if __name__ == "__main__":
     args = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
                                    description="Multi-shot retrieval with query decomposition")
-    
+
     # Add all standard parameters
     add_all_args(args)
-    
+
     # Add multi-shot specific parameters
     args.add_argument('--max-sub-queries', type=int, default=3,
-                     help='Maximum number of sub-queries to generate (default: 3)')
+                      help='Maximum number of sub-queries to generate (default: 3)')
     args.add_argument('--reasoning', type=str, default='medium',
-                     choices=['low', 'medium', 'high'],
-                     help='LLM reasoning level for query decomposition (default: medium)')
+                      choices=['low', 'medium', 'high'],
+                      help='LLM reasoning level for query decomposition (default: medium)')
     args.add_argument('--max-iterations', type=int, default=10,
-                     help='Maximum number of retrieval iterations (default: 10)')
+                      help='Maximum number of retrieval iterations (default: 10)')
     args.add_argument('--num-workers', type=int, default=1,
-                     help='Number of parallel query workers (default: 1, sequential)')
+                      help='Number of parallel query workers (default: 1, sequential)')
     args.add_argument('--temperature', type=float, default=1.0,
-                     help='LLM sampling temperature (default: 1.0)')
+                      help='LLM sampling temperature (default: 1.0)')
     args.add_argument('--max-retries', type=int, default=5,
-                     help='Max retries for LLM calls on rate limit/server errors (default: 5)')
+                      help='Max retries for LLM calls on rate limit/server errors (default: 5)')
     args.add_argument('--output-dir', type=str, default='.',
-                     help='Directory for output files (default: current directory)')
+                      help='Directory for output files (default: current directory)')
 
     # Special handling for --eval argument
     for action in args._actions:
@@ -1765,12 +1888,12 @@ if __name__ == "__main__":
             action.type = lambda x: int(x) if x.isdigit() else True
             action.const = True
             break
-    
+
     args = args.parse_args()
-    
+
     # Set deterministic seeds
     set_deterministic_seeds(args.seed)
-    
+
     # Setup LLM configuration with auto-detection
     llm_config = setup_llm_config(args)
     llm_config['temperature'] = args.temperature
@@ -1797,13 +1920,15 @@ if __name__ == "__main__":
     # Setup device-specific environment
     device_config = get_device_config()
     print(f"Device Config: {device_config}")
-    
+
     # Initialize database
     if args.database is None:
         args.database = VectorDB.get_default_db_name()
 
-    db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
-    db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
+    db_file_path = args.database if args.database.endswith(
+        '.db') else f"{args.database}.db"
+    db_base_name = args.database.replace(
+        '.db', '') if args.database.endswith('.db') else args.database
 
     rag_db = VectorDB(
         retriever_model=args.retriever_model,
@@ -1816,14 +1941,15 @@ if __name__ == "__main__":
         reranker_device=args.reranker_device,
         benchmark=args.benchmark
     )
-    
+
     # Load database
     if os.path.exists(db_file_path):
         print(f"Loading existing database from {db_file_path}")
         rag_db.from_serialized(db_file_path)
     else:
-        raise ValueError(f"Database not found: {db_file_path}. Please create it first using single_shot_retrieval.py")
-    
+        raise ValueError(
+            f"Database not found: {db_file_path}. Please create it first using single_shot_retrieval.py")
+
     # Build strategy parameters
     strategy_params = {"max_results": args.max_results}
     if args.retrieval_strategy == "top_p":
@@ -1834,7 +1960,9 @@ if __name__ == "__main__":
     # Initialize LLM logger with incremental writing
     experiment_start_time = datetime.now()
     os.makedirs(args.output_dir, exist_ok=True)
-    log_filename = os.path.join(args.output_dir, f"llm_logs_multi_shot_{experiment_start_time.strftime('%Y%m%d_%H%M%S')}.json")
+    log_filename = os.path.join(
+        args.output_dir,
+        f"llm_logs_multi_shot_{experiment_start_time.strftime('%Y%m%d_%H%M%S')}.json")
 
     # Determine chunk size from database name
     chunk_size = 768  # default
@@ -1848,7 +1976,8 @@ if __name__ == "__main__":
     llm_logger = LLMLogger(
         output_file=log_filename,
         experiment_metadata={
-            "experiment_name": f"multi_shot_{db_base_name}_n{{queries}}",  # Will be updated
+            # Will be updated
+            "experiment_name": f"multi_shot_{db_base_name}_n{{queries}}",
             "timestamp_start": experiment_start_time.isoformat(),
             "timestamp_end": "in_progress",
             "retrieval_mode": "multi_shot",
@@ -1867,7 +1996,6 @@ if __name__ == "__main__":
     )
     print(f"LLM logs will be written incrementally to: {log_filename}")
 
-
     # Setup threading infrastructure if parallel workers requested
     if args.num_workers > 1:
         print(f"Enabling parallel execution with {args.num_workers} workers")
@@ -1875,7 +2003,9 @@ if __name__ == "__main__":
 
     # Run evaluation or single query
     if args.eval:
-        max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
+        max_queries = args.eval if isinstance(
+            args.eval, int) and not isinstance(
+            args.eval, bool) and args.eval > 0 else None
 
         metrics = run_multi_shot_evaluation(
             rag_db, args.dataset,
@@ -1894,7 +2024,7 @@ if __name__ == "__main__":
             num_workers=args.num_workers,
             **strategy_params
         )
-        
+
         # Save results
         per_query_results = metrics.pop('_per_query_results', [])
         results_data = {
@@ -1904,7 +2034,7 @@ if __name__ == "__main__":
             "metrics": metrics,
             "results": per_query_results,
         }
-        
+
         result_path = os.path.join(args.output_dir, "result_multi_shot.json")
         with open(result_path, "w") as f:
             json.dump(results_data, f, indent=2)
@@ -1981,5 +2111,6 @@ if __name__ == "__main__":
     rq = rag_db._reranker_queue
     if rq is not None:
         avg_ms = rq.total_latency_ms / rq.total_requests if rq.total_requests else 0
-        print(f"Reranker stats: {rq.total_requests} requests, {rq.total_documents} docs, {rq.total_latency_ms:.0f}ms total, {avg_ms:.1f}ms/request avg")
+        print(
+            f"Reranker stats: {rq.total_requests} requests, {rq.total_documents} docs, {rq.total_latency_ms:.0f}ms total, {avg_ms:.1f}ms/request avg")
     rag_db.shutdown_reranker()

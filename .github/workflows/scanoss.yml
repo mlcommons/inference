@@ -1,0 +1,120 @@
+name: "SCANOSS License & BOM Check"
+
+on:
+  pull_request:
+    branches: ["master", "main"]
+
+env:
+  REPORTS_DIR: scanoss-reports
+
+jobs:
+  scanoss:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install scanoss-py
+        run: pip install scanoss
+
+      - name: Create reports directory
+        run: mkdir -p ${{ env.REPORTS_DIR }}
+
+      - name: Run SCANOSS scan
+        run: |
+          scanoss-py scan \
+            -o ${{ env.REPORTS_DIR }}/results.json \
+            .
+
+      - name: Generate CycloneDX BOM
+        run: |
+          scanoss-py scan \
+            -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json \
+            --format cyclonedx \
+            .
+
+      - name: Inspect - Copyleft
+        run: |
+          scanoss-py inspect raw copyleft \
+            -i ${{ env.REPORTS_DIR }}/results.json \
+            -f md \
+            -o ${{ env.REPORTS_DIR }}/copyleft.md \
+            -s ${{ env.REPORTS_DIR }}/copyleft_status.md
+
+      - name: Inspect - License Summary
+        run: |
+          scanoss-py inspect raw license-summary \
+            -i ${{ env.REPORTS_DIR }}/results.json \
+            -o ${{ env.REPORTS_DIR }}/license_summary.md
+
+      - name: Inspect - Component Summary
+        run: |
+          scanoss-py inspect raw component-summary \
+            -i ${{ env.REPORTS_DIR }}/results.json \
+            -o ${{ env.REPORTS_DIR }}/component_summary.md
+
+      - name: Inspect - Undeclared Components
+        run: |
+          scanoss-py inspect raw undeclared \
+            -i ${{ env.REPORTS_DIR }}/results.json \
+            -f md \
+            -o ${{ env.REPORTS_DIR }}/undeclared.md \
+            -s ${{ env.REPORTS_DIR }}/undeclared_status.md
+
+      - name: Check for non-allowed licenses
+        run: |
+          python3 - <<'PYEOF'
+          import json, re, sys
+          from collections import defaultdict
+
+          ALLOWED = {'MIT', 'Apache-2.0', 'BSD-3-Clause'}
+
+          def spdx_tokens(expr):
+              return set(re.split(r'\s+(?:OR|AND|WITH)\s+|\(|\)', expr)) - {''}
+
+          with open('${{ env.REPORTS_DIR }}/results.json') as f:
+              data = json.load(f)
+
+          violations = defaultdict(set)
+          for file_path, matches in data.items():
+              for match in matches:
+                  for lic in match.get('licenses', []):
+                      name = lic.get('name', '')
+                      if name and not spdx_tokens(name).issubset(ALLOWED):
+                          violations[name].add(file_path)
+
+          if violations:
+              print("::error::Non-allowed licenses found:")
+              for lic, files in sorted(violations.items()):
+                  print(f"  {lic}: {len(files)} file(s)")
+                  for f in sorted(files)[:5]:
+                      print(f"    - {f}")
+              sys.exit(1)
+          else:
+              print("License check passed — all licenses within MIT, Apache-2.0, BSD-3-Clause")
+          PYEOF
+
+      - name: Check for copyleft
+        run: |
+          STATUS=$(cat ${{ env.REPORTS_DIR }}/copyleft_status.md)
+          echo "$STATUS"
+          if echo "$STATUS" | grep -qv "^0 "; then
+            echo "::error::Copyleft licenses detected"
+            exit 1
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanoss-reports
+          path: ${{ env.REPORTS_DIR }}/
+          retention-days: 30

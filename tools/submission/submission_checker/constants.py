@@ -241,7 +241,6 @@ MODEL_CONFIG = {
             "llama3_1-8b-edge": "llama3.1-8b-edge",
         },
         "seeds": {
-            # TODO: Update seeds for v6.1
             "qsl_rng_seed": 2085463073848966840,
             "sample_index_rng_seed": 2747215439041700203,
             "schedule_rng_seed": 16159082839903944936,

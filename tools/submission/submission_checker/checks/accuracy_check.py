@@ -113,7 +113,7 @@ class AccuracyCheck(BaseCheck):
             return False
 
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
-            self.model
+            self.model, self.scenario_fixed
         )
         acc = None
         hash_val = None
@@ -242,7 +242,7 @@ class AccuracyCheck(BaseCheck):
             )
             return True
         expected_qsl_total_count = self.config.get_accuracy_sample_count(
-            self.model)
+            self.model, self.scenario_fixed)
         if "effective_accuracy_sample_count" in self.mlperf_log.get_keys():
             qsl_total_count = self.mlperf_log["effective_accuracy_sample_count"]
         else:

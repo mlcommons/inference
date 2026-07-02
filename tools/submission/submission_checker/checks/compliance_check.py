@@ -255,9 +255,9 @@ class ComplianceCheck(BaseCheck):
                             is_valid = False
                         else:
                             target = self.config.get_accuracy_target(
-                                self.model)
+                                self.model, self.submission_logs.loader_data.get("scenario", ""))
                             patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
-                                self.model)
+                                self.model, self.submission_logs.loader_data.get("scenario", ""))
                             acc_limit_check = True
 
                             acc_seen = [False for _ in acc_targets]

@@ -56,9 +56,18 @@ class PerformanceCheck(BaseCheck):
         self.is_endpoints = self.submission_logs.loader_data.get(
             "is_endpoints_submission", False)
         if self.is_endpoints:
-            if self.scenario.lower() == "online":
-                self.scenario = "Server"
+            self.scenario = self._normalize_endpoints_scenario(self.scenario)
         self.setup_checks()
+
+    def _normalize_endpoints_scenario(self, scenario):
+        if str(scenario).lower() == "online":
+            # endpoint doesn't distinguish interactive mode and server mode, they 
+            # are all categorized into online mode, but in mlperf submission,
+            # the rule distinguish Server and Interactive
+            if str(self.scenario_fixed).lower() == "interactive":
+                return "Interactive"
+            return "Server"
+        return "Offline"
 
     def setup_checks(self):
         """Register individual performance-related checks.
@@ -521,9 +530,7 @@ class PerformanceCheck(BaseCheck):
             is_valid = True
         scenario = self.mlperf_log["effective_scenario"]
         if self.is_endpoints:
-            if scenario.lower() == "online":
-                scenario = "Server"
-            scenario = scenario.capitalize()
+            scenario = self._normalize_endpoints_scenario(scenario)
 
         res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
         if (

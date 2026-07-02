@@ -7,10 +7,28 @@ import pandas as pd
 import os
 import tqdm
 import urllib.request
+import hashlib
 import zipfile
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
+
+# SHA-256 of the pinned COCO 2014 annotations archive
+COCO_ANNOTATIONS_TRAINVAL2014_SHA256 = (
+    "031296bbc80c45a1d1f76bf9a90ead27e94e99ec629208449507a4917a3bf009"
+)
+
+
+def _verify_sha256(path: str, expected: str) -> None:
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    actual = hasher.hexdigest()
+    if actual != expected:
+        raise RuntimeError(
+            f"SHA-256 mismatch for {path}: expected {expected}, got {actual}"
+        )
 
 
 def get_args():
@@ -44,6 +62,12 @@ def get_args():
 
 def download_img(args):
     img_url, target_folder, file_name = args
+    # Upgrade http://images.cocodataset.org/ URLs to the S3 origin
+    img_url = img_url.replace(
+        "http://images.cocodataset.org/",
+        "https://s3.amazonaws.com/images.cocodataset.org/",
+        1,
+    )
     if os.path.exists(target_folder + file_name):
         log.warning(f"Image {file_name} found locally, skipping download")
     else:
@@ -80,7 +104,12 @@ if __name__ == "__main__":
             os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
             os.system(
                 f"cd {dataset_dir}/download_aux/ && \
-                    wget http://images.cocodataset.org/annotations/annotations_trainval2014.zip --show-progress"
+                    wget https://s3.amazonaws.com/images.cocodataset.org/annotations/annotations_trainval2014.zip --show-progress"
+            )
+            # Verify archive integrity before unzip
+            _verify_sha256(
+                f"{dataset_dir}/download_aux/annotations_trainval2014.zip",
+                COCO_ANNOTATIONS_TRAINVAL2014_SHA256,
             )
 
             # Unzip file

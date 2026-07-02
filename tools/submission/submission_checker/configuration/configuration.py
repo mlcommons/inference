@@ -120,15 +120,20 @@ class Config:
             return set()
         return set(self.optional[model])
 
-    def get_accuracy_target(self, model):
+    def get_accuracy_target(self, model, scenario=None):
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
+        if model == "qwen3-vl-235b-a22b":
+            # qwen model specically has offline, server using 1 threshold, interactive uses another threshold
+            # due to smaller dataset, hence accuracy target need both model and scenario to retrive the correct one
+            assert scenario in self.accuracy_target[model].keys()
+            return self.accuracy_target[model][scenario]
         return self.accuracy_target[model]
 
     def get_accuracy_upper_limit(self, model):
         return self.accuracy_upper_limit.get(model, None)
 
-    def get_accuracy_values(self, model):
+    def get_accuracy_values(self, model, scenario=None):
         patterns = []
         acc_targets = []
         acc_types = []
@@ -136,7 +141,7 @@ class Config:
         up_patterns = []
         acc_limit_check = False
 
-        target = self.get_accuracy_target(model)
+        target = self.get_accuracy_target(model, scenario)
         acc_upper_limit = self.get_accuracy_upper_limit(model)
         if acc_upper_limit is not None:
             for i in range(0, len(acc_upper_limit), 2):
@@ -158,8 +163,11 @@ class Config:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
-    def get_accuracy_sample_count(self, model):
+    def get_accuracy_sample_count(self, model, scenario=None):
         model = self.get_mlperf_model(model)
+        if model == "qwen3-vl-235b-a22b":
+            assert scenario in self.accuracy_sample_count[model].keys()
+            return self.accuracy_sample_count[model][scenario]
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)
         return self.accuracy_sample_count[model]

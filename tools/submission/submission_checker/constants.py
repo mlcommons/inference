@@ -148,7 +148,12 @@ MODEL_CONFIG = {
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
-            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": {
+                # offline and server use large dataset, interactive scenario uses small dataset, hence score is different
+                "Offline": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Server": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Interactive": ("F1_HIERARCHICAL", 0.78777 * 0.99),
+            },
             "dlrm-v3": (
                 "DLRM_NE",
                 0.86687 * 0.999,
@@ -207,6 +212,11 @@ MODEL_CONFIG = {
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
+            "qwen3-vl-235b-a22b": {
+                "Offline": 48289,
+                "Server": 48289,
+                "Interactive": 8000,
+            },
             "wan-2.2-t2v-a14b": 248,
         },
         "dataset-size": {
@@ -257,7 +267,10 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": {"Server": 20000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {
+                "Server": 12000000000,
+                "Interactive": 1500000000,
+            },
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -512,8 +525,11 @@ MODEL_CONFIG = {
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
-            # TODO: Placeholder for now
-            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": {
+                "Offline": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Server": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Interactive": ("F1_HIERARCHICAL", 0.78777 * 0.99),
+            },
             "dlrm-v3": (
                 "DLRM_NE",
                 0.86687 * 0.999,
@@ -1573,6 +1589,7 @@ RESULT_FIELD_NEW = {
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
+        "Interactive": "result_completed_samples_per_sec",
     },
 }
 

@@ -253,12 +253,12 @@ class SystemCheck(BaseCheck):
 
         if not os.path.exists(nameplate_power_path):
             self.submission_logs.loader_data["design_power_watts"] = None
-            self.log.error(
+            self.log.warning(
                 "%s has a power submission but nameplate power YAML not found at %s",
                 self.path,
                 nameplate_power_path,
             )
-            return False
+            return True
 
         if nameplate_power_yaml is None:
             self.submission_logs.loader_data["design_power_watts"] = None

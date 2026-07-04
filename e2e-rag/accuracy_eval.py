@@ -91,11 +91,19 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
 
         # Parse JSON response
         content = content.strip()
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-            content = content.strip()
+
+        # Extract JSON from markdown code blocks
+        if "```" in content:
+            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
+            if json_block_match:
+                content = json_block_match.group(1).strip()
+
+        # Try to extract JSON object
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(0)
+        else:
+            return {"correct": False, "reasoning": "No JSON found in judge response"}
 
         judge_result = json.loads(content)
         return judge_result

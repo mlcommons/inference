@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import Dict, Optional, Union, Any
 
 
-
 def load_url_mapping(directory: str) -> Dict[str, str]:
     """Load URL mapping from url_mapping.json in specified directory."""
     mapping_path = Path(directory) / "url_mapping.json"
@@ -70,27 +69,28 @@ def set_deterministic_seeds(seed: int = 42) -> None:
 def filter_dataset_by_difficulty(df, difficulty: int = 0):
     """
     Filter dataset by minimum number of answer links (difficulty level).
-    
+
     Args:
         df: pandas DataFrame with dataset
         difficulty: Minimum number of answer links required (0 = no filtering)
-        
+
     Returns:
         Filtered DataFrame with queries having >= difficulty answer links
     """
     if difficulty <= 0:
         return df
-    
+
     # Count answer links for each row
     link_counts = df.apply(
-        lambda row: sum(1 for col in df.columns 
-                       if col.startswith('wikipedia_link_') and row.notna()[col]), 
+        lambda row: sum(1 for col in df.columns
+                        if col.startswith('wikipedia_link_') and row.notna()[col]),
         axis=1
     )
-    
+
     filtered_df = df[link_counts >= difficulty].reset_index(drop=True)
-    print(f"Filtered dataset by difficulty >= {difficulty}: {len(filtered_df)} queries remaining (from {len(df)} total)")
-    
+    print(
+        f"Filtered dataset by difficulty >= {difficulty}: {len(filtered_df)} queries remaining (from {len(df)} total)")
+
     return filtered_df
 
 
@@ -156,7 +156,8 @@ def set_mempolicy_membind(node: int) -> None:
         libnuma = ctypes.CDLL("libnuma.so.1", use_errno=True)
         rc = libnuma.set_mempolicy(MPOL_BIND, ctypes.byref(nodemask), maxnode)
     except (OSError, AttributeError):
-        # set_mempolicy is syscall 238 on x86_64; 237 on aarch64 (rare in this codebase).
+        # set_mempolicy is syscall 238 on x86_64; 237 on aarch64 (rare in this
+        # codebase).
         SYS_SET_MEMPOLICY_X86_64 = 238
         libc = ctypes.CDLL("libc.so.6", use_errno=True)
         rc = libc.syscall(SYS_SET_MEMPOLICY_X86_64, MPOL_BIND,
@@ -237,7 +238,8 @@ def pin_worker_to_node(node: int, cpu_set: list) -> None:
     if "OMP_NUM_THREADS" not in os.environ:
         os.environ["OMP_NUM_THREADS"] = str(len(cpu_set))
 
-    print(f"  [worker] node={node} cores={cpu_set[0]}..{cpu_set[-1]} ({len(cpu_set)}) OMP_NUM_THREADS={os.environ['OMP_NUM_THREADS']}")
+    print(
+        f"  [worker] node={node} cores={cpu_set[0]}..{cpu_set[-1]} ({len(cpu_set)}) OMP_NUM_THREADS={os.environ['OMP_NUM_THREADS']}")
 
 
 def apply_numa_pinning() -> None:
@@ -275,7 +277,8 @@ def apply_numa_pinning() -> None:
         print(f"  sched_setaffinity failed: {e}; skipping pinning")
         return
 
-    print(f"  Pinned CPU affinity to {len(cores)} cores: {cores[0]}..{cores[-1]}")
+    print(
+        f"  Pinned CPU affinity to {len(cores)} cores: {cores[0]}..{cores[-1]}")
 
 
 def apply_cpu_threading_env() -> None:
@@ -394,17 +397,20 @@ class DeviceAllocator:
             )
         return indices
 
-    def allocate(self, count: int = 1, name: str = "", override_env: str = "") -> list:
+    def allocate(self, count: int = 1, name: str = "",
+                 override_env: str = "") -> list:
         if override_env:
             requested = self._parse_override(override_env)
             if requested:
                 avail = [i for i in requested if i not in self._taken]
                 source = f"{override_env}={','.join(map(str, requested))}"
             else:
-                avail = [i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
+                avail = [
+                    i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
                 source = "auto"
         else:
-            avail = [i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
+            avail = [
+                i for i in self._all_indices if i not in self._taken and self._is_empty(i)]
             source = "auto"
 
         if len(avail) < count:
@@ -417,7 +423,8 @@ class DeviceAllocator:
         chosen = avail[:count]
         self._taken.update(chosen)
         label = name or self.device_type
-        print(f"  Allocated {self.device_type}:{chosen} for {label} (via {source})")
+        print(
+            f"  Allocated {self.device_type}:{chosen} for {label} (via {source})")
         return chosen
 
 
@@ -428,14 +435,16 @@ def get_device_allocator(device_type: str) -> DeviceAllocator:
     return _DEVICE_ALLOCATORS[device_type]
 
 
-def resolve_gpu_device(device: str, name: str = "", override_env: str = "") -> str:
+def resolve_gpu_device(device: str, name: str = "",
+                       override_env: str = "") -> str:
     """Map a bare device type ('cuda' / 'xpu') to a specific 'cuda:N' string.
 
     Returns `device` unchanged for cpu/hpu/auto/already-indexed strings.
     Errors if no empty GPU is available (use override_env to override).
     """
     if device in ("cuda", "xpu"):
-        idx = get_device_allocator(device).allocate(count=1, name=name, override_env=override_env)[0]
+        idx = get_device_allocator(device).allocate(
+            count=1, name=name, override_env=override_env)[0]
         return f"{device}:{idx}"
     return device
 
@@ -447,7 +456,8 @@ def detect_device() -> str:
 
     if torch.cuda.is_available():
         if getattr(torch.version, "hip", None):
-            print(f"Using AMD ROCm GPU (torch.version.hip={torch.version.hip})")
+            print(
+                f"Using AMD ROCm GPU (torch.version.hip={torch.version.hip})")
         else:
             print("Using NVIDIA CUDA GPU")
         return "cuda"
@@ -473,12 +483,14 @@ def get_model_info_from_service(service_url: str) -> Optional[Dict]:
     """Get model information from LLM service."""
     try:
         # Try OpenAI-compatible API first
-        models_response = requests.get(f"{service_url.rstrip('/v1/chat/completions').rstrip('/v1')}/v1/models", timeout=10)
+        models_response = requests.get(
+            f"{service_url.rstrip('/v1/chat/completions').rstrip('/v1')}/v1/models",
+            timeout=10)
         if models_response.status_code == 200:
             models_data = models_response.json()
             if "data" in models_data and len(models_data["data"]) > 0:
                 return models_data["data"][0]
-        
+
         # Try alternative endpoints
         base_url = service_url.rstrip('/v1/chat/completions').rstrip('/v1')
         for endpoint in ["/models", "/info", "/v1/model"]:
@@ -486,19 +498,19 @@ def get_model_info_from_service(service_url: str) -> Optional[Dict]:
                 response = requests.get(f"{base_url}{endpoint}", timeout=5)
                 if response.status_code == 200:
                     return response.json()
-            except:
+            except BaseException:
                 continue
-                
+
     except Exception as e:
         print(f"Warning: Could not auto-detect model from {service_url}: {e}")
-    
+
     return None
 
 
 def get_model_name_from_service(service_url: str) -> str:
     """Auto-detect model name from LLM service."""
     model_info = get_model_info_from_service(service_url)
-    
+
     if model_info:
         # Try different possible fields for model name
         for field in ["id", "model", "name", "model_name"]:
@@ -512,18 +524,20 @@ def get_model_name_from_service(service_url: str) -> str:
 def get_max_tokens_from_service(service_url: str) -> int:
     """Auto-detect max tokens from LLM service."""
     model_info = get_model_info_from_service(service_url)
-    
+
     if model_info:
         # Try different possible fields for max tokens
-        for field in ["max_tokens", "max_length", "context_length", "max_context_length"]:
+        for field in ["max_tokens", "max_length",
+                      "context_length", "max_context_length"]:
             if field in model_info and isinstance(model_info[field], int):
                 return model_info[field]
-    
+
     # Default fallback based on common models
     return 10240
 
 
-def resolve_config_value(value: Union[str, int], auto_func, *args) -> Union[str, int]:
+def resolve_config_value(
+        value: Union[str, int], auto_func, *args) -> Union[str, int]:
     """Resolve configuration value that might be 'auto'."""
     if value == "auto":
         return auto_func(*args)
@@ -537,21 +551,22 @@ def get_device_config():
         "device_count": 1,
         "device_memory": None
     }
-    
+
     if torch is None:
         return config
-    
+
     if config["device_type"] == "hpu":
         config["device_count"] = torch.hpu.device_count()
-    
+
     elif config["device_type"] == "cuda":
         config["device_count"] = torch.cuda.device_count()
         if torch.cuda.is_available():
-            config["device_memory"] = torch.cuda.get_device_properties(0).total_memory
-    
+            config["device_memory"] = torch.cuda.get_device_properties(
+                0).total_memory
+
     elif config["device_type"] == "xpu":
         config["device_count"] = torch.xpu.device_count()
-    
+
     return config
 
 
@@ -589,7 +604,8 @@ def setup_llm_config(args):
     grader_service_url = getattr(args, 'grader_service_url', None) or base_url
     grader_model_name = getattr(args, 'grader_model', None) or model_name
     query_service_url = getattr(args, 'query_service_url', None) or base_url
-    sufficiency_service_url = getattr(args, 'sufficiency_service_url', None) or base_url
+    sufficiency_service_url = getattr(
+        args, 'sufficiency_service_url', None) or base_url
 
     return {
         "service_url": base_url,

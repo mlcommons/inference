@@ -65,6 +65,8 @@ nav:
     - Automated Submission CLI: submission/submission-cli.md
   - Power:
     - power/index.md
+  - System Info:
+    - system-info/index.md
   - Release Notes:
     - What's New: changelog/index.md
     - Changelog: changelog/changelog.md

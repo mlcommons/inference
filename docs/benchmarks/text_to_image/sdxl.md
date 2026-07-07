@@ -9,15 +9,17 @@ hide:
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "sdxl", "reference") }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", categories=["Edge"]) }}
+
+{#
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia") }}
 
-<!-- 
 === "Intel"
     ## Intel MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "intel") }}
--->
+
+#}

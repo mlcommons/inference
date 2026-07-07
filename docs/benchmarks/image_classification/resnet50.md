@@ -10,14 +10,15 @@ hide:
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "resnet50", "reference") }}
+{{ mlperf_inference_implementation_readme (4, "resnet50", "reference", categories=["Edge"]) }}
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "resnet50", "nvidia") }}
 
-<!-->
+
+{#
 
 === "Intel"
     ## Intel MLPerf Implementation
@@ -34,4 +35,4 @@ hide:
     
 {{ mlperf_inference_implementation_readme (4, "resnet50", "cpp") }}
 
--->
+#}

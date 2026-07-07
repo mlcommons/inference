@@ -251,6 +251,11 @@ class SystemCheck(BaseCheck):
             self.submission_logs.loader_data["design_power_watts"] = None
             return True
 
+        if "system_power_capacity" in self.system_json:
+            design_power_watts = self.system_json["system_power_capacity"]
+            self.submission_logs.loader_data["design_power_watts"] = design_power_watts
+            return True
+
         if not os.path.exists(nameplate_power_path):
             self.submission_logs.loader_data["design_power_watts"] = None
             self.log.warning(

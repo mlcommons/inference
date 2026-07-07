@@ -30,6 +30,7 @@ The benchmark implementation run command will automatically download the validat
         
     ### Get Calibration Dataset
     ```
+
     mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j
     ```
 
@@ -46,6 +47,7 @@ The benchmark implementation run command will automatically download the require
 
         ### Get the Official MLPerf LLAMA3.1-8B model from MLCOMMONS Cloudfare R2
         ```
+
         mlcr get,ml-model,llama3,_mlc,_8b,_r2-downloader --outdirname=<path to download> -j
         ```
 

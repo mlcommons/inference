@@ -85,7 +85,8 @@ class E2EQSL:
 
         print(f"Dataset loaded: {self.count} queries")
         if perf_count is not None:
-            print(f"  (limited to first {perf_count} queries for performance testing)")
+            print(
+                f"  (limited to first {perf_count} queries for performance testing)")
 
     def load_query_samples(self, sample_list):
         """
@@ -161,14 +162,11 @@ class E2EQSLInMemory(E2EQSL):
 # limitations under the License.
 # =============================================================================
 
+
 """
 Query Sample Library for RAG-QnA workload.
 Loads queries from frames_dataset.tsv and provides them to MLPerf Loadgen.
 """
-
-import os
-import pandas as pd
-import mlperf_loadgen as lg
 
 
 class E2EQSL:
@@ -233,7 +231,8 @@ class E2EQSL:
 
         print(f"Dataset loaded: {self.count} queries")
         if perf_count is not None:
-            print(f"  (limited to first {perf_count} queries for performance testing)")
+            print(
+                f"  (limited to first {perf_count} queries for performance testing)")
 
     def load_query_samples(self, sample_list):
         """

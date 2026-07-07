@@ -2,6 +2,9 @@
 
 This guide covers how to automatically collect hardware and software information from one or more nodes for MLPerf Inference submissions using the MLC `get-mlperf-multi-node-system-info` script.
 
+!!! note "MLPerf Inference v6.1 scope"
+    For inference round v6.1, the sysinfo tool aims to automate system inventory collection (CPU, GPU, memory, storage, OS and software stack). Power and Network mode fields are scoped for future rounds and scaffolded as empty strings in the output. Submitters have to fill them in manually before submission.
+
 ## Prerequisites
 
 **Install MLC** — Follow the [MLC installation guide](../install/index.md) to set up `mlc-scripts`.

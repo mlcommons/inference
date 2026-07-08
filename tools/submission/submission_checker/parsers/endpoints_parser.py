@@ -23,7 +23,7 @@ _SAMPLE_LOGS_DIR = os.path.join(
     "helper",
     "sample_logs")
 
-_RESULT_SUMMARY_FILE = "result_summary.json"
+_RESULT_SUMMARY_FILE = "results_summary.json"
 _RESULTS_FILE = "results.json"
 _CONFIG_FILES = ("config.yaml", "config.yml")
 

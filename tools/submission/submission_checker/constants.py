@@ -2032,6 +2032,7 @@ ENDPOINTS_ALLOWED_MODELS = [
     "llama3.1-8b",
     "llama3.1-8b-edge",
     "gpt-oss-120b",
+    "deepseek-r1"
 ]
 
 PERFORMANCE_ENDPOINTS_DIR = {

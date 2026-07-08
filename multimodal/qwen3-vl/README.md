@@ -166,6 +166,7 @@ Each example benchmark config includes an accuracy test that queries the same se
   - Testing duration ≥ 10 minutes.
   - Sample concatenation permutation is enabled.
   - You must explicitly set `--no-enable-prefix-caching` for vLLM.
+  - Image inputs MUST NOT be compressed, resized, downsampled, cropped, re-encoded, or otherwise modified to alter the model's visual-token count or computational load. This includes setting vLLM multimodal processor overrides such as `--mm-processor-kwargs '{"max_pixels": ...}'`, or any equivalent pixel-budget, resolution-limit, or image-token-limit configuration. Submissions must use the dataset images as provided, subject only to reference-specified preprocessing.
 
 
 > [!CAUTION]

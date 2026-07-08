@@ -80,12 +80,12 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   │   │   │   ├── accuracy (optional)
 │   │   │   │   │   │   │   ├── config.yaml
 │   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   │   └── results_summary.json
 │   │   │   │   │   │   ├── performance
 │   │   │   │   │   │   │   ├── run_1
 │   │   │   │   │   │   │   │   ├── config.yaml
 │   │   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   │   │   └── results_summary.json
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   └── accuracy.txt

@@ -90,7 +90,8 @@ def get_args():
         help="Number of queries for performance testing (None = all)"
     )
 
-    # Multi-shot specific parameters (these are unique to multi_shot_retrieval.py)
+    # Multi-shot specific parameters (these are unique to
+    # multi_shot_retrieval.py)
     parser.add_argument(
         '--max-sub-queries',
         type=int,
@@ -171,9 +172,9 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Initialize SUT
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Initializing RAG-QnA SUT...")
-    print("="*80)
+    print("=" * 80)
 
     sut = E2ESUT(
         dataset_path=args.dataset_path,
@@ -194,9 +195,9 @@ def main():
         args=args,  # Pass full args for additional params
     )
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("SUT initialization complete")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Configure loadgen settings
     settings = lg.TestSettings()
@@ -227,9 +228,9 @@ def main():
     log_settings.log_output = log_output_settings
 
     # Run loadgen test
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Running MLPerf Loadgen test...")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     lg.StartTestWithLogSettings(
         sut.sut,
@@ -239,9 +240,9 @@ def main():
         args.audit_conf
     )
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Loadgen test complete")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     # Finalize SUT (save logs, cleanup)
     sut.finalize()
@@ -253,9 +254,9 @@ def main():
 
     # Run accuracy evaluation if in accuracy mode
     if args.accuracy:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("Running accuracy evaluation...")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
 
         cmd = [
             "python3",
@@ -269,9 +270,9 @@ def main():
         print(f"Command: {' '.join(cmd)}")
         subprocess.check_call(cmd)
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Done!")
-    print("="*80)
+    print("=" * 80)
 
 
 if __name__ == "__main__":

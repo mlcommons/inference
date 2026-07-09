@@ -3,6 +3,7 @@ name: "SCANOSS License & BOM Check"
 on:
   pull_request:
     branches: ["master", "main"]
+  workflow_dispatch:
 
 env:
   REPORTS_DIR: scanoss-reports
@@ -31,12 +32,14 @@ jobs:
       - name: Run SCANOSS scan
         run: |
           scanoss-py scan \
+            --apiurl https://api.osskb.org \
             -o ${{ env.REPORTS_DIR }}/results.json \
             .
 
       - name: Generate CycloneDX BOM
         run: |
           scanoss-py scan \
+            --apiurl https://api.osskb.org \
             -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json \
             --format cyclonedx \
             .

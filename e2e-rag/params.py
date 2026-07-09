@@ -22,7 +22,7 @@ used across single_shot_retrieval.py, optimize_retrieval.py, and other scripts.
 
 Usage:
     from params import add_all_args, add_common_args, add_retrieval_args
-    
+
     parser = argparse.ArgumentParser()
     add_all_args(parser)  # Add all parameters
     # OR
@@ -37,9 +37,12 @@ import argparse
 # ============================================================================
 # Parameter Definitions
 # ============================================================================
+
+
 class ParamDef:
     """Parameter definition with metadata."""
-    def __init__(self, 
+
+    def __init__(self,
                  name: str,
                  arg_names: List[str],
                  type: type,
@@ -76,35 +79,36 @@ class ParamDef:
         self.category = category
         self.applies_to = applies_to or ["both"]
         self.optuna_suggest = optuna_suggest
-    
+
     def add_to_parser(self, parser: argparse.ArgumentParser):
         """Add this parameter to an argument parser."""
         kwargs = {
             'help': self.help,
             'default': self.default,
         }
-        
+
         if self.action:
             kwargs['action'] = self.action
         else:
             kwargs['type'] = self.type
-        
+
         if self.choices:
             kwargs['choices'] = self.choices
-        
+
         if self.nargs:
             kwargs['nargs'] = self.nargs
-        
+
         parser.add_argument(*self.arg_names, **kwargs)
-    
+
     def suggest_value(self, trial):
         """Suggest a value for Optuna trial."""
         if not self.optuna_suggest:
-            raise ValueError(f"No optuna_suggest config for parameter {self.name}")
-        
+            raise ValueError(
+                f"No optuna_suggest config for parameter {self.name}")
+
         config = self.optuna_suggest
         suggest_type = config['type']
-        
+
         if suggest_type == 'float':
             return trial.suggest_float(
                 self.name,
@@ -477,7 +481,12 @@ STRATEGY_PARAMS = [
         choices=["fixed_k", "top_p", "relative"],
         category="strategy",
         applies_to=["both"],
-        optuna_suggest={'type': 'categorical', 'choices': ["fixed_k", "top_p", "relative"]}
+        optuna_suggest={
+            'type': 'categorical',
+            'choices': [
+                "fixed_k",
+                "top_p",
+                "relative"]}
     ),
     ParamDef(
         name="top_k_retriever",
@@ -557,8 +566,10 @@ PARAMS_BY_CATEGORY = {
 }
 
 # Method-specific parameters
-BM25_METHOD_PARAMS = [p for p in ALL_PARAMS if "bm25" in p.applies_to or "both" in p.applies_to]
-VECTOR_METHOD_PARAMS = [p for p in ALL_PARAMS if "vector" in p.applies_to or "both" in p.applies_to]
+BM25_METHOD_PARAMS = [
+    p for p in ALL_PARAMS if "bm25" in p.applies_to or "both" in p.applies_to]
+VECTOR_METHOD_PARAMS = [
+    p for p in ALL_PARAMS if "vector" in p.applies_to or "both" in p.applies_to]
 
 # Optimizable parameters (those with optuna_suggest defined)
 OPTIMIZABLE_PARAMS = [p for p in ALL_PARAMS if p.optuna_suggest is not None]
@@ -568,24 +579,26 @@ OPTIMIZABLE_PARAM_NAMES = [p.name for p in OPTIMIZABLE_PARAMS]
 # Helper Functions
 # ============================================================================
 
+
 def add_common_args(parser: argparse.ArgumentParser):
     """
     Add common script parameters (ingest, database, query, etc.)
-    
+
     Args:
         parser: ArgumentParser to add arguments to
     """
     for param in COMMON_PARAMS:
         param.add_to_parser(parser)
 
-def add_retrieval_args(parser: argparse.ArgumentParser, 
+
+def add_retrieval_args(parser: argparse.ArgumentParser,
                        method: Optional[str] = None,
                        categories: Optional[List[str]] = None):
     """
     Add retrieval parameters to an argument parser.
     Includes: General, BM25, Vector, Strategy, and Reranking parameters.
     Does NOT include common script parameters (use add_common_args for those).
-    
+
     Args:
         parser: ArgumentParser to add arguments to
         method: Filter by method ('bm25', 'vector', or None for all)
@@ -593,24 +606,26 @@ def add_retrieval_args(parser: argparse.ArgumentParser,
     """
     # Get non-common params
     params_to_add = [p for p in ALL_PARAMS if p.category != "common"]
-    
+
     # Filter by method
     if method:
-        params_to_add = [p for p in params_to_add 
-                        if method in p.applies_to or "both" in p.applies_to]
-    
+        params_to_add = [p for p in params_to_add
+                         if method in p.applies_to or "both" in p.applies_to]
+
     # Filter by category
     if categories:
         params_to_add = [p for p in params_to_add if p.category in categories]
-    
+
     # Add to parser
     for param in params_to_add:
         param.add_to_parser(parser)
 
-def add_all_args(parser: argparse.ArgumentParser, method: Optional[str] = None):
+
+def add_all_args(parser: argparse.ArgumentParser,
+                 method: Optional[str] = None):
     """
     Add all parameters (common + retrieval) to an argument parser.
-    
+
     Args:
         parser: ArgumentParser to add arguments to
         method: Filter by method ('bm25', 'vector', or None for all)
@@ -618,48 +633,51 @@ def add_all_args(parser: argparse.ArgumentParser, method: Optional[str] = None):
     add_common_args(parser)
     add_retrieval_args(parser, method=method)
 
+
 def get_optimizable_params(method: Optional[str] = None) -> List[ParamDef]:
     """
     Get list of parameters that can be optimized with Optuna.
-    
+
     Args:
         method: Filter by method ('bm25', 'vector', or None for all)
-    
+
     Returns:
         List of ParamDef objects
     """
     params = OPTIMIZABLE_PARAMS
-    
+
     if method:
-        params = [p for p in params 
-                 if method in p.applies_to or "both" in p.applies_to]
-    
+        params = [p for p in params
+                  if method in p.applies_to or "both" in p.applies_to]
+
     return params
+
 
 def suggest_param(trial, param_name: str) -> Any:
     """
     Suggest a parameter value for Optuna trial.
-    
+
     Args:
         trial: Optuna trial object
         param_name: Parameter name
-    
+
     Returns:
         Suggested value
     """
     if param_name not in PARAM_BY_NAME:
         raise ValueError(f"Unknown parameter: {param_name}")
-    
+
     param = PARAM_BY_NAME[param_name]
     return param.suggest_value(trial)
+
 
 def get_default_params(method: str) -> Dict[str, Any]:
     """
     Get default parameter values for a method.
-    
+
     Args:
         method: 'bm25' or 'vector'
-    
+
     Returns:
         Dictionary of parameter name -> default value
     """
@@ -669,34 +687,36 @@ def get_default_params(method: str) -> Dict[str, Any]:
         params = VECTOR_METHOD_PARAMS
     else:
         params = ALL_PARAMS
-    
+
     return {p.name: p.default for p in params}
 
-def format_params_for_cli(params: Dict[str, Any], skip_defaults: bool = True) -> List[str]:
+
+def format_params_for_cli(
+        params: Dict[str, Any], skip_defaults: bool = True) -> List[str]:
     """
     Format parameter dictionary as CLI arguments.
-    
+
     Args:
         params: Dictionary of parameter name -> value
         skip_defaults: If True, skip parameters that match their default values
-    
+
     Returns:
         List of CLI argument strings
     """
     args = []
-    
+
     for name, value in params.items():
         if name not in PARAM_BY_NAME:
             continue
-        
+
         param_def = PARAM_BY_NAME[name]
-        
+
         # Skip if value matches default (when skip_defaults=True)
         if skip_defaults and value == param_def.default:
             continue
-        
+
         cli_arg = param_def.arg_names[0]
-        
+
         if param_def.action == "store_true":
             if value:
                 args.append(cli_arg)
@@ -705,40 +725,42 @@ def format_params_for_cli(params: Dict[str, Any], skip_defaults: bool = True) ->
                 args.append(cli_arg)
         elif value is not None:
             args.extend([cli_arg, str(value)])
-    
+
     return args
+
 
 def print_param_info(method: Optional[str] = None):
     """Print parameter information grouped by category."""
-    
+
     if method == "bm25":
         params = BM25_METHOD_PARAMS
     elif method == "vector":
         params = VECTOR_METHOD_PARAMS
     else:
         params = ALL_PARAMS
-    
+
     # Group by category
     by_category = {}
     for param in params:
         if param.category not in by_category:
             by_category[param.category] = []
         by_category[param.category].append(param)
-    
+
     # Print
     for category in ["common", "general", "vector", "strategy", "reranking"]:
         if category not in by_category:
             continue
-        
+
         print(f"\n{category.upper()} Parameters:")
         print("=" * 60)
-        
+
         for param in by_category[category]:
             opt_marker = " [optimizable]" if param.optuna_suggest else ""
             print(f"  {param.name}{opt_marker}")
             print(f"    CLI: {', '.join(param.arg_names)}")
             print(f"    Default: {param.default}")
-            print(f"    Help: {param.help[:80]}..." if len(param.help) > 80 else f"    Help: {param.help}")
+            print(f"    Help: {param.help[:80]}..." if len(
+                param.help) > 80 else f"    Help: {param.help}")
             if param.choices:
                 print(f"    Choices: {param.choices}")
 
@@ -746,9 +768,10 @@ def print_param_info(method: Optional[str] = None):
 # Main (for testing/documentation)
 # ============================================================================
 
+
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) > 1 and sys.argv[1] == "list":
         method = sys.argv[2] if len(sys.argv) > 2 else None
         print_param_info(method)

@@ -31,7 +31,8 @@ from typing import Dict, List, Any, Optional
 class LLMLogger:
     """Logger for tracking all LLM calls with full input/output and metrics."""
 
-    def __init__(self, output_file: str = None, experiment_metadata: Dict[str, Any] = None):
+    def __init__(self, output_file: str = None,
+                 experiment_metadata: Dict[str, Any] = None):
         self.session_id = str(uuid.uuid4())
         self.queries = []
         self.output_file = output_file
@@ -159,7 +160,8 @@ class LLMLogger:
         data['queries'].append(query_data)
 
         # Update experiment summary
-        data['experiment_summary'] = self._calculate_experiment_summary(data['queries'])
+        data['experiment_summary'] = self._calculate_experiment_summary(
+            data['queries'])
 
         # Write back
         with open(self.output_file, 'w', encoding='utf-8') as f:
@@ -187,7 +189,8 @@ class LLMLogger:
         }
 
         # Add retrieval/answer metrics if available
-        queries_with_retrieval = [q for q in queries if "retrieval_results" in q]
+        queries_with_retrieval = [
+            q for q in queries if "retrieval_results" in q]
         if queries_with_retrieval:
             experiment_summary["retrieval_metrics"] = {
                 "average_precision": round(sum(q["retrieval_results"].get("precision", 0) for q in queries_with_retrieval) / len(queries_with_retrieval), 4),
@@ -197,7 +200,9 @@ class LLMLogger:
 
         queries_with_answers = [q for q in queries if "answer_results" in q]
         if queries_with_answers:
-            correct_count = sum(1 for q in queries_with_answers if q["answer_results"].get("judge_score", 0) >= 4)
+            correct_count = sum(
+                1 for q in queries_with_answers if q["answer_results"].get(
+                    "judge_score", 0) >= 4)
             experiment_summary["answer_metrics"] = {
                 "average_judge_score": round(sum(q["answer_results"].get("judge_score", 0) for q in queries_with_answers) / len(queries_with_answers), 2),
                 "queries_correct": correct_count,
@@ -207,14 +212,17 @@ class LLMLogger:
 
         return experiment_summary
 
-    def end_query(self, retrieval_results: Dict = None, answer_results: Dict = None, wall_time_s: float = None):
+    def end_query(self, retrieval_results: Dict = None,
+                  answer_results: Dict = None, wall_time_s: float = None):
         """Finish logging current query, compute summary, and write to file"""
         if self.current_query:
-            self.current_query["timestamp_end"] = datetime.utcnow().isoformat() + "Z"
+            self.current_query["timestamp_end"] = datetime.utcnow(
+            ).isoformat() + "Z"
 
             # Calculate summary
             llm_calls = self.current_query["llm_calls"]
-            hop_counts = [c["hop_count"] for c in llm_calls if c["hop_count"] is not None]
+            hop_counts = [c["hop_count"]
+                          for c in llm_calls if c["hop_count"] is not None]
 
             summary = {
                 "total_llm_calls": len(llm_calls),
@@ -244,7 +252,8 @@ class LLMLogger:
 
             self.current_query = None
 
-    def save(self, output_file: str = None, experiment_metadata: Dict[str, Any] = None):
+    def save(self, output_file: str = None,
+             experiment_metadata: Dict[str, Any] = None):
         """Save all logs to JSON file (legacy method for backward compatibility).
 
         Note: If logger was initialized with output_file, logs are already written
@@ -280,21 +289,28 @@ class LLMLogger:
         print(f"LLM logs saved to: {target_file}")
         print(f"Total queries: {len(self.queries)}")
         if experiment_summary:
-            print(f"Total LLM calls: {experiment_summary.get('total_llm_calls', 0)}")
+            print(
+                f"Total LLM calls: {experiment_summary.get('total_llm_calls', 0)}")
             print(f"Total tokens: {experiment_summary.get('total_tokens', 0):,} (input: {experiment_summary.get('total_input_tokens', 0):,}, output: {experiment_summary.get('total_output_tokens', 0):,})")
             # Per-query latency distribution (wall time: query to answer)
             per_query_latencies = sorted(
-                (q["summary"].get("total_wall_time_ms") or q["summary"].get("total_latency_ms", 0)) / 1000
+                (q["summary"].get("total_wall_time_ms")
+                 or q["summary"].get("total_latency_ms", 0)) / 1000
                 for q in self.queries
                 if "summary" in q
             )
             n = len(per_query_latencies)
             if n > 0:
                 mean_lat = sum(per_query_latencies) / n
-                median_lat = per_query_latencies[n // 2] if n % 2 == 1 else (per_query_latencies[n // 2 - 1] + per_query_latencies[n // 2]) / 2
-                p90_lat = per_query_latencies[int(n * 0.90)] if n >= 10 else per_query_latencies[-1]
-                p99_lat = per_query_latencies[int(n * 0.99)] if n >= 100 else per_query_latencies[-1]
+                median_lat = per_query_latencies[n // 2] if n % 2 == 1 else (
+                    per_query_latencies[n // 2 - 1] + per_query_latencies[n // 2]) / 2
+                p90_lat = per_query_latencies[int(
+                    n * 0.90)] if n >= 10 else per_query_latencies[-1]
+                p99_lat = per_query_latencies[int(
+                    n * 0.99)] if n >= 100 else per_query_latencies[-1]
                 total_latency_s = sum(per_query_latencies)
-                print(f"Per-query latency (query-to-answer):  mean={mean_lat:.2f}s  median={median_lat:.2f}s  p90={p90_lat:.2f}s  p99={p99_lat:.2f}s")
-                print(f"Throughput:    {n / total_latency_s:.4f} queries/sec  ({total_latency_s / n:.2f}s per query)")
+                print(
+                    f"Per-query latency (query-to-answer):  mean={mean_lat:.2f}s  median={median_lat:.2f}s  p90={p90_lat:.2f}s  p99={p99_lat:.2f}s")
+                print(
+                    f"Throughput:    {n / total_latency_s:.4f} queries/sec  ({total_latency_s / n:.2f}s per query)")
         print(f"{'='*80}\n")

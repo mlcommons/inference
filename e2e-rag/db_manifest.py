@@ -254,7 +254,7 @@ def main():
 
     pw = sub.add_parser("write", help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
-    pw.add_argument("--retriever_model", default="intfloat/e5-base-v2")
+    pw.add_argument("--retriever_model", default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)

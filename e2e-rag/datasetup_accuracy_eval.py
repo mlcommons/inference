@@ -520,7 +520,7 @@ def main():
     )
     parser.add_argument(
         "--retriever_model",
-        default="/data/model/e5-base-v2",
+        default="intfloat_e5-base-v2/e5-base-v2",
         help="Path to retriever model (for validation)"
     )
 

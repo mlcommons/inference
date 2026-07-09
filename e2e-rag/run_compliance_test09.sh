@@ -55,16 +55,18 @@ export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
 # Model paths
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
+export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
-export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8124/v1/chat/completions}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
+export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
+export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
+export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-gpt-oss-20b-mxfp4}
 
 # Performance cache file (optional - for faster testing)
 export PERF_CACHE_FILE=${PERF_CACHE_FILE:-""}
@@ -147,6 +149,8 @@ python3 reference_mlperf.py \
     --llm_model ${LLM_MODEL} \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
+    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency-model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}

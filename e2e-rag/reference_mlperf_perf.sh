@@ -51,14 +51,17 @@ export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
 # Separate service endpoints for each LLM component
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
+export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
 
-export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8124/v1/chat/completions}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
+export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
 
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
+export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
+
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-gpt-oss-20b-mxfp4}
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
@@ -109,6 +112,8 @@ python3 reference_mlperf.py \
     --llm_model ${LLM_MODEL} \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
+    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency-model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}

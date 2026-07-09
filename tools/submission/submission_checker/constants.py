@@ -44,7 +44,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": ["Interactive", "Server"],
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
-            "gpt-oss-120b": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Online", "Server"],
             "qwen3-vl-235b-a22b": ["Interactive"],
         },
         "required-scenarios-edge": {
@@ -85,7 +85,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": ["Interactive", "Server"],
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
-            "gpt-oss-120b": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Online", "Server"],
             "qwen3-vl-235b-a22b": ["Interactive", "Server"],
         },
         "accuracy-target": {
@@ -376,7 +376,7 @@ MODEL_CONFIG = {
             "llama3.1-405b": ["Interactive", "Server"],
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
-            "gpt-oss-120b": ["Interactive", "Server"],
+            "gpt-oss-120b": ["Online", "Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -1540,6 +1540,7 @@ SCENARIO_MAPPING = {
     "server": "Server",
     "offline": "Offline",
     "interactive": "Interactive",
+    "online": "Online",
 }
 
 RESULT_FIELD = {
@@ -1987,12 +1988,14 @@ UNIT_DICT = {
     "Offline": "Samples/s",
     "Server": "Queries/s",
     "Interactive": "Queries/s",
+    "Online": "Queries/s",
 
     "singlestream": "Latency (ms)",
     "multistream": "Latency (ms)",
     "offline": "Samples/s",
     "server": "Queries/s",
     "interactive": "Queries/s",
+    "online": "Queries/s",
 }
 
 
@@ -2002,12 +2005,14 @@ POWER_UNIT_DICT = {
     "Offline": "Watts",
     "Server": "Watts",
     "Interactive": "Watts",
+    "Online": "Watts",
 
     "singlestream": "millijoules",
     "multistream": "millijoules",
     "offline": "Watts",
     "server": "Watts",
     "interactive": "Watts",
+    "online": "Watts",
 }
 
 

@@ -477,7 +477,8 @@ class PerformanceCheck(BaseCheck):
             bool: True if inference is valid or not attempted, False otherwise.
         """
         if self.scenario.lower() != self.scenario_fixed.lower() and (
-                self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
+                self.scenario.lower(), self.scenario_fixed.lower()) not in {
+                    ("server", "interactive"), ("server", "online")}:
             if "edge" not in self.system_json["system_type"].lower():
                 self.log.error(
                     "Result can not be inferred for %s suite for: %s. Scenario: %s, Scenario fixed: %s",
@@ -543,7 +544,8 @@ class PerformanceCheck(BaseCheck):
                 res /= S_TO_MS
 
         if self.scenario.lower() != self.scenario_fixed.lower() and (
-                self.scenario.lower(), self.scenario_fixed.lower()) != ("server", "interactive"):
+                self.scenario.lower(), self.scenario_fixed.lower()) not in {
+                    ("server", "interactive"), ("server", "online")}:
             res, is_valid = self.get_inferred_result(res)
         self.submission_logs.loader_data["performance_metric"] = res
         return is_valid

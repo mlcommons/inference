@@ -116,7 +116,8 @@ class ResultExporter:
         row["errors"] = 0
         row["version"] = self.config.version
         row["inferred"] = 1 if row["Scenario"] != submission_logs.performance_log["effective_scenario"] and (
-            submission_logs.performance_log["effective_scenario"], row["Scenario"]) != ("server", "interactive") else 0
+            submission_logs.performance_log["effective_scenario"], row["Scenario"]) not in {
+                ("server", "interactive"), ("server", "online")} else 0
         row["has_power"] = os.path.exists(
             submission_logs.loader_data["power_dir_path"])
         unit = SPECIAL_UNIT_DICT.get(

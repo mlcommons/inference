@@ -1,0 +1,738 @@
+# Copyright 2025 The MLPerf Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
+
+
+import os
+import sys
+import faiss
+import torch
+import numpy as np
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from typing import List
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from .ragdb import RagDB
+
+
+def _alias_missing_faiss_swigfaiss_modules() -> None:
+    """Make all FAISS SWIG submodules resolve to whichever build is available.
+
+    `langchain_community.FAISS.serialize_to_bytes` pickles the FAISS index using
+    Python's pickle protocol, which stores fully-qualified class paths like
+    "faiss.swigfaiss_avx512.IndexHNSWFlat". When a `.db` file is loaded on a
+    machine whose installed `faiss-cpu` wheel does not ship that exact SWIG
+    submodule (different version, ARM build, conda build, CPU without AVX-512,
+    etc.), unpickling fails with `ModuleNotFoundError: No module named
+    'faiss.swigfaiss_avx512'`.
+
+    All FAISS SWIG submodules expose the same class names (the AVX variants
+    are SIMD-optimized builds of the same C++ classes), so we can safely alias
+    any missing submodule to the one that did get built. This keeps existing
+    serialized databases loadable across heterogeneous installs without
+    rebuilding them.
+    """
+    candidates = ("swigfaiss_avx512_spr", "swigfaiss_avx512", "swigfaiss_avx2", "swigfaiss")
+    available = None
+    for name in candidates:
+        full = f"faiss.{name}"
+        if full in sys.modules:
+            available = sys.modules[full]
+            break
+        try:
+            available = __import__(full, fromlist=[name])
+            break
+        except ImportError:
+            continue
+    if available is None:
+        return  # Nothing we can do; let pickle raise the original error.
+    for name in candidates:
+        full = f"faiss.{name}"
+        if full not in sys.modules:
+            try:
+                __import__(full)
+            except ImportError:
+                sys.modules[full] = available
+
+# Worker function for parallel embedding generation (must be at module level for multiprocessing)
+def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_queue,
+                           model_name, encode_kwargs, base_device, numa_plan=None):
+    """Worker function to generate embeddings on a specific device.
+
+    This worker processes multiple input chunks on a single device to avoid
+    loading the model multiple times.
+
+    Args:
+        device_id: Device index assigned by DeviceAllocator (e.g. 2 for xpu:2).
+        input_chunk_indices: Position(s) in the parent's `input_chunks` list.
+                             Used as a sortable key so the parent can reassemble
+                             in order even when workers finish out of order.
+        input_chunks: Per-worker shards of passages.
+        result_queue: Multiprocessing queue for results.
+        model_name: Name of the embedding model.
+        encode_kwargs: Encoding arguments.
+        base_device: Base device type ('xpu', 'cuda', 'hpu', 'cpu').
+        numa_plan: Optional (node, cpu_set) tuple. When set, this worker pins
+                   itself to that node before importing torch.
+    """
+    try:
+        import os
+
+        # NUMA pinning must happen before torch import + before allocations.
+        if numa_plan is not None:
+            from utils import pin_worker_to_node
+            node, cpu_set = numa_plan
+            pin_worker_to_node(node, cpu_set)
+
+        import torch
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        # Format device string: CPU doesn't use indices, others do
+        if base_device == 'cpu':
+            device = 'cpu'
+            if numa_plan is None:
+                from utils import apply_cpu_threading_env
+                apply_cpu_threading_env()
+        elif base_device == 'hpu':
+            device = 'hpu'
+            import habana_frameworks.torch.core as htcore
+        else:
+            device = f'{base_device}:{device_id}'
+
+        model_kwargs = {'device': device, 'local_files_only': True}
+
+        # Load model once for this device
+        embedder = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
+
+        print(f"✓ Device {device}: Loaded model, processing {len(input_chunks)} input chunk(s)")
+
+        for input_chunk_idx, input_chunk in zip(input_chunk_indices, input_chunks):
+            embeddings = embedder.embed_documents(input_chunk)
+            result_queue.put((input_chunk_idx, embeddings))
+
+    except Exception as e:
+        print(f"❌ Error on device {device_id} ({base_device}): {e}")
+        import traceback
+        traceback.print_exc()
+        for input_chunk_idx in input_chunk_indices:
+            result_queue.put((input_chunk_idx, None))
+
+class VectorDB(RagDB):
+    @classmethod
+    def get_default_db_name(cls) -> str:
+        """Get the default database filename for VectorDB."""
+        return "vector.db"
+    
+    def __init__(self,
+            retriever_model: str = None,
+            reranker_model: str = None,
+            device: str = "auto",
+            load_embeddings: bool = True,
+            num_embedding_devices: int = 1,
+            benchmark: bool = False,
+            hierarchical: bool = False,
+            embedding_device: str = None,
+            reranker_device: str = None,
+            **kwargs
+        ):
+        super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
+        self._retriever_model_name = retriever_model
+        self._reranker_model_name = reranker_model
+        self._load_embeddings = load_embeddings
+        self._num_embedding_devices = num_embedding_devices
+        self._hierarchical = hierarchical
+        self._embedding_lock = None
+        # Embedding device defaults to inheriting from --device.
+        self._embedding_device = self._determine_device(embedding_device) if embedding_device else self._device
+
+        # For hierarchical mode: map child_index -> parent_passage
+        self._parent_map = {}
+
+        if self._embedding_device == "hpu":
+            import habana_frameworks.torch.core as htcore
+            os.environ["PT_HPU_LAZY_MODE"] = "1"
+
+        if self._embedding_device == "cpu":
+            from utils import apply_cpu_threading_env
+            apply_cpu_threading_env()
+
+        # For single-device embedding, allocate one GPU now so the reranker
+        # (allocated later) can't pick the same one. Multi-device path
+        # allocates inside _embed_documents_parallel.
+        if num_embedding_devices == 1 and self._embedding_device in ("cuda", "xpu"):
+            from utils import resolve_gpu_device
+            self._embedding_device = resolve_gpu_device(
+                self._embedding_device, name="embedding",
+                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+            )
+
+        # Initialize embedding model with device configuration
+        model_kwargs = {'device': self._embedding_device, 'local_files_only': True}
+        encode_kwargs = {'normalize_embeddings': True}
+        
+        self._embedding_model = HuggingFaceEmbeddings(
+            model_name=self._retriever_model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
+        self._embedding_dimension = len(self._embedding_model.embed_query("hello world"))
+        
+        # Check the dtype of the embedding without using numpy
+        test_embedding_raw = self._embedding_model.embed_query("test")
+        
+        # Calculate dtype and itemsize from Python native list
+        if isinstance(test_embedding_raw, list) and len(test_embedding_raw) > 0:
+            test_element = test_embedding_raw[0]
+            embedding_dtype = type(test_element)
+            embedding_itemsize = test_element.__sizeof__()  # Size in bytes of one element
+            self._embedding_bytes_per_element = embedding_itemsize
+        else:
+            raise ValueError("Embedding query did not return a valid list of floats.")
+
+        if self._benchmark:
+            print(f"   Embedding element type: {embedding_dtype}")
+            print(f"   Bytes per element: {embedding_itemsize}")
+
+        # The index defines the algorithm used for the similarity search
+        # Support multiple vector index types (currently FAISS-based)
+        self._index = self._create_vector_index(self._embedding_dimension)
+
+        # The docstore is used to store the documents and their metadata
+        self._docstore = InMemoryDocstore()
+
+        self._vector_store = FAISS(
+            embedding_function=self._embedding_model,
+            index=self._index,
+            docstore=self._docstore,
+            index_to_docstore_id={}, # This will be populated as documents are added
+        )
+        
+        # Keep track of ingested documents
+        self._doc_list = []
+    
+    def _create_vector_index(self, dimension: int):
+        """Create a FAISS HNSW vector index.
+
+        HNSW (Hierarchical Navigable Small World):
+        - Graph-based approximate nearest neighbor search
+        - Very fast search O(log N), excellent recall, no training needed
+        - Higher memory usage (stores graph), slower indexing
+
+        Args:
+            dimension: Embedding dimension
+
+        Returns:
+            FAISS HNSW index
+        """
+        # M: number of connections per layer (higher = better recall, more memory)
+        # efConstruction: quality of index construction (higher = better quality, slower build)
+        M = 32  # Default: 32, good balance
+        index = faiss.IndexHNSWFlat(dimension, M)
+        index.hnsw.efConstruction = 200  # Default: 40
+        index.hnsw.efSearch = 100  # Search-time parameter, can be adjusted later
+        return index
+    def _get_embeddings_cache_path(self, passages_path: str) -> str:
+        """Get the cache path for embeddings based on passages file path."""
+        from pathlib import Path
+        passages_path = Path(passages_path)
+        # Replace extension with .emb.pkl
+        cache_path = passages_path.with_suffix('.emb.pkl')
+        return str(cache_path)
+    
+    def _save_embeddings_cache(self, embeddings: list, passages_path: str):
+        """Save embeddings to a pickle file for reuse."""
+        import os, pickle
+        from pathlib import Path
+        
+        cache_path = self._get_embeddings_cache_path(passages_path)
+        Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        if os.path.exists(cache_path):
+            print(f"Embeddings cache exists: {cache_path}")
+            return
+
+        with open(cache_path, 'wb') as f:
+            pickle.dump(embeddings, f)
+        print(f"💾 Saved embeddings cache to {cache_path}")
+    
+    def _load_embeddings_cache(self, passages_path: str) -> list:
+        """Load embeddings from cache if available."""
+        import pickle
+        from pathlib import Path
+        
+        cache_path = self._get_embeddings_cache_path(passages_path)
+        if not Path(cache_path).exists():
+            return None
+        
+        try:
+            with open(cache_path, 'rb') as f:
+                embeddings = pickle.load(f)
+            print(f"✓ Loaded embeddings from cache: {cache_path}")
+            return embeddings
+        except Exception as e:
+            print(f"⚠️  Failed to load embeddings cache: {e}")
+            return None
+    
+    def _build_numa_plans(self, num_workers: int):
+        """Parse INFERENCE_EMBEDDING_NUMA_NODES into per-worker (node, cpu_set).
+
+        Returns None if the env var isn't set (no NUMA pinning).
+        """
+        nodes_env = os.environ.get("INFERENCE_EMBEDDING_NUMA_NODES")
+        if not nodes_env:
+            return None
+
+        try:
+            numa_nodes = [int(x) for x in nodes_env.split(",") if x.strip()]
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid INFERENCE_EMBEDDING_NUMA_NODES={nodes_env!r}; "
+                f"expected comma-separated ints"
+            )
+        if len(numa_nodes) != num_workers:
+            raise RuntimeError(
+                f"INFERENCE_EMBEDDING_NUMA_NODES has {len(numa_nodes)} entries "
+                f"but num_embedding_devices={num_workers}"
+            )
+
+        omp_env = os.environ.get("INFERENCE_EMBEDDING_OMP_NUM_THREADS")
+        omp_per_worker = int(omp_env) if omp_env else 0
+
+        from utils import slice_cores_for_workers
+        return slice_cores_for_workers(numa_nodes, omp_per_worker)
+
+    def _embed_documents_parallel(self, passages: List[str]) -> list:
+        """Generate embeddings using multiple devices in parallel.
+        
+        Uses the device type from --device option and spawns multiple workers.
+        
+        Args:
+            passages: List of text passages to embed
+            
+        Returns:
+            List of embeddings (one per passage)
+        """
+        import torch
+        import multiprocessing as mp
+        
+        # Use the embedding device (may differ from the global --device).
+        # Strip any GPU index already allocated for the single-device path so
+        # the parallel allocator gets a clean device-type string.
+        base_device = self._embedding_device.split(":")[0]  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
+
+        num_workers = min(self._num_embedding_devices, len(passages))
+
+        if num_workers <= 1:
+            # Fallback to single device
+            return self._embedding_model.embed_documents(passages)
+
+        # Resolve per-worker device indices.
+        if base_device in ("cuda", "xpu"):
+            from utils import get_device_allocator
+            device_indices = get_device_allocator(base_device).allocate(
+                count=num_workers, name="parallel-embedding",
+                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+            )
+        else:
+            # CPU / HPU: workers use the same device string; index field is ignored.
+            device_indices = list(range(num_workers))
+
+        # Set spawn method for device compatibility (required for XPU/CUDA)
+        try:
+            mp.set_start_method('spawn', force=True)
+        except RuntimeError:
+            # Already set, ignore
+            pass
+
+        print(f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
+
+        # Optional per-worker NUMA pinning (CPU + memory + OMP).
+        numa_plans = self._build_numa_plans(num_workers)
+
+        # Split passages into per-worker input chunks.
+        input_chunk_size = (len(passages) + num_workers - 1) // num_workers
+        input_chunks = [passages[i:i + input_chunk_size] for i in range(0, len(passages), input_chunk_size)]
+
+        print(f"   Split {len(passages)} passages into {len(input_chunks)} input chunk(s) (~{input_chunk_size} passages/device)")
+
+        result_queue = mp.Queue()
+        processes = []
+
+        encode_kwargs = {'normalize_embeddings': True}
+
+        # input_chunk_idx is the position in `input_chunks`; device_id is the GPU
+        # index from the allocator. They differ when the allocator returns
+        # non-contiguous indices.
+        for input_chunk_idx, device_id in enumerate(device_indices[:len(input_chunks)]):
+            numa_plan = numa_plans[input_chunk_idx] if numa_plans else None
+            p = mp.Process(target=_parallel_embed_worker,
+                       args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
+                             self._retriever_model_name, encode_kwargs, base_device, numa_plan))
+            p.start()
+            processes.append(p)
+
+        results = {}
+        for _ in range(min(num_workers, len(input_chunks))):
+            input_chunk_idx, embeddings = result_queue.get()
+            if embeddings is not None:
+                results[input_chunk_idx] = embeddings
+
+        for p in processes:
+            p.join()
+
+        # Reassemble in original passage order.
+        all_embeddings = []
+        for i in range(len(input_chunks)):
+            if i in results:
+                all_embeddings.extend(results[i])
+        
+        print(f"✓ Generated {len(all_embeddings)} embeddings across {num_workers} devices")
+        
+        return all_embeddings
+    
+    def _calculate_index_output_size(self):
+        """Calculate the size of VectorDB output data (db file - metadata).
+        
+        Returns the total size in bytes of the serialized database file,
+        excluding configuration metadata overhead.
+        
+        The .db file contains:
+        - FAISS index (vectors)
+        - Passages (docstore)
+        - Metadata (small overhead)
+        
+        We estimate metadata size and subtract it from total file size.
+        """
+        from pathlib import Path
+        
+        if not hasattr(self, '_serialize_path') or not self._serialize_path:
+            return 0
+        
+        db_path = Path(self._serialize_path)
+        if not db_path.exists():
+            return 0
+        
+        total_file_size = db_path.stat().st_size
+        return total_file_size
+    
+    def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
+        """Ingest passages with performance monitoring.
+
+        For hierarchical mode:
+        - passages: list of child passage texts (for embedding)
+        - metadatas: list of dicts with 'parent_passage' key (for retrieval)
+        """
+        # Handle unused parameters
+        if 'num_threads' in kwargs:
+            print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
+
+        # Extract passages source path for embeddings caching
+        passages_path = kwargs.get('passages_path', None)
+
+        # Start timing (works for both benchmark and non-benchmark modes)
+        ingestion_start = self._start_ingestion_timer()
+
+        # For hierarchical mode: extract parent passages and build mapping
+        if self._hierarchical:
+            print("Hierarchical mode: Indexing children, storing parents for retrieval")
+            for idx, metadata in enumerate(metadatas):
+                if 'parent_passage' in metadata:
+                    self._parent_map[idx] = metadata['parent_passage']
+            print(f"  Stored {len(self._parent_map)} parent mappings")
+
+        total_chars = sum(len(passage) for passage in passages)
+        
+        # Handle embeddings: try to load from cache or generate new ones
+        embeddings = None
+
+        if self._load_embeddings and passages_path:
+            embeddings = self._load_embeddings_cache(passages_path)
+
+        # Generate embeddings if not cached
+        if embeddings is None:
+            if self._num_embedding_devices > 1:
+                # Use parallel embedding generation across multiple devices
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
+                                                  lambda: self._embed_documents_parallel(passages),
+                                                  is_pipeline_input=True)
+            else:
+                # Single device embedding generation
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
+                                                  lambda: self._embedding_model.embed_documents(passages),
+                                                  is_pipeline_input=True)
+
+
+        # Determine batch size: single batch for small datasets, multiple batches for scaling analysis
+        track_incremental = self._benchmark and self._monitor and len(passages) >= 500
+        if track_incremental:
+            batch_size = max(1000, len(passages) // 10)  # 10 batches, minimum 1000 docs per batch
+            print(f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
+        else:
+            batch_size = len(passages)  # Single batch
+        
+        # Track total indexing time for component metrics
+        import time
+        indexing_component_start = time.perf_counter()
+        
+        # Process in batches
+        for i in range(0, len(passages), batch_size):
+            batch_end = min(i + batch_size, len(passages))
+            self._ingest_single_batch(passages, metadatas, embeddings, i, batch_end, track_incremental)
+        
+        indexing_component_end = time.perf_counter()
+        indexing_component_duration = indexing_component_end - indexing_component_start
+        
+        # Create component metrics for the entire indexing operation
+        if not track_incremental:
+            # For single batch, component was tracked inside _ingest_single_batch
+            pass
+        elif self._monitor:
+            # For incremental, create component metrics here for the entire operation
+            embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
+            
+            from ingestion_monitor import ComponentMetrics
+            self._monitor.components["faiss_indexing"] = ComponentMetrics(
+                name="faiss_indexing",
+                duration=indexing_component_duration,
+                input_size_bytes=embedding_bytes,
+                output_size_bytes=embedding_bytes,  # Vectors stored in FAISS index
+                items_processed=len(passages),
+                throughput_mb_per_sec=(embedding_bytes / (1024 * 1024)) / indexing_component_duration if indexing_component_duration > 0 else 0,
+                throughput_items_per_sec=len(passages) / indexing_component_duration if indexing_component_duration > 0 else 0,
+                is_pipeline_input=False,
+                is_pipeline_output=True
+            )
+        
+        # Store ingestion metrics for later reporting
+        self._ingestion_start = ingestion_start
+        self._ingestion_item_count = len(passages)
+        self._ingestion_total_chars = total_chars
+        
+        # Save embeddings to cache 
+        if self._load_embeddings and passages_path:
+            self._save_embeddings_cache(embeddings, passages_path)
+
+    def _ingest_single_batch(self, passages: List[str], metadatas: List[dict], embeddings: list,
+                            batch_start: int, batch_end: int, track_incremental: bool):
+        """Ingest a batch of passages. Can be used for single or incremental indexing.
+        
+        Args:
+            passages: All passages
+            metadatas: All metadata
+            embeddings: All embeddings
+            batch_start: Start index for this batch
+            batch_end: End index for this batch (exclusive)
+            track_incremental: Whether to track this batch for incremental analysis
+        """
+        import time
+        
+        # Extract batch data
+        batch_passages = passages[batch_start:batch_end]
+        batch_metadatas = metadatas[batch_start:batch_end] if metadatas else [{}] * (batch_end - batch_start)
+        batch_embeddings = embeddings[batch_start:batch_end]
+        
+        # Track DB size before adding (for incremental tracking)
+        db_size_before = len(self._doc_list) if track_incremental else 0
+        
+        # Calculate embedding size for this batch
+        batch_embedding_bytes = len(batch_passages) * self._embedding_dimension * self._embedding_bytes_per_element
+        
+        # Time and execute indexing operation
+        indexing_start = time.perf_counter()
+        
+        if track_incremental:
+            # For incremental: just add embeddings without component tracking
+            self._vector_store.add_embeddings(
+                list(zip(batch_passages, batch_embeddings)), 
+                batch_metadatas
+            )
+        else:
+            # For single batch: use component tracking
+            self._track_component("faiss_indexing", batch_embedding_bytes, len(batch_passages),
+                                 lambda: self._vector_store.add_embeddings(
+                                     list(zip(batch_passages, batch_embeddings)), batch_metadatas),
+                                 is_pipeline_output=True)
+        
+        indexing_end = time.perf_counter()
+        indexing_time = indexing_end - indexing_start
+        
+        # Update document list
+        self._doc_list.extend(batch_passages)
+        
+        # Track for incremental analysis if requested
+        if track_incremental and self._monitor:
+            self._monitor.track_incremental_indexing(
+                db_size_before=db_size_before,
+                batch_size=len(batch_passages),
+                indexing_time=indexing_time
+            )
+    
+    def enable_threading(self):
+        """Enable thread-safe access to the embedding model."""
+        import threading
+        self._embedding_lock = threading.Lock()
+
+    def embed_query(self, query: str) -> List[float]:
+        """Embed a single query string. Caller must hold _embedding_lock if threading."""
+        return self._embedding_model.embed_query(query)
+
+    def lookup(self, query: str, k: int):
+        if self._embedding_lock:
+            with self._embedding_lock:
+                embedding = self.embed_query(query)
+        else:
+            embedding = self.embed_query(query)
+        results = self._vector_store.similarity_search_by_vector(embedding, k=k)
+
+        # In hierarchical mode: replace child passages with parents, deduplicate
+        if self._hierarchical and self._parent_map:
+            parent_docs = []
+            seen_parents = set()
+
+            for doc in results:
+                # Get document index from metadata
+                doc_idx = doc.metadata.get('index', None)
+                if doc_idx is not None and doc_idx in self._parent_map:
+                    parent_text = self._parent_map[doc_idx]
+                    # Deduplicate: only add each unique parent once
+                    if parent_text not in seen_parents:
+                        # Create new document with parent content
+                        from langchain_core.documents import Document
+                        parent_doc = Document(
+                            page_content=parent_text,
+                            metadata=doc.metadata.copy()
+                        )
+                        parent_docs.append(parent_doc)
+                        seen_parents.add(parent_text)
+
+                        # Stop if we have k unique parents
+                        if len(parent_docs) >= k:
+                            break
+                else:
+                    # No parent mapping, use original
+                    parent_docs.append(doc)
+
+            return parent_docs
+
+        return results
+    
+    def lookup_with_scores(self, query: str, k: int):
+        """
+        Lookup documents with similarity scores.
+        Returns list of (document, score) tuples.
+
+        Note: FAISS returns L2 distances (lower is better), but we convert to
+        similarity scores (higher is better).
+        """
+        if self._embedding_lock:
+            with self._embedding_lock:
+                embedding = self.embed_query(query)
+        else:
+            embedding = self.embed_query(query)
+        results_with_scores = self._vector_store.similarity_search_with_score_by_vector(embedding, k=k)
+
+        # FAISS returns (document, distance) where distance is L2 distance (lower is better)
+        # Convert to similarity score (higher is better) by negating
+        results_with_similarity = [(doc, -distance) for doc, distance in results_with_scores]
+
+        # In hierarchical mode: replace child passages with parents, deduplicate
+        if self._hierarchical and self._parent_map:
+            parent_results = []
+            seen_parents = set()
+
+            for doc, score in results_with_similarity:
+                # Get document index from metadata
+                doc_idx = doc.metadata.get('index', None)
+                if doc_idx is not None and doc_idx in self._parent_map:
+                    parent_text = self._parent_map[doc_idx]
+                    # Deduplicate: only add each unique parent once
+                    if parent_text not in seen_parents:
+                        # Create new document with parent content
+                        from langchain_core.documents import Document
+                        parent_doc = Document(
+                            page_content=parent_text,
+                            metadata=doc.metadata.copy()
+                        )
+                        parent_results.append((parent_doc, score))
+                        seen_parents.add(parent_text)
+
+                        # Stop if we have k unique parents
+                        if len(parent_results) >= k:
+                            break
+                else:
+                    # No parent mapping, use original
+                    parent_results.append((doc, score))
+
+            return parent_results
+
+        return results_with_similarity
+
+
+
+    def serialize(self, path: str):
+        # Store path for output size calculation
+        self._serialize_path = path
+
+        data = self._vector_store.serialize_to_bytes()
+        with open(path, "wb") as f:
+            f.write(data)
+
+        # Save parent map if hierarchical mode
+        if self._hierarchical and self._parent_map:
+            import pickle
+            from pathlib import Path
+            parent_map_path = Path(path).with_suffix('.parent_map.pkl')
+            with open(parent_map_path, 'wb') as f:
+                pickle.dump(self._parent_map, f)
+            print(f"💾 Saved parent map ({len(self._parent_map)} entries) to {parent_map_path}")
+
+        # Update output size after serialization (now file exists)
+        if self._benchmark and self._monitor:
+            self._monitor.set_output_size_callback("faiss_indexing", self._calculate_index_output_size)
+
+        # Report performance after serialization if benchmarking
+        if self._benchmark and self._monitor and hasattr(self, '_ingestion_start'):
+            # Determine db_type based on whether incremental was used
+            db_type = "VectorDB (Incremental)" if hasattr(self._monitor, 'indexing_trend') and len(self._monitor.indexing_trend) > 0 else "VectorDB"
+            self._report_performance(self._ingestion_start, self._ingestion_item_count,
+                                    self._ingestion_total_chars, db_type)
+
+    def from_serialized(self, path: str):
+        assert len(self._vector_store.index_to_docstore_id) == 0, "Vector store already has documents"
+        # Pickled FAISS indexes reference a specific SWIG submodule (e.g.
+        # `faiss.swigfaiss_avx512`). Alias any missing submodules so DBs built
+        # on one host load on hosts with a different faiss-cpu build.
+        _alias_missing_faiss_swigfaiss_modules()
+        with open(path, "rb") as f:
+            data = f.read()
+        self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
+            serialized=data,
+            allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
+
+        # Load parent map if hierarchical mode
+        if self._hierarchical:
+            import pickle
+            from pathlib import Path
+            parent_map_path = Path(path).with_suffix('.parent_map.pkl')
+            if parent_map_path.exists():
+                with open(parent_map_path, 'rb') as f:
+                    self._parent_map = pickle.load(f)
+                print(f"✓ Loaded parent map ({len(self._parent_map)} entries) from {parent_map_path}")
+            else:
+                print(f"⚠️  Warning: Hierarchical mode enabled but no parent map found at {parent_map_path}")

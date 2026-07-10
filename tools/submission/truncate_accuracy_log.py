@@ -5,6 +5,7 @@ Tool to truncate the mlperf_log_accuracy.json
 
 import argparse
 import hashlib
+import json
 import logging
 import os
 import re
@@ -17,6 +18,7 @@ log = logging.getLogger("main")
 
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 VIEWABLE_SIZE = 4096
+RESPONSES_LIMIT = 10 * 1024  # cap on truncated responses bytes
 
 HELP_TEXT = """
 You can run this tool in 2 ways:
@@ -122,6 +124,84 @@ def copy_submission_dir(src, dst, filter_submitter):
             )
 
 
+def _truncate_endpoints_results(results_path, acc_path, backup):
+    """Truncate the ``responses`` field in an endpoints accuracy results.json.
+
+    Mirrors the behaviour of truncate_accuracy_log.py for traditional
+    submissions: backs up the original file (when --backup is given),
+    computes a SHA-256 hash of the original, appends ``hash=<hex>`` to
+    accuracy.txt, then writes back a copy with responses capped at
+    RESPONSES_LIMIT bytes.
+    """
+    try:
+        with open(results_path, "r", encoding="utf-8") as f:
+            original_bytes = f.read().encode()
+        data = json.loads(original_bytes)
+    except Exception as exc:
+        log.error("Could not read %s: %s", results_path, exc)
+        return
+
+    # Back up before any modification.
+    if backup:
+        backup_dir = os.path.join(backup, acc_path)
+        os.makedirs(backup_dir, exist_ok=True)
+        dst = os.path.join(backup_dir, "results.json")
+        if os.path.exists(dst):
+            log.error(
+                "not processing %s because %s already exists",
+                results_path,
+                dst,
+            )
+            return
+        shutil.copy(results_path, dst)
+
+    # Hash the original file for audit purposes (mirrors accuracy.txt hash
+    # written for traditional mlperf_log_accuracy.json truncation).
+    hash_val = hashlib.sha256(original_bytes).hexdigest()
+    acc_txt = os.path.join(acc_path, "accuracy.txt")
+    with open(acc_txt, "a", encoding="utf-8") as f:
+        f.write("\nhash={0}\n".format(hash_val))
+
+    # Truncate the responses collection so the file stays small.
+    responses = data.get("responses")
+    if responses is None or (isinstance(responses, (list, dict)) and not responses):
+        log.info("%s has no responses to truncate", results_path)
+        return
+
+    if isinstance(responses, list):
+        total = 2  # "[]"
+        idx = 0
+        for i, r in enumerate(responses):
+            total += len(json.dumps(r).encode()) + (2 if i > 0 else 0)
+            if total > RESPONSES_LIMIT:
+                break
+            idx = i + 1
+        data["responses"] = responses[:idx]
+    elif isinstance(responses, dict):
+        total = 2  # "{}"
+        kept = {}
+        for i, (k, v) in enumerate(responses.items()):
+            entry = len(json.dumps(k).encode()) + len(json.dumps(v).encode()) + 2
+            if i > 0:
+                entry += 2
+            if total + entry > RESPONSES_LIMIT:
+                break
+            total += entry
+            kept[k] = v
+        data["responses"] = kept
+    else:
+        log.error(
+            "%s: responses has unexpected type %s; skipping truncation",
+            results_path,
+            type(responses).__name__,
+        )
+        return
+
+    with open(results_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    log.info("%s responses truncated", results_path)
+
+
 def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
     """Walk result dir and
     write a hash of mlperf_log_accuracy.json to accuracy.txt
@@ -182,7 +262,17 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 acc_txt = os.path.join(
                                     acc_path, "accuracy.txt")
                                 if not os.path.exists(acc_log):
-                                    log.error("%s missing", acc_log)
+                                    # Endpoints submissions have results.json
+                                    # instead of mlperf_log_accuracy.json
+                                    endpoints_results = os.path.join(
+                                        acc_path, "results.json"
+                                    )
+                                    if os.path.exists(endpoints_results):
+                                        _truncate_endpoints_results(
+                                            endpoints_results, acc_path, backup
+                                        )
+                                    else:
+                                        log.error("%s missing", acc_log)
                                     continue
 
                                 # TEST07 and TEST09 don't have accuracy.txt,

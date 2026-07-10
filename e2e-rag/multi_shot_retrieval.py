@@ -1438,15 +1438,10 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 if verbose:
                     print(f"    Reranking {len(results)} docs for this subquery to top {target_docs_per_subquery}...")
                 
-                # Extract contents for reranking
-                contents = [r.page_content for r in results]
-                scored_passages = rag_db.rerank(sub_query, contents)
-                
-                # Reorder results by reranking scores and take top-k
-                reranked_indices = [i for i, _ in sorted(enumerate(scored_passages), 
-                                                         key=lambda x: x[1][1], reverse=True)]
-                results = [results[idx] for idx in reranked_indices[:target_docs_per_subquery]]
-                
+                # Rerank Documents by score and take top-k.
+                results = rag_db.rerank_documents(sub_query, results,
+                                                  top_k=target_docs_per_subquery)
+
                 if verbose:
                     print(f"    After reranking: keeping top {len(results)} docs")
             elif len(results) > target_docs_per_subquery:

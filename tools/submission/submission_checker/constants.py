@@ -1573,6 +1573,7 @@ RESULT_FIELD_NEW = {
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
+        "Interactive": "result_completed_samples_per_sec",
     },
 }
 

@@ -514,7 +514,7 @@ class Loader:
                                 "submitter": submitter,
                                 "system": system,
                                 "benchmark": benchmark,
-                                "scenario": scenario,
+                                "scenario": "server" if is_endpoints_submission and scenario.lower() == "online" else scenario,
                                 "is_endpoints_submission": is_endpoints_submission,
                                 # Submission paths
                                 "perf_path": perf_path,

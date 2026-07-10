@@ -164,7 +164,8 @@ def _truncate_endpoints_results(results_path, acc_path, backup):
 
     # Truncate the responses collection so the file stays small.
     responses = data.get("responses")
-    if responses is None or (isinstance(responses, (list, dict)) and not responses):
+    if responses is None or (isinstance(
+            responses, (list, dict)) and not responses):
         log.info("%s has no responses to truncate", results_path)
         return
 
@@ -181,7 +182,8 @@ def _truncate_endpoints_results(results_path, acc_path, backup):
         total = 2  # "{}"
         kept = {}
         for i, (k, v) in enumerate(responses.items()):
-            entry = len(json.dumps(k).encode()) + len(json.dumps(v).encode()) + 2
+            entry = len(json.dumps(k).encode()) + \
+                len(json.dumps(v).encode()) + 2
             if i > 0:
                 entry += 2
             if total + entry > RESPONSES_LIMIT:

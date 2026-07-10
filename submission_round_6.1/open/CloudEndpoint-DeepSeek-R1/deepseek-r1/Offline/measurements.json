@@ -1,0 +1,7 @@
+{
+    "input_data_types": "bf16",
+    "retraining": "No",
+    "starting_weights_filename": "Original Huggingface model weights",
+    "weight_data_types": "bf16",
+    "weight_transformations": "none"
+}

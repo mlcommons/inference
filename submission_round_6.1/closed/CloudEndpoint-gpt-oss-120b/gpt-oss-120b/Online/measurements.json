@@ -1,0 +1,7 @@
+{
+    "input_data_types": "fp8",
+    "retraining": "No",
+    "starting_weights_filename": "gpt-oss-120b weights",
+    "weight_data_types": "fp8",
+    "weight_transformations": "quantization"
+}

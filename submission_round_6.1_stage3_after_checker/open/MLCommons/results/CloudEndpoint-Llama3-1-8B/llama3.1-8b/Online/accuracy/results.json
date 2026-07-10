@@ -1,0 +1,76 @@
+{
+  "config": {
+    "endpoint": [
+      "http://cloud-endpoint.example.com/v1"
+    ],
+    "mode": "accuracy",
+    "target_qps": null
+  },
+  "results": {
+    "total": 13368,
+    "successful": 13368,
+    "failed": 0,
+    "elapsed_time": 18923.456
+  },
+  "accuracy_scores": {
+    "cnn_dailymail::llama3_8b": {
+      "dataset_name": "cnn_dailymail::llama3_8b",
+      "num_samples": 13368,
+      "extractor": "IdentityExtractor",
+      "ground_truth_column": "highlights",
+      "score": {
+        "rouge1": "37.4231",
+        "rouge2": "14.8714",
+        "rougeL": "23.9428",
+        "rougeLsum": "34.6157",
+        "gen_len": "8025640",
+        "gen_num": 13368
+      },
+      "n_repeats": 1,
+      "complete": true
+    }
+  },
+  "responses": {
+    "4fa0336cf4d24f489e22010bcec2d5ef": "Scientists from Harvard identified a novel compound targeting Alzheimer's disease. The study in Nature enrolled 2870 participants across 5 years. Efficacy was 40% in treated groups versus 13% in controls. Phase 3 trials are planned for 2027.",
+    "248ee65a687b4c7a9ce82c7013300288": "WHO announced sweeping energy transition guidelines affecting 14 million people. The policy requires compliance by 2026 and carries fines up to $49M. Industry groups warned of $188B in compliance costs. Supporters cited 37% projected improvement in outcomes.",
+    "ef516257e0574c68b2fda54c6303c86d": "The Nasdaq slipped 0.9% as jobs data surprised markets. Microsoft shares led gains after reporting quarterly revenue of $94B, missing estimates by 13%.",
+    "04537ef1c9e241c1a0583cb827ec9993": "World leaders convened in Sydney to negotiate energy transition commitments. The 2-day summit produced a framework targeting 45% emission reductions by 2046. Island states secured $229B in climate finance pledges.",
+    "e1ed17490fd541eca26935328f658323": "Pfizer reported disappointing quarterly earnings of $4.82 per share, missing the $2.15 consensus. Revenue grew 19% year-on-year driven by biotechnology. The company raised full-year guidance by 3%.",
+    "9f459a49029149faaed08d072b0bd6c1": "Archaeologists in China uncovered 1398 artifacts from the medieval period. The site, excavated over 4 years, reveals evidence of long-distance trade. Items will be displayed at the National Museum starting autumn.",
+    "f8ba5342454d4a8d9450725233531265": "Heavy wildfires struck Germany this week, claiming 163 lives and displacing 155939 residents. Emergency responders deployed 3826 personnel. The government pledged $274M in immediate relief funding.",
+    "e4ee3fee102340fe88fabc4136e35e78": "The Supreme Court ruled 5-3 in favour of the government in a landmark climate policy case. The decision overturns precedent set in 1991 and is expected to affect 83 million people.",
+    "c43d037861d645a88703aad3d55a717f": "Inflation in Japan eased to 2.6% in September, down from 8.8% the prior month. The central bank signalled a pause depending on global conditions.",
+    "701ab8cf5d484f2b9244b9373beaeae9": "Researchers at MIT demonstrated a renewable energy breakthrough achieving 90% efficiency \u2014 a 20x improvement over prior methods. The technique, published in Nature Medicine, could reduce costs by 74%. Commercial deployment is projected within 5 years.",
+    "3aace40693104bafa89ebe553ba3b682": "Scientists from MIT identified a novel compound targeting childhood obesity. The study in NEJM enrolled 19848 participants across 2 years. Efficacy was 80% in treated groups versus 24% in controls. Phase 3 trials are planned for 2025.",
+    "86bbaaf4cd984f23b339b1fdf11818c3": "FDA announced sweeping cybersecurity guidelines affecting 28 million people. The policy requires compliance by 2029 and carries fines up to $42M. Industry groups warned of $77B in compliance costs. Supporters cited 30% projected improvement in outcomes.",
+    "1552406a0ff64745a1a712c4d50033a6": "The DAX surged 3.5% as earnings reports surprised markets. Apple shares were unchanged after reporting quarterly revenue of $21B, missing estimates by 4%.",
+    "ab95e9f8223f4d6bbe53d58e53fbda82": "World leaders convened in Brussels to negotiate immigration reform commitments. The 5-day summit produced a framework targeting 40% emission reductions by 2042. Developing nations secured $258B in climate finance pledges.",
+    "21b4f7d9f983465882d8f8c5b91fc0b0": "Pfizer reported record quarterly earnings of $8.26 per share, meeting the $6.34 consensus. Revenue grew 25% year-on-year driven by artificial intelligence. The company raised full-year guidance by 3%.",
+    "61b061b843d7410cac71ed06c676dfe5": "Archaeologists in South Korea uncovered 1327 artifacts from the medieval period. The site, excavated over 5 years, reveals evidence of long-distance trade. Items will be displayed at the National Museum starting next year.",
+    "e931055270fa42c49481e38956c39afa": "Heavy flooding struck Germany this week, claiming 130 lives and displacing 35597 residents. Emergency responders deployed 3473 personnel. The government pledged $333M in immediate relief funding.",
+    "ed537afec8ea4aa898ba236fbc661d2c": "The Appeals Court ruled 7-2 in favour of the government in a landmark climate policy case. The decision narrows precedent set in 1998 and is expected to affect 35 million people.",
+    "852863d1f0f74931b19e48cc590cdf7e": "Inflation in China eased to 8.2% in January, down from 9.2% the prior month. The central bank signalled further hikes depending on services inflation.",
+    "a58c86389fa9491e81669da5defd0bcc": "Researchers at Johns Hopkins demonstrated a artificial intelligence breakthrough achieving 96% efficiency \u2014 a 15x improvement over prior methods. The technique, published in Science, could reduce costs by 55%. Commercial deployment is projected within 3 years.",
+    "92d5ec914b3140ffb8c1d2bf579a5016": "Scientists from Johns Hopkins identified a novel compound targeting type 2 diabetes. The study in Nature Medicine enrolled 14994 participants across 4 years. Efficacy was 48% in treated groups versus 21% in controls. Phase 3 trials are planned for 2025.",
+    "2c6e98a89b674428881ffabbc14ae4b6": "Federal Reserve announced sweeping climate policy guidelines affecting 23 million people. The policy requires compliance by 2028 and carries fines up to $41M. Industry groups warned of $137B in compliance costs. Supporters cited 44% projected improvement in outcomes.",
+    "474c0d1bea9244bca6a543f0fcef2987": "The Dow Jones rose 3.9% as jobs data surprised markets. Pfizer shares were unchanged after reporting quarterly revenue of $110B, missing estimates by 12%.",
+    "c381bd4dd85d46f182f607cb9e078402": "World leaders convened in London to negotiate supply chain resilience commitments. The 3-day summit produced a framework targeting 60% emission reductions by 2049. The G7 secured $245B in climate finance pledges.",
+    "a2a39b472ea0447388596494deb86465": "Samsung reported record quarterly earnings of $3.64 per share, beating the $3.38 consensus. Revenue grew 7% year-on-year driven by artificial intelligence. The company raised full-year guidance by 2%.",
+    "ee82e9972fe84db7a9463c0f98990d65": "Archaeologists in Germany uncovered 940 artifacts from antiquity. The site, excavated over 8 years, reveals evidence of long-distance trade. Items will be displayed at the National Museum starting autumn.",
+    "6b494355d332470ba58d3d7b301d22e9": "Heavy snowfall struck UK this week, claiming 169 lives and displacing 363100 residents. Emergency responders deployed 563 personnel. The government pledged $204M in immediate relief funding.",
+    "30b8bf57b1d8445aa539496e57bb7f36": "The Supreme Court ruled 8-3 in favour of the government in a landmark cybersecurity case. The decision narrows precedent set in 2003 and is expected to affect 29 million people.",
+    "899acc1aac4e413bb91b932c4523d1ec": "Inflation in Brazil eased to 7.6% in March, down from 5.6% the prior month. The central bank signalled further hikes depending on global conditions.",
+    "914d1d4d39644dfd900ea6686e5fd0f7": "Researchers at Cambridge demonstrated a semiconductors breakthrough achieving 90% efficiency \u2014 a 16x improvement over prior methods. The technique, published in The Lancet, could reduce costs by 45%. Commercial deployment is projected within 3 years.",
+    "80fb41ea776b4dafad07fd9d2c3a29fe": "Scientists from Harvard identified a novel compound targeting childhood obesity. The study in The Lancet enrolled 26419 participants across 4 years. Efficacy was 40% in treated groups versus 25% in controls. Phase 3 trials are planned for 2025.",
+    "b4101d6eb778486ab68d15127cb64888": "UN Security Council announced sweeping supply chain resilience guidelines affecting 37 million people. The policy requires compliance by 2027 and carries fines up to $50M. Industry groups warned of $27B in compliance costs. Supporters cited 24% projected improvement in outcomes.",
+    "c3779d963b1f479ea338529edeefd570": "The Nikkei rose 1.4% as inflation figures surprised markets. Tesla shares were unchanged after reporting quarterly revenue of $52B, missing estimates by 11%.",
+    "431ea8ba619f4b2f94d6631cf564e6e8": "World leaders convened in London to negotiate education reform commitments. The 5-day summit produced a framework targeting 39% emission reductions by 2048. The G7 secured $167B in climate finance pledges.",
+    "6b6e69877e354ad1a8f466188644039c": "OpenAI reported record quarterly earnings of $8.6 per share, beating the $3.54 consensus. Revenue grew 28% year-on-year driven by biotechnology. The company raised full-year guidance by 14%.",
+    "85674f8ef9ab4d9d9a49e15f66f6577c": "Archaeologists in France uncovered 1965 artifacts from the Bronze Age. The site, excavated over 5 years, reveals evidence of long-distance trade. Items will be displayed at the National Museum starting spring.",
+    "48a841ced19b4b10973d1b263b74567c": "Heavy snowfall struck China this week, claiming 95 lives and displacing 401142 residents. Emergency responders deployed 3722 personnel. The government pledged $435M in immediate relief funding.",
+    "2167f3ff8a784e98a3d71fea06acd0f6": "The Supreme Court ruled 7-2 in favour of plaintiffs in a landmark data privacy case. The decision upholds precedent set in 2000 and is expected to affect 46 million people.",
+    "3da6270dceff4eefa8261e30967ffe66": "Inflation in South Korea eased to 6.5% in September, down from 8.0% the prior month. The central bank signalled a pause depending on global conditions.",
+    "11fc91a68c51477fb91769a9c1bd206f": "Researchers at MIT demonstrated a electric vehicles breakthrough achieving 90% efficiency \u2014 a 6x improvement over prior methods. The technique, published in Nature Medicine, could reduce costs by 38%. Commercial deployment is projected within 5 years.",
+    "2ad483639449499ea3eeb84dd00ab0d6": "Scientists from Stanford identified a novel compound targeting rare genetic conditions. The study in Nature Medicine enrolled 15534 participants across 4 years. Efficacy was 75% in treated groups versus 21% in controls. Phase 3 trials are planned for 2028."
+  }
+}

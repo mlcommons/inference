@@ -1,0 +1,14 @@
+type: Online
+version: "0.1.0"
+model_params:
+  streaming: true
+settings:
+  load_pattern:
+    type: constant
+    target_qps: 16.0
+  runtime:
+    min_duration_ms: 600000
+    max_duration_ms: 660000
+    n_samples_to_issue: 7200
+    dataloader_random_seed: 2747215439041700203
+    scheduler_random_seed: 16159082839903944936

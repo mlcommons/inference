@@ -1,0 +1,91 @@
+{
+  "config": {
+    "endpoint": [
+      "http://cloud-endpoint.example.com/v1"
+    ],
+    "mode": "accuracy",
+    "target_qps": null
+  },
+  "results": {
+    "total": 4395,
+    "successful": 4395,
+    "failed": 0,
+    "elapsed_time": 7234.567
+  },
+  "accuracy_scores": {
+    "aime25::gptoss": {
+      "dataset_name": "aime25::gptoss",
+      "num_samples": 30,
+      "extractor": "BoxedMathExtractor",
+      "ground_truth_column": "answer",
+      "score": 0.7541666666666667,
+      "n_repeats": 8,
+      "complete": true
+    },
+    "gpqa::gptoss": {
+      "dataset_name": "gpqa::gptoss",
+      "num_samples": 198,
+      "extractor": "ABCDExtractor",
+      "ground_truth_column": "ground_truth",
+      "score": 0.6818181818181818,
+      "n_repeats": 5,
+      "complete": true
+    },
+    "livecodebench::gptoss": {
+      "dataset_name": "livecodebench::gptoss",
+      "num_samples": 1055,
+      "extractor": "PythonCodeExtractor",
+      "ground_truth_column": null,
+      "score": 0.8123696682464455,
+      "n_repeats": 3,
+      "complete": true
+    }
+  },
+  "responses": {
+    "7404359018a648658afedacfb2ccdfa7": "Let me work through this carefully.\n\nSetting $n$ as our variable, we complete the square: $(n - 8)^2 + 7$. For this to be a perfect square $k^2$, we factor and solve.\n\nValid solutions: $n \\in \\{2, 9, 18\\}$. Sum $= \\boxed{62}$.",
+    "939d61dc6eb148e2839aa6b004e77af5": "Using the Euclidean algorithm: $\\gcd(713, 73)$.\n\nBack-substituting gives the Bezout coefficients. The minimal positive value of the expression is $\\boxed{20}$.",
+    "d1f9effa1b784c4499d2f5ed0ec69d37": "By Heron's formula with sides $a=10$, $b=15$, $c=16$:\n$s = 26$, Area $= \\sqrt{7211} = 60$.\n\nThe answer is $\\boxed{32}$.",
+    "20f2c3607ef84d5b95a25c02832ea288": "Counting lattice paths with the reflection principle.\n\nTotal paths: $\\binom{11}{7}$. Invalid paths (crossing boundary): $\\binom{12}{3}$.\n\nValid paths $= \\boxed{132}$.",
+    "607e2b462e8d4bb3933d9d81459d9901": "Modular arithmetic: $7^{149} \\pmod{29}$.\n\nThe order of $7$ modulo $p$ divides $p-1$ by Fermat's Little Theorem. Computing the cycle: the answer is $\\boxed{17}$.",
+    "2a6d06f0d6cf43c08fb87e07f120986b": "This is a Pell equation: $x^2 - 3y^2 = 1$.\n\nThe fundamental solution is $(x_1, y_1) = (4, 10)$. The $n$-th solution satisfies the recurrence, giving $x_{5} = \\boxed{3157}$.",
+    "9599bc3dd04646679b0e5e65fcfcbc36": "By the Pigeonhole Principle applied to a set of 9 integers chosen from $\\{1, 2, \\ldots, 28\\}$:\n\nAt least two elements have the same residue mod 3, so their difference is divisible by 7. The minimum count is $\\boxed{8}$.",
+    "5486d49654ce4017b9307855e61f2da4": "Probability problem. Sample space: $|\\Omega| = 1100$.\n\nFavorable outcomes computed by inclusion-exclusion: $|A| + |B| - |A\\cap B| = 34 + 169 - 34$.\n\n$P = \\frac{m}{n}$ where $m + n = \\boxed{185}$.",
+    "2ab49ae170544e0bb37ee754aa032032": "Vieta jumping on $f(a,b) = \\frac{a^2 + b^2 + 1}{ab}$.\n\nAssuming $(a,b)$ is a solution with $a > b > 0$, we construct a smaller solution. The minimal case gives $\\boxed{9}$.",
+    "2f9e383bba714a189e38a9ff44a3f944": "Geometric series: $\\sum_{k=0}^{\\infty} \\left(\\frac{2}{5}\\right)^k = \\frac{1}{1 - 3/5}$.\n\nThe sum equals $\\frac{p}{q}$ in lowest terms; $p + q = \\boxed{47}$.",
+    "ba83f02ac7754887a63ce18b7eb39bc1": "Combinatorics: distribute 18 identical balls into 3 distinct bins with each bin having at least 3 ball(s).\n\nStars and bars after substitution: $\\binom{18}{2} = \\boxed{172}$.",
+    "c60e43ae9a1344ffaa387a4ef7702500": "In triangle $ABC$: $AB = 11$, $BC = 18$, $\\angle B = 85^\\circ$.\n\nBy the law of cosines: $AC^2 = AB^2 + BC^2 - 2\\cdot AB\\cdot BC\\cdot\\cos B$.\n\n$AC = \\sqrt{71}$, so $\\lfloor AC \\rfloor = \\boxed{20}$.",
+    "b0a84cd01be34ac18eb9d5a9ceb64bfe": "Recursion: $a_n = 2a_{n-1} - 2a_{n-2}$, $a_0 = 1$, $a_1 = 1$.\n\nCharacteristic roots: $r = 3, 3$. $a_{10} \\pmod{1000} = \\boxed{587}$.",
+    "ca9c2af1e74d42139b12d40d00a51da6": "Trigonometric identity manipulation:\n\n$\\sin^4\\theta + \\cos^4\\theta = 1 - 2\\sin^2\\theta\\cos^2\\theta = 1 - \\frac{1}{2}\\sin^2(2\\theta)$.\n\nGiven $\\sin(2\\theta) = \\frac{4}{8}$, the expression equals $\\frac{87}{104}$, so $p + q = \\boxed{67}$.",
+    "c115bff5eff54a26824ce83f7f8439ca": "Number of divisors of $N = 2^{8} \\cdot 3^{1} \\cdot 5^{2} \\cdot 7^{0}$ that are perfect cubes.\n\nCount: $(\\lfloor8/3\\rfloor+1)(\\lfloor3/3\\rfloor+1)(\\lfloor1/3\\rfloor+1) = \\boxed{19}$.",
+    "efc3282ed8f34b87b4c2901ab7bd86bf": "Let me work through this carefully.\n\nSetting $n$ as our variable, we complete the square: $(n - 11)^2 + 8$. For this to be a perfect square $k^2$, we factor and solve.\n\nValid solutions: $n \\in \\{4, 6, 13\\}$. Sum $= \\boxed{25}$.",
+    "67495073935c4b9faf69ad42af5f3eed": "Using the Euclidean algorithm: $\\gcd(788, 61)$.\n\nBack-substituting gives the Bezout coefficients. The minimal positive value of the expression is $\\boxed{7}$.",
+    "2d864c4a899f4915af90e1bf0d457c22": "By Heron's formula with sides $a=9$, $b=15$, $c=17$:\n$s = 18$, Area $= \\sqrt{5463} = 60$.\n\nThe answer is $\\boxed{54}$.",
+    "586c21e138d04f0d8cc73cbdf5753875": "Counting lattice paths with the reflection principle.\n\nTotal paths: $\\binom{13}{9}$. Invalid paths (crossing boundary): $\\binom{10}{8}$.\n\nValid paths $= \\boxed{169}$.",
+    "3990af27639f4342bd55ce5fd29eba72": "Modular arithmetic: $7^{98} \\pmod{17}$.\n\nThe order of $7$ modulo $p$ divides $p-1$ by Fermat's Little Theorem. Computing the cycle: the answer is $\\boxed{13}$.",
+    "dc65a3308bba4d33861410f306f6f365": "This is a Pell equation: $x^2 - 2y^2 = 1$.\n\nThe fundamental solution is $(x_1, y_1) = (17, 9)$. The $n$-th solution satisfies the recurrence, giving $x_{5} = \\boxed{1672}$.",
+    "3838fa1d43744d8798764bf394355527": "By the Pigeonhole Principle applied to a set of 14 integers chosen from $\\{1, 2, \\ldots, 47\\}$:\n\nAt least two elements have the same residue mod 7, so their difference is divisible by 7. The minimum count is $\\boxed{8}$.",
+    "38336541b30247e39bc04c840190cbe8": "Probability problem. Sample space: $|\\Omega| = 2228$.\n\nFavorable outcomes computed by inclusion-exclusion: $|A| + |B| - |A\\cap B| = 124 + 110 - 14$.\n\n$P = \\frac{m}{n}$ where $m + n = \\boxed{83}$.",
+    "3375b2e96a5d437d9f58978990f52731": "Vieta jumping on $f(a,b) = \\frac{a^2 + b^2 + 1}{ab}$.\n\nAssuming $(a,b)$ is a solution with $a > b > 0$, we construct a smaller solution. The minimal case gives $\\boxed{2}$.",
+    "50073c2a54104f599dcc06ad604a6f76": "Geometric series: $\\sum_{k=0}^{\\infty} \\left(\\frac{4}{8}\\right)^k = \\frac{1}{1 - 1/5}$.\n\nThe sum equals $\\frac{p}{q}$ in lowest terms; $p + q = \\boxed{21}$.",
+    "0b39b99c3c8b4ca9b31f09e73e17077c": "Combinatorics: distribute 12 identical balls into 4 distinct bins with each bin having at least 3 ball(s).\n\nStars and bars after substitution: $\\binom{17}{3} = \\boxed{374}$.",
+    "24685a5d56f34506b40df9e27b537dc7": "In triangle $ABC$: $AB = 7$, $BC = 11$, $\\angle B = 91^\\circ$.\n\nBy the law of cosines: $AC^2 = AB^2 + BC^2 - 2\\cdot AB\\cdot BC\\cdot\\cos B$.\n\n$AC = \\sqrt{189}$, so $\\lfloor AC \\rfloor = \\boxed{7}$.",
+    "4c8d0a1171bd4784ab1fc65091ca33aa": "Recursion: $a_n = 3a_{n-1} - 1a_{n-2}$, $a_0 = 0$, $a_1 = 2$.\n\nCharacteristic roots: $r = 2, 3$. $a_{10} \\pmod{1000} = \\boxed{292}$.",
+    "9c2cbd2e8c9a41e6986a4bc67ca1196b": "Trigonometric identity manipulation:\n\n$\\sin^4\\theta + \\cos^4\\theta = 1 - 2\\sin^2\\theta\\cos^2\\theta = 1 - \\frac{1}{2}\\sin^2(2\\theta)$.\n\nGiven $\\sin(2\\theta) = \\frac{4}{8}$, the expression equals $\\frac{69}{196}$, so $p + q = \\boxed{170}$.",
+    "b31bf637a3484a49a1bd1dc7cc878dc1": "Number of divisors of $N = 2^{5} \\cdot 3^{4} \\cdot 5^{1} \\cdot 7^{1}$ that are perfect cubes.\n\nCount: $(\\lfloor6/3\\rfloor+1)(\\lfloor2/3\\rfloor+1)(\\lfloor1/3\\rfloor+1) = \\boxed{5}$.",
+    "843f2fc5cf5e4674bae3921ecb2e6bfa": "Let me work through this carefully.\n\nSetting $n$ as our variable, we complete the square: $(n - 8)^2 + 15$. For this to be a perfect square $k^2$, we factor and solve.\n\nValid solutions: $n \\in \\{2, 7, 16\\}$. Sum $= \\boxed{59}$.",
+    "6b4dcc8776494ac0bf7f17997c6c3d33": "Using the Euclidean algorithm: $\\gcd(161, 42)$.\n\nBack-substituting gives the Bezout coefficients. The minimal positive value of the expression is $\\boxed{6}$.",
+    "5244c251cde940439d4d5e5123ac193b": "By Heron's formula with sides $a=9$, $b=7$, $c=13$:\n$s = 19$, Area $= \\sqrt{7355} = 44$.\n\nThe answer is $\\boxed{73}$.",
+    "728e8781fd9749edb2c0aab0633d1532": "Counting lattice paths with the reflection principle.\n\nTotal paths: $\\binom{15}{6}$. Invalid paths (crossing boundary): $\\binom{15}{3}$.\n\nValid paths $= \\boxed{451}$.",
+    "ca9231393c934d58b5f3b17ecbc65455": "Modular arithmetic: $7^{133} \\pmod{19}$.\n\nThe order of $7$ modulo $p$ divides $p-1$ by Fermat's Little Theorem. Computing the cycle: the answer is $\\boxed{27}$.",
+    "4b2c43f797eb4e91940b32633d6ac120": "This is a Pell equation: $x^2 - 9y^2 = 1$.\n\nThe fundamental solution is $(x_1, y_1) = (8, 6)$. The $n$-th solution satisfies the recurrence, giving $x_{9} = \\boxed{7219}$.",
+    "27f02ef8c9e84d93a17f70b4e2cba002": "By the Pigeonhole Principle applied to a set of 13 integers chosen from $\\{1, 2, \\ldots, 40\\}$:\n\nAt least two elements have the same residue mod 3, so their difference is divisible by 4. The minimum count is $\\boxed{14}$.",
+    "b632c97fb7644def81ef168196b365a2": "Probability problem. Sample space: $|\\Omega| = 3598$.\n\nFavorable outcomes computed by inclusion-exclusion: $|A| + |B| - |A\\cap B| = 45 + 55 - 49$.\n\n$P = \\frac{m}{n}$ where $m + n = \\boxed{184}$.",
+    "6370c4707ff345c8a7df15c642cd38f4": "Vieta jumping on $f(a,b) = \\frac{a^2 + b^2 + 1}{ab}$.\n\nAssuming $(a,b)$ is a solution with $a > b > 0$, we construct a smaller solution. The minimal case gives $\\boxed{4}$.",
+    "6f85e97dd55044189a7956a1223ba65b": "Geometric series: $\\sum_{k=0}^{\\infty} \\left(\\frac{2}{7}\\right)^k = \\frac{1}{1 - 1/9}$.\n\nThe sum equals $\\frac{p}{q}$ in lowest terms; $p + q = \\boxed{33}$.",
+    "a1ae879170744912935f488d6044a52e": "Combinatorics: distribute 12 identical balls into 5 distinct bins with each bin having at least 1 ball(s).\n\nStars and bars after substitution: $\\binom{10}{5} = \\boxed{46}$.",
+    "7c9547b2b7b44686ace42221024a3260": "In triangle $ABC$: $AB = 13$, $BC = 15$, $\\angle B = 90^\\circ$.\n\nBy the law of cosines: $AC^2 = AB^2 + BC^2 - 2\\cdot AB\\cdot BC\\cdot\\cos B$.\n\n$AC = \\sqrt{327}$, so $\\lfloor AC \\rfloor = \\boxed{8}$.",
+    "accdb979ae4940a69670a634b2f2d77a": "Recursion: $a_n = 3a_{n-1} - 1a_{n-2}$, $a_0 = 2$, $a_1 = 1$.\n\nCharacteristic roots: $r = 3, 3$. $a_{11} \\pmod{1000} = \\boxed{458}$.",
+    "54bf0e6643dc4c669511d2b301cf1dcf": "Trigonometric identity manipulation:\n\n$\\sin^4\\theta + \\cos^4\\theta = 1 - 2\\sin^2\\theta\\cos^2\\theta = 1 - \\frac{1}{2}\\sin^2(2\\theta)$.\n\nGiven $\\sin(2\\theta) = \\frac{4}{8}$, the expression equals $\\frac{59}{123}$, so $p + q = \\boxed{121}$.",
+    "76ffbb1f6a1949199f721134dae45b56": "Number of divisors of $N = 2^{2} \\cdot 3^{1} \\cdot 5^{3} \\cdot 7^{1}$ that are perfect cubes.\n\nCount: $(\\lfloor2/3\\rfloor+1)(\\lfloor3/3\\rfloor+1)(\\lfloor2/3\\rfloor+1) = \\boxed{12}$."
+  }
+}

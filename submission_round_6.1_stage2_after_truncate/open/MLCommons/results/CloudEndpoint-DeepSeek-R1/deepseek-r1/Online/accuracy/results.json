@@ -1,0 +1,93 @@
+{
+  "config": {
+    "endpoint": [
+      "http://cloud-endpoint.example.com/v1"
+    ],
+    "mode": "accuracy",
+    "target_qps": null
+  },
+  "results": {
+    "total": 4388,
+    "successful": 4388,
+    "failed": 0,
+    "elapsed_time": 12834.567
+  },
+  "accuracy_scores": {
+    "deepseek-r1::math500": {
+      "dataset_name": "deepseek-r1::math500",
+      "num_samples": 500,
+      "extractor": "BoxedMathExtractor",
+      "ground_truth_column": "answer",
+      "score": 0.97,
+      "n_repeats": 1,
+      "complete": true
+    },
+    "deepseek-r1::aime24": {
+      "dataset_name": "deepseek-r1::aime24",
+      "num_samples": 30,
+      "extractor": "BoxedMathExtractor",
+      "ground_truth_column": "answer",
+      "score": 0.7667,
+      "n_repeats": 8,
+      "complete": true
+    },
+    "deepseek-r1::gpqa_diamond": {
+      "dataset_name": "deepseek-r1::gpqa_diamond",
+      "num_samples": 198,
+      "extractor": "ABCDExtractor",
+      "ground_truth_column": "ground_truth",
+      "score": 0.7172,
+      "n_repeats": 5,
+      "complete": true
+    },
+    "deepseek-r1::livecodebench": {
+      "dataset_name": "deepseek-r1::livecodebench",
+      "num_samples": 2658,
+      "extractor": "PythonCodeExtractor",
+      "ground_truth_column": null,
+      "score": 0.653,
+      "n_repeats": 1,
+      "complete": true
+    }
+  },
+  "responses": {
+    "024115e491954d9d9ddccf2d39850d17": "<think>\nLet me set up the problem systematically.\n\nLet $x = 8$ and $y = 11$. The constraint gives $x + y = 13$ and $xy = 42$.\n\nThese are roots of $t^2 - 22t + 48 = 0$. Discriminant: $\\Delta = 41$. The desired quantity evaluates to the sum of squares.\n</think>\n\n$\\boxed{19}$",
+    "537c9792ab8745c5b0f9aafcc41edca6": "<think>\nOptimization via calculus.\n\n$f(x) = x^2 - 3x + 14$. Critical point: $f'(x) = 0 \\Rightarrow x = 6$.\n\n$f''(6) = 8 > 0$ (minimum). Minimum value: $38$.\n</think>\n\n$\\boxed{26}$",
+    "451ed237183942d296afb86411efe3fd": "<think>\nCounting with inclusion-exclusion.\n\nLet $A$ = integers divisible by 4, $B$ = integers divisible by 3 in $[1, 136]$.\n\n$|A| = 38$, $|B| = 34$, $|A\\cap B| = 7$.\n$|A\\cup B| = 64$.\n</think>\n\n$\\boxed{85}$",
+    "3047a45230c94507aab9448079e21d29": "<think>\nGeometry: area of polygon.\n\nVertices: $(0,0), (8,0), (15,8), (0,7)$.\n\nBy the shoelace formula: Area $= \\frac{1}{2}|247| = 49$.\n</think>\n\n$\\boxed{147}$",
+    "d1139b9af5e844cfac78b4890b1f331b": "<think>\nNumber theory: modular arithmetic.\n\nWe need $n^{83} \\pmod{13}$.\n\nBy Fermat's Little Theorem, the order divides $p-1$. Computing the residue: $8$.\n</think>\n\n$\\boxed{2}$",
+    "cd4d6762970842beb4211244a16c4327": "<think>\nAlgebra: polynomial roots.\n\n$P(x) = x^3 - 15x^2 + 37x - 7$.\n\nBy Vieta's: sum $= 15$, product $= 26$. The desired symmetric function evaluates to $104$.\n</think>\n\n$\\boxed{130}$",
+    "d6e3facff92d470b91d2384c9dc2b5d1": "<think>\nProbability: conditional probability.\n\n$P(A|B) = \\frac{P(A\\cap B)}{P(B)} = \\frac{9/24}{17/45}$.\n\nSimplifying: $\\frac{m}{n}$ where $m + n = 68$.\n</think>\n\n$\\boxed{54}$",
+    "a5940e139a94434780e27124947d6053": "<think>\nSequences and series.\n\n$S_n = \\sum_{k=1}^{n} \\frac{1}{k(k+1)}$. Partial fractions: $\\frac{1}{k(k+r)} = \\frac{1}{r}\\left(\\frac{1}{k} - \\frac{1}{k+r}\\right)$.\n\nTelescoping: $S_{100} = \\frac{1}{3}\\left(1 - \\frac{1}{101}\\right) = \\frac{2\\ \\cdot\\ 100}{1\\ \\cdot\\ 101}$.\n</think>\n\n$\\boxed{\\dfrac{107}{207}}$",
+    "1cc25c5057124aa69c66c4581c8c857b": "<think>\nTrigonometry: product-to-sum.\n\n$\\prod_{k=1}^{13} \\cos\\left(\\frac{k\\pi}{64}\\right) = \\frac{\\sin(\\pi/2)}{17 \\sin(\\pi/32)} = \\frac{1}{26 \\sin(\\pi/16)}$.\n</think>\n\n$\\boxed{\\dfrac{1}{61}}$",
+    "ebc9d0834b2f43fba64108e79ea08917": "<think>\nLinear algebra: eigenvalues.\n\nMatrix $A = \\begin{pmatrix} 2 & 1 \\\\ -2 & 5 \\end{pmatrix}$.\n\nCharacteristic polynomial: $\\lambda^2 - 3\\lambda + 17 = 0$. Eigenvalues: $\\lambda_1 = 1, \\lambda_2 = 3$. $\\text{tr}(A^5) = 3039$.\n</think>\n\n$\\boxed{188}$",
+    "31501e85ada04b93a060af8586113d33": "<think>\nLet me set up the problem systematically.\n\nLet $x = 3$ and $y = 7$. The constraint gives $x + y = 12$ and $xy = 20$.\n\nThese are roots of $t^2 - 23t + 55 = 0$. Discriminant: $\\Delta = 26$. The desired quantity evaluates to the sum of squares.\n</think>\n\n$\\boxed{357}$",
+    "7cd6b3d5cc324ba18bdd1d8654748ea2": "<think>\nOptimization via calculus.\n\n$f(x) = x^2 - 4x + 20$. Critical point: $f'(x) = 0 \\Rightarrow x = 3$.\n\n$f''(1) = 10 > 0$ (minimum). Minimum value: $49$.\n</think>\n\n$\\boxed{39}$",
+    "12a144c77325445bb15ef81de1f49f15": "<think>\nCounting with inclusion-exclusion.\n\nLet $A$ = integers divisible by 2, $B$ = integers divisible by 5 in $[1, 175]$.\n\n$|A| = 39$, $|B| = 27$, $|A\\cap B| = 11$.\n$|A\\cup B| = 88$.\n</think>\n\n$\\boxed{90}$",
+    "71874113e9764981985f0b27a6a7be85": "<think>\nGeometry: area of polygon.\n\nVertices: $(0,0), (8,2), (7,6), (5,6)$.\n\nBy the shoelace formula: Area $= \\frac{1}{2}|88| = 138$.\n</think>\n\n$\\boxed{126}$",
+    "80cf1263888d4fe4bee771b14751fb15": "<think>\nNumber theory: modular arithmetic.\n\nWe need $n^{71} \\pmod{13}$.\n\nBy Fermat's Little Theorem, the order divides $p-1$. Computing the residue: $19$.\n</think>\n\n$\\boxed{5}$",
+    "6995c185dd3b44be858f92d0811f16c8": "<think>\nAlgebra: polynomial roots.\n\n$P(x) = x^3 - 10x^2 + 25x - 7$.\n\nBy Vieta's: sum $= 8$, product $= 40$. The desired symmetric function evaluates to $134$.\n</think>\n\n$\\boxed{28}$",
+    "870ef5025da24d0b98e0988beced732e": "<think>\nProbability: conditional probability.\n\n$P(A|B) = \\frac{P(A\\cap B)}{P(B)} = \\frac{3/50}{24/38}$.\n\nSimplifying: $\\frac{m}{n}$ where $m + n = 26$.\n</think>\n\n$\\boxed{39}$",
+    "67dd6c28e97b4674aa327188143774cd": "<think>\nSequences and series.\n\n$S_n = \\sum_{k=1}^{n} \\frac{1}{k(k+1)}$. Partial fractions: $\\frac{1}{k(k+r)} = \\frac{1}{r}\\left(\\frac{1}{k} - \\frac{1}{k+r}\\right)$.\n\nTelescoping: $S_{100} = \\frac{1}{3}\\left(1 - \\frac{1}{101}\\right) = \\frac{3\\ \\cdot\\ 100}{4\\ \\cdot\\ 101}$.\n</think>\n\n$\\boxed{\\dfrac{87}{202}}$",
+    "81f347d5afcd45e0b3c21eb0be0e9a63": "<think>\nTrigonometry: product-to-sum.\n\n$\\prod_{k=1}^{15} \\cos\\left(\\frac{k\\pi}{64}\\right) = \\frac{\\sin(\\pi/2)}{30 \\sin(\\pi/32)} = \\frac{1}{20 \\sin(\\pi/64)}$.\n</think>\n\n$\\boxed{\\dfrac{1}{90}}$",
+    "211d941d9b984cfab63d1000b27bebf3": "<think>\nLinear algebra: eigenvalues.\n\nMatrix $A = \\begin{pmatrix} 4 & -2 \\\\ -1 & 3 \\end{pmatrix}$.\n\nCharacteristic polynomial: $\\lambda^2 - 5\\lambda + 2 = 0$. Eigenvalues: $\\lambda_1 = 3, \\lambda_2 = 4$. $\\text{tr}(A^5) = 326$.\n</think>\n\n$\\boxed{8876}$",
+    "e1886671a36540bc8d1899ab805dedb4": "<think>\nLet me set up the problem systematically.\n\nLet $x = 4$ and $y = 6$. The constraint gives $x + y = 10$ and $xy = 29$.\n\nThese are roots of $t^2 - 13t + 32 = 0$. Discriminant: $\\Delta = 54$. The desired quantity evaluates to the sum of squares.\n</think>\n\n$\\boxed{278}$",
+    "8ab9fe9552634ee0910b1947b065a479": "<think>\nOptimization via calculus.\n\n$f(x) = x^3 - 5x + 9$. Critical point: $f'(x) = 0 \\Rightarrow x = 3$.\n\n$f''(6) = 4 > 0$ (minimum). Minimum value: $44$.\n</think>\n\n$\\boxed{40}$",
+    "2c668ebe13444881aa72ddd6041f3188": "<think>\nCounting with inclusion-exclusion.\n\nLet $A$ = integers divisible by 4, $B$ = integers divisible by 7 in $[1, 123]$.\n\n$|A| = 21$, $|B| = 16$, $|A\\cap B| = 8$.\n$|A\\cup B| = 64$.\n</think>\n\n$\\boxed{44}$",
+    "436c0c374cb04541a6275b47f68687e6": "<think>\nGeometry: area of polygon.\n\nVertices: $(0,0), (4,1), (11,8), (3,7)$.\n\nBy the shoelace formula: Area $= \\frac{1}{2}|177| = 174$.\n</think>\n\n$\\boxed{95}$",
+    "735897b648cd4665adc08cf17aecec81": "<think>\nNumber theory: modular arithmetic.\n\nWe need $n^{153} \\pmod{11}$.\n\nBy Fermat's Little Theorem, the order divides $p-1$. Computing the residue: $22$.\n</think>\n\n$\\boxed{6}$",
+    "cd528c5e1cb94d06b525df8d7b025c66": "<think>\nAlgebra: polynomial roots.\n\n$P(x) = x^3 - 12x^2 + 40x - 23$.\n\nBy Vieta's: sum $= 9$, product $= 33$. The desired symmetric function evaluates to $137$.\n</think>\n\n$\\boxed{106}$",
+    "2c957838c65c40e1a4375f1be499b827": "<think>\nProbability: conditional probability.\n\n$P(A|B) = \\frac{P(A\\cap B)}{P(B)} = \\frac{5/38}{16/38}$.\n\nSimplifying: $\\frac{m}{n}$ where $m + n = 38$.\n</think>\n\n$\\boxed{71}$",
+    "45e298fcff5241c98872dad14e5fbfd2": "<think>\nSequences and series.\n\n$S_n = \\sum_{k=1}^{n} \\frac{1}{k(k+3)}$. Partial fractions: $\\frac{1}{k(k+r)} = \\frac{1}{r}\\left(\\frac{1}{k} - \\frac{1}{k+r}\\right)$.\n\nTelescoping: $S_{100} = \\frac{1}{1}\\left(1 - \\frac{1}{101}\\right) = \\frac{3\\ \\cdot\\ 100}{2\\ \\cdot\\ 101}$.\n</think>\n\n$\\boxed{\\dfrac{158}{419}}$",
+    "c601069a2c3c419184fa314f4d3d65a0": "<think>\nTrigonometry: product-to-sum.\n\n$\\prod_{k=1}^{13} \\cos\\left(\\frac{k\\pi}{64}\\right) = \\frac{\\sin(\\pi/2)}{21 \\sin(\\pi/16)} = \\frac{1}{8 \\sin(\\pi/16)}$.\n</think>\n\n$\\boxed{\\dfrac{1}{78}}$",
+    "38f1eb00a7034c85ab0962f54ad42ac8": "<think>\nLinear algebra: eigenvalues.\n\nMatrix $A = \\begin{pmatrix} 2 & 2 \\\\ 0 & 4 \\end{pmatrix}$.\n\nCharacteristic polynomial: $\\lambda^2 - 10\\lambda + 17 = 0$. Eigenvalues: $\\lambda_1 = 1, \\lambda_2 = 6$. $\\text{tr}(A^5) = 9789$.\n</think>\n\n$\\boxed{880}$",
+    "12b09bb0b14e4d71b1901f860c6cc6ae": "<think>\nLet me set up the problem systematically.\n\nLet $x = 7$ and $y = 13$. The constraint gives $x + y = 10$ and $xy = 64$.\n\nThese are roots of $t^2 - 15t + 27 = 0$. Discriminant: $\\Delta = 89$. The desired quantity evaluates to the sum of squares.\n</think>\n\n$\\boxed{249}$",
+    "13c382115b9c420e86d9aac087e32764": "<think>\nOptimization via calculus.\n\n$f(x) = x^3 - 5x + 8$. Critical point: $f'(x) = 0 \\Rightarrow x = 2$.\n\n$f''(4) = 6 > 0$ (minimum). Minimum value: $4$.\n</think>\n\n$\\boxed{15}$",
+    "8a29798bf1aa405e9ca2815c7f099294": "<think>\nCounting with inclusion-exclusion.\n\nLet $A$ = integers divisible by 2, $B$ = integers divisible by 3 in $[1, 54]$.\n\n$|A| = 55$, $|B| = 39$, $|A\\cap B| = 13$.\n$|A\\cup B| = 93$.\n</think>\n\n$\\boxed{103}$",
+    "8edc6d3cbac148ca94083afd040958fe": "<think>\nGeometry: area of polygon.\n\nVertices: $(0,0), (8,3), (8,12), (3,5)$.\n\nBy the shoelace formula: Area $= \\frac{1}{2}|72| = 27$.\n</think>\n\n$\\boxed{125}$",
+    "8d3cedc693f443f79beb381ea189076d": "<think>\nNumber theory: modular arithmetic.\n\nWe need $n^{73} \\pmod{7}$.\n\nBy Fermat's Little Theorem, the order divides $p-1$. Computing the residue: $20$.\n</think>\n\n$\\boxed{8}$",
+    "36da507aecf94501bde5e244ac438567": "<think>\nAlgebra: polynomial roots.\n\n$P(x) = x^3 - 11x^2 + 45x - 8$.\n\nBy Vieta's: sum $= 11$, product $= 35$. The desired symmetric function evaluates to $161$.\n</think>\n\n$\\boxed{143}$",
+    "e2e0fde341624a44987e5620352e2f56": "<think>\nProbability: conditional probability.\n\n$P(A|B) = \\frac{P(A\\cap B)}{P(B)} = \\frac{2/37}{22/33}$.\n\nSimplifying: $\\frac{m}{n}$ where $m + n = 77$.\n</think>\n\n$\\boxed{27}$",
+    "06cc0cfe8c734782b2314e4d61b393f3": "<think>\nSequences and series.\n\n$S_n = \\sum_{k=1}^{n} \\frac{1}{k(k+3)}$. Partial fractions: $\\frac{1}{k(k+r)} = \\frac{1}{r}\\left(\\frac{1}{k} - \\frac{1}{k+r}\\right)$.\n\nTelescoping: $S_{100} = \\frac{1}{3}\\left(1 - \\frac{1}{101}\\right) = \\frac{2\\ \\cdot\\ 100}{3\\ \\cdot\\ 101}$.\n</think>\n\n$\\boxed{\\dfrac{71}{461}}$"
+  }
+}

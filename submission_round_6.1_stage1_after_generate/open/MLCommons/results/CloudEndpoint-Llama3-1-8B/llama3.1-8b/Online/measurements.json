@@ -1,0 +1,7 @@
+{
+    "input_data_types": "fp8",
+    "retraining": "No",
+    "starting_weights_filename": "llama3.1-8b weights",
+    "weight_data_types": "fp8",
+    "weight_transformations": "quantization"
+}

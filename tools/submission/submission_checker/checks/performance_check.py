@@ -56,9 +56,17 @@ class PerformanceCheck(BaseCheck):
         self.is_endpoints = self.submission_logs.loader_data.get(
             "is_endpoints_submission", False)
         if self.is_endpoints:
-            if self.scenario.lower() == "online":
-                self.scenario = "Server"
+            self.scenario = self.map_endpoints_scenario(
+                self.scenario, self.scenario_fixed
+            )
         self.setup_checks()
+
+    def map_endpoints_scenario(self, scenario, scenario_fixed):
+        if scenario_fixed.lower() == "singlestream":
+            return "SingleStream"
+        if scenario.lower() == "online":
+            return "Server"
+        return scenario
 
     def setup_checks(self):
         """Register individual performance-related checks.
@@ -492,7 +500,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                ) not in list_inferred:
+                    ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -519,13 +527,13 @@ class PerformanceCheck(BaseCheck):
             and self.mlperf_log["result_validity"] == "VALID"
         ):
             is_valid = True
-        scenario = self.mlperf_log["effective_scenario"]
+        scenario = self.scenario
+        res = None
         if self.is_endpoints:
-            if scenario.lower() == "online":
-                scenario = "Server"
-            scenario = scenario.capitalize()
-
-        res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+            res = float(
+                self.mlperf_log[RESULT_FIELD_ENDPOINTS[version][scenario.lower()]])
+        else:
+            res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
         if (
             not self.is_endpoints
             and version in RESULT_FIELD_BENCHMARK_OVERWRITE
@@ -606,12 +614,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (scenario_fixed in ["Offline"]
-                ) and scenario in ["MultiStream"]:
+            ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+            ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -628,6 +636,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (scenario_fixed in ["Interactive"]
-                ) and scenario not in ["Server"]:
+            ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

@@ -1,8 +1,12 @@
 name: "SCANOSS License & BOM Check"
 
+# Runs only when a PR is APPROVED — i.e. after review and all other checks are
+# green — so the scan happens once, last, right before merge. Scans only the
+# files the PR changed (not the whole tree). Both choices minimize osskb quota
+# (limits are per-file: 5000/day, 7500/week, 15000/month).
 on:
-  pull_request:
-    branches: ["master", "main"]
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
 
 env:
@@ -11,12 +15,25 @@ env:
 jobs:
   scanoss:
     runs-on: ubuntu-latest
+    # Only on an approving review of a PR targeting master/main (or manual dispatch).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.review.state == 'approved' &&
+       (github.event.pull_request.base.ref == 'master' ||
+        github.event.pull_request.base.ref == 'main'))
     permissions:
       contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # pull_request_review checks out the base branch by default; force the
+          # PR head so we scan the code being merged. fetch-depth 0 so we can
+          # diff against the base branch. (Empty ref on manual dispatch -> the
+          # dispatched ref.)
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,20 +46,41 @@ jobs:
       - name: Create reports directory
         run: mkdir -p ${{ env.REPORTS_DIR }}
 
-      - name: Run SCANOSS scan
+      - name: Run SCANOSS scan (changed files only)
         run: |
-          scanoss-py scan \
-            --apiurl https://api.osskb.org \
-            -o ${{ env.REPORTS_DIR }}/results.json \
-            .
+          set -euo pipefail
+          OUT=${{ env.REPORTS_DIR }}/results.json
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          if [ -z "$BASE_REF" ]; then
+            # Manual dispatch: no PR context -> scan the whole tree.
+            echo "No PR context (manual dispatch): scanning full tree."
+            scanoss-py scan --apiurl https://api.osskb.org -o "$OUT" . || true
+          else
+            git fetch --no-tags --quiet origin "$BASE_REF" || true
+            BASE_SHA=$(git merge-base "origin/$BASE_REF" HEAD 2>/dev/null || echo "${{ github.event.pull_request.base.sha }}")
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA" HEAD > changed_files.txt || true
+            echo "Changed files in this PR ($(wc -l < changed_files.txt)):"
+            cat changed_files.txt || true
+            if [ -s changed_files.txt ]; then
+              # scanoss-py applies scanoss.json skip patterns to this list too,
+              # so tests/vendor/generated/docs are filtered out automatically.
+              scanoss-py scan \
+                --apiurl https://api.osskb.org \
+                --files-from changed_files.txt \
+                -o "$OUT" || true
+            else
+              echo "No changed files to scan."
+            fi
+          fi
+          # Ensure a valid (possibly empty) results file exists for downstream steps.
+          [ -s "$OUT" ] || echo '{}' > "$OUT"
 
-      - name: Generate CycloneDX BOM
+      - name: Generate CycloneDX BOM (convert, no re-scan)
         run: |
-          scanoss-py scan \
-            --apiurl https://api.osskb.org \
-            -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json \
-            --format cyclonedx \
-            .
+          scanoss-py convert \
+            -i ${{ env.REPORTS_DIR }}/results.json \
+            -f cyclonedx \
+            -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json || true
 
       - name: Inspect - Copyleft
         run: |

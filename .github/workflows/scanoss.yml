@@ -1,13 +1,17 @@
 name: "SCANOSS License & BOM Check"
 
-# Runs only when a PR is APPROVED — i.e. after review and all other checks are
-# green — so the scan happens once, last, right before merge. Scans only the
-# files the PR changed (not the whole tree). Both choices minimize osskb quota
-# (limits are per-file: 5000/day, 7500/week, 15000/month).
+# Runs AFTER merge (a push to the default branch) over ONLY the merged delta,
+# purely informational — it never blocks. Surfaces a file->license table (match
+# %, and a "potentially problematic" flag for copyleft / non-commercial /
+# non-permissive licenses) plus remaining osskb quota into the run Summary.
 on:
-  pull_request_review:
-    types: [submitted]
+  push:
+    branches: ["master", "main"]
   workflow_dispatch:
+
+concurrency:
+  group: scanoss-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REPORTS_DIR: scanoss-reports
@@ -15,12 +19,6 @@ env:
 jobs:
   scanoss:
     runs-on: ubuntu-latest
-    # Only on an approving review of a PR targeting master/main (or manual dispatch).
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.review.state == 'approved' &&
-       (github.event.pull_request.base.ref == 'master' ||
-        github.event.pull_request.base.ref == 'main'))
     permissions:
       contents: read
 
@@ -28,11 +26,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # pull_request_review checks out the base branch by default; force the
-          # PR head so we scan the code being merged. fetch-depth 0 so we can
-          # diff against the base branch. (Empty ref on manual dispatch -> the
-          # dispatched ref.)
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -46,111 +39,163 @@ jobs:
       - name: Create reports directory
         run: mkdir -p ${{ env.REPORTS_DIR }}
 
-      - name: Run SCANOSS scan (changed files only)
+      - name: Scan merged delta
+        env:
+          SCANOSS_API_KEY: ${{ secrets.SCANOSS_API_KEY }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           OUT=${{ env.REPORTS_DIR }}/results.json
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
-          if [ -z "$BASE_REF" ]; then
-            # Manual dispatch: no PR context -> scan the whole tree.
-            echo "No PR context (manual dispatch): scanning full tree."
-            scanoss-py scan --apiurl https://api.osskb.org -o "$OUT" . || true
-          else
-            git fetch --no-tags --quiet origin "$BASE_REF" || true
-            BASE_SHA=$(git merge-base "origin/$BASE_REF" HEAD 2>/dev/null || echo "${{ github.event.pull_request.base.sha }}")
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA" HEAD > changed_files.txt || true
-            echo "Changed files in this PR ($(wc -l < changed_files.txt)):"
-            cat changed_files.txt || true
-            if [ -s changed_files.txt ]; then
-              # scanoss-py applies scanoss.json skip patterns to this list too,
-              # so tests/vendor/generated/docs are filtered out automatically.
-              scanoss-py scan \
-                --apiurl https://api.osskb.org \
-                --files-from changed_files.txt \
-                -o "$OUT" || true
-            else
-              echo "No changed files to scan."
-            fi
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          # Always scan a DELTA, never the whole tree.
+          if [ -z "$BEFORE" ] || ! git rev-parse -q --verify "$BEFORE^{commit}" >/dev/null 2>&1; then
+            BEFORE=$(git rev-parse -q --verify "$AFTER~1" 2>/dev/null || echo "$AFTER")
           fi
-          # Ensure a valid (possibly empty) results file exists for downstream steps.
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "No parent commit to diff against; nothing to scan."
+            : > changed_files.txt
+          else
+            git diff --name-only --diff-filter=ACMR "$BEFORE" "$AFTER" > changed_files.txt
+          fi
+          echo "Merged delta ($(wc -l < changed_files.txt) file(s), before scanoss.json skip filters):"
+          cat changed_files.txt || true
+          SCAN_RC=0
+          if [ -s changed_files.txt ]; then
+            KEY_ARG=()
+            [ -n "${SCANOSS_API_KEY:-}" ] && KEY_ARG=(--key "${SCANOSS_API_KEY}")
+            scanoss-py scan "${KEY_ARG[@]}" \
+              --apiurl https://api.osskb.org \
+              --files-from changed_files.txt \
+              -o "$OUT" || SCAN_RC=$?
+          else
+            echo "No changed files to scan (delta empty or all filtered)."
+          fi
           [ -s "$OUT" ] || echo '{}' > "$OUT"
+          echo "SCAN_RC=$SCAN_RC" >> "$GITHUB_ENV"
 
       - name: Generate CycloneDX BOM (convert, no re-scan)
+        continue-on-error: true
         run: |
-          scanoss-py convert \
-            -i ${{ env.REPORTS_DIR }}/results.json \
-            -f cyclonedx \
-            -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json || true
+          scanoss-py convert -i ${{ env.REPORTS_DIR }}/results.json -f cyclonedx -o ${{ env.REPORTS_DIR }}/bom_cyclonedx.json
 
       - name: Inspect - Copyleft
+        continue-on-error: true
         run: |
-          scanoss-py inspect raw copyleft \
-            -i ${{ env.REPORTS_DIR }}/results.json \
-            -f md \
-            -o ${{ env.REPORTS_DIR }}/copyleft.md \
-            -s ${{ env.REPORTS_DIR }}/copyleft_status.md
-
-      - name: Inspect - License Summary
-        run: |
-          scanoss-py inspect raw license-summary \
-            -i ${{ env.REPORTS_DIR }}/results.json \
-            -o ${{ env.REPORTS_DIR }}/license_summary.md
-
-      - name: Inspect - Component Summary
-        run: |
-          scanoss-py inspect raw component-summary \
-            -i ${{ env.REPORTS_DIR }}/results.json \
-            -o ${{ env.REPORTS_DIR }}/component_summary.md
+          scanoss-py inspect raw copyleft -i ${{ env.REPORTS_DIR }}/results.json -f md -o ${{ env.REPORTS_DIR }}/copyleft.md -s ${{ env.REPORTS_DIR }}/copyleft_status.md
 
       - name: Inspect - Undeclared Components
+        continue-on-error: true
         run: |
-          scanoss-py inspect raw undeclared \
-            -i ${{ env.REPORTS_DIR }}/results.json \
-            -f md \
-            -o ${{ env.REPORTS_DIR }}/undeclared.md \
-            -s ${{ env.REPORTS_DIR }}/undeclared_status.md
+          scanoss-py inspect raw undeclared -i ${{ env.REPORTS_DIR }}/results.json -f md -o ${{ env.REPORTS_DIR }}/undeclared.md -s ${{ env.REPORTS_DIR }}/undeclared_status.md
 
-      - name: Check for non-allowed licenses
+      - name: Build report (quota + file/license table)
+        if: always()
+        env:
+          SCANOSS_API_KEY: ${{ secrets.SCANOSS_API_KEY }}
         run: |
-          python3 - <<'PYEOF'
-          import json, re, sys
-          from collections import defaultdict
+          python3 - <<'PY'
+          import json, os, uuid
 
-          ALLOWED = {'MIT', 'Apache-2.0', 'BSD-3-Clause'}
+          R = os.environ.get("REPORTS_DIR", "scanoss-reports")
+          out = []
+          def w(s=""): out.append(s)
 
-          def spdx_tokens(expr):
-              return set(re.split(r'\s+(?:OR|AND|WITH)\s+|\(|\)', expr)) - {''}
+          # ---- license risk classification ----
+          PERMISSIVE = {
+              "mit", "mit-0", "apache-2.0", "bsd-2-clause", "bsd-3-clause", "isc", "0bsd",
+              "zlib", "cc0-1.0", "unlicense", "bsl-1.0", "x11", "ncsa", "python-2.0",
+              "postgresql", "cc-by-4.0", "cc-by-3.0", "ofl-1.1",
+          }
+          COPYLEFT = ("gpl", "agpl", "lgpl", "mpl", "epl", "cddl", "osl", "eupl",
+                      "cecill", "gfdl", "cc-by-sa", "sleepycat", "ms-rl")
 
-          with open('${{ env.REPORTS_DIR }}/results.json') as f:
-              data = json.load(f)
+          def risk(name, copyleft_flag=None):
+              """Return a short risk reason for a single license, or None if clear."""
+              n = (name or "").strip().rstrip(".").lower()
+              if not n:
+                  return None
+              if "cc-by-nc" in n or "noncommercial" in n:
+                  return "non-commercial"
+              if copyleft_flag in ("yes", True, "true") or any(c in n for c in COPYLEFT):
+                  return "copyleft"
+              if n in PERMISSIVE:
+                  return None
+              return "review"   # not clearly permissive — worth a look
 
-          violations = defaultdict(set)
-          for file_path, matches in data.items():
-              for match in matches:
-                  for lic in match.get('licenses', []):
-                      name = lic.get('name', '')
-                      if name and not spdx_tokens(name).issubset(ALLOWED):
-                          violations[name].add(file_path)
+          w("## SCANOSS — merged-delta report")
+          w()
+          w(f"Commit `{os.environ.get('GITHUB_SHA','')[:12]}` on `{os.environ.get('GITHUB_REF_NAME','')}`")
+          w()
 
-          if violations:
-              print("::error::Non-allowed licenses found:")
-              for lic, files in sorted(violations.items()):
-                  print(f"  {lic}: {len(files)} file(s)")
-                  for f in sorted(files)[:5]:
-                      print(f"    - {f}")
-              sys.exit(1)
+          # ---- current file-scan quota (per-key X-Ratelimit-* headers; needs the key) ----
+          key = os.environ.get("SCANOSS_API_KEY", "")
+          if key:
+              try:
+                  import requests
+                  from scanoss.winnowing import Winnowing
+                  wfp = Winnowing().wfp_for_contents("scanoss.json", False, open("scanoss.json", "rb").read())
+                  rid = str(uuid.uuid4())
+                  r = requests.post(
+                      "https://api.osskb.org/scan/direct",
+                      files={"file": (rid + ".wfp", wfp)},
+                      headers={"x-api-key": key, "X-Session": key, "User-Agent": "scanoss-ci-quota"},
+                      timeout=30,
+                  )
+                  h = r.headers
+                  w("### File-scan quota remaining (per key, as of this run)")
+                  w()
+                  w("| Window | Remaining | Limit |")
+                  w("|---|---|---|")
+                  for win in ("Daily", "Weekly", "Monthly"):
+                      w(f"| {win} | {h.get('X-Ratelimit-Remaining-' + win, '?')} | {h.get('X-Ratelimit-Limit-' + win, '?')} |")
+                  w()
+              except Exception as e:
+                  w(f"_Quota probe failed: {e}_")
+                  w()
           else:
-              print("License check passed — all licenses within MIT, Apache-2.0, BSD-3-Clause")
-          PYEOF
+              w("_Quota not shown — set the `SCANOSS_API_KEY` repo secret to enable per-key quota reporting._")
+              w()
 
-      - name: Check for copyleft
-        run: |
-          STATUS=$(cat ${{ env.REPORTS_DIR }}/copyleft_status.md)
-          echo "$STATUS"
-          if echo "$STATUS" | grep -qv "^0 "; then
-            echo "::error::Copyleft licenses detected"
-            exit 1
-          fi
+          # ---- file -> component / match% / license / risk table ----
+          try:
+              data = json.load(open(f"{R}/results.json"))
+          except Exception:
+              data = {}
+
+          rows = []
+          flagged = 0
+          for fpath, matches in data.items():
+              for m in matches:
+                  if m.get("id") == "none":      # scanned but no match
+                      continue
+                  purls = m.get("purl") or []
+                  comp = purls[0] if purls else ""
+                  pct = m.get("matched", "") or ""
+                  lic_objs = m.get("licenses") or []
+                  lics = sorted({l.get("name", "") for l in lic_objs if l.get("name")})
+                  reasons = sorted({r for l in lic_objs for r in [risk(l.get("name"), l.get("copyleft"))] if r})
+                  flag = "⚠️ " + ", ".join(reasons) if reasons else "—"
+                  if reasons:
+                      flagged += 1
+                  rows.append((fpath, comp, pct, ", ".join(lics) or "—", flag))
+
+          w("### Detected components (file → license)")
+          w()
+          if flagged:
+              w(f"⚠️ **{flagged} of {len(rows)}** matched component(s) use potentially problematic licenses "
+                f"(copyleft / non-commercial / non-permissive) — see the **Potentially problematic** column.")
+              w()
+          w("| File | Component | Match | License(s) | Potentially problematic |")
+          w("|---|---|---|---|---|")
+          for fpath, comp, pct, lics, flag in rows:
+              w(f"| `{fpath}` | {comp} | {pct} | {lics} | {flag} |")
+          if not rows:
+              w("| _no components detected in this delta_ | | | | |")
+          w()
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(out) + "\n")
+          PY
 
       - name: Upload reports
         if: always()

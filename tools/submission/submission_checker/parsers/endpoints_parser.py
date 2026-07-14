@@ -24,7 +24,9 @@ _SAMPLE_LOGS_DIR = os.path.join(
     "sample_logs")
 
 _RESULT_SUMMARY_FILE = "results_summary.json"
-_RESULTS_FILE = "results.json"
+_ACCURACY_RESULTS_FILE = "accuracy_results.json"
+_PERF_SUBDIR = os.path.join("performance", "run_1")
+_ACC_SUBDIR = "accuracy"
 _CONFIG_FILES = ("config.yaml", "config.yml")
 
 
@@ -94,22 +96,23 @@ def _resolve_value(stripped, summary_data, results_data, yaml_data):
 
 
 class EndpointsParser(BaseParser):
-    def __init__(self, run_dir):
+    def __init__(self, scenario_dir):
         """
-        run_dir: path to the run directory containing:
-          - result_summary.json  (highest priority)
-          - results.json
-          - config.yaml / config.yml  (lowest priority)
+        scenario_dir: path to the scenario directory containing:
+          - config.yaml                              (scenario root)
+          - performance/run_1/results_summary.json   (performance metrics)
+          - accuracy/accuracy_results.json           (accuracy metrics)
         """
-        super().__init__(run_dir)
+        super().__init__(scenario_dir)
 
         self.logger = logging.getLogger("MLPerfLog")
         self.messages = {}
 
         summary_data = self._load_json(
-            os.path.join(run_dir, _RESULT_SUMMARY_FILE))
-        results_data = self._load_json(os.path.join(run_dir, _RESULTS_FILE))
-        yaml_data = self._load_yaml(run_dir)
+            os.path.join(scenario_dir, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
+        results_data = self._load_json(
+            os.path.join(scenario_dir, _ACC_SUBDIR, _ACCURACY_RESULTS_FILE))
+        yaml_data = self._load_yaml(scenario_dir)
 
         for endpoints_key, loadgen_key in ENDPOINTS_MAPPINGS.items():
             stripped = endpoints_key.strip()
@@ -153,7 +156,9 @@ class EndpointsParser(BaseParser):
                 )
 
         self.keys = set(self.messages.keys())
-        self.logger.info("Successfully loaded endpoints log from %s.", run_dir)
+        self.logger.info(
+            "Successfully loaded endpoints log from %s.",
+            scenario_dir)
 
     def _load_json(self, path):
         try:
@@ -162,7 +167,6 @@ class EndpointsParser(BaseParser):
         except BaseException:
             self.logger.error("Could not load json file from %s", path)
             return {}
-        return {}
 
     def _load_yaml(self, run_dir):
         for name in _CONFIG_FILES:
@@ -212,18 +216,20 @@ def main():
 
     backwards_map = _load_field_map("backwards.json")
 
-    # Collect all run directories (those containing at least one JSON and one
-    # YAML)
+    # Collect scenario-level directories (those containing config.yaml and
+    # the performance/run_1 subdirectory with results_summary.json)
     run_dirs = []
-    for root, _dirs, files in os.walk(_SAMPLE_LOGS_DIR):
-        has_json = any(f.endswith(".json") for f in files)
-        has_yaml = any(f.endswith(".yaml") or f.endswith(".yml")
-                       for f in files)
-        if has_json and has_yaml:
+    for root, dirs, files in os.walk(_SAMPLE_LOGS_DIR):
+        has_yaml = any(f in _CONFIG_FILES for f in files)
+        has_perf = os.path.exists(
+            os.path.join(root, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
+        if has_yaml and has_perf:
             run_dirs.append(root)
 
     if not run_dirs:
-        logger.error("No run directories found under %s.", _SAMPLE_LOGS_DIR)
+        logger.error(
+            "No scenario directories found under %s.",
+            _SAMPLE_LOGS_DIR)
         return 1
 
     for run_dir in sorted(run_dirs):

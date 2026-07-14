@@ -86,12 +86,9 @@ class Loader:
         self.acc_json_path = os.path.join(
             self.root, ACCURACY_JSON_PATH.get(
                 version, ACCURACY_JSON_PATH["default"]))
-        self.perf_endpoints_dir = os.path.join(
-            self.root, PERFORMANCE_ENDPOINTS_DIR.get(
-                version, PERFORMANCE_ENDPOINTS_DIR["default"]))
-        self.acc_endpoints_dir = os.path.join(
-            self.root, ACCURACY_ENDPOINTS_DIR.get(
-                version, ACCURACY_ENDPOINTS_DIR["default"]))
+        self.endpoints_scenario_dir = os.path.join(
+            self.root, ENDPOINTS_SCENARIO_DIR.get(
+                version, ENDPOINTS_SCENARIO_DIR["default"]))
         self.system_log_path = os.path.join(
             self.root, SYSTEM_PATH.get(
                 version, SYSTEM_PATH["default"]))
@@ -234,21 +231,15 @@ class Loader:
                 path)
         return log
 
-    def load_endpoints_logs(self, perf_dir, acc_dir):
-        perf_log = None
-        acc_log = None
-        if os.path.exists(acc_dir) and os.path.exists(perf_dir):
-            acc_log = EndpointsParser(acc_dir)
-            perf_log = EndpointsParser(perf_dir)
-        elif os.path.exists(perf_dir):
-            acc_log = EndpointsParser(perf_dir)
-            perf_log = EndpointsParser(perf_dir)
-        else:
-            self.logger.info(
-                "Could not load endpoints log from %s, path does not exist",
-                perf_dir
-            )
-        return perf_log, acc_log
+    def load_endpoints_logs(self, scenario_dir):
+        if os.path.exists(scenario_dir):
+            parser = EndpointsParser(scenario_dir)
+            return parser, parser
+        self.logger.info(
+            "Could not load endpoints log from %s, path does not exist",
+            scenario_dir
+        )
+        return None, None
 
     def check_scenarios(self, benchmark, model_mapping,
                         system_type, scenarios):
@@ -362,13 +353,7 @@ class Loader:
                                 system=system,
                                 benchmark=benchmark,
                                 scenario=scenario)
-                            perf_endpoints_dir = self.perf_endpoints_dir.format(
-                                division=division,
-                                submitter=submitter,
-                                system=system,
-                                benchmark=benchmark,
-                                scenario=scenario)
-                            acc_endpoints_dir = self.acc_endpoints_dir.format(
+                            endpoints_scenario_dir = self.endpoints_scenario_dir.format(
                                 division=division,
                                 submitter=submitter,
                                 system=system,
@@ -483,7 +468,7 @@ class Loader:
                             if perf_log is None and acc_log is None:
                                 is_endpoints_submission = True
                                 perf_log, acc_log = self.load_endpoints_logs(
-                                    perf_endpoints_dir, acc_endpoints_dir
+                                    endpoints_scenario_dir
                                 )
 
                             # Load test logs

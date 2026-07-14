@@ -65,7 +65,7 @@ The following diagram describes the standard submission structure.
 
 ## Endpoints submission structure
 
-For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. You can provide a performance+accuracy run in the performance folder or one performance run and one accuracy run
+For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. The `config.yaml` is placed at the scenario root, `results_summary.json` contains performance metrics, and `accuracy_results.json` contains accuracy metrics.
 
 ```
 ...
@@ -77,15 +77,12 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   ├── <system_desc_id_1>
 │   │   │   │   ├── <benchmark_name>
 │   │   │   │   │   ├── <scenario>
-│   │   │   │   │   │   ├── accuracy (optional)
-│   │   │   │   │   │   │   ├── config.yaml
-│   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   └── results_summary.json
+│   │   │   │   │   │   ├── config.yaml
+│   │   │   │   │   │   ├── accuracy
+│   │   │   │   │   │   │   └── accuracy_results.json
 │   │   │   │   │   │   ├── performance
-│   │   │   │   │   │   │   ├── run_1
-│   │   │   │   │   │   │   │   ├── config.yaml
-│   │   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   │   └── results_summary.json
+│   │   │   │   │   │   │   └── run_1
+│   │   │   │   │   │   │       └── results_summary.json
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   └── accuracy.txt

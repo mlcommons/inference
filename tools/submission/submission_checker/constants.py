@@ -2040,7 +2040,16 @@ PERFORMANCE_ENDPOINTS_DIR = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+}
+
+ENDPOINTS_SCENARIO_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
 }
 
 ACCURACY_LOG_PATH = {
@@ -2071,6 +2080,7 @@ ACCURACY_ENDPOINTS_DIR = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
 }
 

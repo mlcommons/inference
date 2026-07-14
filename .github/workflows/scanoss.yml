@@ -64,6 +64,7 @@ jobs:
             KEY_ARG=()
             [ -n "${SCANOSS_API_KEY:-}" ] && KEY_ARG=(--key "${SCANOSS_API_KEY}")
             scanoss-py scan "${KEY_ARG[@]}" \
+              --settings .github/scanoss.json \
               --apiurl https://api.osskb.org \
               --files-from changed_files.txt \
               -o "$OUT" || SCAN_RC=$?
@@ -133,7 +134,7 @@ jobs:
               try:
                   import requests
                   from scanoss.winnowing import Winnowing
-                  wfp = Winnowing().wfp_for_contents("scanoss.json", False, open("scanoss.json", "rb").read())
+                  wfp = Winnowing().wfp_for_contents(".github/scanoss.json", False, open(".github/scanoss.json", "rb").read())
                   rid = str(uuid.uuid4())
                   r = requests.post(
                       "https://api.osskb.org/scan/direct",

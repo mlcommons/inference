@@ -128,6 +128,90 @@ def contains_list(l1, l2):
     return missing, len(missing) == 0
 
 
+def get_performance_metric(
+        config, model, path, scenario_fixed):
+    # Assumes new logging format
+    version = config.version
+
+    fname = os.path.join(path, "mlperf_log_detail.txt")
+    mlperf_log = LoadgenParser(fname)
+    if (
+        "result_validity" in mlperf_log.get_keys()
+        and mlperf_log["result_validity"] == "VALID"
+    ):
+        is_valid = True
+    scenario = mlperf_log["effective_scenario"]
+
+    res = float(mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+    if (
+        version in RESULT_FIELD_BENCHMARK_OVERWRITE
+        and model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+        and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]
+    ):
+        res = float(
+            mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+                       [model][scenario]]
+        )
+
+    inferred = False
+    if scenario_fixed != scenario:
+        inferred, res, _ = get_inferred_result(
+            scenario_fixed, scenario, res, mlperf_log, config, False
+        )
+
+    return res
+
+
+def get_inferred_result(
+    scenario_fixed, scenario, res, mlperf_log, config, log_error=False
+):
+
+    inferred = False
+    is_valid = True
+    # Check if current scenario (and version) uses early stopping
+    uses_early_stopping = config.uses_early_stopping(scenario)
+
+    latency_mean = mlperf_log["result_mean_latency_ns"]
+    if scenario in ["MultiStream"]:
+        latency_99_percentile = mlperf_log[
+            "result_99.00_percentile_per_query_latency_ns"
+        ]
+        latency_mean = mlperf_log["result_mean_query_latency_ns"]
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    if scenario == "SingleStream":
+        # qps_wo_loadgen_overhead is only used for inferring Offline from
+        # SingleStream; only for old submissions
+        qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
+
+    # special case for results inferred from different scenario
+    if scenario_fixed in ["Offline"] and scenario in ["SingleStream"]:
+        inferred = True
+        res = qps_wo_loadgen_overhead
+
+    if (scenario_fixed in ["Offline"]) and scenario in ["MultiStream"]:
+        inferred = True
+        res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
+
+    if (scenario_fixed in ["MultiStream"]) and scenario in ["SingleStream"]:
+        inferred = True
+        # samples_per_query does not match with the one reported in the logs
+        # when inferring MultiStream from SingleStream
+        samples_per_query = 8
+        if uses_early_stopping:
+            early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
+            if early_stopping_latency_ms == 0 and log_error:
+                log.error(
+                    "Not enough samples were processed for early stopping to make an estimate"
+                )
+                is_valid = False
+            res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
+        else:
+            res = (latency_99_percentile * samples_per_query) / MS_TO_NS
+    if (scenario_fixed in ["Interactive"]) and scenario not in ["Server"]:
+        is_valid = False
+    return inferred, res, is_valid
+
+
 def check_compliance_perf_dir(test_dir):
     is_valid = False
     import logging

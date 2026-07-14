@@ -60,8 +60,8 @@ export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
 export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
 
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-gpt-oss-20b-mxfp4}
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"

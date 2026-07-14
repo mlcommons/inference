@@ -58,8 +58,8 @@ export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/
 export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
 
 # Judge LLM configuration (for accuracy evaluation)
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-gpt-oss-20b-mxfp4}
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8193/v1/chat/completions}
+export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 echo "  LLM Service URL: ${LLM_SERVICE_URL}"
 echo "  Judge Service URL: ${JUDGE_SERVICE_URL}"

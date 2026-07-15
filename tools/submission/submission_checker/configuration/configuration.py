@@ -20,6 +20,7 @@ class Config:
         skip_calibration_check=False,
         skip_dataset_size_check=False,
         submitter=None,
+        private_ids=False,
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -38,6 +39,7 @@ class Config:
         self.skip_all_systems_have_results_check = skip_all_systems_have_results_check
         self.skip_calibration_check = skip_calibration_check
         self.skip_dataset_size_check = skip_dataset_size_check
+        self.private_ids = private_ids
         self.load_config(version)
 
     def load_config(self, version):

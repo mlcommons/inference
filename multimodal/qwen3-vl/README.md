@@ -1,3 +1,178 @@
+# Reference Implementation for the Qwen3-VL (Q3VL) Benchmark
+
+For the MLPerf Inference v6.1 round, benchmarking uses a decoupled load generator client ([endpoints](https://github.com/mlcommons/endpoints#)), a model server (for example, [vLLM](https://github.com/vllm-project/vllm)), and the dataset/configuration described below.
+
+## Quick Start
+
+### Start the model server
+
+The model server can run in its own environment. Using vLLM as example, start vLLM as you would for any standard OpenAI-compatible deployment:
+
+```bash
+export MODEL_NAME=Qwen/Qwen3-VL-235B-A22B-Instruct
+export HF_TOKEN=<your Hugging Face token>  # Optional for public models
+export HF_HOME=<path to Hugging Face cache, e.g. ~/.cache/huggingface>
+
+docker run --runtime nvidia --gpus all \
+  -p 8000:8000 \
+  --ipc=host \
+  --env "HUGGING_FACE_HUB_TOKEN=$HF_TOKEN" \
+  -v ${HF_HOME}:/root/.cache/huggingface \
+  vllm/vllm-openai:latest \
+  --model ${MODEL_NAME} \
+  --tensor-parallel-size 4 \
+  --max-model-len=32768 \
+  --async-scheduling \
+  --limit-mm-per-prompt.video 0 \
+  --no-enable-prefix-caching  ## Must have this flag as the rule forbids prefix caching
+```
+
+### Set up endpoints
+
+After the server is ready to listen for requests, clone [endpoints](https://github.com/mlcommons/endpoints#) on the same node—or on any host that can reach the server over HTTP. Follow the [endpoints quick start](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e#quick-start) and install with either **uv**:
+
+```bash
+git clone https://github.com/mlcommons/endpoints.git
+cd endpoints
+uv sync
+```
+
+or **pip** in a virtual environment:
+
+```bash
+python3.12 -m venv venv && source venv/bin/activate
+pip install .
+```
+
+### Configure the benchmark
+
+Example configs live under [endpoints/examples/08_Qwen3-VL-235B-A22B_Example](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e/examples/08_Qwen3-VL-235B-A22B_Example). 
+
+#### Fields that the submitter **should** update to match their server status:
+
+- Served model name (to match the actual, probably quantized, model checkpoint):
+
+```yaml
+model_params:
+  name: "Qwen/Qwen3-VL-235B-A22B-Instruct"
+```
+
+- The URL and port number of the endpoint:
+
+```yaml
+endpoint_config:
+  endpoints:
+    - "http://localhost:8000"
+```
+
+#### Fields that the submitter **may** customize for performance tuning:
+
+- Target QPS (for the server and interactive scenarios):
+
+
+- Client worker related settings:
+
+```yaml
+client:
+    num_workers: 5
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+    max_connections: 1000
+    worker_initialization_timeout: 120
+```
+
+#### Fileds that the submitter **MUST NOT** change for valid results:
+
+- Sampling parameters specified in the section [Reference Implementation Specification](#reference-implementation-specification)
+
+- Datasets (neither for performance evaluation nor for accuracy evaluation)
+
+### Run the benchmark
+
+Launch the offline scenario:
+
+```bash
+uv run inference-endpoint benchmark from-config \
+  -c examples/08_Qwen3-VL-235B-A22B_Example/offline_qwen3_vl_235b_a22b_shopify.yaml
+```
+
+Launch the server scenario:
+
+```bash
+uv run inference-endpoint benchmark from-config \
+  -c examples/08_Qwen3-VL-235B-A22B_Example/server_qwen3_vl_235b_a22b_shopify.yaml
+```
+
+Launch the interactive scenario:
+
+```bash
+uv run inference-endpoint benchmark from-config \
+  -c examples/08_Qwen3-VL-235B-A22B_Example/interactive_qwen3_vl_235b_a22b_shopify_8k.yaml
+```
+
+## Compliance Test
+
+Each example benchmark config includes an accuracy test that queries the same server backend. You do not need a separate accuracy-mode run. Reported accuracy must meet the minimum thresholds in [Reference Implementation Specification](#reference-implementation-specification) below.
+
+## Reference Implementation Specification
+
+### v6.1 round
+
+- **vLLM version:** [a65093c](https://github.com/vllm-project/vllm/tree/a65093c1a39a8ddd8455365128ecbe259350e22c)
+- **endpoints version:** [381d13bbd27d6d52306813a51dc4e44295222d7e](https://github.com/mlcommons/endpoints/tree/381d13bbd27d6d52306813a51dc4e44295222d7e)
+- **Model:**
+  - [Qwen/Qwen3-VL-235B-A22B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct)
+  - Commit SHA: [710c13861be6c466e66de3f484069440b8f31389](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct/tree/710c13861be6c466e66de3f484069440b8f31389)
+- **Dataset:**
+  - **Offline/Server scenario:**
+    - [Shopify/product-catalogue](https://huggingface.co/datasets/Shopify/product-catalogue)
+    - Commit SHA: [d5c517c509f5aca99053897ef1de797d6d7e5aa5](https://huggingface.co/datasets/Shopify/product-catalogue/tree/d5c517c509f5aca99053897ef1de797d6d7e5aa5)
+    - Both the `train` and `test` splits are used, concatenated in that order.
+    - Total number of samples: `48289`.
+  - **Interactive scenario:**
+    - [nvidia/Shopify-product-catalogue-8k](https://huggingface.co/datasets/nvidia/Shopify-product-catalogue-8k)
+    - Commit SHA: [2bc8c6c4b6ebd27b880b0cba519cb45d09867045](https://huggingface.co/datasets/nvidia/Shopify-product-catalogue-8k/commit/2bc8c6c4b6ebd27b880b0cba519cb45d09867045)
+    - Total number of samples: `8000`.
+- **Guided decoding:** not used.
+- **Sampling parameters:**
+  - Frequency penalty: `None` (mathematically equivalent to `0.0`).
+  - Presence penalty: `None` (mathematically equivalent to `0.0`).
+  - Temperature: `None` (mathematically equivalent to `1.0`).
+  - Top-P: `None` (mathematically equivalent to `1.0`).
+  - Top-K: `None` (mathematically equivalent to `0`).
+  - Min-P: `None` (mathematically equivalent to `0.0`).
+  - Repetition penalty: `None` (mathematically equivalent to `1.0`).
+- **Constraints:**
+  - **Model quality:**
+    - **Offline/Server scenario:**
+      - Category Hierarchical F1 score ≥ `0.7824`. This is the 99% recovery of `0.7903037`, the mean category hierarchical F1 score across 10 runs on [the BF16 version of the model](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct). The standard deviation across those 10 runs is `0.0002250412555`.
+    - **Interactive scenario:**
+      - Category Hierarchical F1 score ≥ `0.7799`. This is the 99% recovery of `0.7878`, the mean category hierarchical F1 score across 5 runs on [the BF16 version of the model](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct). The standard deviation across those 5 runs is `0.000535724`.
+  - **Server scenario:**
+    - Target latency is the constraint (not Time to First Token (TTFT) or Time per Output Token (TPOT)).
+    - Target latency percentile: `0.99`.
+    - Target latency ≤ 12 seconds.
+    - Performance sample count: `48289`.
+  - **Offline scenario:**
+    - Number of samples in the query ≥ `48289` (every sample in the dataset is sent to the VLM endpoint at least once).
+    - Performance sample count: `48289`.
+  - **Interactive scenario:**
+    - Target latency is the constraint (not TTFT or TPOT).
+    - Target latency percentile: `0.99`.
+    - Target latency ≤ 1.5 seconds.
+    - Performance sample count: `8000`.
+  - Testing duration ≥ 10 minutes.
+  - Sample concatenation permutation is enabled.
+  - You must explicitly set `--no-enable-prefix-caching` for vLLM.
+  - Image inputs MUST NOT be compressed, resized, downsampled, cropped, re-encoded, or otherwise modified to alter the model's visual-token count or computational load. This includes setting vLLM multimodal processor overrides such as `--mm-processor-kwargs '{"max_pixels": ...}'`, or any equivalent pixel-budget, resolution-limit, or image-token-limit configuration. Submissions must use the dataset images as provided, subject only to reference-specified preprocessing.
+
+
+> [!CAUTION]
+> **MLPerf Inference v6.0 round only.**
+> The following sections and the Qwen3-VL reference implementation under `multimodal/qwen3-vl` were maintained for the **v6.0** submission round, and they are **deprecated** for the newer rounds. Please use the above documentation along with [mlcommons/endpoints](https://github.com/mlcommons/endpoints) for the newer rounds.
+
 # Reference Implementation for the Qwen3-VL (Q3VL) Benchmark 
 
 ## Automated command to run the benchmark via MLCFlow
@@ -19,6 +194,38 @@ mlcr get-ml-model-qwen3-vl,_mlc,_r2-downloader,_235b-a22b --outdirname=<Download
 ```
 mlcr get-dataset-mlperf-inference-shopify-catalogue,_mlc,_r2-downloader --outdirname=<path_to_download> -j
 ```
+
+## Calibration Dataset
+
+Submitters who reuse the performance-measurement dataset (`Shopify/product-catalogue`) for model calibration or quantization must use the 20 samples below. This number of samples follows the approach used in the [Qwen3-VL-MoE calibration example](https://github.com/vllm-project/llm-compressor/blob/main/examples/quantization_w4a4_fp4/qwen3_vl_moe_w4a4_fp4.py#L18) from [llm-compressor](https://github.com/vllm-project/llm-compressor).
+
+| Rank | Full HF index | Split | Split index | ISL | Product title |
+| ---: | ---: | :---: | ---: | ---: | :--- |
+| 0 | 20232 | train | 20232 | 809 | Financial Times USA 27 January, 2023 |
+| 1 | 21162 | train | 21162 | 1366 | Powertip PC1602ARS-H Alphanumeric LCD Display |
+| 2 | 33584 | train | 33584 | 1520 | Panini 2023 Football Donruss Optic H2 Hobby Box |
+| 3 | 46825 | test | 8194 | 1677 | October Edibles Cardinal |
+| 4 | 45190 | test | 6559 | 1946 | Glass Screen Protector for Nintendo Switch |
+| 5 | 46143 | test | 7512 | 2355 | Contact™ Nipple Shields |
+| 6 | 14189 | train | 14189 | 2436 | MV - GYO Bags - 1258 |
+| 7 | 16658 | train | 16658 | 2922 | Chic Suede Contrast PU Straight Leg Pants |
+| 8 | 26406 | train | 26406 | 3145 | Startveer passend op STIHL TS410/TS420 |
+| 9 | 9565 | train | 9565 | 3738 | 4 Pcs Massage Scratcher Telescoping Back Massager |
+| 10 | 33733 | train | 33733 | 4398 | The Carter Carbon Fiber Cigar Accessories Box |
+| 11 | 31057 | train | 31057 | 4518 | Histology glass knife strips |
+| 12 | 47465 | test | 8834 | 4876 | Unimom Forte Electronic Breast Pump |
+| 13 | 33503 | train | 33503 | 5409 | Tennis skort - Maternity & Postpartum |
+| 14 | 42293 | test | 3662 | 6778 | Cible d'Entraînement pour But de Football |
+| 15 | 7768 | train | 7768 | 6902 | Slipstop Puddle Jumper 3-6 jaar |
+| 16 | 1962 | train | 1962 | 9279 | Marks & Spencer - Wild Fruits - Gravy Boat |
+| 17 | 39746 | test | 1115 | 11008 | 58.5"-60" Aluminum Track Sliding Semi-Frameless Shower |
+| 18 | 13568 | train | 13568 | 16176 | kleankin Modern Bathroom Sink Cabinet |
+| 19 | 22527 | train | 22527 | 61566 | Baby Blues Healing by Donald P. |
+
+- **Full HF index**: row index in the concatenated `train+test` HuggingFace dataset.
+- **Split index**: row index within the named split.
+- **ISL**: input sequence length in tokens for the formatted benchmark prompt.
+
 
 ## Quick Start
 

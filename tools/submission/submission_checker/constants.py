@@ -2036,14 +2036,6 @@ ENDPOINTS_ALLOWED_MODELS = [
     "deepseek-r1"
 ]
 
-PERFORMANCE_ENDPOINTS_DIR = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-}
-
 ENDPOINTS_SCENARIO_DIR = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
@@ -2075,15 +2067,6 @@ ACCURACY_JSON_PATH = {
     "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
-
-ACCURACY_ENDPOINTS_DIR = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-}
-
 
 POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",

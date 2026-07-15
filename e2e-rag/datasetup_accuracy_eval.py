@@ -68,7 +68,8 @@ def parse_accuracy_log(log_path):
                     try:
                         qsl_idx = entry['qsl_idx']
 
-                        # Handle data field - can be hex string or list of bytes
+                        # Handle data field - can be hex string or list of
+                        # bytes
                         data_field = entry['data']
                         if isinstance(data_field, str):
                             # Hex string - convert to bytes
@@ -180,7 +181,8 @@ def validate_database(database_path, retriever_model):
             print(f"  ✗ Vector count: Cannot access vector store")
 
         # Check 2: Docstore consistency
-        if hasattr(db, '_vector_store') and hasattr(db._vector_store, 'index_to_docstore_id'):
+        if hasattr(db, '_vector_store') and hasattr(
+                db._vector_store, 'index_to_docstore_id'):
             docstore_count = len(db._vector_store.index_to_docstore_id)
             check_passed = (docstore_count == vector_count)
             validation_results["checks"].append({
@@ -194,7 +196,8 @@ def validate_database(database_path, retriever_model):
             if check_passed:
                 print(f"  ✓ Docstore consistency: {docstore_count} documents")
             else:
-                print(f"  ✗ Docstore consistency: {vector_count} vectors but {docstore_count} documents")
+                print(
+                    f"  ✗ Docstore consistency: {vector_count} vectors but {docstore_count} documents")
         else:
             validation_results["checks"].append({
                 "name": "docstore_consistency",
@@ -206,7 +209,8 @@ def validate_database(database_path, retriever_model):
             print(f"  ✗ Docstore consistency: Cannot access docstore")
 
         # Check 3: Index dimension
-        if hasattr(db, '_vector_store') and hasattr(db._vector_store.index, 'd'):
+        if hasattr(db, '_vector_store') and hasattr(
+                db._vector_store.index, 'd'):
             dimension = db._vector_store.index.d
             expected_dim = 768  # e5-base-v2
             check_passed = (dimension == expected_dim)
@@ -218,7 +222,8 @@ def validate_database(database_path, retriever_model):
                 "expected": expected_dim
             })
             # Don't fail on dimension mismatch, just warn
-            print(f"  {'✓' if check_passed else '⚠'} Index dimension: {dimension} (expected {expected_dim})")
+            print(
+                f"  {'✓' if check_passed else '⚠'} Index dimension: {dimension} (expected {expected_dim})")
         else:
             validation_results["checks"].append({
                 "name": "index_dimension",
@@ -241,7 +246,8 @@ def validate_database(database_path, retriever_model):
             })
             validation_results["passed"] &= check_passed
             if check_passed:
-                print(f"  ✓ Sample retrieval: Retrieved {len(results)} results")
+                print(
+                    f"  ✓ Sample retrieval: Retrieved {len(results)} results")
             else:
                 print(f"  ✗ Sample retrieval: No results returned")
         except Exception as e:
@@ -268,7 +274,8 @@ def validate_database(database_path, retriever_model):
     return validation_results
 
 
-def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
+def evaluate_accuracy(log_dir, output_dir, database_path,
+                      retriever_model=None):
     """
     Evaluate accuracy of datasetup workload.
 
@@ -281,9 +288,9 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
     Returns:
         dict: Accuracy results
     """
-    print("="*80)
+    print("=" * 80)
     print("RAG-DB Accuracy Evaluation")
-    print("="*80)
+    print("=" * 80)
     print(f"Started: {datetime.now().isoformat()}")
     print()
 
@@ -320,18 +327,21 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
             # MD5 hash (32 hex characters = 32 bytes when encoded)
             try:
                 md5_str = data.decode('utf-8')
-                if len(md5_str) == 32 and all(c in '0123456789abcdef' for c in md5_str):
+                if len(md5_str) == 32 and all(
+                        c in '0123456789abcdef' for c in md5_str):
                     md5_response = md5_str
                     md5_qsl_idx = qsl_idx
                     success_count += 1  # MD5 response counts as success
                 else:
-                    print(f"Warning: Invalid MD5 format at qsl_idx {qsl_idx}: {md5_str}")
+                    print(
+                        f"Warning: Invalid MD5 format at qsl_idx {qsl_idx}: {md5_str}")
                     failure_count += 1
             except UnicodeDecodeError:
                 print(f"Warning: Cannot decode response at qsl_idx {qsl_idx}")
                 failure_count += 1
         else:
-            print(f"Warning: Unexpected response length {len(data)} at qsl_idx {qsl_idx}")
+            print(
+                f"Warning: Unexpected response length {len(data)} at qsl_idx {qsl_idx}")
             failure_count += 1
 
     print(f"Response Summary:")
@@ -372,13 +382,14 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
     # Compare MD5s
     md5_match = (md5_response == actual_md5)
 
-    print("="*80)
+    print("=" * 80)
     print("Accuracy Results:")
-    print("="*80)
+    print("=" * 80)
     print(f"  Total files processed: {success_count + failure_count}")
     print(f"  Successful: {success_count}")
     print(f"  Failed: {failure_count}")
-    print(f"  Success rate: {100.0 * success_count / (success_count + failure_count):.2f}%")
+    print(
+        f"  Success rate: {100.0 * success_count / (success_count + failure_count):.2f}%")
     print()
     print(f"  MD5 returned: {md5_response}")
     print(f"  MD5 actual:   {actual_md5}")
@@ -390,12 +401,13 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
     # 1. At least 99% of files succeeded
     # 2. MD5 matches
     min_success_rate = 0.99
-    actual_success_rate = success_count / (success_count + failure_count) if (success_count + failure_count) > 0 else 0
+    actual_success_rate = success_count / \
+        (success_count + failure_count) if (success_count + failure_count) > 0 else 0
 
     passed = (actual_success_rate >= min_success_rate) and md5_match
 
     print(f"Overall: {'✅ PASSED' if passed else '❌ FAILED'}")
-    print("="*80)
+    print("=" * 80)
     print()
 
     # Save results
@@ -423,9 +435,9 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
     # Run database validation if retriever model provided
     validation_results = None
     if retriever_model and os.path.exists(database_path):
-        print("="*80)
+        print("=" * 80)
         print("Database Validation")
-        print("="*80)
+        print("=" * 80)
         print()
 
         validation_results = validate_database(database_path, retriever_model)
@@ -436,48 +448,54 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
         overall_passed = passed and validation_results["passed"]
         accuracy_results["passed"] = overall_passed
 
-        print("="*80)
+        print("=" * 80)
         print("Validation Summary:")
-        print("="*80)
+        print("=" * 80)
         for check in validation_results["checks"]:
-            status_symbol = "✓" if check["result"] == "PASS" else ("⚠" if check["result"] == "WARN" else "✗")
-            print(f"  {status_symbol} {check['description']}: {check['result']}")
+            status_symbol = "✓" if check["result"] == "PASS" else (
+                "⚠" if check["result"] == "WARN" else "✗")
+            print(
+                f"  {status_symbol} {check['description']}: {check['result']}")
         print()
-        print(f"Validation: {'✅ PASSED' if validation_results['passed'] else '❌ FAILED'}")
+        print(
+            f"Validation: {'✅ PASSED' if validation_results['passed'] else '❌ FAILED'}")
         print(f"Overall: {'✅ PASSED' if overall_passed else '❌ FAILED'}")
-        print("="*80)
+        print("=" * 80)
         print()
 
     # Write accuracy.txt in MLPerf format
     accuracy_txt_path = os.path.join(log_dir, "accuracy.txt")
     with open(accuracy_txt_path, 'w') as f:
-        f.write("="*80 + "\n")
+        f.write("=" * 80 + "\n")
         f.write("RAG-DB Accuracy Report\n")
-        f.write("="*80 + "\n")
+        f.write("=" * 80 + "\n")
         f.write(f"Timestamp: {datetime.now().isoformat()}\n")
         f.write(f"Database: {database_path}\n")
         f.write("\n")
 
         f.write("File Processing Results:\n")
-        f.write("-"*80 + "\n")
+        f.write("-" * 80 + "\n")
         f.write(f"Total files: {accuracy_results['total_files']}\n")
         f.write(f"Successful: {accuracy_results['successful_files']}\n")
         f.write(f"Failed: {accuracy_results['failed_files']}\n")
         f.write(f"Success rate: {accuracy_results['success_rate']*100:.2f}%\n")
-        f.write(f"Required rate: {accuracy_results['min_success_rate_required']*100:.2f}%\n")
-        f.write(f"Status: {'PASS' if actual_success_rate >= min_success_rate else 'FAIL'}\n")
+        f.write(
+            f"Required rate: {accuracy_results['min_success_rate_required']*100:.2f}%\n")
+        f.write(
+            f"Status: {'PASS' if actual_success_rate >= min_success_rate else 'FAIL'}\n")
         f.write("\n")
 
         f.write("MD5 Verification:\n")
-        f.write("-"*80 + "\n")
+        f.write("-" * 80 + "\n")
         f.write(f"MD5 returned by SUT: {accuracy_results['md5_response']}\n")
         f.write(f"MD5 actual (computed): {accuracy_results['md5_actual']}\n")
-        f.write(f"MD5 match: {'PASS' if accuracy_results['md5_match'] else 'FAIL'}\n")
+        f.write(
+            f"MD5 match: {'PASS' if accuracy_results['md5_match'] else 'FAIL'}\n")
         f.write("\n")
 
         if validation_results:
             f.write("Database Validation:\n")
-            f.write("-"*80 + "\n")
+            f.write("-" * 80 + "\n")
             for check in validation_results["checks"]:
                 f.write(f"  {check['name']}: {check['result']}\n")
                 f.write(f"    - {check['description']}\n")
@@ -485,12 +503,14 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
                     f.write(f"    - Value: {check['value']}\n")
                 if 'error' in check:
                     f.write(f"    - Error: {check['error']}\n")
-            f.write(f"Validation status: {'PASS' if validation_results['passed'] else 'FAIL'}\n")
+            f.write(
+                f"Validation status: {'PASS' if validation_results['passed'] else 'FAIL'}\n")
             f.write("\n")
 
-        f.write("="*80 + "\n")
-        f.write(f"Overall Result: {'PASS' if accuracy_results['passed'] else 'FAIL'}\n")
-        f.write("="*80 + "\n")
+        f.write("=" * 80 + "\n")
+        f.write(
+            f"Overall Result: {'PASS' if accuracy_results['passed'] else 'FAIL'}\n")
+        f.write("=" * 80 + "\n")
 
     print(f"Accuracy report saved to: {accuracy_txt_path}")
     print()
@@ -526,7 +546,11 @@ def main():
 
     args = parser.parse_args()
 
-    results = evaluate_accuracy(args.log_dir, args.output_dir, args.database, args.retriever_model)
+    results = evaluate_accuracy(
+        args.log_dir,
+        args.output_dir,
+        args.database,
+        args.retriever_model)
 
     # Exit with appropriate code
     if results.get("passed", False):

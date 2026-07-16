@@ -1,8 +1,8 @@
 [run]
-source = .
+# Coverage is scoped to the submission checker (the only code under test).
+# The CI step also passes --cov=submission_checker; keeping it here means a
+# bare `pytest --cov` / `coverage` run is scoped correctly too.
+source = submission_checker
 omit =
-    nev/*
-    tests/*
-    retired_benchmarks/*
     */site-packages/*
     */dist-packages/*

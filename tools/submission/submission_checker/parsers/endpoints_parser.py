@@ -23,9 +23,9 @@ _SAMPLE_LOGS_DIR = os.path.join(
     "helper",
     "sample_logs")
 
-_RESULT_SUMMARY_FILE = "results_summary.json"
+_RESULT_SUMMARY_FILE = "result_summary.json"
 _ACCURACY_RESULTS_FILE = "accuracy_results.json"
-_PERF_SUBDIR = os.path.join("performance", "run_1")
+_PERF_SUBDIR = "performance"
 _ACC_SUBDIR = "accuracy"
 _CONFIG_FILES = ("config.yaml", "config.yml")
 
@@ -100,7 +100,7 @@ class EndpointsParser(BaseParser):
         """
         scenario_dir: path to the scenario directory containing:
           - config.yaml                              (scenario root)
-          - performance/run_1/results_summary.json   (performance metrics)
+          - performance/result_summary.json         (performance metrics)
           - accuracy/accuracy_results.json           (accuracy metrics)
         """
         super().__init__(scenario_dir)
@@ -217,7 +217,7 @@ def main():
     backwards_map = _load_field_map("backwards.json")
 
     # Collect scenario-level directories (those containing config.yaml and
-    # the performance/run_1 subdirectory with results_summary.json)
+    # the performance subdirectory with result_summary.json)
     run_dirs = []
     for root, dirs, files in os.walk(_SAMPLE_LOGS_DIR):
         has_yaml = any(f in _CONFIG_FILES for f in files)

@@ -96,22 +96,30 @@ def _resolve_value(stripped, summary_data, results_data, yaml_data):
 
 
 class EndpointsParser(BaseParser):
-    def __init__(self, scenario_dir):
+    def __init__(self, scenario_dir, log_type="performance"):
         """
         scenario_dir: path to the scenario directory containing:
           - config.yaml                              (scenario root)
           - performance/result_summary.json         (performance metrics)
           - accuracy/accuracy_results.json           (accuracy metrics)
+        log_type: which log to parse from scenario_dir, either
+          "performance" (reads performance/result_summary.json) or
+          "accuracy" (reads accuracy/accuracy_results.json).
         """
         super().__init__(scenario_dir)
 
         self.logger = logging.getLogger("MLPerfLog")
         self.messages = {}
+        self.log_type = log_type
 
-        summary_data = self._load_json(
-            os.path.join(scenario_dir, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
-        results_data = self._load_json(
-            os.path.join(scenario_dir, _ACC_SUBDIR, _ACCURACY_RESULTS_FILE))
+        if log_type == "accuracy":
+            summary_data = {}
+            results_data = self._load_json(
+                os.path.join(scenario_dir, _ACC_SUBDIR, _ACCURACY_RESULTS_FILE))
+        else:
+            summary_data = self._load_json(
+                os.path.join(scenario_dir, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
+            results_data = {}
         yaml_data = self._load_yaml(scenario_dir)
 
         for endpoints_key, loadgen_key in ENDPOINTS_MAPPINGS.items():
@@ -238,12 +246,15 @@ def main():
         print(f"Directory: {folder}")
         print(f"{'=' * 70}")
 
-        parser = EndpointsParser(run_dir)
+        perf_parser = EndpointsParser(run_dir, log_type="performance")
+        acc_parser = EndpointsParser(run_dir, log_type="accuracy")
 
         found = []
         not_found = []
         for loadgen_key, endpoints_key in backwards_map.items():
-            value = parser[loadgen_key]
+            value = perf_parser[loadgen_key]
+            if value is None:
+                value = acc_parser[loadgen_key]
             if value is not None:
                 found.append((loadgen_key, endpoints_key, value))
             else:

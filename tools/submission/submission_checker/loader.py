@@ -233,8 +233,9 @@ class Loader:
 
     def load_endpoints_logs(self, scenario_dir):
         if os.path.exists(scenario_dir):
-            parser = EndpointsParser(scenario_dir)
-            return parser, parser
+            perf_parser = EndpointsParser(scenario_dir, log_type="performance")
+            acc_parser = EndpointsParser(scenario_dir, log_type="accuracy")
+            return perf_parser, acc_parser
         self.logger.info(
             "Could not load endpoints log from %s, path does not exist",
             scenario_dir

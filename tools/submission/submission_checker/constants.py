@@ -1501,6 +1501,9 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
     "compliance_accuracy.txt",
 ]
 
+TEST09_LOW = 1150.38
+TEST09_HIGH = 1406.02
+
 OFFLINE_MIN_SPQ_SINCE_V4 = {
     "resnet": 24576,
     "retinanet": 24576,
@@ -2233,6 +2236,7 @@ ENDPOINTS_MAPPINGS = {
     "tps": "result_completed_tokens_per_second",
     "result.total": "result_query_count",
     "result.failed": "num_errors",
+    "output_sequence_lengths.avg": "mean_output_tokens",
 }
 
 
@@ -2266,4 +2270,12 @@ ENDPOINTS_JSON_ALT_PATHS = {
 
 ENDPOINTS_INFERRED_FIELDS = {
     "effective_accuracy_sample_count": "result_query_count"
+}
+
+ENDPOINTS_COMPLIANCE_MAPPING = {
+    "TEST01": "accuracy_in_performance_test",
+    "TEST04": "output_caching_test",
+    "TEST06": "consistency_output_test",
+    "TEST07": "accuracy_in_performance_full_test",
+    "TEST08": "accuracy_in_performance_dlrmv3_test",
 }

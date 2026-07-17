@@ -2277,9 +2277,9 @@ ENDPOINTS_YAML_FIELD_MAP = {
 # Alternative JSON paths for endpoints keys that don't directly match the
 # JSON structure
 ENDPOINTS_JSON_ALT_PATHS = {
-    "result.total": "results.total",
-    "result.failed": "results.failed",
-    "qps": "results.qps",
+    "result.total": "n_samples_completed",
+    "result.failed": "n_samples_failed",
+    "results.qps": "qps",
     "generated_query_count": "n_samples_issued",
     "generated_query_duration": "duration_ns",
     "test_datetime": "test_started_at",

@@ -148,7 +148,7 @@ class EndpointsParser(BaseParser):
                 self.messages[qps_key] = [{"key": qps_key, "value": qps}]
 
         # Expose accuracy scores stored in results.json
-        for result in results_data.get("accuracy_scores", {}).values():
+        for result in results_data.get("accuracy_scores", []):
             score = result.get("score")
             if score is not None:
                 self.messages.setdefault("accuracy_score", []).append(

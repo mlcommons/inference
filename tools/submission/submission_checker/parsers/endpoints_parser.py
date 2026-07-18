@@ -95,6 +95,24 @@ def _resolve_value(stripped, summary_data, results_data, yaml_data):
     return _get_nested(yaml_data, stripped)
 
 
+def _endpoint_accuracy_sample_count(results_data):
+    counts = []
+    accuracy_scores = results_data.get("accuracy_scores", [])
+
+    for result in accuracy_scores:
+        if not isinstance(result, dict):
+            continue
+        dataset_type = result.get("dataset_type")
+        if dataset_type is not None and dataset_type != "accuracy":
+            continue
+        if result.get("total_samples") is not None:
+            counts.append(int(result["total_samples"]))
+        elif result.get("response_counts", {}).get("issued") is not None:
+            counts.append(int(result["response_counts"]["issued"]))
+
+    return sum(counts) if counts else None
+
+
 class EndpointsParser(BaseParser):
     def __init__(self, scenario_dir, log_type="performance"):
         """
@@ -130,6 +148,19 @@ class EndpointsParser(BaseParser):
                 self.messages.setdefault(loadgen_key, []).append(
                     {"key": loadgen_key, "value": value}
                 )
+
+        if log_type == "accuracy":
+            # load accuracy sample count from accuracy_results.json, 2 cases:
+            # gptoss has 3 sub dataset with 3 counts(aime, gpqa, lcb), sum them
+            # other which has 1 dataset with 1 sample count, use it
+            accuracy_count = _endpoint_accuracy_sample_count(results_data)
+            if accuracy_count is not None:
+                self.messages["effective_accuracy_sample_count"] = [
+                    {"key": "effective_accuracy_sample_count", "value": accuracy_count}
+                ]
+                self.messages.setdefault("qsl_reported_total_count", [
+                    {"key": "qsl_reported_total_count", "value": accuracy_count}
+                ])
 
         self.keys = set(self.messages.keys())
 
@@ -209,7 +240,10 @@ class EndpointsParser(BaseParser):
         return self.keys
 
     def num_errors(self):
-        return self["num_errors"]
+        return self["num_errors"] or 0
+
+    def get_errors(self):
+        return []
 
     def has_error(self):
         return self.num_errors() != 0

@@ -506,8 +506,13 @@ class ComplianceCheck(BaseCheck):
                 test_name = ENDPOINTS_COMPLIANCE_MAPPING.get(test, test)
                 fname = os.path.join(test_dir, f"audit_{test_name}.json")
                 if not os.path.exists(fname):
-                    self.log.error("%s is missing in %s", fname, test_dir)
-                    is_valid = False
+                    if self.endpoint_audit_file_required(test):
+                        # if audit file is required, but missing, error out
+                        self.log.error("%s is missing in %s", fname, test_dir)
+                        is_valid = False
+                    else:
+                        # if audit file is not required, skip
+                        continue
                 else:
                     try:
                         with open(fname) as f:
@@ -551,3 +556,11 @@ class ComplianceCheck(BaseCheck):
                     is_valid = False
 
         return is_valid
+
+    def endpoint_audit_file_required(self, test):
+        # currently, only test04 is enabled in endpoints. and Wan is the only model that requires test04
+        return (
+            test == "TEST04"
+            and self.model in ENDPOINTS_ALLOWED_MODELS
+            and self.model in self.config.base.get("models_TEST04", [])
+        )

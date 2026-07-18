@@ -259,6 +259,7 @@ class PerformanceCheck(BaseCheck):
             bool: True if latency constraints are satisfied, False otherwise.
         """
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
+        # traditional loadgen log path:
         if uses_early_stopping and not self.is_endpoints:
             # check if early_stopping condition was met
             if not self.mlperf_log["early_stopping_met"]:
@@ -290,7 +291,12 @@ class PerformanceCheck(BaseCheck):
                     )
                     return False
         else:
-            # check if the benchmark meets latency constraint
+            if self.is_endpoints and self.model in self.config.get_llm_models():
+                # Endpoint LLM latency is enforced by llm_check using TTFT/TPOT.
+                return True
+
+            # check if the benchmark meets latency constraint, works for both Endpoint and non-Endpoint based logs
+            # Qwen3VL falls in this category, it has scenario specific e2e latency constraints
             latency_99_percentile = self.mlperf_log["result_99.00_percentile_latency_ns"]
             target_latency = self.config.latency_constraint.get(
                 self.model, dict()).get(self.scenario)
@@ -310,6 +316,7 @@ class PerformanceCheck(BaseCheck):
                     )
                     return False
         return True
+
 
     def min_query_count_check(self):
         """Verify minimum query counts and samples per query are met.
@@ -426,54 +433,63 @@ class PerformanceCheck(BaseCheck):
             bool: True if LLM checks pass or model is not an LLM,
                 False otherwise.
         """
-        if self.model in self.config.get_llm_models():
-            if self.is_endpoints:
-                # Endpoints don't use the loadgen use_token_latencies flag;
-                # check TTFT/TPOT directly from the endpoints result JSON.
-                if self.scenario not in ["Server", "Interactive"]:
-                    return True
-                limits = LLM_LATENCY_LIMITS[self.model][self.scenario]
-                ttft = self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
-                tpot = self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
-                if ttft is None or tpot is None:
-                    self.log.warning(
-                        "%s TTFT or TPOT percentile data missing for endpoints LLM check",
-                        self.path)
-                    return True
-                if ttft < limits["ttft"] and tpot < limits["tpot"]:
-                    return True
-                self.log.error(
-                    'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
-                    ttft, tpot, limits["ttft"], limits["tpot"])
-                return False
-            if self.mlperf_log["requested_use_token_latencies"]:
-                if self.scenario not in ["Server", "Interactive"]:
-                    # For offline, singlestream and multistream no further checks are
-                    # necessary
-                    return True
-                else:
-                    limits = LLM_LATENCY_LIMITS[self.model][self.scenario]
-                    if (
-                        self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
-                        < limits["ttft"]
-                        and self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
-                        < limits["tpot"]
-                    ):
-                        return True
-            else:
-                self.log.error(
-                    f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
-                return False
+        if self.model not in self.config.get_llm_models():
+            return True
 
+        # Endpoint logs do not carry LoadGen's requested_use_token_latencies
+        # setting, but the endpoint parser maps token latency fields to the
+        # same LoadGen-style result keys used below.
+        requested_use_token_latencies = (
+            self.is_endpoints
+            or self.mlperf_log["requested_use_token_latencies"]
+        )
+        if not requested_use_token_latencies:
             self.log.error(
-                'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
-                self.mlperf_log["result_first_token_99.00_percentile_latency_ns"],
-                self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"],
-                limits["ttft"],
-                limits["tpot"]
+                "use_token_latencies flag needs to be enabled for LLM benchmark")
+            return False
+
+        if self.scenario not in ["Server", "Interactive"]:
+            # For offline, singlestream and multistream no further checks are
+            # necessary.
+            return True
+
+        limits = LLM_LATENCY_LIMITS.get(self.model, {}).get(self.scenario)
+        if limits is None:
+            self.log.error(
+                "%s TTFT/TPOT latency limits missing for model=%s scenario=%s",
+                self.path,
+                self.model,
+                self.scenario,
             )
             return False
-        return True
+
+        ttft = self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+        tpot = self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+        if ttft is None or tpot is None:
+            self.log.error(
+                "%s TTFT or TPOT percentile data missing for LLM check",
+                self.path)
+            return False
+
+        self.log.info(
+            "TTFT target: %s, TTFT: %s, TPOT target: %s, TPOT: %s, Scenario: %s",
+            limits["ttft"],
+            ttft,
+            limits["tpot"],
+            tpot,
+            self.scenario,
+        )
+        if ttft < limits["ttft"] and tpot < limits["tpot"]:
+            return True
+
+        self.log.error(
+            'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+            ttft,
+            tpot,
+            limits["ttft"],
+            limits["tpot"]
+        )
+        return False
 
     def inferred_check(self):
         """Validate rules for inferring results across scenarios.

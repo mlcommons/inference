@@ -159,7 +159,8 @@ class Config:
         return self.performance_sample_count[model]
 
     def get_accuracy_sample_count(self, model, scenario=None):
-        # get expected accuracy sample count from config, qwen has scenario specific sample counts as special case
+        # get expected accuracy sample count from config, qwen has scenario
+        # specific sample counts as special case
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)

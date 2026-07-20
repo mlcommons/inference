@@ -292,11 +292,13 @@ class PerformanceCheck(BaseCheck):
                     return False
         else:
             if self.is_endpoints and self.model in self.config.get_llm_models():
-                # Endpoint LLM latency is enforced by llm_check using TTFT/TPOT.
+                # Endpoint LLM latency is enforced by llm_check using
+                # TTFT/TPOT.
                 return True
 
             # check if the benchmark meets latency constraint, works for both Endpoint and non-Endpoint based logs
-            # Qwen3VL falls in this category, it has scenario specific e2e latency constraints
+            # Qwen3VL falls in this category, it has scenario specific e2e
+            # latency constraints
             latency_99_percentile = self.mlperf_log["result_99.00_percentile_latency_ns"]
             target_latency = self.config.latency_constraint.get(
                 self.model, dict()).get(self.scenario)
@@ -316,7 +318,6 @@ class PerformanceCheck(BaseCheck):
                     )
                     return False
         return True
-
 
     def min_query_count_check(self):
         """Verify minimum query counts and samples per query are met.
@@ -516,7 +517,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                    ) not in list_inferred:
+                ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -630,12 +631,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (scenario_fixed in ["Offline"]
-            ) and scenario in ["MultiStream"]:
+                ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (scenario_fixed in ["MultiStream"]
-            ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -652,6 +653,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (scenario_fixed in ["Interactive"]
-            ) and scenario not in ["Server"]:
+                ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

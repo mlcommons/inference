@@ -558,7 +558,8 @@ class ComplianceCheck(BaseCheck):
         return is_valid
 
     def endpoint_audit_file_required(self, test):
-        # currently, only test04 is enabled in endpoints. and Wan is the only model that requires test04
+        # currently, only test04 is enabled in endpoints. and Wan is the only
+        # model that requires test04
         return (
             test == "TEST04"
             and self.model in ENDPOINTS_ALLOWED_MODELS

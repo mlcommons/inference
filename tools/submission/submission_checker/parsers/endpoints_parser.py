@@ -156,7 +156,8 @@ class EndpointsParser(BaseParser):
             accuracy_count = _endpoint_accuracy_sample_count(results_data)
             if accuracy_count is not None:
                 self.messages["effective_accuracy_sample_count"] = [
-                    {"key": "effective_accuracy_sample_count", "value": accuracy_count}
+                    {"key": "effective_accuracy_sample_count",
+                        "value": accuracy_count}
                 ]
                 self.messages.setdefault("qsl_reported_total_count", [
                     {"key": "qsl_reported_total_count", "value": accuracy_count}

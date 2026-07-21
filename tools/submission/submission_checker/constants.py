@@ -323,6 +323,7 @@ MODEL_CONFIG = {
         ],
         "models_TEST09": [
             "gpt-oss-120b",
+            "e2e-rag-qna",
         ],
         "models_TEST08": [
             "dlrm-v3",

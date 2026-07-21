@@ -65,7 +65,7 @@ The following diagram describes the standard submission structure.
 
 ## Endpoints submission structure
 
-For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. The `config.yaml` is placed at the scenario root, `results_summary.json` contains performance metrics, and `accuracy_results.json` contains accuracy metrics.
+For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. The `config.yaml` is placed at the scenario root, `result_summary.json` contains performance metrics, and `accuracy_results.json` contains accuracy metrics.
 
 ```
 ...

@@ -1,4 +1,4 @@
-# TEST09 Compliance for E2E-RAG Workload
+# TEST09 Compliance for E2E-RAG-QnA Workload
 
 ## Overview
 
@@ -65,7 +65,7 @@ Copy the audit.config to your working directory:
 
 ```bash
 cd inference/e2e-rag
-cp ../compliance/TEST09/e2e-rag/audit.config ./
+cp ../compliance/TEST09/e2e-rag-qna/audit.config ./
 ```
 
 ### Part II: Run Performance Test
@@ -94,8 +94,8 @@ python3 reference_mlperf.py \
 ```bash
 python3 inference/e2e/third_party/mlperf-inference/compliance/TEST09/run_verification.py \
     -c run_output_test09 \
-    -o submission/compliance/e2e-rag/Offline \
-    --audit-config ../compliance/TEST09/e2e-rag/audit.config
+    -o submission/compliance/e2e-rag-qna/Offline \
+    --audit-config ../compliance/TEST09/e2e-rag-qna/audit.config
 ```
 
 ### Expected Output

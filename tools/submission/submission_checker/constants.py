@@ -20,8 +20,8 @@ MODEL_CONFIG = {
             "dlrm-v3",
             "yolo-95",
             "yolo-99",
-            "e2e",
-            "e2e_vectorDB"
+            "e2e-rag-qna",
+            "e2e-rag-db"
         ],
         "required-scenarios-datacenter": {
             "dlrm-v3": ["Server", "Offline"],
@@ -36,8 +36,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
             "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
-            "e2e": ["Offline"],
-            "e2e_vectorDB": ["Offline"]
+            "e2e-rag-qna": ["Offline"],
+            "e2e-rag-db": ["Offline"]
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -162,8 +162,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
             # TODO: Set e2e accuracy threshold once reference score is
             # established
-            "e2e": ("E2E_ACCURACY", ""),
-            "e2e_vectorDB": ("E2E_ACCURACY", ""),
+            "e2e-rag-qna": ("E2E_ACCURACY", ""),
+            "e2e-rag-db": ("E2E_ACCURACY", ""),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -202,8 +202,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
-            "e2e": 824,
-            "e2e_vectorDB": 824
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 824
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
@@ -229,8 +229,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
-            "e2e": 824,
-            "e2e_vectorDB": 824,
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 824,
         },
         "model_mapping": {
             "ssd-resnet34": "retinanet",
@@ -289,8 +289,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "e2e": {"Offline": 824},
-            "e2e_vectorDB": {"Offline": 824},
+            "e2e-rag-qna": {"Offline": 824},
+            "e2e-rag-db": {"Offline": 824},
         },
         "models_TEST01": [
             "resnet",
@@ -1530,8 +1530,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 50,
-    "e2e": 824,
-    "e2e_vectorDB": 824
+    "e2e-rag-qna": 824,
+    "e2e-rag-db": 824
 }
 
 SCENARIO_MAPPING = {

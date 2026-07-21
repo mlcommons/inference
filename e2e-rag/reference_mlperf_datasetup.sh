@@ -22,8 +22,8 @@ echo "Time Start: $(date +%s)"
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
 export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
-export RUN_LOGS=${WORKSPACE_DIR}/run_output_datasetup
-export OUTPUT_DIR=${WORKSPACE_DIR}/output_datasetup
+export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-db/performance
+export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-db/performance
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Chunking configuration
@@ -81,16 +81,16 @@ fi
 if [ -f "user.conf" ]; then
     # Update max_async_queries to match HTML count (send all at once)
     # Update min_query_count to match HTML count
-    if grep -q "e2e-datasetup.Offline.max_async_queries" user.conf; then
-        sed -i "s/^e2e-datasetup.Offline.max_async_queries = .*/e2e-datasetup.Offline.max_async_queries = ${HTML_COUNT}/" user.conf
+    if grep -q "e2e-rag-db.Offline.max_async_queries" user.conf; then
+        sed -i "s/^e2e-rag-db.Offline.max_async_queries = .*/e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}/" user.conf
     else
-        echo "e2e-datasetup.Offline.max_async_queries = ${HTML_COUNT}" >> user.conf
+        echo "e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}" >> user.conf
     fi
 
-    if grep -q "e2e-datasetup.Offline.min_query_count" user.conf; then
-        sed -i "s/^e2e-datasetup.Offline.min_query_count = .*/e2e-datasetup.Offline.min_query_count = ${HTML_COUNT}/" user.conf
+    if grep -q "e2e-rag-db.Offline.min_query_count" user.conf; then
+        sed -i "s/^e2e-rag-db.Offline.min_query_count = .*/e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}/" user.conf
     else
-        echo "e2e-datasetup.Offline.min_query_count = ${HTML_COUNT}" >> user.conf
+        echo "e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}" >> user.conf
     fi
 
     echo "  Loadgen configured to dispatch all ${HTML_COUNT} files at once"

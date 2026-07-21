@@ -14,7 +14,7 @@
 # limitations under the License.
 # ============================================================================
 
-# TEST09 Compliance Test Runner for E2E DocGrader Workload
+# TEST09 Compliance Test Runner for E2E-RAG-QnA Workload
 # Automates: setup -> run -> verify -> cleanup workflow
 
 set -e  # Exit on error
@@ -27,7 +27,7 @@ echo ""
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPLIANCE_DIR="${SCRIPT_DIR}/../compliance/TEST09/e2e-rag"
+COMPLIANCE_DIR="${SCRIPT_DIR}/../compliance/TEST09/e2e-rag-qna"
 AUDIT_CONFIG="${COMPLIANCE_DIR}/audit.config"
 WORKING_AUDIT_CONFIG="${SCRIPT_DIR}/audit.config"
 TEST09_VERIFICATION="${SCRIPT_DIR}/third_party/mlperf-inference/compliance/TEST09/run_verification.py"
@@ -39,7 +39,7 @@ export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_test09
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_test09
-export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag/Offline
+export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag-qna/Offline
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Performance testing - full dataset for compliance

@@ -14,7 +14,7 @@
 # limitations under the License.
 # ============================================================================
 
-# Accuracy test script for E2E DocGrader workload with MLPerf Loadgen
+# Accuracy test script for E2E-RAG-QnA workload with MLPerf Loadgen
 
 echo "Time Start: $(date +%s)"
 
@@ -23,8 +23,8 @@ export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
 export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
 export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
-export RUN_LOGS=${WORKSPACE_DIR}/run_output
-export OUTPUT_DIR=${WORKSPACE_DIR}/output
+export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-qna/accuracy
+export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-qna/accuracy
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration

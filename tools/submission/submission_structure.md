@@ -90,7 +90,7 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   └── <system_desc_id_n>
 │   │   ├── systems
 │   │   │   ├── <system_desc_id_1>.json
-│   │   │   ├── <system_desc_id_1>_power.yaml (optional)
+│   │   │   ├── <system_desc_id_1>_power.yaml (Optional. See example below)
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>.json
 │   │
@@ -112,7 +112,7 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 **<TEST0X>:** Compliance test number. E.g TEST01
 **model_mapping.json (optional):** Optional file for the open submission that contains a map from the submitters custom names to the official benchmark names.
 
-## Power template (optional)
+## Template for <system_desc_id_1>_power.yaml file (optional)
 ```
 My System:
 - My Rack 1:

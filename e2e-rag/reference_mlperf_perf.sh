@@ -83,7 +83,7 @@ echo "  JUDGE_SERVICE_URL: ${JUDGE_SERVICE_URL}"
 echo "  JUDGE_MODEL: ${JUDGE_MODEL}"
 
 # Update user.conf with threading configuration
-sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
+sed -i "s/^e2e-rag-qna.Offline.max_async_queries = .*/e2e-rag-qna.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
 # Build perf cache argument if file exists
 PERF_CACHE_ARG=""

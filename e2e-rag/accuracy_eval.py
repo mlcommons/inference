@@ -311,6 +311,15 @@ def main():
         json.dump(metrics, f, indent=2)
     print(f"Detailed results saved to {args.output}")
 
+    # Write accuracy.txt into the loadgen log dir in MLPerf format. The
+    # submission checker parses the LLM judge answer accuracy (as a percentage)
+    # from the "Accuracy:" line. The hash= line and log truncation are added
+    # later by tools/submission/truncate_accuracy_log.py during submission prep.
+    accuracy_txt_path = os.path.join(args.log_dir, "accuracy.txt")
+    with open(accuracy_txt_path, 'w') as f:
+        f.write(f"Accuracy: {metrics['answer_accuracy'] * 100:.4f}\n")
+    print(f"Accuracy report saved to {accuracy_txt_path}")
+
 
 if __name__ == "__main__":
     main()

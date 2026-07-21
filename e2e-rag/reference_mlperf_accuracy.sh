@@ -84,7 +84,7 @@ if [ -n "${PERF_COUNT}" ]; then
 fi
 
 # Update user.conf with threading configuration
-sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
+sed -i "s/^e2e-rag-qna.Offline.max_async_queries = .*/e2e-rag-qna.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
 # Run loadgen accuracy test
 python3 reference_mlperf.py \

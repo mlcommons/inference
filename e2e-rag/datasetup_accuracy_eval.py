@@ -268,7 +268,9 @@ def validate_database(database_path, retriever_model):
     return validation_results
 
 
-def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
+def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
+                      manifest_path=None, cosine_threshold=0.9999,
+                      top_k_depth=3):
     """
     Evaluate accuracy of datasetup workload.
 
@@ -277,6 +279,11 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
         output_dir: Directory containing SUT output files
         database_path: Path to the saved database file
         retriever_model: Path to retriever model (for validation)
+        manifest_path: Path to reference DB manifest for cross-system
+            verification. If None, the manifest check is skipped.
+        cosine_threshold: Minimum sample-embedding cosine similarity for the
+            manifest check.
+        top_k_depth: Probe-query top-K rank match depth for the manifest check.
 
     Returns:
         dict: Accuracy results
@@ -448,6 +455,59 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
         print("="*80)
         print()
 
+    # Cross-system manifest verification (corpus fingerprint, sample-embedding
+    # cosine, probe-query top-K ranks) against a reference manifest.
+    manifest_results = None
+    if manifest_path:
+        print("="*80)
+        print("DB Manifest Verification")
+        print("="*80)
+        print(f"Manifest: {manifest_path}")
+        print()
+
+        if not os.path.exists(manifest_path):
+            manifest_results = {
+                "passed": False,
+                "error": "manifest_not_found",
+                "manifest_path": manifest_path,
+            }
+            print(f"  ✗ Manifest not found: {manifest_path}")
+        elif not os.path.exists(database_path):
+            manifest_results = {
+                "passed": False,
+                "error": "database_not_found",
+                "database_path": database_path,
+            }
+            print(f"  ✗ Database not found: {database_path}")
+        else:
+            try:
+                from db_manifest import verify_manifest
+                manifest_results = verify_manifest(
+                    database_path,
+                    manifest_path,
+                    retriever_model=retriever_model,
+                    cosine_threshold=cosine_threshold,
+                    top_k_depth=top_k_depth,
+                )
+                if manifest_results["passed"]:
+                    print("  ✓ Manifest verification PASSED")
+                else:
+                    print("  ✗ Manifest verification FAILED:")
+                    for failure in manifest_results["failures"]:
+                        print(f"    - {failure}")
+            except Exception as e:
+                manifest_results = {"passed": False, "error": str(e)}
+                print(f"  ✗ Manifest verification error: {e}")
+
+        accuracy_results["manifest"] = manifest_results
+        # Overall pass now also requires the manifest check to pass.
+        accuracy_results["passed"] = accuracy_results["passed"] and manifest_results["passed"]
+
+        print()
+        print(f"Manifest: {'✅ PASSED' if manifest_results['passed'] else '❌ FAILED'}")
+        print("="*80)
+        print()
+
     # Write accuracy.txt in MLPerf format
     accuracy_txt_path = os.path.join(log_dir, "accuracy.txt")
     with open(accuracy_txt_path, 'w') as f:
@@ -488,6 +548,19 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None):
             f.write(f"Validation status: {'PASS' if validation_results['passed'] else 'FAIL'}\n")
             f.write("\n")
 
+        if manifest_results:
+            f.write("DB Manifest Verification:\n")
+            f.write("-"*80 + "\n")
+            if manifest_results.get("error"):
+                f.write(f"  Error: {manifest_results['error']}\n")
+            metrics = manifest_results.get("metrics", {})
+            for key, value in metrics.items():
+                f.write(f"  {key}: {value}\n")
+            for failure in manifest_results.get("failures", []):
+                f.write(f"  MISMATCH: {failure}\n")
+            f.write(f"Manifest status: {'PASS' if manifest_results['passed'] else 'FAIL'}\n")
+            f.write("\n")
+
         f.write("="*80 + "\n")
         f.write(f"Overall Result: {'PASS' if accuracy_results['passed'] else 'FAIL'}\n")
         f.write("="*80 + "\n")
@@ -523,10 +596,33 @@ def main():
         default="intfloat_e5-base-v2/e5-base-v2",
         help="Path to retriever model (for validation)"
     )
+    parser.add_argument(
+        "--manifest",
+        default=None,
+        help="Path to reference DB manifest (.json/.json.gz) for cross-system "
+             "verification. If omitted, the manifest check is skipped."
+    )
+    parser.add_argument(
+        "--cosine_threshold",
+        type=float,
+        default=0.9999,
+        help="Minimum sample-embedding cosine similarity for the manifest check"
+    )
+    parser.add_argument(
+        "--top_k_depth",
+        type=int,
+        default=3,
+        help="Probe-query top-K rank match depth for the manifest check"
+    )
 
     args = parser.parse_args()
 
-    results = evaluate_accuracy(args.log_dir, args.output_dir, args.database, args.retriever_model)
+    results = evaluate_accuracy(
+        args.log_dir, args.output_dir, args.database, args.retriever_model,
+        manifest_path=args.manifest,
+        cosine_threshold=args.cosine_threshold,
+        top_k_depth=args.top_k_depth,
+    )
 
     # Exit with appropriate code
     if results.get("passed", False):

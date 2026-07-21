@@ -42,6 +42,12 @@ export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
 # Vector database configuration
 export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
 
+# Reference DB manifest for cross-system verification (corpus fingerprint,
+# sample-embedding cosine, probe-query top-K ranks). Set to "" to skip.
+export MANIFEST=${MANIFEST:-scripts/db_manifest_intel_xpu.json.gz}
+export COSINE_THRESHOLD=${COSINE_THRESHOLD:-0.9999}
+export TOP_K_DEPTH=${TOP_K_DEPTH:-3}
+
 # Performance options
 export BENCHMARK=${BENCHMARK:-false}
 export MAX_WORKERS=${MAX_WORKERS:-4}
@@ -133,11 +139,18 @@ if [ ${EXIT_CODE} -eq 0 ]; then
     echo "Running Accuracy Evaluation"
     echo "============================================================"
 
+    # Build optional manifest argument (skip check if MANIFEST is empty)
+    MANIFEST_ARG=""
+    if [ -n "${MANIFEST}" ]; then
+        MANIFEST_ARG="--manifest ${MANIFEST} --cosine_threshold ${COSINE_THRESHOLD} --top_k_depth ${TOP_K_DEPTH}"
+    fi
+
     python3 datasetup_accuracy_eval.py \
         --log_dir ${RUN_LOGS} \
         --output_dir ${OUTPUT_DIR} \
         --database ${DATABASE}.db \
-        --retriever_model ${RETRIEVER_MODEL}
+        --retriever_model ${RETRIEVER_MODEL} \
+        ${MANIFEST_ARG}
 
     EVAL_EXIT_CODE=$?
 

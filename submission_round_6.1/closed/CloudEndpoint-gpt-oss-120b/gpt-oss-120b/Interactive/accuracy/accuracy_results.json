@@ -1,0 +1,27 @@
+{
+  "average_accuracy": 67.7840909090909,
+  "accuracy_scores": [
+    {
+      "dataset_name": "aime25::gptoss",
+      "extractor": "BoxedMathExtractor",
+      "ground_truth_column": "answer",
+      "score": 63.74999999999999,
+      "unit_samples": 30,
+      "num_repeats": 8,
+      "total_samples": 240,
+      "duration_s": 993.325,
+      "complete": true
+    },
+    {
+      "dataset_name": "gpqa::gptoss",
+      "extractor": "ABCDExtractor",
+      "ground_truth_column": "ground_truth",
+      "score": 71.81818181818181,
+      "unit_samples": 198,
+      "num_repeats": 5,
+      "total_samples": 4155,
+      "duration_s": 2725.614,
+      "complete": true
+    }
+  ]
+}

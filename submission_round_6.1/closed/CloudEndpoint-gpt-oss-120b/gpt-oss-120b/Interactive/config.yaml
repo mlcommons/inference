@@ -1,0 +1,82 @@
+name: gpt-oss-120b-online
+version: '1.0'
+type: online
+model_params:
+  name: openai/gpt-oss-120b
+  temperature: 1.0
+  top_k: -1
+  top_p: 1.0
+  max_new_tokens: 16384
+  min_new_tokens: 1
+  skip_special_tokens: false
+  streaming: 'on'
+datasets:
+- name: aime25::gptoss
+  type: accuracy
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: answer
+    extractor: boxed_math_extractor
+    num_repeats: 8
+    scale: 100.0
+- name: gpqa::gptoss
+  type: accuracy
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: ground_truth
+    extractor: abcd_extractor
+    num_repeats: 5
+    scale: 100.0
+- name: aime25::gptoss
+  type: performance
+  samples: 240
+settings:
+  runtime:
+    min_duration_ms: 600000
+    max_duration_ms: 7200000
+    scheduler_random_seed: 16159082839903944936
+    dataloader_random_seed: 2747215439041700203
+  load_pattern:
+    type: concurrency
+    target_concurrency: 32
+  client:
+    num_workers: 8
+    log_level: INFO
+    warmup_connections: -1
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 300.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 4.0
+    min_required_connections: -1
+    worker_gc_mode: relaxed
+  drain:
+    warmup_timeout_s: 240.0
+    performance_timeout_s: 240.0
+    metrics_drain_timeout_s: 0.0
+    metrics_tokenizer_workers: 2
+  warmup:
+    enabled: false
+    salt: true
+    drain: false
+    warmup_random_seed: 42
+  profiling: {}
+  service_ready_timeout_s: 30.0
+endpoint_config:
+  endpoints:
+  - http://localhost:11001
+  api_type: openai_completions
+report_dir: results/gptoss_120b_online
+verbose: false
+enable_cpu_affinity: true

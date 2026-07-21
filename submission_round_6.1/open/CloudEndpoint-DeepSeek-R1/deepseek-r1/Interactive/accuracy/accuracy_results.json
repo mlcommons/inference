@@ -1,0 +1,28 @@
+{
+  "average_accuracy": 81.04,
+  "accuracy_scores": [
+    {
+      "dataset_name": "legacy_mlperf_deepseek_r1",
+      "extractor": null,
+      "ground_truth_column": null,
+      "score": 81.04,
+      "unit_samples": 4388,
+      "num_repeats": 1,
+      "total_samples": 4388,
+      "duration_s": 8123.457,
+      "complete": true,
+      "dataset_type": "accuracy",
+      "breakdown": {
+        "subset_scores": {
+          "math500": 95.8,
+          "aime": 83.3,
+          "gpqa": 66.7,
+          "mmlu_pro": 77.3,
+          "livecodebench": 87.7
+        },
+        "total_samples": 4388,
+        "complete": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "accuracy_scores": [
+    {
+      "dataset_name": "cnn_dailymail::llama3_8b",
+      "extractor": "IdentityExtractor",
+      "ground_truth_column": "highlights",
+      "score": {
+        "rouge1": "38.8237",
+        "rouge2": "15.9705",
+        "rougeL": "24.5631",
+        "rougeLsum": "35.8748",
+        "gen_len": "8163423",
+        "gen_num": 13368
+      },
+      "unit_samples": 13368,
+      "num_repeats": 1,
+      "total_samples": 13368,
+      "duration_s": 287.081,
+      "complete": true
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+name: llama3.1-8b-online
+version: '1.0'
+type: online
+model_params:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 128
+  min_new_tokens: 1
+  skip_special_tokens: true
+  streaming: 'on'
+datasets:
+- name: cnn_dailymail::llama3_8b
+  type: accuracy
+  samples: 13368
+  parser:
+    input: prompt
+  accuracy_config:
+    eval_method: rouge
+    ground_truth: highlights
+    extractor: identity_extractor
+    num_repeats: 1
+    scale: 1.0
+- name: cnn_dailymail::llama3_8b
+  type: performance
+  samples: 13368
+  parser:
+    input: prompt
+settings:
+  runtime:
+    min_duration_ms: 600000
+    max_duration_ms: 3600000
+    n_samples_to_issue: 13368
+    scheduler_random_seed: 16159082839903944936
+    dataloader_random_seed: 2747215439041700203
+  load_pattern:
+    type: concurrency
+    target_concurrency: 256
+  client:
+    num_workers: 4
+    log_level: INFO
+    warmup_connections: -1
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 60.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 4.0
+    min_required_connections: -1
+    worker_gc_mode: relaxed
+  drain:
+    warmup_timeout_s: 240.0
+    performance_timeout_s: 240.0
+    metrics_drain_timeout_s: 0.0
+    metrics_tokenizer_workers: 2
+  warmup:
+    enabled: false
+    salt: true
+    drain: false
+    warmup_random_seed: 42
+  profiling: {}
+  service_ready_timeout_s: 30.0
+endpoint_config:
+  endpoints:
+  - http://localhost:11001
+  api_type: openai
+report_dir: results/llama3_8b_online
+verbose: false
+enable_cpu_affinity: true

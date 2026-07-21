@@ -81,8 +81,7 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   └── accuracy_results.json
 │   │   │   │   │   │   ├── performance
-│   │   │   │   │   │   │   └── run_1
-│   │   │   │   │   │   │       └── results_summary.json
+│   │   │   │   │   │   │   └── result_summary.json
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   └── accuracy.txt

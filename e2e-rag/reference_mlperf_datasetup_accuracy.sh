@@ -43,8 +43,11 @@ export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
 export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
 
 # Reference DB manifest for cross-system verification (corpus fingerprint,
-# sample-embedding cosine, probe-query top-K ranks). Set to "" to skip.
-export MANIFEST=${MANIFEST:-scripts/db_manifest_intel_xpu.json.gz}
+# sample-embedding cosine, probe-query top-K ranks).
+# Set to "" or "none" to skip the manifest check. Note: ${VAR:-default} treats
+# an empty value the same as unset, so an explicit "none" sentinel is the
+# reliable way to skip from a parent script that exports MANIFEST="".
+export MANIFEST=${MANIFEST-scripts/db_manifest_intel_xpu.json.gz}
 export COSINE_THRESHOLD=${COSINE_THRESHOLD:-0.9999}
 export TOP_K_DEPTH=${TOP_K_DEPTH:-3}
 
@@ -139,9 +142,9 @@ if [ ${EXIT_CODE} -eq 0 ]; then
     echo "Running Accuracy Evaluation"
     echo "============================================================"
 
-    # Build optional manifest argument (skip check if MANIFEST is empty)
+    # Build optional manifest argument (skip check if MANIFEST is empty or "none")
     MANIFEST_ARG=""
-    if [ -n "${MANIFEST}" ]; then
+    if [ -n "${MANIFEST}" ] && [ "${MANIFEST,,}" != "none" ]; then
         MANIFEST_ARG="--manifest ${MANIFEST} --cosine_threshold ${COSINE_THRESHOLD} --top_k_depth ${TOP_K_DEPTH}"
     fi
 

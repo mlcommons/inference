@@ -118,4 +118,7 @@ python3 reference_mlperf.py \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}
 
+EXIT_CODE=$?
+
 echo "Time Stop: $(date +%s)"
+exit ${EXIT_CODE}

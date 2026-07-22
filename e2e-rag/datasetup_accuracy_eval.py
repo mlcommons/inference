@@ -511,6 +511,11 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
     # Write accuracy.txt in MLPerf format
     accuracy_txt_path = os.path.join(log_dir, "accuracy.txt")
     with open(accuracy_txt_path, 'w') as f:
+        # Checker-compliant metric line first: the submission checker parses the
+        # RAG-DB accuracy (document indexing success rate as a percentage) from
+        # this "Accuracy:" line via the E2E_ACCURACY pattern. The hash= line and
+        # log truncation are added later by truncate_accuracy_log.py.
+        f.write(f"Accuracy: {actual_success_rate * 100:.4f}\n")
         f.write("="*80 + "\n")
         f.write("RAG-DB Accuracy Report\n")
         f.write("="*80 + "\n")
@@ -548,9 +553,13 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
             f.write(f"Validation status: {'PASS' if validation_results['passed'] else 'FAIL'}\n")
             f.write("\n")
 
-        if manifest_results:
-            f.write("DB Manifest Verification:\n")
-            f.write("-"*80 + "\n")
+        # Always emit the manifest section so its status (or that it was
+        # skipped) is visible in every accuracy report.
+        f.write("DB Manifest Verification:\n")
+        f.write("-"*80 + "\n")
+        if manifest_results is None:
+            f.write("  Manifest status: SKIPPED (no manifest provided)\n")
+        else:
             if manifest_results.get("error"):
                 f.write(f"  Error: {manifest_results['error']}\n")
             metrics = manifest_results.get("metrics", {})
@@ -558,8 +567,8 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
                 f.write(f"  {key}: {value}\n")
             for failure in manifest_results.get("failures", []):
                 f.write(f"  MISMATCH: {failure}\n")
-            f.write(f"Manifest status: {'PASS' if manifest_results['passed'] else 'FAIL'}\n")
-            f.write("\n")
+            f.write(f"  Manifest status: {'PASS' if manifest_results['passed'] else 'FAIL'}\n")
+        f.write("\n")
 
         f.write("="*80 + "\n")
         f.write(f"Overall Result: {'PASS' if accuracy_results['passed'] else 'FAIL'}\n")

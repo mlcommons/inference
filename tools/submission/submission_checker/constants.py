@@ -21,8 +21,8 @@ MODEL_CONFIG = {
             "dlrm-v3",
             "yolo-95",
             "yolo-99",
-            "e2e",
-            "e2e_vectorDB"
+            "e2e-rag-qna",
+            "e2e-rag-db"
         ],
         "required-scenarios-datacenter": {
             "dlrm-v3": ["Server", "Offline"],
@@ -37,8 +37,8 @@ MODEL_CONFIG = {
             "gpt-oss-120b": ["Offline"],
             "qwen3-vl-235b-a22b": ["Server", "Offline"],
             "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
-            "e2e": ["Offline"],
-            "e2e_vectorDB": ["Offline"]
+            "e2e-rag-qna": ["Offline"],
+            "e2e-rag-db": ["Offline"]
         },
         "optional-scenarios-datacenter": {
             "llama2-70b-99": ["Interactive", "Server"],
@@ -163,10 +163,8 @@ MODEL_CONFIG = {
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
-            # TODO: Set e2e accuracy threshold once reference score is
-            # established
-            "e2e": ("E2E_ACCURACY", ""),
-            "e2e_vectorDB": ("E2E_ACCURACY", ""),
+            "e2e-rag-qna": ("E2E_ACCURACY", 33.95),
+            "e2e-rag-db": ("E2E_ACCURACY", 98),
             "qwen3.6-27b": ("mAP", 86.23 * 0.99),
         },
         "accuracy-upper-limit": {
@@ -206,8 +204,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
-            "e2e": 824,
-            "e2e_vectorDB": 824,
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 2515,
             "qwen3.6-27b": 995,
         },
         "accuracy-sample-count": {
@@ -240,8 +238,8 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
-            "e2e": 824,
-            "e2e_vectorDB": 824,
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 2515,
             "qwen3.6-27b": 995,
         },
         "model_mapping": {
@@ -301,8 +299,8 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "e2e": {"Offline": 824},
-            "e2e_vectorDB": {"Offline": 824},
+            "e2e-rag-qna": {"Offline": 1},
+            "e2e-rag-db": {"Offline": 1},
             "qwen3.6-27b": {"SingleStream": 995},
         },
         "models_TEST01": [
@@ -336,6 +334,7 @@ MODEL_CONFIG = {
         ],
         "models_TEST09": [
             "gpt-oss-120b",
+            "e2e-rag-qna",
         ],
         "models_TEST08": [
             "dlrm-v3",
@@ -1546,8 +1545,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 50,
-    "e2e": 824,
-    "e2e_vectorDB": 824
+    "e2e-rag-qna": 824,
+    "e2e-rag-db": 2515
 }
 
 SCENARIO_MAPPING = {

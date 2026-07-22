@@ -24,7 +24,9 @@ _SAMPLE_LOGS_DIR = os.path.join(
     "sample_logs")
 
 _RESULT_SUMMARY_FILE = "result_summary.json"
-_RESULTS_FILE = "results.json"
+_ACCURACY_RESULTS_FILE = "accuracy_results.json"
+_PERF_SUBDIR = "performance"
+_ACC_SUBDIR = "accuracy"
 _CONFIG_FILES = ("config.yaml", "config.yml")
 
 
@@ -93,23 +95,50 @@ def _resolve_value(stripped, summary_data, results_data, yaml_data):
     return _get_nested(yaml_data, stripped)
 
 
+def _endpoint_accuracy_sample_count(results_data):
+    counts = []
+    accuracy_scores = results_data.get("accuracy_scores", [])
+
+    for result in accuracy_scores:
+        if not isinstance(result, dict):
+            continue
+        dataset_type = result.get("dataset_type")
+        if dataset_type is not None and dataset_type != "accuracy":
+            continue
+        if result.get("total_samples") is not None:
+            counts.append(int(result["total_samples"]))
+        elif result.get("response_counts", {}).get("issued") is not None:
+            counts.append(int(result["response_counts"]["issued"]))
+
+    return sum(counts) if counts else None
+
+
 class EndpointsParser(BaseParser):
-    def __init__(self, run_dir):
+    def __init__(self, scenario_dir, log_type="performance"):
         """
-        run_dir: path to the run directory containing:
-          - result_summary.json  (highest priority)
-          - results.json
-          - config.yaml / config.yml  (lowest priority)
+        scenario_dir: path to the scenario directory containing:
+          - config.yaml                              (scenario root)
+          - performance/result_summary.json         (performance metrics)
+          - accuracy/accuracy_results.json           (accuracy metrics)
+        log_type: which log to parse from scenario_dir, either
+          "performance" (reads performance/result_summary.json) or
+          "accuracy" (reads accuracy/accuracy_results.json).
         """
-        super().__init__(run_dir)
+        super().__init__(scenario_dir)
 
         self.logger = logging.getLogger("MLPerfLog")
         self.messages = {}
+        self.log_type = log_type
 
-        summary_data = self._load_json(
-            os.path.join(run_dir, _RESULT_SUMMARY_FILE))
-        results_data = self._load_json(os.path.join(run_dir, _RESULTS_FILE))
-        yaml_data = self._load_yaml(run_dir)
+        if log_type == "accuracy":
+            summary_data = {}
+            results_data = self._load_json(
+                os.path.join(scenario_dir, _ACC_SUBDIR, _ACCURACY_RESULTS_FILE))
+        else:
+            summary_data = self._load_json(
+                os.path.join(scenario_dir, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
+            results_data = {}
+        yaml_data = self._load_yaml(scenario_dir)
 
         for endpoints_key, loadgen_key in ENDPOINTS_MAPPINGS.items():
             stripped = endpoints_key.strip()
@@ -119,6 +148,20 @@ class EndpointsParser(BaseParser):
                 self.messages.setdefault(loadgen_key, []).append(
                     {"key": loadgen_key, "value": value}
                 )
+
+        if log_type == "accuracy":
+            # load accuracy sample count from accuracy_results.json, 2 cases:
+            # gptoss has 3 sub dataset with 3 counts(aime, gpqa, lcb), sum them
+            # other which has 1 dataset with 1 sample count, use it
+            accuracy_count = _endpoint_accuracy_sample_count(results_data)
+            if accuracy_count is not None:
+                self.messages["effective_accuracy_sample_count"] = [
+                    {"key": "effective_accuracy_sample_count",
+                        "value": accuracy_count}
+                ]
+                self.messages.setdefault("qsl_reported_total_count", [
+                    {"key": "qsl_reported_total_count", "value": accuracy_count}
+                ])
 
         self.keys = set(self.messages.keys())
 
@@ -145,7 +188,7 @@ class EndpointsParser(BaseParser):
                 self.messages[qps_key] = [{"key": qps_key, "value": qps}]
 
         # Expose accuracy scores stored in results.json
-        for result in results_data.get("accuracy_scores", {}).values():
+        for result in results_data.get("accuracy_scores", []):
             score = result.get("score")
             if score is not None:
                 self.messages.setdefault("accuracy_score", []).append(
@@ -153,7 +196,9 @@ class EndpointsParser(BaseParser):
                 )
 
         self.keys = set(self.messages.keys())
-        self.logger.info("Successfully loaded endpoints log from %s.", run_dir)
+        self.logger.info(
+            "Successfully loaded endpoints log from %s.",
+            scenario_dir)
 
     def _load_json(self, path):
         try:
@@ -162,7 +207,6 @@ class EndpointsParser(BaseParser):
         except BaseException:
             self.logger.error("Could not load json file from %s", path)
             return {}
-        return {}
 
     def _load_yaml(self, run_dir):
         for name in _CONFIG_FILES:
@@ -197,7 +241,10 @@ class EndpointsParser(BaseParser):
         return self.keys
 
     def num_errors(self):
-        return self["num_errors"]
+        return self["num_errors"] or 0
+
+    def get_errors(self):
+        return []
 
     def has_error(self):
         return self.num_errors() != 0
@@ -212,18 +259,20 @@ def main():
 
     backwards_map = _load_field_map("backwards.json")
 
-    # Collect all run directories (those containing at least one JSON and one
-    # YAML)
+    # Collect scenario-level directories (those containing config.yaml and
+    # the performance subdirectory with result_summary.json)
     run_dirs = []
-    for root, _dirs, files in os.walk(_SAMPLE_LOGS_DIR):
-        has_json = any(f.endswith(".json") for f in files)
-        has_yaml = any(f.endswith(".yaml") or f.endswith(".yml")
-                       for f in files)
-        if has_json and has_yaml:
+    for root, dirs, files in os.walk(_SAMPLE_LOGS_DIR):
+        has_yaml = any(f in _CONFIG_FILES for f in files)
+        has_perf = os.path.exists(
+            os.path.join(root, _PERF_SUBDIR, _RESULT_SUMMARY_FILE))
+        if has_yaml and has_perf:
             run_dirs.append(root)
 
     if not run_dirs:
-        logger.error("No run directories found under %s.", _SAMPLE_LOGS_DIR)
+        logger.error(
+            "No scenario directories found under %s.",
+            _SAMPLE_LOGS_DIR)
         return 1
 
     for run_dir in sorted(run_dirs):
@@ -232,12 +281,15 @@ def main():
         print(f"Directory: {folder}")
         print(f"{'=' * 70}")
 
-        parser = EndpointsParser(run_dir)
+        perf_parser = EndpointsParser(run_dir, log_type="performance")
+        acc_parser = EndpointsParser(run_dir, log_type="accuracy")
 
         found = []
         not_found = []
         for loadgen_key, endpoints_key in backwards_map.items():
-            value = parser[loadgen_key]
+            value = perf_parser[loadgen_key]
+            if value is None:
+                value = acc_parser[loadgen_key]
             if value is not None:
                 found.append((loadgen_key, endpoints_key, value))
             else:

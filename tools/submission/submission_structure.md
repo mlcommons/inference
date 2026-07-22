@@ -50,6 +50,7 @@ The following diagram describes the standard submission structure.
 │   │   │   └── <system_desc_id_n>
 │   │   ├── systems
 │   │   │   ├── <system_desc_id_1>.json
+│   │   │   ├── <system_desc_id_1>_power.yaml (optional)
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>.json
 │   │
@@ -64,7 +65,7 @@ The following diagram describes the standard submission structure.
 
 ## Endpoints submission structure
 
-For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. You can provide a performance+accuracy run in the performance folder or one performance run and one accuracy run
+For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structured JSON and YAML files produced by the endpoint harness. The `config.yaml` is placed at the scenario root, `result_summary.json` contains performance metrics, and `accuracy_results.json` contains accuracy metrics.
 
 ```
 ...
@@ -76,15 +77,11 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   ├── <system_desc_id_1>
 │   │   │   │   ├── <benchmark_name>
 │   │   │   │   │   ├── <scenario>
-│   │   │   │   │   │   ├── accuracy (optional)
-│   │   │   │   │   │   │   ├── config.yaml
-│   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   ├── config.yaml
+│   │   │   │   │   │   ├── accuracy
+│   │   │   │   │   │   │   └── accuracy_results.json
 │   │   │   │   │   │   ├── performance
-│   │   │   │   │   │   │   ├── run_1
-│   │   │   │   │   │   │   │   ├── config.yaml
-│   │   │   │   │   │   │   │   ├── results.json
-│   │   │   │   │   │   │   │   └── result_summary.json
+│   │   │   │   │   │   │   └── result_summary.json
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   └── accuracy.txt
@@ -93,6 +90,7 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 │   │   │   └── <system_desc_id_n>
 │   │   ├── systems
 │   │   │   ├── <system_desc_id_1>.json
+│   │   │   ├── <system_desc_id_1>_power.yaml (optional)
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>.json
 │   │
@@ -113,3 +111,27 @@ For endpoints submissions, the `mlperf_log_*.txt` files are replaced by structur
 **<scenario>:** Name of the benchmarking scenario. One of `["SingleStream", "MultiStream", "Offline", "Server", "Interactive"]`
 **<TEST0X>:** Compliance test number. E.g TEST01
 **model_mapping.json (optional):** Optional file for the open submission that contains a map from the submitters custom names to the official benchmark names.
+
+## Power template (optional)
+```
+My System:
+- My Rack 1:
+  - My Server 1:
+    - Description: 'Optional Description'
+      Min PSUs Needed: 1
+      PSUs:
+      - Name: PSU 1
+        PowerCapacityWatts: 1200
+      - Name: PSU 2
+        PowerCapacityWatts: 1200
+  - My Switch 1:
+    - Description: 'Optional Description'
+      Min PSUs needed: 1
+      PSUs:
+      - Name: PSU 1
+        PowerCapacityWatts: 1200
+      - Name: PSU 2
+        PowerCapacityWatts: 1200
+```
+
+Alternatively you can report it manually in the <system_desc>.json in the field "system_power_capacity".

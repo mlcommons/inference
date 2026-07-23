@@ -37,7 +37,6 @@ import gzip
 import hashlib
 import json
 import random
-import re
 import sys
 from pathlib import Path
 from typing import Dict, List
@@ -63,11 +62,14 @@ PROBE_TOP_K = 5
 DEFAULT_COSINE_THRESHOLD = 0.9999
 DEFAULT_TOP_K_DEPTH = 3
 # Cross-system reproducibility gate. Exact byte/passage-count/sha256 matches are
-# NOT required: different implementations chunk and index the corpus at
-# different times, so passages arrive in different order and the sha256 / count
-# legitimately differ. What must hold is that the DB *retrieves the same
-# documents* for a fixed set of probe queries. This threshold is the minimum
-# mean top-K document-URL overlap (recall) across the probe queries.
+# NOT required: implementations chunk and index the corpus differently (chunk
+# size, overlap, ordering), so the passage count and corpus sha256 legitimately
+# differ even when the underlying documents are identical. What must hold is
+# that the DB *retrieves the same documents* for a fixed set of probe queries.
+# (The document set itself is fixed: the benchmark ships a frozen corpus as
+# docs.tar.gz, so a submission that ingests the official corpus is comparing
+# like with like.) This threshold is the minimum mean top-K document-URL overlap
+# (recall) across the probe queries.
 DEFAULT_RETRIEVAL_THRESHOLD = 0.999
 
 
@@ -81,31 +83,6 @@ def _sha256_docstore(db: "VectorDB") -> str:
         h.update(doc.page_content.encode("utf-8", errors="replace"))
         h.update(b"\x00")
     return h.hexdigest()
-
-
-def _normalize_url(url: str) -> str:
-    """Reduce a document identifier to a corpus-stable key.
-
-    Different implementations store the source differently: a full URL
-    (``https://en.wikipedia.org/wiki/James_Cameron#Filmography``) on one system,
-    a sanitized filename (``en.wikipedia.org_wiki_James_Cameron#Filmography.html``)
-    on another. Normalize both to the same key so retrieval overlap is compared
-    on document identity, not on incidental path formatting.
-    """
-    if not url:
-        return ""
-    u = url.strip()
-    # Drop scheme.
-    u = re.sub(r"^[a-zA-Z]+://", "", u)
-    # Drop a trailing .html the filename form appends.
-    if u.endswith(".html"):
-        u = u[:-len(".html")]
-    # Unify path separators: the filename form replaces '/' with '_'.
-    u = u.replace("/", "_")
-    # Drop the in-page anchor: the same article may be chunked with or without
-    # a section fragment, but it is the same source document.
-    u = u.split("#", 1)[0]
-    return u.lower()
 
 
 def _cosine(a: List[float], b: List[float]) -> float:
@@ -294,9 +271,13 @@ def verify_manifest(db_path: str, manifest_path: str,
 
     # --- Retrieval reproducibility (the PASS/FAIL gate) ----------------------
     # For each probe query, compare the set of retrieved document URLs against
-    # the reference, normalized to a corpus-stable key and compared as a set so
-    # ordering and path formatting do not matter. The score is the mean overlap
-    # (recall of the reference documents) across all probe queries.
+    # the reference. URLs are compared as sets (order-independent) but otherwise
+    # verbatim: the benchmark ships a frozen corpus (docs.tar.gz) with a fixed
+    # url_mapping.json, so every submission that ingests the official corpus
+    # stores the identical `original_url` for each document. A divergence here is
+    # therefore a real retrieval difference, not incidental path formatting. The
+    # score is the mean overlap (recall of the reference documents) across all
+    # probe queries.
     probe_queries = manifest["probe_queries"]
     local_top = _gather_top_k(db, probe_queries, PROBE_TOP_K)
     ref_top = {r["index"]: r["top_k_urls"] for r in manifest["probe_top_k"]}
@@ -304,8 +285,8 @@ def verify_manifest(db_path: str, manifest_path: str,
     overlaps = []
     low_overlap = []
     for entry in local_top:
-        local_urls = {_normalize_url(u) for u in entry["top_k_urls"][:top_k_depth] if u}
-        ref_urls = {_normalize_url(u) for u in ref_top.get(entry["index"], [])[:top_k_depth] if u}
+        local_urls = {u for u in entry["top_k_urls"][:top_k_depth] if u}
+        ref_urls = {u for u in ref_top.get(entry["index"], [])[:top_k_depth] if u}
         if not ref_urls:
             continue
         overlap = len(local_urls & ref_urls) / len(ref_urls)

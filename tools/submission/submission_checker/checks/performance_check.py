@@ -364,6 +364,11 @@ class PerformanceCheck(BaseCheck):
         Returns:
             bool: True if duration meets the minimum, False otherwise.
         """
+        # The e2e-rag workloads run a fixed-size single pass over the dataset
+        # (min_query_count == dataset size) rather than a time-bounded loop, so
+        # the 600s minimum duration does not apply.
+        if self.model in ("e2e-rag-qna", "e2e-rag-db"):
+            return True
         required_min_duration = TEST_DURATION_MS
         min_duration = self.mlperf_log["effective_min_duration_ms"]
         if min_duration < required_min_duration:

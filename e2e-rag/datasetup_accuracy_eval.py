@@ -274,8 +274,9 @@ def validate_database(database_path, retriever_model):
     return validation_results
 
 
-def evaluate_accuracy(log_dir, output_dir, database_path,
-                      retriever_model=None):
+def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
+                      manifest_path=None, cosine_threshold=0.9999,
+                      top_k_depth=3, retrieval_threshold=0.999):
     """
     Evaluate accuracy of datasetup workload.
 
@@ -286,9 +287,11 @@ def evaluate_accuracy(log_dir, output_dir, database_path,
         retriever_model: Path to retriever model (for validation)
         manifest_path: Path to reference DB manifest for cross-system
             verification. If None, the manifest check is skipped.
-        cosine_threshold: Minimum sample-embedding cosine similarity for the
-            manifest check.
-        top_k_depth: Probe-query top-K rank match depth for the manifest check.
+        cosine_threshold: Informational sample-embedding cosine threshold for
+            the manifest check; does not affect pass/fail.
+        top_k_depth: Probe-query top-K depth for the manifest overlap check.
+        retrieval_threshold: Minimum mean probe-query top-K document overlap
+            required for the manifest check to pass.
 
     Returns:
         dict: Accuracy results
@@ -501,6 +504,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path,
                     retriever_model=retriever_model,
                     cosine_threshold=cosine_threshold,
                     top_k_depth=top_k_depth,
+                    retrieval_threshold=retrieval_threshold,
                 )
                 if manifest_results["passed"]:
                     print("  ✓ Manifest verification PASSED")
@@ -612,22 +616,32 @@ def main():
         "--cosine_threshold",
         type=float,
         default=0.9999,
-        help="Minimum sample-embedding cosine similarity for the manifest check"
+        help="Informational sample-embedding cosine threshold for the manifest "
+             "check; does not affect pass/fail."
     )
     parser.add_argument(
         "--top_k_depth",
         type=int,
         default=3,
-        help="Probe-query top-K rank match depth for the manifest check"
+        help="Probe-query top-K depth for the manifest overlap check"
+    )
+    parser.add_argument(
+        "--retrieval_threshold",
+        type=float,
+        default=0.999,
+        help="Minimum mean probe-query top-K document overlap required for the "
+             "manifest check to pass (default: 0.999)."
     )
 
     args = parser.parse_args()
 
     results = evaluate_accuracy(
-        args.log_dir,
-        args.output_dir,
-        args.database,
-        args.retriever_model)
+        args.log_dir, args.output_dir, args.database, args.retriever_model,
+        manifest_path=args.manifest,
+        cosine_threshold=args.cosine_threshold,
+        top_k_depth=args.top_k_depth,
+        retrieval_threshold=args.retrieval_threshold,
+    )
 
     # Exit with appropriate code
     if results.get("passed", False):

@@ -21,7 +21,7 @@ The reranker model lives in its own multiprocessing.Process so it can have:
 - Its own CPU affinity + memory binding (per-NUMA-node placement).
 - Isolation from the main process's GIL / thread pool.
 
-Public API kept: RerankerQueue.submit(query, passages) -> [(passage, score), ...]
+Public API kept: RerankerQueue.submit(query, passages) -> [(passage, score), ...] in input order.
 """
 
 import ctypes
@@ -126,9 +126,8 @@ def _do_rerank(model, tokenizer, device: str, query: str, passages: List[str]) -
         sim = sim.masked_fill(~d_mask.unsqueeze(1).bool(), float('-inf'))
         scores = sim.max(dim=-1).values.sum(dim=-1)
 
-    scored_passages = list(zip(passages, scores.float().tolist()))
-    scored_passages.sort(key=lambda x: x[1], reverse=True)
-    return scored_passages
+    # Return (passage, score) in input order; caller sorts/selects.
+    return list(zip(passages, scores.float().tolist()))
 
 
 class RerankerQueue:

@@ -189,7 +189,7 @@ COMMON_PARAMS = [
         name="retriever_model",
         arg_names=["--retriever_model"],
         type=str,
-        default="intfloat/e5-base-v2",
+        default="intfloat_e5-base-v2/e5-base-v2",
         help="Model to use for embedding-based retrieval",
         category="common",
         applies_to=["vector"]
@@ -198,7 +198,7 @@ COMMON_PARAMS = [
         name="reranker_model",
         arg_names=["--reranker_model"],
         type=str,
-        default="colbert-ir/colbertv2.0",
+        default="colbert-ir_colbertv2.0/colbertv2.0",
         help="Model to use for reranking (currently unused)",
         category="common",
         applies_to=["both"]
@@ -320,8 +320,8 @@ GENERAL_PARAMS = [
         name="llm_service_url",
         arg_names=["--llm_service_url"],
         type=str,
-        default="http://127.0.0.1:8123/v1/chat/completions",
-        help="URL for the LLM service endpoint",
+        default="http://127.0.0.1:8192/v1/chat/completions",
+        help="URL for the LLM service endpoint (20B model on port 8192)",
         category="general",
         applies_to=["both"]
     ),
@@ -338,14 +338,14 @@ GENERAL_PARAMS = [
         name="query_model",
         arg_names=["--query_model"],
         type=str,
-        default=None,
-        help="LLM model name/path for query generation (generate_search_queries). Defaults to --llm_model if not set. Example: /model/gpt-oss-120b",
+        default="gpt-oss-120b-mxfp4",
+        help="LLM model name/path for query generation (generate_search_queries). Defaults to --llm_model if not set. Example: gpt-oss-120b-mxfp4",
         category="general",
         applies_to=["both"]
     ),
     # Per-component endpoint overrides. Each defaults to --llm_service_url when
     # not set; same for the model. Lets you split components across separate
-    # vLLM servers (e.g. 20B grader on :8124, 120B query/sufficiency on :8123).
+    # vLLM servers (e.g. 20B grader on :8192, 120B query/sufficiency on :8123).
     ParamDef(
         name="grader_service_url",
         arg_names=["--grader-service-url"],
@@ -368,8 +368,8 @@ GENERAL_PARAMS = [
         name="query_service_url",
         arg_names=["--query-service-url"],
         type=str,
-        default=None,
-        help="LLM service URL for query generation (default: --llm_service_url).",
+        default="http://127.0.0.1:8123/v1/chat/completions",
+        help="LLM service URL for query generation (120B model on port 8123, default: --llm_service_url).",
         category="general",
         applies_to=["both"]
     ),

@@ -204,7 +204,7 @@ def main():
 
     # Load config files
     if os.path.exists(args.user_conf):
-        settings.FromConfig(args.user_conf, "rag-qna", args.scenario)
+        settings.FromConfig(args.user_conf, "e2e-rag-qna", args.scenario)
         print(f"Loaded user config from {args.user_conf}")
     else:
         print(f"Warning: User config not found: {args.user_conf}")

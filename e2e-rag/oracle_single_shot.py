@@ -46,9 +46,7 @@ import requests
 
 DEFAULT_CHECKPOINT_FILE = "oracle_checkpoint.pkl"
 DEFAULT_SERVICE_URL = "http://localhost:8123/v1/chat/completions"
-#DEFAULT_MODEL_NAME = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct"
-#DEFAULT_MODEL_NAME = "/mnt/weka/data/pytorch/llama3.1/Meta-Llama-3.1-405B-Instruct-v2"
-DEFAULT_MODEL_NAME = "/model/gpt-oss-120b-mxfp4"
+DEFAULT_MODEL_NAME = "gpt-oss-120b-mxfp4"
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_TIMEOUT = 2400
 # For reasoning model, it should be large enough

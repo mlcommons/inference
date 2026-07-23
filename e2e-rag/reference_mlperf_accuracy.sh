@@ -14,7 +14,7 @@
 # limitations under the License.
 # ============================================================================
 
-# Accuracy test script for E2E DocGrader workload with MLPerf Loadgen
+# Accuracy test script for E2E-RAG-QnA workload with MLPerf Loadgen
 
 echo "Time Start: $(date +%s)"
 
@@ -23,8 +23,8 @@ export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
 export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
 export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
-export RUN_LOGS=${WORKSPACE_DIR}/run_output
-export OUTPUT_DIR=${WORKSPACE_DIR}/output
+export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-qna/accuracy
+export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-qna/accuracy
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
@@ -48,12 +48,17 @@ export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
 # Default to local vLLM server
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
+export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
+
+# Query and sufficiency use 120B model on port 8123
+export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
 
 # Judge LLM configuration (for accuracy evaluation)
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8193/v1/chat/completions}
 export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 echo "  LLM Service URL: ${LLM_SERVICE_URL}"
@@ -79,7 +84,7 @@ if [ -n "${PERF_COUNT}" ]; then
 fi
 
 # Update user.conf with threading configuration
-sed -i "s/^e2e.Offline.max_async_queries = .*/e2e.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
+sed -i "s/^e2e-rag-qna.Offline.max_async_queries = .*/e2e-rag-qna.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
 
 # Run loadgen accuracy test
 python3 reference_mlperf.py \
@@ -98,8 +103,14 @@ python3 reference_mlperf.py \
     --llm_service_url ${LLM_SERVICE_URL} \
     --llm_model ${LLM_MODEL} \
     --query_model ${QUERY_MODEL} \
+    --query-service-url ${QUERY_SERVICE_URL} \
+    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency-model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     --accuracy
 
+EXIT_CODE=$?
+
 echo "Time Stop: $(date +%s)"
+exit ${EXIT_CODE}

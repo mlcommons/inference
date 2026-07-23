@@ -29,6 +29,7 @@ else
 fi
 
 INFERENCE_DB="${INFERENCE_DB:-vector_html_hnsw_len768_ov32_word}"
+INFERENCE_RETRIEVER_MODEL="${INFERENCE_RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
 
 MANIFEST="$1"
 COSINE_THRESHOLD="${2:-0.9999}"
@@ -36,6 +37,7 @@ TOP_K_DEPTH="${3:-3}"
 
 echo "=== Verifying DB against manifest ==="
 echo "  DB:                ${INFERENCE_DB}"
+echo "  Retriever:         ${INFERENCE_RETRIEVER_MODEL}"
 echo "  Manifest:          ${MANIFEST}"
 echo "  Cosine threshold:  ${COSINE_THRESHOLD}"
 echo "  Top-K depth:       ${TOP_K_DEPTH}"
@@ -44,5 +46,6 @@ echo ""
 python3 -u db_manifest.py verify \
     --db "${INFERENCE_DB}" \
     --manifest "${MANIFEST}" \
+    --retriever_model "${INFERENCE_RETRIEVER_MODEL}" \
     --cosine-threshold "${COSINE_THRESHOLD}" \
     --top-k-depth "${TOP_K_DEPTH}"

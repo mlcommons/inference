@@ -241,38 +241,20 @@ class RagDB(abc.ABC):
             self._reranker_queue = None
 
     def rerank(self, query: str, passages: List[str]):
-        """Rerank passages via the reranker queue (ColBERT MaxSim)."""
+        """Score passages via the reranker; returns (passage, score) in input order."""
         if self._reranker_queue:
             return self._reranker_queue.submit(query, passages)
         return [(p, 0.0) for p in passages]
 
-    def lookup_with_rerank(self, query: str, k: int, rerank_k: int = None) -> List[Any]:
-        """Retrieve and rerank passages."""
-        if rerank_k is None:
-            rerank_k = k
-
-        # Get initial results
-        results = self.lookup(query, k=rerank_k)
-
-        # If no reranker or fewer results than requested, return as-is
-        if self._reranker_queue is None or len(results) <= k:
-            return results[:k]
-        
-        # Extract passages for reranking
-        passages = [result.page_content for result in results]
-        
-        # Rerank
-        reranked_passages = self.rerank(query, passages)
-        
-        # Map back to original results and return top-k
-        reranked_results = []
-        for passage, score in reranked_passages[:k]:
-            for result in results:
-                if result.page_content == passage:
-                    reranked_results.append(result)
-                    break
-        
-        return reranked_results
+    def rerank_documents(self, query: str, documents: List[Any], top_k: int = None) -> List[Any]:
+        """Rerank Documents by score (desc) and return top-k; sole place sorting happens."""
+        if not documents:
+            return []
+        passages = [d.page_content for d in documents]
+        scored = self.rerank(query, passages)  # input order: scored[i] <-> documents[i]
+        order = sorted(range(len(documents)), key=lambda i: scored[i][1], reverse=True)
+        ranked = [documents[i] for i in order]
+        return ranked[:top_k] if top_k is not None else ranked
 
     @property
     def device(self) -> str:

@@ -32,14 +32,14 @@ import requests
 
 
 # OpenRouter configuration
-DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
-DEFAULT_JUDGE_MODEL = "gpt-oss-20b"
+DEFAULT_JUDGE_URL = "http://127.0.0.1:8125/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 # Masked API key (set OPENROUTER_API_KEY environment variable to use OpenRouter)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY',
     'sk-or-v1-****')
 
 
-JUDGE_PROMPT = """You are an expert evaluator comparing LLM-generated answers to ground truth answers.
+JUDGE_PROMPT = """You are grading whether an LLM answer is correct against a ground truth answer.
 
 QUESTION: {question}
 
@@ -47,8 +47,14 @@ GROUND TRUTH ANSWER: {ground_truth}
 
 LLM ANSWER: {llm_answer}
 
-Evaluate if the LLM answer is factually correct compared to the ground truth.
-Consider semantic equivalence, not just exact string matching.
+Grade in two steps.
+
+STEP 1 - If the LLM answer is empty, "Unknown", "I don't know", "cannot be determined", or otherwise does not commit to an answer, then it is WRONG: output correct=false immediately and do not go to step 2.
+
+STEP 2 - Otherwise compare it to the ground truth by meaning, not wording. correct=true only if it supplies every fact the ground truth requires and each clearly matches; if you are unsure or the match is only partial, output correct=false. Rules:
+- If the ground truth is a list or has multiple parts, an answer missing any of them is correct=false.
+- Every number, date, and name must match the ground truth; a different or differently-rounded value is correct=false, a different name is correct=false.
+- Do NOT penalize harmless extras or omissions when the required facts match: a missing suffix like "Inc.", an added state/country, a full middle name, missing units when the number is right, or a briefer/longer phrasing.
 
 Return your evaluation in JSON format:
 {{
@@ -91,11 +97,19 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
 
         # Parse JSON response
         content = content.strip()
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-            content = content.strip()
+
+        # Extract JSON from markdown code blocks
+        if "```" in content:
+            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
+            if json_block_match:
+                content = json_block_match.group(1).strip()
+
+        # Try to extract JSON object
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(0)
+        else:
+            return {"correct": False, "reasoning": "No JSON found in judge response"}
 
         judge_result = json.loads(content)
         return judge_result
@@ -296,6 +310,15 @@ def main():
     with open(args.output, 'w') as f:
         json.dump(metrics, f, indent=2)
     print(f"Detailed results saved to {args.output}")
+
+    # Write accuracy.txt into the loadgen log dir in MLPerf format. The
+    # submission checker parses the LLM judge answer accuracy (as a percentage)
+    # from the "Accuracy:" line. The hash= line and log truncation are added
+    # later by tools/submission/truncate_accuracy_log.py during submission prep.
+    accuracy_txt_path = os.path.join(args.log_dir, "accuracy.txt")
+    with open(accuracy_txt_path, 'w') as f:
+        f.write(f"Accuracy: {metrics['answer_accuracy'] * 100:.4f}\n")
+    print(f"Accuracy report saved to {accuracy_txt_path}")
 
 
 if __name__ == "__main__":

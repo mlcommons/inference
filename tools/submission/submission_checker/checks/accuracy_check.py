@@ -70,6 +70,8 @@ class AccuracyCheck(BaseCheck):
             "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.setup_checks()
 
     def setup_checks(self):
@@ -83,6 +85,12 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
         self.checks.append(self.extra_files_check)
+        self.checks.append(self.endpoints_model_check)
+        self.apply_checks = set(self.checks)
+        if self.is_endpoints:
+            self.apply_checks.remove(self.accuracy_json_check)
+        else:
+            self.apply_checks.remove(self.endpoints_model_check)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.
@@ -96,6 +104,13 @@ class AccuracyCheck(BaseCheck):
             bool: True if accuracy checks passed (or division is 'open'),
                 False otherwise.
         """
+
+        if self.is_endpoints:
+            if self.mlperf_log["accuracy_score"] is not None:
+                self.submission_logs.loader_data["accuracy_metrics"] = self.mlperf_log["accuracy_score"]
+                return True
+            self.log.error("%s accuracy score not found", self.path)
+            return False
 
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
             self.model
@@ -227,7 +242,7 @@ class AccuracyCheck(BaseCheck):
             )
             return True
         expected_qsl_total_count = self.config.get_accuracy_sample_count(
-            self.model)
+            self.model, self.scenario_fixed)
         if "effective_accuracy_sample_count" in self.mlperf_log.get_keys():
             qsl_total_count = self.mlperf_log["effective_accuracy_sample_count"]
         else:
@@ -267,6 +282,24 @@ class AccuracyCheck(BaseCheck):
                 "%s expected to have the following extra files (%s)",
                 acc_dir,
                 missing_files,
+            )
+            return False
+        return True
+
+    def endpoints_model_check(self):
+        """Verify the model is allowed for endpoints submissions.
+
+        Returns:
+            bool: True if the model is in ENDPOINTS_ALLOWED_MODELS,
+                False otherwise.
+        """
+        if self.model not in ENDPOINTS_ALLOWED_MODELS:
+            self.log.error(
+                "%s endpoints submission uses disallowed model '%s', "
+                "must be one of: %s",
+                self.path,
+                self.model,
+                ENDPOINTS_ALLOWED_MODELS,
             )
             return False
         return True

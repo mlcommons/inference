@@ -168,8 +168,8 @@ def main():
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "gpt-oss-120b",
-            "e2e",
-            "e2e_vectorDB",
+            "e2e-rag-qna",
+            "e2e-rag-db",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
@@ -252,8 +252,8 @@ def main():
                 "gpt-oss-120b": ["Offline", "Interactive", "Server"],
                 "qwen3-vl-235b-a22b": ["Server", "Offline", "Interactive"],
                 "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
-                "e2e": ["Offline"],
-                "e2e_vectorDB": ["Offline"],
+                "e2e-rag-qna": ["Offline"],
+                "e2e-rag-db": ["Offline"],
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -275,8 +275,8 @@ def main():
                 "gpt-oss-120b": [],
                 "qwen3-vl-235b-a22b": [],
                 "wan-2.2-t2v-a14b": [],
-                "e2e": [],
-                "e2e_vectorDB": [],
+                "e2e-rag-qna": [],
+                "e2e-rag-db": [],
             },
         }
     elif args.version == "5.0":

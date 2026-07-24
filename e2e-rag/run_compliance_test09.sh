@@ -14,7 +14,7 @@
 # limitations under the License.
 # ============================================================================
 
-# TEST09 Compliance Test Runner for E2E DocGrader Workload
+# TEST09 Compliance Test Runner for E2E-RAG-QnA Workload
 # Automates: setup -> run -> verify -> cleanup workflow
 
 set -e  # Exit on error
@@ -27,7 +27,11 @@ echo ""
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPLIANCE_DIR="${SCRIPT_DIR}/../compliance/TEST09/e2e-rag"
+# The TEST09 config comes from the main inference repo's compliance tree.
+# Copy compliance/TEST09/e2e-rag-qna/ into this directory before running
+# (e.g. when e2e-rag is mounted standalone into a container), or override
+# COMPLIANCE_DIR to point at it.
+COMPLIANCE_DIR="${COMPLIANCE_DIR:-${SCRIPT_DIR}/../compliance/TEST09/e2e-rag-qna}"
 AUDIT_CONFIG="${COMPLIANCE_DIR}/audit.config"
 WORKING_AUDIT_CONFIG="${SCRIPT_DIR}/audit.config"
 TEST09_VERIFICATION="${SCRIPT_DIR}/third_party/mlperf-inference/compliance/TEST09/run_verification.py"
@@ -39,11 +43,12 @@ export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_test09
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_test09
-export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag/Offline
+export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag-qna/Offline
 export SCENARIO="${SCENARIO:-Offline}"
 
-# Performance testing - full dataset for compliance
-export PERF_COUNT=824
+# Performance testing - full dataset for compliance.
+# Overridable (e.g. for a smoke run); a valid TEST09 submission needs 824.
+export PERF_COUNT=${PERF_COUNT:-824}
 
 # Threading configuration
 export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
@@ -55,15 +60,17 @@ export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
 # Model paths
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-/data/model/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-/data/model/colbertv2.0}
+export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b}
-export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8124/v1/chat/completions}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b}
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
+export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
+export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
+export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
+export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8193/v1/chat/completions}
 export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 # Performance cache file (optional - for faster testing)
@@ -109,7 +116,11 @@ mkdir -p "${SUBMISSION_DIR}"
 # Copy audit.config to working directory
 echo "Copying audit.config to working directory..."
 cp "${AUDIT_CONFIG}" "${WORKING_AUDIT_CONFIG}"
-echo "✓ audit.config copied to ${WORKING_AUDIT_CONFIG}"
+# Keep the audit.config's min_query_count in sync with PERF_COUNT. Otherwise
+# loadgen honors the config's min_query_count (824) and loops back up to it even
+# when PERF_COUNT is smaller (e.g. a smoke run). A real submission uses 824.
+sed -i "s/^\*\.\*\.min_query_count = .*/*.*.min_query_count = ${PERF_COUNT}/" "${WORKING_AUDIT_CONFIG}"
+echo "✓ audit.config copied to ${WORKING_AUDIT_CONFIG} (min_query_count=${PERF_COUNT})"
 echo ""
 
 # ============================================================================
@@ -129,11 +140,15 @@ if [ -n "${PERF_CACHE_FILE}" ] && [ -f "${PERF_CACHE_FILE}" ]; then
 fi
 
 # Run loadgen performance test
-# Note: LoadGen automatically detects audit.config in the current directory
+# reference_mlperf.py passes --audit_conf explicitly to StartTestWithLogSettings,
+# so we must point it at the copied audit.config (named audit.config, whereas
+# the default arg is audit.conf). Without this, loadgen never applies the TEST09
+# accuracy_log_sampling_target and mlperf_log_accuracy.json comes out empty.
 python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --audit_conf ${WORKING_AUDIT_CONFIG} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \
     --perf_count ${PERF_COUNT} \
@@ -147,6 +162,8 @@ python3 reference_mlperf.py \
     --llm_model ${LLM_MODEL} \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
+    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency-model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}

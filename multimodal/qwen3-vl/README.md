@@ -137,13 +137,13 @@ Each example benchmark config includes an accuracy test that queries the same se
     - Total number of samples: `8000`.
 - **Guided decoding:** not used.
 - **Sampling parameters:**
-  - Frequency penalty: `None` (mathematically equivalent to `0.0`).
-  - Presence penalty: `None` (mathematically equivalent to `0.0`).
-  - Temperature: `None` (mathematically equivalent to `1.0`).
-  - Top-P: `None` (mathematically equivalent to `1.0`).
-  - Top-K: `None` (mathematically equivalent to `0`).
-  - Min-P: `None` (mathematically equivalent to `0.0`).
-  - Repetition penalty: `None` (mathematically equivalent to `1.0`).
+    - Frequency penalty: None resolves to 0.0 because vLLM applies its neutral fallback; Q3VL’s generation config does not override it.
+    - Presence penalty: None resolves to 0.0 because vLLM applies its neutral fallback; Q3VL’s generation config does not override it.
+    - Temperature: None resolves to 0.7 from Q3VL’s generation_config.json.
+    - Top-P: None resolves to 0.8 from Q3VL’s generation_config.json.
+    - Top-K: None resolves to 20 from Q3VL’s generation_config.json.
+    - Min-P: None resolves to 0.0 because Q3VL’s generation config does not define it, so vLLM uses its neutral fallback.
+    - Repetition penalty: None resolves to 1.0 from Q3VL’s generation_config.json.
 - **Constraints:**
   - **Model quality:**
     - **Offline/Server scenario:**
@@ -483,13 +483,13 @@ are allowed. This means that, in:
     - Total number of samples: `48289`.
   - Guided decoding is not used.
   - Sampling parameters:
-    - Frequency penalty: `None` (mathematically equivalent to `0.0`).
-    - Presence penalty: `None` (mathematically equivalent to `0.0`).
-    - Temperature: `None` (mathematically equivalent to `1.0`).
-    - Top-P: `None` (mathematically equivalent to `1.0`).
-    - Top-K: `None` (mathematically equivalent to `0`).
-    - Min-P: `None` (mathematically equivalent to `0.0`).
-    - Repetition penalty: `None` (mathematically equivalent to `1.0`).
+    - Frequency penalty: None resolves to 0.0 because vLLM applies its neutral fallback; Q3VL’s generation config does not override it.
+    - Presence penalty: None resolves to 0.0 because vLLM applies its neutral fallback; Q3VL’s generation config does not override it.
+    - Temperature: None resolves to 0.7 from Q3VL’s generation_config.json.
+    - Top-P: None resolves to 0.8 from Q3VL’s generation_config.json.
+    - Top-K: None resolves to 20 from Q3VL’s generation_config.json.
+    - Min-P: None resolves to 0.0 because Q3VL’s generation config does not define it, so vLLM uses its neutral fallback.
+    - Repetition penalty: None resolves to 1.0 from Q3VL’s generation_config.json.
   - Constraints:
     - Model quality:
       - Category Hierarchical F1 Score >= `0.7824`. This is the 99% recovery of 

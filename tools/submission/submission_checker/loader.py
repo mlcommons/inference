@@ -2,6 +2,7 @@ import os
 from .constants import *
 from .utils import list_dir, generate_private_id
 from .parsers.loadgen_parser import LoadgenParser
+from .parsers.endpoints_parser import EndpointsParser
 from typing import Generator, Literal
 from .utils import *
 from .configuration.configuration import Config
@@ -85,6 +86,9 @@ class Loader:
         self.acc_json_path = os.path.join(
             self.root, ACCURACY_JSON_PATH.get(
                 version, ACCURACY_JSON_PATH["default"]))
+        self.endpoints_scenario_dir = os.path.join(
+            self.root, ENDPOINTS_SCENARIO_DIR.get(
+                version, ENDPOINTS_SCENARIO_DIR["default"]))
         self.system_log_path = os.path.join(
             self.root, SYSTEM_PATH.get(
                 version, SYSTEM_PATH["default"]))
@@ -192,7 +196,7 @@ class Loader:
         accuracy results as line lists, etc.
 
         Args:
-            path (str): Filesystem path to the log file.
+            path (str or List[str]): Filesystem path to the log file.
             log_type (str): Type of log to load, determining parsing method.
 
         Returns:
@@ -226,6 +230,17 @@ class Loader:
                 log_type,
                 path)
         return log
+
+    def load_endpoints_logs(self, scenario_dir):
+        if os.path.exists(scenario_dir):
+            perf_parser = EndpointsParser(scenario_dir, log_type="performance")
+            acc_parser = EndpointsParser(scenario_dir, log_type="accuracy")
+            return perf_parser, acc_parser
+        self.logger.info(
+            "Could not load endpoints log from %s, path does not exist",
+            scenario_dir
+        )
+        return None, None
 
     def check_scenarios(self, benchmark, model_mapping,
                         system_type, scenarios):
@@ -339,6 +354,12 @@ class Loader:
                                 system=system,
                                 benchmark=benchmark,
                                 scenario=scenario)
+                            endpoints_scenario_dir = self.endpoints_scenario_dir.format(
+                                division=division,
+                                submitter=submitter,
+                                system=system,
+                                benchmark=benchmark,
+                                scenario=scenario)
                             acc_result_path = self.acc_result_path.format(
                                 division=division,
                                 submitter=submitter,
@@ -433,7 +454,8 @@ class Loader:
                             src_path = self.src_path.format(
                                 division=division, submitter=submitter)
 
-                            # Load logs
+                            # Load logs loadgen
+                            is_endpoints_submission = False
                             perf_log = self.load_single_log(
                                 perf_path, "Performance")
                             acc_log = self.load_single_log(
@@ -444,6 +466,11 @@ class Loader:
                                 acc_json_path, "AccuracyJSON")
                             measurements_json = self.load_single_log(
                                 measurements_path, "Measurements")
+                            if perf_log is None and acc_log is None:
+                                is_endpoints_submission = True
+                                perf_log, acc_log = self.load_endpoints_logs(
+                                    endpoints_scenario_dir
+                                )
 
                             # Load test logs
                             test01_perf_log = self.load_single_log(
@@ -473,7 +500,8 @@ class Loader:
                                 "submitter": submitter,
                                 "system": system,
                                 "benchmark": benchmark,
-                                "scenario": scenario,
+                                "scenario": "server" if is_endpoints_submission and scenario.lower() == "online" else scenario,
+                                "is_endpoints_submission": is_endpoints_submission,
                                 # Submission paths
                                 "perf_path": perf_path,
                                 "acc_path": acc_path,

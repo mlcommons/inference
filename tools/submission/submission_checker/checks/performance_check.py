@@ -53,7 +53,20 @@ class PerformanceCheck(BaseCheck):
             "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
+        if self.is_endpoints:
+            self.scenario = self.map_endpoints_scenario(
+                self.scenario, self.scenario_fixed
+            )
         self.setup_checks()
+
+    def map_endpoints_scenario(self, scenario, scenario_fixed):
+        if scenario_fixed.lower() == "singlestream":
+            return "SingleStream"
+        if scenario.lower() == "online":
+            return "Server"
+        return scenario
 
     def setup_checks(self):
         """Register individual performance-related checks.
@@ -74,6 +87,13 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.llm_check)
         self.checks.append(self.inferred_check)
         self.checks.append(self.get_performance_metric_check)
+        self.checks.append(self.endpoints_model_check)
+        self.apply_checks = set(self.checks)
+        if self.is_endpoints:
+            self.apply_checks.remove(self.performance_sample_count_check)
+            self.apply_checks.remove(self.min_query_count_check)
+        else:
+            self.apply_checks.remove(self.endpoints_model_check)
 
     def missing_check(self):
         """Ensure the performance log was provided.
@@ -200,14 +220,16 @@ class PerformanceCheck(BaseCheck):
         sample_index_rng_seed = self.mlperf_log["effective_sample_index_rng_seed"]
         schedule_rng_seed = self.mlperf_log["effective_schedule_rng_seed"]
         is_valid = True
-        if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
-            self.log.error(
-                "%s qsl_rng_seed is wrong, expected=%s, found=%s",
-                self.path,
-                config_seeds["qsl_rng_seed"],
-                qsl_rng_seed,
-            )
-            is_valid = False
+        if not self.is_endpoints:
+            # This seed does not exists for endpoints runs
+            if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
+                self.log.error(
+                    "%s qsl_rng_seed is wrong, expected=%s, found=%s",
+                    self.path,
+                    config_seeds["qsl_rng_seed"],
+                    qsl_rng_seed,
+                )
+                is_valid = False
         if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
             self.log.error(
                 "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
@@ -237,7 +259,8 @@ class PerformanceCheck(BaseCheck):
             bool: True if latency constraints are satisfied, False otherwise.
         """
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
-        if uses_early_stopping:
+        # traditional loadgen log path:
+        if uses_early_stopping and not self.is_endpoints:
             # check if early_stopping condition was met
             if not self.mlperf_log["early_stopping_met"]:
                 early_stopping_result = self.mlperf_log["early_stopping_result"]
@@ -268,7 +291,14 @@ class PerformanceCheck(BaseCheck):
                     )
                     return False
         else:
-            # check if the benchmark meets latency constraint
+            if self.is_endpoints and self.model in self.config.get_llm_models():
+                # Endpoint LLM latency is enforced by llm_check using
+                # TTFT/TPOT.
+                return True
+
+            # check if the benchmark meets latency constraint, works for both Endpoint and non-Endpoint based logs
+            # Qwen3VL falls in this category, it has scenario specific e2e
+            # latency constraints
             latency_99_percentile = self.mlperf_log["result_99.00_percentile_latency_ns"]
             target_latency = self.config.latency_constraint.get(
                 self.model, dict()).get(self.scenario)
@@ -334,6 +364,11 @@ class PerformanceCheck(BaseCheck):
         Returns:
             bool: True if duration meets the minimum, False otherwise.
         """
+        # The e2e-rag workloads run a fixed-size single pass over the dataset
+        # (min_query_count == dataset size) rather than a time-bounded loop, so
+        # the 600s minimum duration does not apply.
+        if self.model in ("e2e-rag-qna", "e2e-rag-db"):
+            return True
         required_min_duration = TEST_DURATION_MS
         min_duration = self.mlperf_log["effective_min_duration_ms"]
         if min_duration < required_min_duration:
@@ -386,7 +421,9 @@ class PerformanceCheck(BaseCheck):
             # (must include "Network SUT" in name)
             if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
                 self.log.error(
-                    f"{self.path} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
+                    f"{self.path} invalid sut name for network mode." +
+                    f"expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}'" +
+                    f" got '{sut_name}'"
                 )
                 return False
 
@@ -402,35 +439,63 @@ class PerformanceCheck(BaseCheck):
             bool: True if LLM checks pass or model is not an LLM,
                 False otherwise.
         """
-        if self.model in self.config.get_llm_models():
-            if self.mlperf_log["requested_use_token_latencies"]:
-                if self.scenario not in ["Server", "Interactive"]:
-                    # For offline, singlestream and multistream no further checks are
-                    # necessary
-                    return True
-                else:
-                    limits = LLM_LATENCY_LIMITS[self.model][self.scenario]
-                    if (
-                        self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
-                        < limits["ttft"]
-                        and self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
-                        < limits["tpot"]
-                    ):
-                        return True
-            else:
-                self.log.error(
-                    f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
-                return False
+        if self.model not in self.config.get_llm_models():
+            return True
 
+        # Endpoint logs do not carry LoadGen's requested_use_token_latencies
+        # setting, but the endpoint parser maps token latency fields to the
+        # same LoadGen-style result keys used below.
+        requested_use_token_latencies = (
+            self.is_endpoints
+            or self.mlperf_log["requested_use_token_latencies"]
+        )
+        if not requested_use_token_latencies:
             self.log.error(
-                'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
-                self.mlperf_log["result_first_token_99.00_percentile_latency_ns"],
-                self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"],
-                limits["ttft"],
-                limits["tpot"]
+                "use_token_latencies flag needs to be enabled for LLM benchmark")
+            return False
+
+        if self.scenario not in ["Server", "Interactive"]:
+            # For offline, singlestream and multistream no further checks are
+            # necessary.
+            return True
+
+        limits = LLM_LATENCY_LIMITS.get(self.model, {}).get(self.scenario)
+        if limits is None:
+            self.log.error(
+                "%s TTFT/TPOT latency limits missing for model=%s scenario=%s",
+                self.path,
+                self.model,
+                self.scenario,
             )
             return False
-        return True
+
+        ttft = self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+        tpot = self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+        if ttft is None or tpot is None:
+            self.log.error(
+                "%s TTFT or TPOT percentile data missing for LLM check",
+                self.path)
+            return False
+
+        self.log.info(
+            "TTFT target: %s, TTFT: %s, TPOT target: %s, TPOT: %s, Scenario: %s",
+            limits["ttft"],
+            ttft,
+            limits["tpot"],
+            tpot,
+            self.scenario,
+        )
+        if ttft < limits["ttft"] and tpot < limits["tpot"]:
+            return True
+
+        self.log.error(
+            'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+            ttft,
+            tpot,
+            limits["ttft"],
+            limits["tpot"]
+        )
+        return False
 
     def inferred_check(self):
         """Validate rules for inferring results across scenarios.
@@ -457,7 +522,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                    ) not in list_inferred:
+                ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -484,11 +549,16 @@ class PerformanceCheck(BaseCheck):
             and self.mlperf_log["result_validity"] == "VALID"
         ):
             is_valid = True
-        scenario = self.mlperf_log["effective_scenario"]
-
-        res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+        scenario = self.scenario
+        res = None
+        if self.is_endpoints:
+            res = float(
+                self.mlperf_log[RESULT_FIELD_ENDPOINTS[version][scenario.lower()]])
+        else:
+            res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
         if (
-            version in RESULT_FIELD_BENCHMARK_OVERWRITE
+            not self.is_endpoints
+            and version in RESULT_FIELD_BENCHMARK_OVERWRITE
             and self.model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
             and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][self.model]
         ):
@@ -507,6 +577,24 @@ class PerformanceCheck(BaseCheck):
             res, is_valid = self.get_inferred_result(res)
         self.submission_logs.loader_data["performance_metric"] = res
         return is_valid
+
+    def endpoints_model_check(self):
+        """Verify the model is allowed for endpoints submissions.
+
+        Returns:
+            bool: True if the model is in ENDPOINTS_ALLOWED_MODELS,
+                False otherwise.
+        """
+        if self.model not in ENDPOINTS_ALLOWED_MODELS:
+            self.log.error(
+                "%s endpoints submission uses disallowed model '%s', "
+                "must be one of: %s",
+                self.path,
+                self.model,
+                ENDPOINTS_ALLOWED_MODELS,
+            )
+            return False
+        return True
 
     def get_inferred_result(self, res):
         """Compute inferred performance result for cross-scenario reuse.
@@ -548,12 +636,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (scenario_fixed in ["Offline"]
-            ) and scenario in ["MultiStream"]:
+                ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (scenario_fixed in ["MultiStream"]
-            ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -570,6 +658,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (scenario_fixed in ["Interactive"]
-            ) and scenario not in ["Server"]:
+                ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

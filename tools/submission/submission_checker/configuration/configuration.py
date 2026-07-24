@@ -158,11 +158,20 @@ class Config:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
-    def get_accuracy_sample_count(self, model):
+    def get_accuracy_sample_count(self, model, scenario=None):
+        # get expected accuracy sample count from config, qwen has scenario
+        # specific sample counts as special case
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)
-        return self.accuracy_sample_count[model]
+        sample_count = self.accuracy_sample_count[model]
+        # handle Qwen's scenario specific sample counts
+        if isinstance(sample_count, dict):
+            if scenario in sample_count:
+                return sample_count[scenario]
+            if scenario is not None and scenario.lower() in sample_count:
+                return sample_count[scenario.lower()]
+        return sample_count
 
     def ignore_errors(self, line):
         for error in self.base["ignore_errors"]:
@@ -231,5 +240,6 @@ class Config:
             "llama3.1-405b",
             "llama3.1-8b",
             "llama3.1-8b-edge",
-            "deepseek-r1"
+            "deepseek-r1",
+            "gpt-oss-120b"
         ]

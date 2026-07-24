@@ -167,14 +167,42 @@ def cmd_write(args):
     print(f"[manifest] wrote {args.output}")
 
 
-def cmd_verify(args):
-    with _open_manifest(args.manifest, "rt") as f:
+def verify_manifest(db_path: str, manifest_path: str,
+                    retriever_model: str = None,
+                    cosine_threshold: float = DEFAULT_COSINE_THRESHOLD,
+                    top_k_depth: int = DEFAULT_TOP_K_DEPTH) -> Dict:
+    """Verify a vector DB against a reference manifest.
+
+    Args:
+        db_path: Path to the local vector DB to check.
+        manifest_path: Path to the reference manifest (.json or .json.gz).
+        retriever_model: Retriever model to load the DB with. If None, falls
+            back to the manifest's stored ``retriever_model``. The manifest
+            value is often a system-specific absolute path, so callers on other
+            systems should pass their own local model path here.
+        cosine_threshold: Minimum sample-embedding cosine similarity.
+        top_k_depth: Probe-query top-K rank match depth.
+
+    Returns:
+        dict with keys ``passed`` (bool), ``failures`` (list[str]), and
+        ``metrics`` (dict of observed values). Never raises on mismatch; the
+        CLI wrapper is responsible for translating a failure into an exit code.
+    """
+    with _open_manifest(manifest_path, "rt") as f:
         manifest = json.load(f)
 
-    db = _load_db(args.db, manifest["retriever_model"])
+    # Prefer an explicit retriever model; the manifest's value may be an
+    # absolute path that only exists on the system that wrote it.
+    model = retriever_model or manifest["retriever_model"]
+    db = _load_db(db_path, model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
     failures = []
+    metrics = {
+        "total_passages": total_passages,
+        "embedding_dim": db._embedding_dimension,
+        "retriever_model": model,
+    }
 
     # Exact-match fields.
     if total_passages != manifest["total_passages"]:
@@ -189,6 +217,7 @@ def cmd_verify(args):
 
     # Corpus fingerprint (sha256 of all passage texts in index order).
     local_corpus_sha = _sha256_docstore(db)
+    metrics["corpus_sha256_match"] = (local_corpus_sha == manifest["corpus_sha256"])
     if local_corpus_sha != manifest["corpus_sha256"]:
         failures.append(
             f"corpus sha256 mismatch:\n"
@@ -211,12 +240,14 @@ def cmd_verify(args):
     if cosines:
         worst_idx, worst_cos = min(cosines, key=lambda x: x[1])
         mean_cos = sum(c for _, c in cosines) / len(cosines)
+        metrics["sample_cosine_mean"] = mean_cos
+        metrics["sample_cosine_min"] = worst_cos
         print(f"[verify] sample embeddings: mean cosine={mean_cos:.6f} "
-              f"min={worst_cos:.6f} (idx={worst_idx}) threshold={args.cosine_threshold}")
-        if worst_cos < args.cosine_threshold:
+              f"min={worst_cos:.6f} (idx={worst_idx}) threshold={cosine_threshold}")
+        if worst_cos < cosine_threshold:
             failures.append(
                 f"sample embedding cosine below threshold: "
-                f"min={worst_cos:.6f} (idx={worst_idx}) < threshold={args.cosine_threshold}\n"
+                f"min={worst_cos:.6f} (idx={worst_idx}) < threshold={cosine_threshold}\n"
                 f"  mean={mean_cos:.6f}"
             )
 
@@ -227,26 +258,39 @@ def cmd_verify(args):
 
     rank_failures = []
     for entry in local_top:
-        local_urls = entry["top_k_urls"][:args.top_k_depth]
-        ref_urls = ref_top.get(entry["index"], [])[:args.top_k_depth]
+        local_urls = entry["top_k_urls"][:top_k_depth]
+        ref_urls = ref_top.get(entry["index"], [])[:top_k_depth]
         if local_urls != ref_urls:
             rank_failures.append(
-                f"  query idx {entry['index']}: top-{args.top_k_depth} differs\n"
+                f"  query idx {entry['index']}: top-{top_k_depth} differs\n"
                 f"    local : {local_urls}\n"
                 f"    ref   : {ref_urls}"
             )
 
+    metrics["probe_queries_total"] = len(probe_queries)
+    metrics["probe_queries_matched"] = len(probe_queries) - len(rank_failures)
     print(f"[verify] probe queries: {len(probe_queries)} queries, "
-          f"top-{args.top_k_depth} {len(probe_queries) - len(rank_failures)}/"
+          f"top-{top_k_depth} {len(probe_queries) - len(rank_failures)}/"
           f"{len(probe_queries)} match")
     if rank_failures:
         failures.append(
             "probe-query top-K rank mismatch:\n" +
             "\n".join(rank_failures))
 
-    if failures:
+    return {"passed": not failures, "failures": failures, "metrics": metrics}
+
+
+def cmd_verify(args):
+    result = verify_manifest(
+        args.db,
+        args.manifest,
+        retriever_model=args.retriever_model,
+        cosine_threshold=args.cosine_threshold,
+        top_k_depth=args.top_k_depth,
+    )
+    if not result["passed"]:
         print("\n[verify] FAILED:")
-        for f in failures:
+        for f in result["failures"]:
             print(f"  - {f}")
         sys.exit(1)
     print("\n[verify] OK")
@@ -261,7 +305,7 @@ def main():
         "write",
         help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
-    pw.add_argument("--retriever_model", default="intfloat/e5-base-v2")
+    pw.add_argument("--retriever_model", default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)

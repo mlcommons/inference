@@ -61,6 +61,9 @@ class MeasurementsCheck(BaseCheck):
         self.checks.append(self.directory_exist_check)
         self.checks.append(self.required_files_check)
         self.checks.append(self.required_fields_check)
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
+        self.apply_checks = set(self.checks)
 
     def missing_check(self):
         """Ensure a measurements JSON was provided.
@@ -103,6 +106,8 @@ class MeasurementsCheck(BaseCheck):
         is_valid = True
         files = list_files(self.measurements_dir)
         for i in REQUIRED_MEASURE_FILES:
+            if i == 'user.conf' and self.is_endpoints:
+                continue
             if i not in files:
                 self.log.error("%s is missing %s", self.measurements_dir, i)
                 is_valid = False

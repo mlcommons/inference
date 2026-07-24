@@ -112,7 +112,8 @@ def _gather_top_k(db: VectorDB, queries: List[Dict], k: int) -> List[Dict]:
         urls = []
         for doc in results:
             md = getattr(doc, "metadata", None) or {}
-            url = md.get("original_url") or md.get("source") or md.get("base_filename") or ""
+            url = md.get("original_url") or md.get(
+                "source") or md.get("base_filename") or ""
             urls.append(url)
         out.append({"index": q["index"], "top_k_urls": urls})
     return out
@@ -139,10 +140,12 @@ def cmd_write(args):
     db = _load_db(args.db, args.retriever_model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
-    print(f"[manifest] DB has {total_passages} passages, dim={db._embedding_dimension}")
+    print(
+        f"[manifest] DB has {total_passages} passages, dim={db._embedding_dimension}")
 
     corpus_sha = _sha256_docstore(db)
-    sample_block = _gather_sample_embeddings(db, total_passages, NUM_SAMPLE_EMBEDDINGS)
+    sample_block = _gather_sample_embeddings(
+        db, total_passages, NUM_SAMPLE_EMBEDDINGS)
     probe_queries = _load_probe_queries(args.dataset, NUM_PROBE_QUERIES)
     probe_block = _gather_top_k(db, probe_queries, PROBE_TOP_K)
 
@@ -214,7 +217,8 @@ def verify_manifest(db_path: str, manifest_path: str,
 
     # Corpus fingerprint (sha256 of all passage texts in index order).
     local_corpus_sha = _sha256_docstore(db)
-    metrics["corpus_sha256_match"] = (local_corpus_sha == manifest["corpus_sha256"])
+    metrics["corpus_sha256_match"] = (
+        local_corpus_sha == manifest["corpus_sha256"])
     if local_corpus_sha != manifest["corpus_sha256"]:
         failures.append(
             f"corpus sha256 mismatch:\n"
@@ -270,7 +274,9 @@ def verify_manifest(db_path: str, manifest_path: str,
           f"top-{top_k_depth} {len(probe_queries) - len(rank_failures)}/"
           f"{len(probe_queries)} match")
     if rank_failures:
-        failures.append("probe-query top-K rank mismatch:\n" + "\n".join(rank_failures))
+        failures.append(
+            "probe-query top-K rank mismatch:\n" +
+            "\n".join(rank_failures))
 
     return {"passed": not failures, "failures": failures, "metrics": metrics}
 
@@ -296,24 +302,26 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    pw = sub.add_parser("write", help="Generate a reference manifest from a DB.")
+    pw = sub.add_parser(
+        "write",
+        help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
-    pw.add_argument("--retriever_model", default="intfloat_e5-base-v2/e5-base-v2")
+    pw.add_argument(
+        "--retriever_model",
+        default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)
 
-    pv = sub.add_parser("verify", help="Verify a DB against a reference manifest.")
+    pv = sub.add_parser(
+        "verify",
+        help="Verify a DB against a reference manifest.")
     pv.add_argument("--db", required=True)
     pv.add_argument("--manifest", required=True)
     pv.add_argument(
-        "--retriever_model",
-        default=None,
-        help="Retriever model to load the DB with. Defaults to the manifest's "
-             "stored value, which may be a system-specific absolute path; pass "
-             "your local model path to verify on a different system.",
-    )
-    pv.add_argument("--cosine-threshold", type=float, default=DEFAULT_COSINE_THRESHOLD)
+        "--cosine-threshold",
+        type=float,
+        default=DEFAULT_COSINE_THRESHOLD)
     pv.add_argument("--top-k-depth", type=int, default=DEFAULT_TOP_K_DEPTH)
     pv.set_defaults(func=cmd_verify)
 

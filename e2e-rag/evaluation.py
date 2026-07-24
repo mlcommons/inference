@@ -141,8 +141,8 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
 
     # Step 2: Apply reranking if enabled and reranker is available
     reranking_time = 0.0
-    has_reranker = getattr(rag_db, '_reranker_queue', None) is not None
-    if not no_rerank and has_reranker:
+    if not no_rerank and hasattr(
+            rag_db, '_reranker_model') and rag_db._reranker_model is not None:
         # Safety check: If no results retrieved, skip reranking
         if not results:
             if verbose:
@@ -150,11 +150,28 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
                     f"Warning: No documents retrieved for query: {query[:50]}")
         else:
             reranking_start = time.perf_counter()
-            # Rerank Documents by score; fixed_k takes top-k, adaptive keeps all.
-            reranked_results = rag_db.rerank_documents(query, results)
+            # Extract text content for reranking (rerank expects strings)
+            passages = [result.page_content for result in results]
+            scored_passages = rag_db.rerank(query, passages)
+
+            # Reconstruct document objects with reranked order
+            # scored_passages is [(text, score), ...] ordered by score
+            reranked_results = []
+            for text, score in scored_passages:
+                # Find the original document object for this text
+                for doc in results:
+                    if doc.page_content == text:
+                        reranked_results.append(doc)
+                        break
+
+            # Apply top_k_reranking limit AFTER reranking
+            # For adaptive strategies (top_p, relative, etc.), respect the number of documents
+            # selected by the strategy, only limit for fixed_k
             if retrieval_strategy == "fixed_k":
                 results = reranked_results[:top_k_reranking]
             else:
+                # For adaptive strategies, keep all documents selected by the
+                # strategy
                 results = reranked_results
             reranking_time = time.perf_counter() - reranking_start
 

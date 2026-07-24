@@ -51,16 +51,18 @@ def load_results(path: Path):
         # Load pandas DataFrame checkpoint
         with open(path, 'rb') as f:
             df = pickle.load(f)
-        
+
         # Convert DataFrame to dict: query -> llm_answer
         # Only include successfully completed queries
         successful = df[df['success'] == True]
-        return {row['query']: row['llm_answer'] for _, row in successful.iterrows()}
+        return {row['query']: row['llm_answer']
+                for _, row in successful.iterrows()}
     else:
         # Legacy JSON format
         data = json.loads(path.read_text(encoding="utf-8"))
         results = data.get("results", [])
-        return {entry.get("prompt"): entry.get("llm_answer", "") for entry in results if entry.get("prompt")}
+        return {entry.get("prompt"): entry.get("llm_answer", "")
+                for entry in results if entry.get("prompt")}
 
 
 def _parse_score_value(value) -> int:
@@ -122,7 +124,8 @@ def _extract_json_dict(content: str) -> Optional[dict]:
     return None
 
 
-def call_judge(session: requests.Session, service_url: str, model: str, question: str, gold: str, pred: str):
+def call_judge(session: requests.Session, service_url: str,
+               model: str, question: str, gold: str, pred: str):
     prompt = (
         "You judge whether the model answer correctly answers the question based on semantic equivalence to the gold answer.\n\n"
         "GRADING RULES:\n"
@@ -168,12 +171,17 @@ def call_judge(session: requests.Session, service_url: str, model: str, question
             "X-Title": "RAG-QnA Evaluation"
         }
 
-    response = session.post(service_url, json=payload, headers=headers, timeout=120)
+    response = session.post(
+        service_url,
+        json=payload,
+        headers=headers,
+        timeout=120)
     response.raise_for_status()
     data = response.json()
     # Defensive: handle missing or malformed 'choices' in response
     choices = data.get("choices")
-    if not choices or not isinstance(choices, list) or not choices[0] or "message" not in choices[0] or "content" not in choices[0]["message"]:
+    if not choices or not isinstance(
+            choices, list) or not choices[0] or "message" not in choices[0] or "content" not in choices[0]["message"]:
         print("[ERROR] Judge response missing 'choices' or 'content':", data)
         # Return score 0, explanation with raw response, and raw data
         return 0, f"Malformed judge response: {data}", str(data)
@@ -207,11 +215,13 @@ def call_judge(session: requests.Session, service_url: str, model: str, question
 def _judge_row(idx, prompt, gold, pred, service_url, model):
     """Call judge for a single row, returning (idx, prompt, gold, pred, score, explanation, raw)."""
     session = requests.Session()
-    score, explanation, raw = call_judge(session, service_url, model, prompt, gold, pred)
+    score, explanation, raw = call_judge(
+        session, service_url, model, prompt, gold, pred)
     return idx, prompt, gold, pred, score, explanation, raw
 
 
-def evaluate(results_path: Path, dataset_path: Path, service_url: str, model: str, batch_size: int = 16):
+def evaluate(results_path: Path, dataset_path: Path,
+             service_url: str, model: str, batch_size: int = 16):
     # Check for OpenRouter API key if using OpenRouter
     if "openrouter.ai" in service_url and not OPENROUTER_API_KEY:
         print("ERROR: OPENROUTER_API_KEY environment variable not set")
@@ -227,13 +237,15 @@ def evaluate(results_path: Path, dataset_path: Path, service_url: str, model: st
         print(f"CHECKPOINT STATISTICS")
         print("=" * 80)
         print(f"Total queries in checkpoint: {len(checkpoint_df)}")
-        print(f"Successful queries: {(checkpoint_df['success'] == True).sum()}")
+        print(
+            f"Successful queries: {(checkpoint_df['success'] == True).sum()}")
         print(f"Failed queries: {(checkpoint_df['success'] == False).sum()}")
         if 'num_docs' in checkpoint_df.columns:
             total_docs = checkpoint_df['num_docs'].sum()
             total_missing = checkpoint_df['num_missing_docs'].sum()
             print(f"Total documents referenced: {total_docs}")
-            print(f"Missing documents: {total_missing} ({100*total_missing/total_docs:.2f}%)")
+            print(
+                f"Missing documents: {total_missing} ({100*total_missing/total_docs:.2f}%)")
         print("=" * 80)
         print()
 
@@ -256,7 +268,8 @@ def evaluate(results_path: Path, dataset_path: Path, service_url: str, model: st
     total = len(items)
     unknown = sum(1 for _, _, _, pred in items if pred.lower() == "unknown")
 
-    # Submit all judge calls in parallel (batch_size workers), print as they complete
+    # Submit all judge calls in parallel (batch_size workers), print as they
+    # complete
     score_sum = 0
     with ThreadPoolExecutor(max_workers=batch_size) as executor:
         futures = {
@@ -284,15 +297,38 @@ def evaluate(results_path: Path, dataset_path: Path, service_url: str, model: st
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate single-shot results using an LLM judge.")
-    parser.add_argument("results", type=Path, help="Path to results (result_single_shot.json or oracle_checkpoint.pkl)")
-    parser.add_argument("--dataset", type=Path, default=Path("data/frames_dataset.tsv"), help="Evaluation dataset TSV")
-    parser.add_argument("--judge-url", default=DEFAULT_JUDGE_URL, help="Judge service endpoint")
-    parser.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL, help="Judge model identifier")
-    parser.add_argument("--batch-size", type=int, default=16, help="Number of concurrent judge requests (default: 16)")
+    parser = argparse.ArgumentParser(
+        description="Evaluate single-shot results using an LLM judge.")
+    parser.add_argument(
+        "results",
+        type=Path,
+        help="Path to results (result_single_shot.json or oracle_checkpoint.pkl)")
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("data/frames_dataset.tsv"),
+        help="Evaluation dataset TSV")
+    parser.add_argument(
+        "--judge-url",
+        default=DEFAULT_JUDGE_URL,
+        help="Judge service endpoint")
+    parser.add_argument(
+        "--judge-model",
+        default=DEFAULT_JUDGE_MODEL,
+        help="Judge model identifier")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=16,
+        help="Number of concurrent judge requests (default: 16)")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    evaluate(args.results, args.dataset, args.judge_url, args.judge_model, args.batch_size)
+    evaluate(
+        args.results,
+        args.dataset,
+        args.judge_url,
+        args.judge_model,
+        args.batch_size)

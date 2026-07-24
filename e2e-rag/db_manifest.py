@@ -243,10 +243,10 @@ def verify_manifest(db_path: str, manifest_path: str,
             f"(different retriever model — comparison is not meaningful)"
         )
 
-    # Corpus fingerprint: recorded for provenance, but an implementation that
-    # chunks/orders passages differently will differ here legitimately.
-    local_corpus_sha = _sha256_docstore(db)
-    metrics["corpus_sha256_match"] = (local_corpus_sha == manifest["corpus_sha256"])
+    # Corpus fingerprint is intentionally NOT verified: passage ordering depends
+    # on ingestion thread timing, so the docstore sha256 differs across systems
+    # even for identical source documents. The retrieval overlap below is the
+    # real cross-system signal.
 
     # Sample-embedding cosine compares the *same index position* across DBs.
     # When passage ordering differs, index i is a different passage, so this is

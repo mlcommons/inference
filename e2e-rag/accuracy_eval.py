@@ -105,7 +105,8 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
 
         # Extract JSON from markdown code blocks
         if "```" in content:
-            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
             if json_block_match:
                 content = json_block_match.group(1).strip()
 
@@ -114,7 +115,8 @@ def call_judge(question: str, ground_truth: str, llm_answer: str,
         if json_match:
             content = json_match.group(0)
         else:
-            return {"correct": False, "reasoning": "No JSON found in judge response"}
+            return {"correct": False,
+                    "reasoning": "No JSON found in judge response"}
 
         judge_result = json.loads(content)
         return judge_result
@@ -346,7 +348,8 @@ def main():
     # Write accuracy.txt into the loadgen log dir in MLPerf format. The
     # submission checker parses the LLM judge answer accuracy (as a percentage)
     # from the "Accuracy:" line. The hash= line and log truncation are added
-    # later by tools/submission/truncate_accuracy_log.py during submission prep.
+    # later by tools/submission/truncate_accuracy_log.py during submission
+    # prep.
     accuracy_txt_path = os.path.join(args.log_dir, "accuracy.txt")
     with open(accuracy_txt_path, 'w') as f:
         f.write(f"Accuracy: {metrics['answer_accuracy'] * 100:.4f}\n")

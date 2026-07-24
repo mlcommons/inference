@@ -537,7 +537,8 @@ def evaluate_document_relevance(question: str,
 
         # Extract JSON from markdown code blocks
         if "```" in llm_output:
-            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
             if json_block_match:
                 llm_output = json_block_match.group(1).strip()
 
@@ -658,7 +659,8 @@ def check_sufficiency(question: str,
 
         # Extract JSON from markdown code blocks
         if "```" in llm_output:
-            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
             if json_block_match:
                 llm_output = json_block_match.group(1).strip()
 
@@ -669,7 +671,8 @@ def check_sufficiency(question: str,
         else:
             print(f"    Warning: No JSON in sufficiency response")
             if iteration >= max_iterations:
-                return {"sufficient": True, "reasoning": "Max iterations reached, no JSON"}
+                return {"sufficient": True,
+                        "reasoning": "Max iterations reached, no JSON"}
             return {"sufficient": False, "reasoning": "No JSON in response"}
 
         result = json.loads(llm_output)
@@ -876,7 +879,8 @@ def generate_search_queries(question: str,
         # Extract JSON from markdown code blocks
         if "```" in llm_output:
             # Find content between ```json and ``` or just between ``` markers
-            json_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
             if json_block_match:
                 llm_output = json_block_match.group(1).strip()
 
@@ -887,7 +891,8 @@ def generate_search_queries(question: str,
         else:
             # No JSON found in response
             print(f"    Warning: No JSON found in LLM response")
-            return {"queries": [question], "feedback": "No JSON in LLM response"}
+            return {"queries": [question],
+                    "feedback": "No JSON in LLM response"}
 
         query_result = json.loads(llm_output)
         return {
@@ -1536,10 +1541,13 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             for result in results:
                 # DEBUG: Log metadata structure for first result
                 if not all_retrieved_urls:  # Log only once
-                    print(f"    [DEBUG] Sample result metadata keys: {list(result.metadata.keys())}")
-                    print(f"    [DEBUG] Sample result metadata: {result.metadata}")
+                    print(
+                        f"    [DEBUG] Sample result metadata keys: {list(result.metadata.keys())}")
+                    print(
+                        f"    [DEBUG] Sample result metadata: {result.metadata}")
 
-                # Try to get URL from metadata - support both 'original_url' and 'source' fields
+                # Try to get URL from metadata - support both 'original_url'
+                # and 'source' fields
                 url = None
                 if 'original_url' in result.metadata and result.metadata['original_url']:
                     url = result.metadata['original_url']

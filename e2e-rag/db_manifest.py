@@ -217,7 +217,8 @@ def verify_manifest(db_path: str, manifest_path: str,
 
     # Corpus fingerprint (sha256 of all passage texts in index order).
     local_corpus_sha = _sha256_docstore(db)
-    metrics["corpus_sha256_match"] = (local_corpus_sha == manifest["corpus_sha256"])
+    metrics["corpus_sha256_match"] = (
+        local_corpus_sha == manifest["corpus_sha256"])
     if local_corpus_sha != manifest["corpus_sha256"]:
         failures.append(
             f"corpus sha256 mismatch:\n"
@@ -305,7 +306,9 @@ def main():
         "write",
         help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
-    pw.add_argument("--retriever_model", default="intfloat_e5-base-v2/e5-base-v2")
+    pw.add_argument(
+        "--retriever_model",
+        default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)

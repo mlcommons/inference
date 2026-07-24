@@ -472,9 +472,9 @@ def evaluate_accuracy(log_dir, output_dir, database_path,
     # cosine, probe-query top-K ranks) against a reference manifest.
     manifest_results = None
     if manifest_path:
-        print("="*80)
+        print("=" * 80)
         print("DB Manifest Verification")
-        print("="*80)
+        print("=" * 80)
         print(f"Manifest: {manifest_path}")
         print()
 
@@ -517,8 +517,9 @@ def evaluate_accuracy(log_dir, output_dir, database_path,
         accuracy_results["passed"] = accuracy_results["passed"] and manifest_results["passed"]
 
         print()
-        print(f"Manifest: {'✅ PASSED' if manifest_results['passed'] else '❌ FAILED'}")
-        print("="*80)
+        print(
+            f"Manifest: {'✅ PASSED' if manifest_results['passed'] else '❌ FAILED'}")
+        print("=" * 80)
         print()
 
     # Write accuracy.txt in MLPerf format

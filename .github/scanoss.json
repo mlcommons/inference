@@ -1,0 +1,83 @@
+{
+  "settings": {
+    "skip": {
+      "patterns": {
+        "scanning": [
+          "tests/",
+          "test/",
+          "__tests__/",
+          "test_*.py",
+          "*_test.py",
+          "*_test.go",
+          "*.test.js",
+          "*.test.ts",
+          "*.spec.js",
+          "*.spec.ts",
+          "conftest.py",
+          "vendor/",
+          "third_party/",
+          "third-party/",
+          "external/",
+          "node_modules/",
+          "deps/",
+          "*_pb2.py",
+          "*_pb2_grpc.py",
+          "*.pb.go"
+        ]
+      },
+      "sizes": {}
+    }
+  },
+  "bom": {
+    "include": [
+      {
+        "purl": "pkg:github/mlcommons/inference"
+      },
+      {
+        "purl": "pkg:conda/tf2onnx"
+      },
+      {
+        "purl": "pkg:gitee/deep-spark/deepsparkhub"
+      },
+      {
+        "purl": "pkg:github/facebookresearch/generative-recommenders"
+      },
+      {
+        "purl": "pkg:github/habanaai/model-references"
+      },
+      {
+        "purl": "pkg:github/intel/ai-reference-models"
+      },
+      {
+        "purl": "pkg:github/miguelvictor/code-completion"
+      },
+      {
+        "purl": "pkg:github/onnx/tensorflow-onnx"
+      },
+      {
+        "purl": "pkg:github/open-mmlab/mmdetection3d"
+      },
+      {
+        "purl": "pkg:github/t4ngo/sphinxcontrib-traceables"
+      },
+      {
+        "purl": "pkg:github/transcend-0/earn"
+      },
+      {
+        "purl": "pkg:github/yupeeee/yupnets"
+      },
+      {
+        "purl": "pkg:pypi/mmdet3d"
+      },
+      {
+        "purl": "pkg:pypi/sphinxcontrib-traceables"
+      },
+      {
+        "purl": "pkg:pypi/tf2onnx"
+      },
+      {
+        "purl": "pkg:pypi/yupnets"
+      }
+    ]
+  }
+}

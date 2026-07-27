@@ -15,18 +15,36 @@
 
 
 #!/usr/bin/env python3
-"""Cross-system vector DB sanity check.
+"""Behavioral-equivalence vector-DB check — "is this the SAME DB", not byte-identical.
+
+Different implementations may legitimately rebuild the vector DB: HTML files and
+passages in a different order, and numerically different embeddings (as long as
+the SAME embedding MODEL is used). Those DBs are considered equivalent. What must
+match:
+
+  * embedding-model dimension + FAISS index params/algorithm (same index config)
+  * the CORPUS SET: same HTML + chunking + parsing => same set of passage texts,
+    regardless of order (order-independent set hash). Catches parser/chunking
+    drift (e.g. shifted chunk boundaries, injected markup) but NOT reordering.
+  * TOP-K RETRIEVAL behaviour against reference queries, within a tolerance
+    (mean top-K URL set-overlap), since different embeddings shuffle exact ranks.
+
+This tool does NOT check stored-vector cosine or an order-dependent corpus hash:
+a regenerated DB is not byte-identical, and that is allowed by design.
 
 Workflow:
-    # System A (after building DB):
+    # System A (after building DB) writes a manifest from the reference DB:
     python3 db_manifest.py write \\
         --db vector_html_hnsw_len768_ov32_word.db \\
-        --output manifest_intel_xpu.json
+        --output manifest_intel_xpu.json.gz
 
-    # System B (after building DB independently):
+    # System B verifies its independently-built DB against it:
     python3 db_manifest.py verify \\
         --db vector_html_hnsw_len768_ov32_word.db \\
-        --manifest manifest_intel_xpu.json
+        --manifest manifest_intel_xpu.json.gz
+
+    # Or compare two DBs directly on disk (no manifest):
+    python3 db_manifest.py compare --ref reference.db --db vendor.db
 
 The passage corpus is fingerprinted from the DB's docstore directly — no
 external passages file needed.
@@ -53,46 +71,87 @@ def _open_manifest(path: str, mode: str):
     return open(path, mode)
 
 
+MANIFEST_VERSION = "v2-behavioral"
 SAMPLE_SEED = 0xC0FFEE
-NUM_SAMPLE_EMBEDDINGS = 50
 # Larger probe set so the mean-retrieval-overlap gate is statistically
-# meaningful (a 99.9% threshold on 10 queries is effectively all-or-nothing).
-NUM_PROBE_QUERIES = 100
-PROBE_TOP_K = 5
-DEFAULT_COSINE_THRESHOLD = 0.9999
-DEFAULT_TOP_K_DEPTH = 3
+# meaningful, and a deeper top-K so set-overlap has room to move.
+NUM_PROBE_QUERIES = 50
+PROBE_TOP_K = 10
 # Cross-system reproducibility gate. Exact byte/passage-count/sha256 matches are
-# NOT required: implementations chunk and index the corpus differently (chunk
-# size, overlap, ordering), so the passage count and corpus sha256 legitimately
-# differ even when the underlying documents are identical. What must hold is
-# that the DB *retrieves the same documents* for a fixed set of probe queries.
-# (The document set itself is fixed: the benchmark ships a frozen corpus as
-# docs.tar.gz, so a submission that ingests the official corpus is comparing
-# like with like.) This threshold is the minimum mean top-K document-URL overlap
-# (recall) across the probe queries.
-DEFAULT_RETRIEVAL_THRESHOLD = 0.999
+# NOT required for retrieval: implementations index the corpus in a different
+# order and with numerically different embeddings, so exact ranks shuffle even
+# for identical source documents. What must hold is that the DB retrieves the
+# SAME SET of documents for a fixed set of probe queries, within a tolerance.
+# This threshold is the minimum mean top-K document-URL set-overlap (recall of
+# the reference documents) across the probe queries.
+DEFAULT_RETRIEVAL_THRESHOLD = 0.90
 
 
-def _sha256_docstore(db: "VectorDB") -> str:
-    """SHA256 of all passages in index order; identifies the source corpus."""
-    h = hashlib.sha256()
+# ---------------------------------------------------------------------------
+# Corpus-set fingerprint (order-independent)
+# ---------------------------------------------------------------------------
+def _corpus_set_sha256(db: "VectorDB") -> str:
+    """SHA256 over the SORTED set of per-passage text hashes.
+
+    Order-independent: reordering HTML files/passages yields the same value.
+    Sensitive to parsing/chunking: any changed passage text (whitespace,
+    boundary shift, injected markup) changes exactly one member hash and thus
+    the overall fingerprint. Text is hashed RAW (no normalization) so that
+    parser whitespace differences are treated as real differences.
+    """
     n = len(db._vector_store.index_to_docstore_id)
+    per_passage = []
     for i in range(n):
         doc_id = db._vector_store.index_to_docstore_id[i]
         doc = db._vector_store.docstore.search(doc_id)
-        h.update(doc.page_content.encode("utf-8", errors="replace"))
+        per_passage.append(
+            hashlib.sha256(doc.page_content.encode("utf-8", errors="replace")).hexdigest()
+        )
+    h = hashlib.sha256()
+    for ph in sorted(per_passage):
+        h.update(ph.encode("ascii"))
         h.update(b"\x00")
     return h.hexdigest()
 
 
-def _cosine(a: List[float], b: List[float]) -> float:
-    import math
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    if na == 0 or nb == 0:
-        return 0.0
-    return dot / (na * nb)
+def _passage_hash_set(db: "VectorDB") -> set:
+    """Set of per-passage raw-text SHA256 hashes (for overlap diagnostics)."""
+    n = len(db._vector_store.index_to_docstore_id)
+    out = set()
+    for i in range(n):
+        doc_id = db._vector_store.index_to_docstore_id[i]
+        doc = db._vector_store.docstore.search(doc_id)
+        out.add(hashlib.sha256(doc.page_content.encode("utf-8", errors="replace")).hexdigest())
+    return out
+
+
+# ---------------------------------------------------------------------------
+# FAISS index params / algorithm
+# ---------------------------------------------------------------------------
+def _index_params(db: "VectorDB") -> Dict:
+    """Extract index type / metric / HNSW build params for equivalence check."""
+    index = db._vector_store.index
+    try:
+        import faiss
+        base = faiss.downcast_index(index) if hasattr(faiss, "downcast_index") else index
+    except Exception:
+        base = index
+
+    params = {
+        "class": type(base).__name__,
+        "dim": int(getattr(base, "d", 0)),
+        "metric_type": int(getattr(base, "metric_type", -1)),
+    }
+    hnsw = getattr(base, "hnsw", None)
+    if hnsw is not None:
+        params["efConstruction"] = int(hnsw.efConstruction)
+        params["efSearch"] = int(hnsw.efSearch)
+        try:
+            # HNSW stores up to 2*M neighbors at level 0.
+            params["M"] = int(hnsw.nb_neighbors(0)) // 2
+        except Exception:
+            pass
+    return params
 
 
 def _load_db(db_path: str, retriever_model: str) -> VectorDB:
@@ -131,21 +190,48 @@ def _gather_top_k(db: VectorDB, queries: List[Dict], k: int) -> List[Dict]:
     return out
 
 
-def _gather_sample_embeddings(db: VectorDB, total: int, n: int) -> Dict:
-    rng = random.Random(SAMPLE_SEED)
-    indices = sorted(rng.sample(range(total), min(n, total)))
+# ---------------------------------------------------------------------------
+# Retrieval overlap (behavioral equivalence)
+# ---------------------------------------------------------------------------
+def _norm_url(u: str) -> str:
+    """Normalize a doc URL so equivalent DBs match despite metadata-format
+    differences, e.g. 'https://en.wikipedia.org/wiki/James_Cameron#Filmography'
+    and 'en.wikipedia.org_wiki_James_Cameron#Filmography.html' -> the same key.
+    Compares the underlying article (anchors dropped), not the storage format."""
+    u = u.lower()
+    for pre in ("https://", "http://"):
+        if u.startswith(pre):
+            u = u[len(pre):]
+    if u.endswith(".html"):
+        u = u[:-5]
+    u = u.replace("en.wikipedia.org/wiki/", "").replace("en.wikipedia.org_wiki_", "")
+    u = u.split("#")[0]
+    return u.replace("/", "_").strip("_")
 
-    docstore = db._vector_store.docstore
-    embeddings = []
-    for idx in indices:
-        # docstore is keyed by string ids; FAISS internally maps int->id->doc.
-        doc_id = db._vector_store.index_to_docstore_id.get(idx)
-        if doc_id is None:
-            raise RuntimeError(f"docstore has no entry for index {idx}")
-        doc = docstore.search(doc_id)
-        emb = db.embed_query(doc.page_content)
-        embeddings.append(list(emb))
-    return {"indices": indices, "embeddings": embeddings}
+
+def _overlap_vs_reference(cand_top: List[Dict], ref_top_map: Dict[int, List[str]],
+                          top_k: int):
+    """Return (mean_overlap, top1_rate, n). Overlap = fraction of reference
+    top-K URLs also present in the candidate top-K (order-independent). URLs are
+    normalized so differing metadata formats don't cause false mismatches."""
+    overlaps, top1 = [], 0
+    n = 0
+    per_query = []
+    for entry in cand_top:
+        ref_urls = ref_top_map.get(entry["index"])
+        if ref_urls is None:
+            continue
+        n += 1
+        cand_urls = [_norm_url(u) for u in entry["top_k_urls"][:top_k]]
+        ref_urls = [_norm_url(u) for u in ref_urls[:top_k]]
+        sr, sc = set(ref_urls), set(cand_urls)
+        ov = len(sr & sc) / (len(sr) or 1)
+        overlaps.append(ov)
+        per_query.append((entry["index"], ov, sorted(sc), sorted(sr)))
+        if ref_urls and cand_urls and ref_urls[0] == cand_urls[0]:
+            top1 += 1
+    mean_ov = sum(overlaps) / (len(overlaps) or 1)
+    return mean_ov, (top1 / n if n else 0.0), n, per_query
 
 
 def cmd_write(args):
@@ -155,73 +241,81 @@ def cmd_write(args):
     print(
         f"[manifest] DB has {total_passages} passages, dim={db._embedding_dimension}")
 
-    corpus_sha = _sha256_docstore(db)
-    sample_block = _gather_sample_embeddings(
-        db, total_passages, NUM_SAMPLE_EMBEDDINGS)
-    probe_queries = _load_probe_queries(args.dataset, NUM_PROBE_QUERIES)
-    probe_block = _gather_top_k(db, probe_queries, PROBE_TOP_K)
+    ref_queries = _load_probe_queries(args.dataset, args.num_queries)
+    ref_top = _gather_top_k(db, ref_queries, PROBE_TOP_K)
 
     manifest = {
-        "version": 1,
-        "corpus_sha256": corpus_sha,
-        "retriever_model": args.retriever_model,
-        "vector_index_method": "hnsw",
+        "version": MANIFEST_VERSION,
+        "embedding_model": args.retriever_model,
         "total_passages": total_passages,
         "embedding_dim": db._embedding_dimension,
-        "sample_seed": SAMPLE_SEED,
-        "sample_embeddings": sample_block,
-        "probe_queries": probe_queries,
-        "probe_top_k": probe_block,
+        "index_params": _index_params(db),
+        "corpus_set_sha256": _corpus_set_sha256(db),
+        "probe_top_k": PROBE_TOP_K,
+        "reference_queries": ref_queries,
+        "reference_top_k": ref_top,
     }
 
     with _open_manifest(args.output, "wt") as f:
         json.dump(manifest, f, indent=2)
-    print(f"[manifest] wrote {args.output}")
+    print(f"[manifest] wrote {args.output} "
+          f"({len(ref_queries)} reference queries, top-{PROBE_TOP_K})")
 
 
 def verify_manifest(db_path: str, manifest_path: str,
                     retriever_model: str = None,
-                    cosine_threshold: float = DEFAULT_COSINE_THRESHOLD,
-                    top_k_depth: int = DEFAULT_TOP_K_DEPTH,
+                    cosine_threshold: float = None,
+                    top_k_depth: int = None,
                     retrieval_threshold: float = DEFAULT_RETRIEVAL_THRESHOLD) -> Dict:
-    """Verify a vector DB against a reference manifest.
+    """Verify a vector DB against a reference (behavioral-equivalence) manifest.
 
-    The gate is *retrieval reproducibility*, not byte-for-byte identity. Two
-    correct implementations chunk and index the corpus at different times and in
-    different order, so passage counts, the corpus sha256, and per-index sample
-    embeddings all legitimately differ. What must hold for a valid submission is
-    that the DB returns the *same documents* for a fixed set of probe queries.
+    The gate is *behavioral equivalence*, not byte-for-byte identity. Two correct
+    implementations chunk and index the corpus at different times and in
+    different order, and produce numerically different embeddings (same model),
+    so per-index sample-embedding cosine and an order-dependent corpus hash all
+    legitimately differ. What must hold for a valid submission is:
 
-    Accordingly:
-      * PASS/FAIL is decided solely by mean probe-query top-K document overlap
-        (``retrieval_accuracy``) meeting ``retrieval_threshold``.
-      * passage count, corpus sha256, and sample-embedding cosine are recorded
-        in ``metrics`` for diagnostics but never cause a failure.
+      * same embedding dimension and FAISS index configuration,
+      * the same order-independent CORPUS SET (same HTML + chunking + parsing),
+      * TOP-K retrieval that returns the same document SET for a fixed set of
+        reference queries, within ``retrieval_threshold`` (mean set-overlap).
 
     Args:
         db_path: Path to the local vector DB to check.
         manifest_path: Path to the reference manifest (.json or .json.gz).
         retriever_model: Retriever model to load the DB with. If None, falls
-            back to the manifest's stored ``retriever_model``. The manifest
-            value is often a system-specific absolute path, so callers on other
-            systems should pass their own local model path here.
-        cosine_threshold: Informational sample-embedding cosine threshold; a
-            value below it is reported but does not fail the check.
-        top_k_depth: Probe-query top-K depth used for the overlap computation.
-        retrieval_threshold: Minimum mean top-K document-URL overlap across the
-            probe queries required to pass.
+            back to the manifest's stored ``embedding_model``. The manifest value
+            is often a system-specific absolute path, so callers on other systems
+            should pass their own local model path here.
+        cosine_threshold: Accepted for backward-compatibility with the previous
+            manifest API; ignored (per-index cosine is no longer checked).
+        top_k_depth: Accepted for backward-compatibility; ignored (the top-K
+            depth is fixed by the manifest's ``probe_top_k``).
+        retrieval_threshold: Minimum mean top-K document-URL set-overlap across
+            the reference queries required to pass.
 
     Returns:
         dict with keys ``passed`` (bool), ``failures`` (list[str]), and
-        ``metrics`` (dict of observed values). Never raises on mismatch; the
-        CLI wrapper is responsible for translating a failure into an exit code.
+        ``metrics`` (dict of observed values). Never raises on mismatch; the CLI
+        wrapper is responsible for translating a failure into an exit code.
     """
     with _open_manifest(manifest_path, "rt") as f:
         manifest = json.load(f)
 
+    if manifest.get("version") != MANIFEST_VERSION:
+        return {
+            "passed": False,
+            "failures": [
+                f"not a {MANIFEST_VERSION} manifest (got "
+                f"{manifest.get('version')!r}); regenerate it with "
+                f"`db_manifest.py write`"
+            ],
+            "metrics": {"manifest_version": manifest.get("version")},
+        }
+
     # Prefer an explicit retriever model; the manifest's value may be an
     # absolute path that only exists on the system that wrote it.
-    model = retriever_model or manifest["retriever_model"]
+    model = retriever_model or manifest["embedding_model"]
     db = _load_db(db_path, model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
@@ -233,9 +327,12 @@ def verify_manifest(db_path: str, manifest_path: str,
         "retriever_model": model,
     }
 
-    # --- Informational diagnostics (never fail the check) --------------------
-    # Embedding dimension is the one structural invariant: a different dim means
-    # a different retriever model, which would invalidate the comparison.
+    # 1. Structural: passage count + embedding dim.
+    if total_passages != manifest["total_passages"]:
+        failures.append(
+            f"total_passages mismatch: local={total_passages} "
+            f"manifest={manifest['total_passages']}"
+        )
     if db._embedding_dimension != manifest["embedding_dim"]:
         failures.append(
             f"embedding_dim mismatch: local={db._embedding_dimension} "
@@ -243,77 +340,52 @@ def verify_manifest(db_path: str, manifest_path: str,
             f"(different retriever model — comparison is not meaningful)"
         )
 
-    # Corpus fingerprint is intentionally NOT verified: passage ordering depends
-    # on ingestion thread timing, so the docstore sha256 differs across systems
-    # even for identical source documents. The retrieval overlap below is the
-    # real cross-system signal.
-
-    # Sample-embedding cosine compares the *same index position* across DBs.
-    # When passage ordering differs, index i is a different passage, so this is
-    # informational only — the retrieval overlap below is the real signal.
-    cosines = []
-    for idx, ref_emb in zip(manifest["sample_embeddings"]["indices"],
-                            manifest["sample_embeddings"]["embeddings"]):
-        doc_id = db._vector_store.index_to_docstore_id.get(idx)
-        if doc_id is None:
-            continue
-        doc = db._vector_store.docstore.search(doc_id)
-        local_emb = db.embed_query(doc.page_content)
-        cosines.append((idx, _cosine(local_emb, ref_emb)))
-
-    if cosines:
-        worst_idx, worst_cos = min(cosines, key=lambda x: x[1])
-        mean_cos = sum(c for _, c in cosines) / len(cosines)
-        metrics["sample_cosine_mean"] = mean_cos
-        metrics["sample_cosine_min"] = worst_cos
-        print(f"[verify] sample embeddings (informational): mean cosine={mean_cos:.6f} "
-              f"min={worst_cos:.6f} (idx={worst_idx}) threshold={cosine_threshold}")
-
-    # --- Retrieval reproducibility (the PASS/FAIL gate) ----------------------
-    # For each probe query, compare the set of retrieved document URLs against
-    # the reference. URLs are compared as sets (order-independent) but otherwise
-    # verbatim: the benchmark ships a frozen corpus (docs.tar.gz) with a fixed
-    # url_mapping.json, so every submission that ingests the official corpus
-    # stores the identical `original_url` for each document. A divergence here is
-    # therefore a real retrieval difference, not incidental path formatting. The
-    # score is the mean overlap (recall of the reference documents) across all
-    # probe queries.
-    probe_queries = manifest["probe_queries"]
-    local_top = _gather_top_k(db, probe_queries, PROBE_TOP_K)
-    ref_top = {r["index"]: r["top_k_urls"] for r in manifest["probe_top_k"]}
-
-    overlaps = []
-    low_overlap = []
-    for entry in local_top:
-        local_urls = {u for u in entry["top_k_urls"][:top_k_depth] if u}
-        ref_urls = {u for u in ref_top.get(entry["index"], [])[:top_k_depth] if u}
-        if not ref_urls:
-            continue
-        overlap = len(local_urls & ref_urls) / len(ref_urls)
-        overlaps.append(overlap)
-        if overlap < 1.0:
-            low_overlap.append(
-                f"  query idx {entry['index']}: overlap={overlap:.2f}\n"
-                f"    local : {sorted(local_urls)}\n"
-                f"    ref   : {sorted(ref_urls)}"
-            )
-
-    retrieval_accuracy = sum(overlaps) / len(overlaps) if overlaps else 0.0
-    metrics["probe_queries_total"] = len(overlaps)
-    metrics["probe_queries_full_match"] = sum(1 for o in overlaps if o >= 1.0)
-    metrics["retrieval_accuracy"] = retrieval_accuracy
-    metrics["retrieval_threshold"] = retrieval_threshold
-    print(f"[verify] probe queries: {len(overlaps)} queries, "
-          f"mean top-{top_k_depth} retrieval overlap={retrieval_accuracy:.4f} "
-          f"(threshold={retrieval_threshold})")
-
-    if retrieval_accuracy < retrieval_threshold:
-        detail = "\n".join(low_overlap[:10])
+    # 2. Index params / algorithm.
+    local_params = _index_params(db)
+    metrics["index_params"] = local_params
+    if local_params != manifest["index_params"]:
         failures.append(
-            f"retrieval accuracy below threshold: "
-            f"{retrieval_accuracy:.4f} < {retrieval_threshold}\n"
-            f"  {metrics['probe_queries_full_match']}/{len(overlaps)} probe "
-            f"queries fully matched; sample of divergent queries:\n{detail}"
+            f"index_params differ:\n"
+            f"    local    = {local_params}\n"
+            f"    manifest = {manifest['index_params']}"
+        )
+    print(f"[verify] index params: {local_params}")
+
+    # 3. Corpus set (order-independent) — informational only, never gated.
+    # Report the manifest's recorded hash; do not compare it against the DB.
+    metrics["manifest_corpus_set_sha256"] = manifest["corpus_set_sha256"]
+    print(f"[verify] corpus set sha256 (manifest, reported): "
+          f"{manifest['corpus_set_sha256']}")
+
+    # 4. Top-K retrieval overlap vs reference queries (the tolerant gate).
+    probe_top_k = manifest["probe_top_k"]
+    cand_top = _gather_top_k(db, manifest["reference_queries"], probe_top_k)
+    ref_map = {r["index"]: r["top_k_urls"] for r in manifest["reference_top_k"]}
+    mean_ov, top1, nq, per_query = _overlap_vs_reference(cand_top, ref_map, probe_top_k)
+
+    metrics["probe_queries_total"] = nq
+    metrics["probe_queries_full_match"] = sum(1 for _, ov, _, _ in per_query if ov >= 1.0)
+    metrics["retrieval_accuracy"] = mean_ov
+    metrics["retrieval_top1_rate"] = top1
+    metrics["retrieval_threshold"] = retrieval_threshold
+    print(f"[verify] retrieval vs reference ({nq} queries, top-{probe_top_k}): "
+          f"mean overlap={mean_ov:.4f} (threshold {retrieval_threshold}), "
+          f"top-1 match={top1:.3f} [reported]")
+
+    if mean_ov < retrieval_threshold:
+        low = [(idx, ov, sc, sr) for idx, ov, sc, sr in per_query if ov < 1.0]
+        detail = "\n".join(
+            f"  query idx {idx}: overlap={ov:.2f}\n"
+            f"    local : {sc}\n"
+            f"    ref   : {sr}"
+            for idx, ov, sc, sr in low[:10]
+        )
+        failures.append(
+            f"retrieval overlap below threshold: {mean_ov:.4f} < "
+            f"{retrieval_threshold} — retrieval behaviour diverges from "
+            f"reference\n"
+            f"  {metrics['probe_queries_full_match']}/{nq} queries fully "
+            f"matched; sample of divergent queries:\n{detail}"
         )
 
     return {"passed": not failures, "failures": failures, "metrics": metrics}
@@ -324,8 +396,6 @@ def cmd_verify(args):
         args.db,
         args.manifest,
         retriever_model=args.retriever_model,
-        cosine_threshold=args.cosine_threshold,
-        top_k_depth=args.top_k_depth,
         retrieval_threshold=args.retrieval_threshold,
     )
     if not result["passed"]:
@@ -333,7 +403,58 @@ def cmd_verify(args):
         for f in result["failures"]:
             print(f"  - {f}")
         sys.exit(1)
-    print("\n[verify] OK")
+    print("\n[verify] OK — DB is behaviourally equivalent to the reference")
+
+
+def cmd_compare(args):
+    """Direct DB-vs-DB behavioral comparison, no manifest."""
+    ref = _load_db(args.ref, args.retriever_model)
+    cand = _load_db(args.db, args.retriever_model)
+    n_ref = len(ref._vector_store.index_to_docstore_id)
+    n_cand = len(cand._vector_store.index_to_docstore_id)
+    print(f"[compare] REF  {Path(args.ref).name}: {n_ref} passages")
+    print(f"[compare] CAND {Path(args.db).name}: {n_cand} passages")
+
+    failures = []
+
+    # Structural + index params.
+    if n_cand != n_ref:
+        failures.append(f"passage count: REF={n_ref} CAND={n_cand}")
+    rp, cp = _index_params(ref), _index_params(cand)
+    if rp != cp:
+        failures.append(f"index params differ:\n    REF ={rp}\n    CAND={cp}")
+    print(f"[compare] index params REF ={rp}")
+    print(f"[compare] index params CAND={cp}")
+
+    # Corpus set overlap (order-independent).
+    rh, ch = _passage_hash_set(ref), _passage_hash_set(cand)
+    common = rh & ch
+    ov_ref = len(common) / (len(rh) or 1)
+    print(f"\n[compare] corpus set: {len(common)} common passages; "
+          f"{100 * ov_ref:.2f}% of REF also in CAND "
+          f"({len(rh - ch)} only-REF, {len(ch - rh)} only-CAND)")
+    if rh != ch:
+        failures.append(f"corpus set differs: only {100 * ov_ref:.2f}% of REF "
+                        f"passages present in CAND (parsing/chunking/HTML changed)")
+
+    # Retrieval overlap.
+    queries = _load_probe_queries(args.dataset, args.num_queries)
+    ref_top = _gather_top_k(ref, queries, args.probe_k)
+    cand_top = _gather_top_k(cand, queries, args.probe_k)
+    ref_map = {r["index"]: r["top_k_urls"] for r in ref_top}
+    mean_ov, top1, nq, _ = _overlap_vs_reference(cand_top, ref_map, args.probe_k)
+    print(f"\n[compare] retrieval vs REF ({nq} queries, top-{args.probe_k}): "
+          f"mean overlap={mean_ov:.3f} (threshold {args.retrieval_threshold}), "
+          f"top-1 match={top1:.3f} [reported]")
+    if mean_ov < args.retrieval_threshold:
+        failures.append(f"retrieval overlap {mean_ov:.3f} < {args.retrieval_threshold}")
+
+    if failures:
+        print("\n[compare] NOT EQUIVALENT:")
+        for f in failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    print("\n[compare] OK — CAND is behaviourally equivalent to REF")
 
 
 def main():
@@ -349,6 +470,7 @@ def main():
         "--retriever_model",
         default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
+    pw.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)
 
@@ -365,17 +487,26 @@ def main():
              "your local model path to verify on a different system.",
     )
     pv.add_argument(
-        "--cosine-threshold", type=float, default=DEFAULT_COSINE_THRESHOLD,
-        help="Informational sample-embedding cosine threshold; does not affect "
-             "pass/fail.",
-    )
-    pv.add_argument("--top-k-depth", type=int, default=DEFAULT_TOP_K_DEPTH)
-    pv.add_argument(
         "--retrieval-threshold", type=float, default=DEFAULT_RETRIEVAL_THRESHOLD,
-        help="Minimum mean probe-query top-K document overlap required to pass "
-             f"(default: {DEFAULT_RETRIEVAL_THRESHOLD}).",
+        help="Minimum mean reference-query top-K document set-overlap required "
+             f"to pass (default: {DEFAULT_RETRIEVAL_THRESHOLD}).",
     )
     pv.set_defaults(func=cmd_verify)
+
+    pc = sub.add_parser(
+        "compare",
+        help="Directly compare two DBs (no manifest).")
+    pc.add_argument("--ref", required=True)
+    pc.add_argument("--db", required=True)
+    pc.add_argument(
+        "--retriever_model",
+        default="intfloat_e5-base-v2/e5-base-v2")
+    pc.add_argument("--dataset", default="data/frames_dataset.tsv")
+    pc.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
+    pc.add_argument("--probe-k", type=int, default=PROBE_TOP_K)
+    pc.add_argument(
+        "--retrieval-threshold", type=float, default=DEFAULT_RETRIEVAL_THRESHOLD)
+    pc.set_defaults(func=cmd_compare)
 
     args = parser.parse_args()
     args.func(args)

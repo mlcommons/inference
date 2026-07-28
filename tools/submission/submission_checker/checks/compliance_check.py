@@ -8,6 +8,7 @@ from .accuracy_check import AccuracyCheck
 from ..utils import *
 import re
 import os
+import json
 
 
 class ComplianceCheck(BaseCheck):
@@ -41,6 +42,7 @@ class ComplianceCheck(BaseCheck):
         self.submission_logs = submission_logs
         self.config = config
         self.name = "compliance check"
+        self.perf_log = self.submission_logs.performance_log
         self.model = self.submission_logs.loader_data.get("benchmark", "")
         self.model_mapping = self.submission_logs.loader_data.get(
             "model_mapping", {})
@@ -50,6 +52,8 @@ class ComplianceCheck(BaseCheck):
         self.model = self.config.get_mlperf_model(
             self.model, self.model_mapping)
         self.test_list = self.get_test_list(self.model)
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.setup_checks()
 
     def setup_checks(self):
@@ -58,10 +62,15 @@ class ComplianceCheck(BaseCheck):
         Appends the per-submission validation callables to `self.checks` in
         the order they should be executed by the checking framework.
         """
-        self.checks.append(self.dir_exists_check)
-        self.checks.append(self.performance_check)
-        self.checks.append(self.accuracy_check)
-        self.checks.append(self.compliance_performance_check)
+        if not self.is_endpoints:
+            self.checks.append(self.dir_exists_check)
+            self.checks.append(self.performance_check)
+            self.checks.append(self.accuracy_check)
+            self.checks.append(self.compliance_performance_check)
+            self.apply_checks = set(self.checks)
+        else:
+            self.checks.append(self.compliance_endpoints_check)
+            self.apply_checks = set(self.checks)
 
     def get_test_list(self, model):
         """Return the list of compliance tests applicable to `model`.
@@ -186,9 +195,10 @@ class ComplianceCheck(BaseCheck):
                     "model_mapping": self.submission_logs.loader_data.get("model_mapping", {}),
                     "check_scenarios": True,
                     "compliance_skip": True,
+                    "is_endpoints_submission": self.submission_logs.loader_data.get("is_endpoints_submission", False),
                 }
                 test_logs = SubmissionLogs(
-                    self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, test_data)
+                    self.submission_logs.loader_data[f"{test}_perf_log"], None, None, None, self.submission_logs.system_json, None, None, test_data)
                 perf_check = PerformanceCheck(self.log, os.path.join(
                     self.compliance_dir, test), self.config, test_logs)
                 is_valid &= perf_check()
@@ -322,7 +332,9 @@ class ComplianceCheck(BaseCheck):
                     first_token_pass and eos_pass and length_check_pass)
                 if not is_valid:
                     self.log.error(
-                        f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}."
+                        f"TEST06 accuracy check failed. first_token_check: " +
+                        f"{first_token_pass} eos_check: " +
+                        f"{eos_pass} length_check: {length_check_pass}."
                     )
             elif test == "TEST07":
                 # TEST07: Verify accuracy in performance mode
@@ -485,3 +497,71 @@ class ComplianceCheck(BaseCheck):
                                 diff)
                             is_valid = False
         return is_valid
+
+    def compliance_endpoints_check(self):
+        test_dir = os.path.join(self.compliance_dir, "audit")
+        is_valid = True
+        for test in self.test_list:
+            if test in ENDPOINTS_COMPLIANCE_MAPPING:
+                test_name = ENDPOINTS_COMPLIANCE_MAPPING.get(test, test)
+                fname = os.path.join(test_dir, f"audit_{test_name}.json")
+                if not os.path.exists(fname):
+                    if self.endpoint_audit_file_required(test):
+                        # if audit file is required, but missing, error out
+                        self.log.error("%s is missing in %s", fname, test_dir)
+                        is_valid = False
+                    else:
+                        # if audit file is not required, skip
+                        continue
+                else:
+                    try:
+                        with open(fname) as f:
+                            test_file = json.load(f)
+
+                        if test_file["test"] != test_name:
+                            self.log.error(
+                                "%s compliance test is incorrect %s. " +
+                                "Expected name=%s" +
+                                "Actual name=%s",
+                                fname,
+                                test_dir,
+                                test_name,
+                                test_file["test"]
+                            )
+                            is_valid = False
+                        elif not test_file["passed"]:
+                            self.log.error(
+                                "%s compliance test can not be loaded in %s", fname, test_dir)
+                            is_valid = False
+                        else:
+                            self.log.info(
+                                "%s compliance test %s passed for %s", fname, test_name, test_dir)
+
+                    except BaseException:
+                        self.log.error(
+                            "%s compliance test can not be loaded in %s", fname, test_dir)
+                        is_valid = False
+
+            if test in ["TEST09"]:
+                mean_output_tokens = self.perf_log["mean_output_tokens"]
+                if mean_output_tokens > TEST09_HIGH or mean_output_tokens < TEST09_LOW:
+                    self.log.error("TEST 09 (Verify Output Token Length in Performance Mode)" +
+                                   " failed for %s. Mean output tokens need to be in the range" +
+                                   " [%s, %s]. Found %s",
+                                   self.compliance_dir,
+                                   TEST09_LOW,
+                                   TEST09_HIGH,
+                                   mean_output_tokens
+                                   )
+                    is_valid = False
+
+        return is_valid
+
+    def endpoint_audit_file_required(self, test):
+        # currently, only test04 is enabled in endpoints. and Wan is the only
+        # model that requires test04
+        return (
+            test == "TEST04"
+            and self.model in ENDPOINTS_ALLOWED_MODELS
+            and self.model in self.config.base.get("models_TEST04", [])
+        )

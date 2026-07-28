@@ -55,6 +55,18 @@ Use [`./sglang/run_server.sh`](./sglang/run_server.sh) to launch an SGLang serve
 
 The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified.
 
+#### Speculative Decoding (Interactive scenario)
+
+Pass `--enable_speculative_decode` to enable EAGLE3 speculative decoding for
+the Interactive scenario:
+
+```bash
+./run_server.sh --enable_speculative_decode
+```
+
+Per the Interactive scenario policy, `num_steps=3` and `topk=1` are fixed; the
+draft head is [`nvidia/gpt-oss-120b-Eagle3-long-context`](https://huggingface.co/nvidia/gpt-oss-120b-Eagle3-long-context).
+
 You may also use docker:
 
 ```bash

@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v2.0.4
+    hooks:
+      - id: autopep8
+        args: ['--in-place', '-a', '--max-line-length', '79']
+        exclude: 'tools/submission/power/power_checker\.py'
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.5
+    hooks:
+      - id: clang-format
+        args: ['--style=file']
+        types_or: [c, c++]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks

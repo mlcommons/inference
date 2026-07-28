@@ -20,6 +20,7 @@ class Config:
         skip_calibration_check=False,
         skip_dataset_size_check=False,
         submitter=None,
+        private_ids=False,
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -38,6 +39,7 @@ class Config:
         self.skip_all_systems_have_results_check = skip_all_systems_have_results_check
         self.skip_calibration_check = skip_calibration_check
         self.skip_dataset_size_check = skip_dataset_size_check
+        self.private_ids = private_ids
         self.load_config(version)
 
     def load_config(self, version):
@@ -156,11 +158,20 @@ class Config:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
-    def get_accuracy_sample_count(self, model):
+    def get_accuracy_sample_count(self, model, scenario=None):
+        # get expected accuracy sample count from config, qwen has scenario
+        # specific sample counts as special case
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)
-        return self.accuracy_sample_count[model]
+        sample_count = self.accuracy_sample_count[model]
+        # handle Qwen's scenario specific sample counts
+        if isinstance(sample_count, dict):
+            if scenario in sample_count:
+                return sample_count[scenario]
+            if scenario is not None and scenario.lower() in sample_count:
+                return sample_count[scenario.lower()]
+        return sample_count
 
     def ignore_errors(self, line):
         for error in self.base["ignore_errors"]:
@@ -229,5 +240,6 @@ class Config:
             "llama3.1-405b",
             "llama3.1-8b",
             "llama3.1-8b-edge",
-            "deepseek-r1"
+            "deepseek-r1",
+            "gpt-oss-120b"
         ]

@@ -1,4 +1,5 @@
 import argparse
+from collections import Counter
 import logging
 import os
 import sys
@@ -113,6 +114,11 @@ def get_args():
         action="store_true",
         help="skips dataset size check, only for backwards compatibility",
     )
+    parser.add_argument(
+        "--private-ids",
+        action="store_true",
+        help="generate and persist private IDs for each system in privateid.json",
+    )
     args = parser.parse_args()
     return args
 
@@ -134,7 +140,7 @@ def main():
         args.version,
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
-        skip_compliance=args.skip_power_check,
+        skip_compliance=args.skip_compliance,
         skip_power_check=args.skip_power_check,
         skip_meaningful_fields_emptiness_check=args.skip_meaningful_fields_emptiness_check,
         skip_check_power_measure_files=args.skip_check_power_measure_files,
@@ -145,6 +151,7 @@ def main():
         skip_calibration_check=args.skip_calibration_check,
         skip_dataset_size_check=args.skip_dataset_size_check,
         submitter=args.submitter,
+        private_ids=args.private_ids
     )
 
     if args.scenarios_to_skip:
@@ -253,13 +260,8 @@ def main():
     )
 
     def merge_two_dict(x, y):
-        z = x.copy()
-        for key in y:
-            if key not in z:
-                z[key] = y[key]
-            else:
-                z[key] += y[key]
-        return z
+        z = Counter(x) + Counter(y)
+        return dict(z)
 
     # systems can be repeating in open, closed and network
     unique_closed_systems = merge_two_dict(
@@ -285,10 +287,7 @@ def main():
 
     # Counting the number of closed,open and network results
     def sum_dict_values(x):
-        count = 0
-        for key in x:
-            count += x[key]
-        return count
+        return sum(x.values())
 
     count_closed_power_results = sum_dict_values(closed_power_systems)
     count_closed_non_power_results = sum_dict_values(closed_non_power_systems)

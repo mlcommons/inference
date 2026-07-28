@@ -1,0 +1,74 @@
+name: Tests and Coverage
+
+on:
+  push:
+    branches: ["arav-codecov-impl"]
+    paths:
+      - "tools/submission/**"
+      - ".github/workflows/codecov.yml"
+  pull_request:
+    branches: ["arav-codecov-impl"]
+    paths:
+      - "tools/submission/**"
+      - ".github/workflows/codecov.yml"
+
+# Keep the pinned inputs in sync with tools/submission/tests/test_snapshot.py
+env:
+  SUBMISSION_REPO: https://github.com/mlcommons/inference_results_v6.0
+  PINNED_SHA: 4d3916ac9cf474b679cdfcf492d43a0559418ad1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov syrupy pyyaml
+
+      - name: Fetch pinned submissions repo
+        run: |
+          set -euo pipefail
+          # Partial clone: fetch only the blobs we check out. The sparse-checkout
+          # excludes large artifacts the checker never reads (accuracy/trace
+          # dumps, dataset JSONs, model caches, vendored binaries).
+          git clone --filter=blob:none --no-checkout "$SUBMISSION_REPO" submissions
+          cd submissions
+          git sparse-checkout set --no-cone \
+            '/*' \
+            '!openimages-mlperf-v21.json' \
+            '!mlperf_log_trace.json' \
+            '!mlc-deps.png' \
+            '!environment.pickle' \
+            '!unet.cache' \
+            '!libamdhip64.so.6' \
+            '!val_map.txt'
+          git checkout "$PINNED_SHA"
+
+      - name: Run tests with coverage
+        # The snapshot test runs the checker as a subprocess; pytest-cov
+        # instruments it automatically, so coverage of submission_checker is
+        # captured end-to-end.
+        env:
+          MLPERF_SUBMISSION_DIR: ${{ github.workspace }}/submissions
+          # Resolve `submission_checker` as an importable package so coverage
+          # can map the subprocess data to it (a path-based --cov would not
+          # match, because the checker subprocess runs from tools/submission).
+          PYTHONPATH: tools/submission
+        run: >
+          pytest tools/submission/tests/
+          --cov=submission_checker
+          --cov-report=xml
+          --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}

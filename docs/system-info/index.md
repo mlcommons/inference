@@ -210,6 +210,60 @@ When the `_power` variation is active, the following additional fields are requi
 
 `power_management`, `filesystem`, `boot_firmware_version`, `management_firmware_version`, `other_hardware`, `number_of_type_nics_installed`, `nics_enabled_firmware`, `nics_enabled_os`, `nics_enabled_connected`, `network_speed_mbit`, `power_supply_quantity_and_rating_watts`, `power_supply_details`, `disk_drives`, `disk_controllers`, `system_power_only`
 
+### Optional Nameplate Power YAML (`_inference_optional_nameplate`, `_redfish`)
+
+Separate from the fields above, the script can also generate the **optional
+nameplate / design-power YAML** described in the inference submission rules
+(`tools/submission/submission_structure.md`). This is not part of
+`system-info-multi-node.json` — it's a standalone file consumed by the
+MLPerf Inference `submission_checker`'s `nameplate_power_check`, which sums
+`PowerCapacityWatts` across the `Min PSUs Needed` largest PSUs per leaf node
+of PSU declarations. The checker expects it at
+`systems/<system_desc_id>_power.yaml` (required starting `v6.1`).
+
+Two modes, selected by whether `_redfish` is also active:
+
+| Tags | What gets written |
+|------|--------------------|
+| `_inference_optional_nameplate` alone | A generic **skeleton template** — placeholder `My Rack 1` / `My Server 1` / `My Switch 1` labels, two PSUs at 1200W each, `Description: 'Optional Description'` — for you to fill in by hand. No BMC is contacted. |
+| `_inference_optional_nameplate,_redfish` | The **real** PSU nameplate/capacity data, queried live from a Redfish-enabled BMC (or a [DMTF Redfish mockup server](https://github.com/DMTF/Redfish-Mockup-Server) for local testing) |
+
+**Skeleton template (no BMC):**
+
+```bash
+mlcr get-mlperf-multi-node-system-info,_inference,_inference_optional_nameplate \
+  --system_name="My-System"
+```
+
+**Populated from a live Redfish BMC:**
+
+```bash
+mlcr get-mlperf-multi-node-system-info,_inference,_redfish,_inference_optional_nameplate \
+  --system_name="My-System" \
+  --redfish_endpoint="https://bmc.example.com" \
+  --redfish_username="admin" \
+  --redfish_password="secret"
+```
+
+When populated from Redfish, PSU data is sourced as follows:
+
+| Nameplate field | Redfish source |
+|---|---|
+| `PSUs[].Name` / `PowerCapacityWatts` | `Chassis/<id>/PowerSubsystem/PowerSupplies/<bay>` (preferred), falling back to the legacy `Chassis/<id>/Power` → `PowerSupplies[]` on BMCs that only implement the older schema |
+| `Min PSUs Needed` | `Chassis/<id>/PowerSubsystem` → `PowerSupplyRedundancy[].MinNeededInGroup`, when reported; otherwise conservatively defaults to the number of installed PSUs (no redundancy credit) |
+
+Redfish has no concept of rack/system grouping above a chassis — each
+chassis becomes one flat leaf under `<system_name>`, even with real BMC
+data. If you want an explicit rack layer in between (as the skeleton
+template shows), add it to the generated YAML by hand.
+
+The output is written to `<system_name with spaces replaced by
+_>_power.yaml` and its path is exported as
+`MLC_NAMEPLATE_POWER_YAML_FILE_PATH`. As with the main system-info JSON,
+you still need to copy/rename this file into your submission's `systems/`
+directory to match whatever `<system_desc_id>` that submission actually
+uses.
+
 ## Available Variations
 
 | Variation | Description |
@@ -221,6 +275,8 @@ When the `_power` variation is active, the following additional fields are requi
 | `_exclude_current_node` | Skip the local machine; collect only from SSH targets |
 | `_network` | Add network mode fields to the output |
 | `_power` | Add power measurement fields to the output |
+| `_redfish` | Capture live PSU/power data from a Redfish BMC (used with `_inference_optional_nameplate`, or alone for a raw reference capture) |
+| `_inference_optional_nameplate` | Generate the optional nameplate power YAML — a skeleton template alone, or populated from Redfish when stacked with `_redfish` (see [Optional Nameplate Power YAML](#optional-nameplate-power-yaml-_inference_optional_nameplate-_redfish)) |
 
 Variations can be stacked:
 
@@ -245,5 +301,8 @@ mlcr get-mlperf-multi-node-system-info,_cuda,_inference,_power \
 | `--cooling` | `MLC_MLPERF_COOLING` | Cooling method |
 | `--hw_notes` | `MLC_MLPERF_HARDWARE_NOTES` | Hardware notes |
 | `--system_type_detail` | `MLC_MLPERF_SYSTEM_TYPE_DETAIL` | `cloud`, `on-premise`, `edge-server`, or `edge-device` (optional) |
+| `--redfish_endpoint` | `MLC_REDFISH_ENDPOINT` | Redfish BMC base URL (only relevant with `_redfish`) |
+| `--redfish_username` | `MLC_REDFISH_USERNAME` | BMC username; leave unset for an unauthenticated mockup |
+| `--redfish_password` | `MLC_REDFISH_PASSWORD` | BMC password |
 
 If you hit any issues while using this script, please feel free to raise an issue at [https://github.com/mlcommons/mlperf-automations](https://github.com/mlcommons/mlperf-automations).

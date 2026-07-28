@@ -276,7 +276,7 @@ def validate_database(database_path, retriever_model):
 
 def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
                       manifest_path=None, cosine_threshold=0.9999,
-                      top_k_depth=3, retrieval_threshold=0.90):
+                      top_k_depth=10, retrieval_threshold=0.95):
     """
     Evaluate accuracy of datasetup workload.
 
@@ -622,15 +622,15 @@ def main():
     parser.add_argument(
         "--top_k_depth",
         type=int,
-        default=3,
+        default=10,
         help="Probe-query top-K depth for the manifest overlap check"
     )
     parser.add_argument(
         "--retrieval_threshold",
         type=float,
-        default=0.90,
+        default=0.95,
         help="Minimum mean probe-query top-K document overlap required for the "
-             "manifest check to pass (default: 0.90)."
+             "manifest check to pass (default: 0.95)."
     )
 
     args = parser.parse_args()

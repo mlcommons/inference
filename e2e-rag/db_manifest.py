@@ -71,20 +71,33 @@ def _open_manifest(path: str, mode: str):
     return open(path, mode)
 
 
-MANIFEST_VERSION = "v2-behavioral"
+def _resolve_model(args, manifest=None):
+    """Accept either --retriever_model or --embedding_model, falling back to the
+    manifest's retriever_model / embedding_model key. The two names are
+    interchangeable (same underlying model)."""
+    model = getattr(args, "retriever_model", None) or getattr(args, "embedding_model", None)
+    if model:
+        return model
+    if manifest is not None:
+        return manifest.get("retriever_model") or manifest.get("embedding_model")
+    return None
+
+
+def _add_model_args(parser, **kwargs):
+    """--retriever_model / --embedding_model as interchangeable aliases."""
+    parser.add_argument("--retriever_model", "--embedding_model",
+                        dest="retriever_model", **kwargs)
+
+
+# Manifest schema version. Written as int 2; older manifests used the string
+# "v2-behavioral", still accepted on verify.
+MANIFEST_VERSION = 2
+ACCEPTED_VERSIONS = (2, "v2-behavioral")
 SAMPLE_SEED = 0xC0FFEE
-# Larger probe set so the mean-retrieval-overlap gate is statistically
-# meaningful, and a deeper top-K so set-overlap has room to move.
 NUM_PROBE_QUERIES = 50
 PROBE_TOP_K = 10
-# Cross-system reproducibility gate. Exact byte/passage-count/sha256 matches are
-# NOT required for retrieval: implementations index the corpus in a different
-# order and with numerically different embeddings, so exact ranks shuffle even
-# for identical source documents. What must hold is that the DB retrieves the
-# SAME SET of documents for a fixed set of probe queries, within a tolerance.
-# This threshold is the minimum mean top-K document-URL set-overlap (recall of
-# the reference documents) across the probe queries.
-DEFAULT_RETRIEVAL_THRESHOLD = 0.90
+# Minimum mean top-K document-URL set-overlap across the probe queries.
+DEFAULT_RETRIEVAL_THRESHOLD = 0.95
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +248,8 @@ def _overlap_vs_reference(cand_top: List[Dict], ref_top_map: Dict[int, List[str]
 
 
 def cmd_write(args):
-    db = _load_db(args.db, args.retriever_model)
+    model = _resolve_model(args)
+    db = _load_db(args.db, model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
     print(
@@ -246,7 +260,10 @@ def cmd_write(args):
 
     manifest = {
         "version": MANIFEST_VERSION,
-        "embedding_model": args.retriever_model,
+        # Write both names so the manifest is portable across repos that use
+        # either "retriever_model" or "embedding_model".
+        "retriever_model": model,
+        "embedding_model": model,
         "total_passages": total_passages,
         "embedding_dim": db._embedding_dimension,
         "index_params": _index_params(db),
@@ -302,11 +319,11 @@ def verify_manifest(db_path: str, manifest_path: str,
     with _open_manifest(manifest_path, "rt") as f:
         manifest = json.load(f)
 
-    if manifest.get("version") != MANIFEST_VERSION:
+    if manifest.get("version") not in ACCEPTED_VERSIONS:
         return {
             "passed": False,
             "failures": [
-                f"not a {MANIFEST_VERSION} manifest (got "
+                f"not a v2 manifest (got version="
                 f"{manifest.get('version')!r}); regenerate it with "
                 f"`db_manifest.py write`"
             ],
@@ -314,8 +331,10 @@ def verify_manifest(db_path: str, manifest_path: str,
         }
 
     # Prefer an explicit retriever model; the manifest's value may be an
-    # absolute path that only exists on the system that wrote it.
-    model = retriever_model or manifest["embedding_model"]
+    # absolute path that only exists on the system that wrote it. Accept either
+    # "retriever_model" or "embedding_model" from the manifest.
+    model = (retriever_model or manifest.get("retriever_model")
+             or manifest.get("embedding_model"))
     db = _load_db(db_path, model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
@@ -408,8 +427,9 @@ def cmd_verify(args):
 
 def cmd_compare(args):
     """Direct DB-vs-DB behavioral comparison, no manifest."""
-    ref = _load_db(args.ref, args.retriever_model)
-    cand = _load_db(args.db, args.retriever_model)
+    model = _resolve_model(args)
+    ref = _load_db(args.ref, model)
+    cand = _load_db(args.db, model)
     n_ref = len(ref._vector_store.index_to_docstore_id)
     n_cand = len(cand._vector_store.index_to_docstore_id)
     print(f"[compare] REF  {Path(args.ref).name}: {n_ref} passages")
@@ -466,9 +486,7 @@ def main():
         "write",
         help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
-    pw.add_argument(
-        "--retriever_model",
-        default="intfloat_e5-base-v2/e5-base-v2")
+    _add_model_args(pw, default="intfloat_e5-base-v2/e5-base-v2")
     pw.add_argument("--dataset", default="data/frames_dataset.tsv")
     pw.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pw.add_argument("--output", required=True)
@@ -479,8 +497,8 @@ def main():
         help="Verify a DB against a reference manifest.")
     pv.add_argument("--db", required=True)
     pv.add_argument("--manifest", required=True)
-    pv.add_argument(
-        "--retriever_model",
+    _add_model_args(
+        pv,
         default=None,
         help="Retriever model to load the DB with. Defaults to the manifest's "
              "stored value, which may be a system-specific absolute path; pass "
@@ -498,9 +516,7 @@ def main():
         help="Directly compare two DBs (no manifest).")
     pc.add_argument("--ref", required=True)
     pc.add_argument("--db", required=True)
-    pc.add_argument(
-        "--retriever_model",
-        default="intfloat_e5-base-v2/e5-base-v2")
+    _add_model_args(pc, default="intfloat_e5-base-v2/e5-base-v2")
     pc.add_argument("--dataset", default="data/frames_dataset.tsv")
     pc.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pc.add_argument("--probe-k", type=int, default=PROBE_TOP_K)

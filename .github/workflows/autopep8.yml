@@ -1,0 +1,57 @@
+# Verify that Python files modified in a PR are autopep8-formatted, using the
+# SAME settings as the auto-formatter in format.yml (-a --max-line-length 79).
+# Intended as a REQUIRED status check (branch protection) so unformatted PRs
+# can't be merged to main.
+name: "autopep8 format check"
+
+on:
+  pull_request:
+    branches: ["master", "main"]
+
+env:
+  python_version: "3.9"
+
+jobs:
+  autopep8-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.python_version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Install autopep8
+        run: python3 -m pip install autopep8
+
+      - name: Check modified Python files
+        run: |
+          set -uo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --quiet origin "$BASE" 2>/dev/null || true
+          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD -- '*.py' || true)
+          if [ -z "$FILES" ]; then
+            echo "No modified Python files."
+            exit 0
+          fi
+          rc=0
+          for FILE in $FILES; do
+            [ -f "$FILE" ] || continue
+            # Match format.yml: it excludes this file from formatting.
+            [ "$FILE" = "tools/submission/power/power_checker.py" ] && continue
+            if ! autopep8 --exit-code --diff -a --max-line-length 79 "$FILE" > /tmp/autopep8.diff 2>/dev/null; then
+              echo "::error file=$FILE::Not autopep8-formatted — run: autopep8 --in-place -a --max-line-length 79 $FILE"
+              cat /tmp/autopep8.diff
+              rc=1
+            fi
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::Some modified Python files are not autopep8-formatted (see diffs above)."
+          else
+            echo "All modified Python files are autopep8-formatted."
+          fi
+          exit "$rc"

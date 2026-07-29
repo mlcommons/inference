@@ -117,6 +117,21 @@ class LLMLogger:
         if self.current_query:
             self.current_query["llm_calls"].append(call_record)
 
+    def get_component_output_tokens(self, component: str) -> Optional[int]:
+        """Return the real output-token count (osl) of the most recent call to
+        ``component`` in the current query, or None if there was no such call.
+
+        Used by the SUT to report the true answer-generation token length to
+        LoadGen (for TEST09), rather than a proxy derived from the answer text.
+        """
+        cq = self.current_query
+        if not cq:
+            return None
+        for call in reversed(cq.get("llm_calls", [])):
+            if call.get("component") == component:
+                return call.get("metrics", {}).get("osl")
+        return None
+
     def _extract_response_text(self, response: Dict) -> str:
         """Extract response text from API response"""
         if not response or 'choices' not in response:

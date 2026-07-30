@@ -1,0 +1,50 @@
+# All memory requirements in GB
+resnet:
+  reference:
+    fp32:
+      system_memory: 8
+      accelerator_memory: 4
+      disk_storage: 25
+  nvidia:
+    int8:
+      system_memory: 8
+      accelerator_memory: 4
+      disk_storage: 100
+  intel:
+    int8:
+      system_memory: 8
+      accelerator_memory: 0
+      disk_storage: 50
+  qualcomm:
+    int8:
+      system_memory: 8
+      accelerator_memory: 8
+      disk_storage: 50
+retinanet:
+  reference:
+    fp32:
+      system_memory: 8
+      accelerator_memory: 8
+      disk_storage: 200
+  nvidia:
+    int8:
+      system_memory: 8
+      accelerator_memory: 8
+      disk_storage: 200
+  intel:
+    int8:
+      system_memory: 8
+      accelerator_memory: 0
+      disk_storage: 200
+  qualcomm:
+    int8:
+      system_memory: 8
+      accelerator_memory: 8
+      disk_storage: 200
+rgat:
+  reference:
+    fp32:
+      system_memory: 768
+      accelerator_memory: 8
+      disk_storage: 2300
+

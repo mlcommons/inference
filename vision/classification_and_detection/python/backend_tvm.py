@@ -200,7 +200,7 @@ class BackendTVM(backend.Backend):
         global global_executor
         return global_executor.predict(feed)
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, threads=None):
         """Load model and find input/outputs from the model file."""
         self.load_impl(model_path, inputs, outputs, self.max_batchsize)
 

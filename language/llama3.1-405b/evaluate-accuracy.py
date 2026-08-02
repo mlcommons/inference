@@ -35,6 +35,8 @@ def get_args():
         help="dtype of the accuracy log",
         choices=["int32", "int64", "float"],
     )
+    parser.add_argument('--mock-dataset-for-testing', action='store_true',
+                        help='Use mock dataset for CI testing')
     args = parser.parse_args()
     return args
 
@@ -147,7 +149,15 @@ def main():
         use_fast=False,
     )
 
-    targets, metrics = get_groundtruth(args.dataset_file)
+    if args.mock_dataset_for_testing:
+        # Create mock data for testing
+        targets = [
+            "Paris",
+            "12345678-1234-1234-1234-123456789012",
+            "Answer: 42"]
+        metrics = ["rouge", "niah_em", "qa_em"]
+    else:
+        targets, metrics = get_groundtruth(args.dataset_file)
 
     target_required = []
     metrics_required = []

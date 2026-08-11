@@ -1,0 +1,15 @@
+python3 -m vllm.entrypoints.openai.api_server \
+	--model gpt-oss-20b-mxfp4 \
+	--dtype bfloat16 \
+	--enforce-eager \
+	--host 0.0.0.0 \
+	--trust-remote-code \
+	--gpu-memory-util=0.95 \
+	--enable-prefix-caching \
+	--max-num-batched-tokens=8192 \
+	--disable-log-requests \
+	--max-model-len=131072 \
+	--block-size 64 \
+	--port 8192 \
+	-tp 4 \
+	--async_scheduling

@@ -248,7 +248,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": {"Server": 20000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 12000000000},
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -628,7 +628,7 @@ MODEL_CONFIG = {
             "llama3.1-405b": {"Server": 60000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 12000000000},
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {

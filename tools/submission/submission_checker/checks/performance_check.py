@@ -557,8 +557,7 @@ class PerformanceCheck(BaseCheck):
         else:
             res = float(self.mlperf_log[RESULT_FIELD_NEW[version][scenario]])
         if (
-            not self.is_endpoints
-            and version in RESULT_FIELD_BENCHMARK_OVERWRITE
+            version in RESULT_FIELD_BENCHMARK_OVERWRITE
             and self.model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
             and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][self.model]
         ):

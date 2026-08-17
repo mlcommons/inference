@@ -1984,6 +1984,9 @@ SPECIAL_UNIT_DICT = {
         "Server": "Tokens/s",
         "Interactive": "Tokens/s",
     },
+    "e2e-rag-qna": {
+        "Offline": "Tasks/s",
+    }
 }
 UNIT_DICT = {
     "SingleStream": "Latency (ms)",

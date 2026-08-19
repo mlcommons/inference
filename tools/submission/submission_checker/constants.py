@@ -33,7 +33,7 @@ MODEL_CONFIG = {
             "whisper": ["Offline"],
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
-            "qwen3-vl-235b-a22b": ["Server", "Offline"],
+            "qwen3-vl-235b-a22b": ["Offline"],
             "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
             "e2e-rag-qna": ["Offline"],
             "e2e-rag-db": ["Offline"]
@@ -43,7 +43,7 @@ MODEL_CONFIG = {
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
             "gpt-oss-120b": ["Interactive", "Server"],
-            "qwen3-vl-235b-a22b": ["Interactive"],
+            "qwen3-vl-235b-a22b": ["Interactive", "Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],

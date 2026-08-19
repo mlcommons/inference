@@ -1,4 +1,4 @@
-from ..constants import MODEL_CONFIG, ACC_PATTERN
+from ..constants import MODEL_CONFIG, ACC_PATTERN, SCENARIO_MAPPING
 
 
 class Config:
@@ -120,15 +120,31 @@ class Config:
             return set()
         return set(self.optional[model])
 
-    def get_accuracy_target(self, model):
+    def get_accuracy_target(self, model, scenario=None):
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
-        return self.accuracy_target[model]
+        target = self.accuracy_target[model]
+        if not isinstance(target, dict):
+            return target
+        if scenario is not None:
+            mapped = SCENARIO_MAPPING.get(str(scenario).lower(), scenario)
+            if mapped in target:
+                return target[mapped]
+            if scenario in target:
+                return target[scenario]
+        if "default" in target:
+            return target["default"]
+        for fallback in ("Offline", "Server"):
+            if fallback in target:
+                return target[fallback]
+        raise ValueError(
+            "no accuracy target for model=%s scenario=%s" % (model, scenario)
+        )
 
     def get_accuracy_upper_limit(self, model):
         return self.accuracy_upper_limit.get(model, None)
 
-    def get_accuracy_values(self, model):
+    def get_accuracy_values(self, model, scenario=None):
         patterns = []
         acc_targets = []
         acc_types = []
@@ -136,7 +152,7 @@ class Config:
         up_patterns = []
         acc_limit_check = False
 
-        target = self.get_accuracy_target(model)
+        target = self.get_accuracy_target(model, scenario)
         acc_upper_limit = self.get_accuracy_upper_limit(model)
         if acc_upper_limit is not None:
             for i in range(0, len(acc_upper_limit), 2):

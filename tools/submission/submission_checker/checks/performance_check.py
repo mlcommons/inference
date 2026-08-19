@@ -64,6 +64,8 @@ class PerformanceCheck(BaseCheck):
     def map_endpoints_scenario(self, scenario, scenario_fixed):
         if scenario_fixed.lower() == "singlestream":
             return "SingleStream"
+        if scenario_fixed.lower() == "interactive" or str(scenario).lower() == "interactive":
+            return "Interactive"
         if scenario.lower() == "online":
             return "Server"
         return scenario
@@ -300,8 +302,12 @@ class PerformanceCheck(BaseCheck):
             # Qwen3VL falls in this category, it has scenario specific e2e
             # latency constraints
             latency_99_percentile = self.mlperf_log["result_99.00_percentile_latency_ns"]
+            constraint_scenario = SCENARIO_MAPPING.get(
+                (self.scenario_fixed or self.scenario).lower(),
+                self.scenario_fixed or self.scenario,
+            )
             target_latency = self.config.latency_constraint.get(
-                self.model, dict()).get(self.scenario)
+                self.model, dict()).get(constraint_scenario)
             self.log.info(
                 "Target latency: %s, Latency: %s, Scenario: %s",
                 target_latency,

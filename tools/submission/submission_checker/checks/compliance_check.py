@@ -51,6 +51,7 @@ class ComplianceCheck(BaseCheck):
         self.division = self.submission_logs.loader_data.get("division", "")
         self.model = self.config.get_mlperf_model(
             self.model, self.model_mapping)
+        self.scenario = self.submission_logs.loader_data.get("scenario", "")
         self.test_list = self.get_test_list(self.model)
         self.is_endpoints = self.submission_logs.loader_data.get(
             "is_endpoints_submission", False)
@@ -258,9 +259,9 @@ class ComplianceCheck(BaseCheck):
                             is_valid = False
                         else:
                             target = self.config.get_accuracy_target(
-                                self.model)
+                                self.model, self.scenario)
                             patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
-                                self.model)
+                                self.model, self.scenario)
                             acc_limit_check = True
 
                             acc_seen = [False for _ in acc_targets]

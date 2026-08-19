@@ -136,7 +136,12 @@ MODEL_CONFIG = {
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
-            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": {
+                "Offline": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Server": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                # Interactive uses the 8k subset; 0.7878 * 0.99 = 0.779922
+                "Interactive": ("F1_HIERARCHICAL", 0.7878 * 0.99),
+            },
             "dlrm-v3": (
                 "DLRM_NE",
                 0.86687 * 0.999,
@@ -248,7 +253,10 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": {"Server": 20000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 12000000000},
+            "qwen3-vl-235b-a22b": {
+                "Server": 12000000000,
+                "Interactive": 1500000000,
+            },
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {

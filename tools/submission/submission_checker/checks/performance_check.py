@@ -64,7 +64,10 @@ class PerformanceCheck(BaseCheck):
     def map_endpoints_scenario(self, scenario, scenario_fixed):
         if scenario_fixed.lower() == "singlestream":
             return "SingleStream"
-        if scenario_fixed.lower() == "interactive" or str(scenario).lower() == "interactive":
+        if (
+            scenario_fixed.lower() == "interactive" or
+            str(scenario).lower() == "interactive"
+        ):
             return "Interactive"
         if scenario.lower() == "online":
             return "Server"
@@ -528,7 +531,7 @@ class PerformanceCheck(BaseCheck):
                 ("singlestream", "offline")
             ]
             if (self.scenario.lower(), self.scenario_fixed.lower()
-                ) not in list_inferred:
+                    ) not in list_inferred:
                 self.log.error(
                     "Result for scenario %s can not be inferred from %s for: %s",
                     self.scenario_fixed,
@@ -555,7 +558,7 @@ class PerformanceCheck(BaseCheck):
             and self.mlperf_log["result_validity"] == "VALID"
         ):
             is_valid = True
-        scenario = self.scenario
+        scenario = SCENARIO_MAPPING.get(self.scenario, self.scenario)
         res = None
         if self.is_endpoints:
             res = float(
@@ -641,12 +644,12 @@ class PerformanceCheck(BaseCheck):
             res = qps_wo_loadgen_overhead
 
         if (scenario_fixed in ["Offline"]
-                ) and scenario in ["MultiStream"]:
+            ) and scenario in ["MultiStream"]:
             inferred = True
             res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
         if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+            ) and scenario in ["SingleStream"]:
             inferred = True
             # samples_per_query does not match with the one reported in the logs
             # when inferring MultiStream from SingleStream
@@ -663,6 +666,6 @@ class PerformanceCheck(BaseCheck):
             else:
                 res = (latency_99_percentile * samples_per_query) / MS_TO_NS
         if (scenario_fixed in ["Interactive"]
-                ) and scenario not in ["Server"]:
+            ) and scenario not in ["Server"]:
             is_valid = False
         return res, is_valid

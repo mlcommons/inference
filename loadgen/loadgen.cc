@@ -828,10 +828,53 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
 
   std::string tmp;
   if (m_perf_summary.PerfConstraintsMet(&tmp)) {
+
+    LogDetail([l_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     l_perf_summary.settings),
+             u_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     u_perf_summary.settings),
+             m_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     m_settings)](AsyncDetail& detail) {
+    #if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(
+        detail, "generic_message",
+        "FindPeakPerformanceBinarySearch:  Mid value satisfies performance constraints, new bounds are [" +
+            m_field + ", " + u_field + ")");
+    #else
+    detail(
+        "FindPeakPerformanceBinarySearch: Mid value satisfies performance constraints, new bounds are [" + m_field + ", " + u_field + "]");
+    #endif
+                     });
+
     return FindPeakPerformanceBinarySearch<scenario>(
         sut, qsl, sequence_gen, performance_set, m_perf_summary,
         u_perf_summary);
   } else {
+
+
+    LogDetail([l_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     l_perf_summary.settings),
+             u_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     u_perf_summary.settings),
+             m_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     m_settings)](AsyncDetail& detail) {
+    #if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(
+        detail, "generic_message",
+        "FindPeakPerformanceBinarySearch:  Mid value does not satisfy performance constraints, new bounds are [" +
+            l_field + ", " + m_field + ")");
+    #else
+    detail(
+        "FindPeakPerformanceBinarySearch: Mid value does not satisfy performance constraints, new bounds are [" + l_field + ", " + m_field + "]");
+    #endif
+                     });
+
     return FindPeakPerformanceBinarySearch<scenario>(
         sut, qsl, sequence_gen, performance_set, l_perf_summary,
         m_perf_summary);
@@ -1048,11 +1091,11 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
            u_perf_summary.settings)](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
         MLPERF_LOG(detail, "generic_message",
-                   "FindPeakPerformance: Found boundaries: [" + l_field + ", " +
-                       u_field + ")");
+                   "FindPeakPerformance: Found initial performance boundaries: [" + l_field + ", " +
+                       u_field + "). Proceeding to find peak performance number.");
 #else
-        detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
-               u_field + ")");
+        detail("FindPeakPerformance: Found initial performance boundaries: [" + l_field + ", " +
+               u_field + "). Proceeding to find peak performance number.");
 #endif
       });
 

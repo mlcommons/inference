@@ -2283,6 +2283,7 @@ ENDPOINTS_JSON_ALT_PATHS = {
 
 ENDPOINTS_INFERRED_FIELDS = {
     "generated_query_count": "qsl_reported_total_count",
+    "result_tokens_per_second": "result_completed_tokens_per_second",
 }
 
 ENDPOINTS_COMPLIANCE_MAPPING = {

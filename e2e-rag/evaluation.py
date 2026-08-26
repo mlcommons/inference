@@ -1,4 +1,5 @@
 # Copyright 2025 The MLPerf Authors. All Rights Reserved.
+# Copyright 2026 Arm Ltd. and affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -231,7 +232,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
             print("-" * 50)
 
         # Show reranked results if reranker is available and reranking was used
-        if not no_rerank and rag_db._reranker_model is not None:
+        if not no_rerank and has_reranker:
             print(f"\nReranking to top-{top_k_reranking}")
             print(f"Reranking results:")
 

@@ -535,11 +535,20 @@ def evaluate_document_relevance(question: str,
             print(f"    Warning: Relevance check returned empty, marking all as relevant")
             return {"relevance": [1] * len(new_documents)}
 
-        if llm_output.startswith("```"):
-            llm_output = llm_output.split("```")[1]
-            if llm_output.startswith("json"):
-                llm_output = llm_output[4:]
-            llm_output = llm_output.strip()
+        # Extract JSON from markdown code blocks
+        if "```" in llm_output:
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            if json_block_match:
+                llm_output = json_block_match.group(1).strip()
+
+        # Try to extract JSON object
+        json_match = re.search(r'\{.*\}', llm_output, re.DOTALL)
+        if json_match:
+            llm_output = json_match.group(0)
+        else:
+            print(f"    Warning: No JSON in relevance response, marking all as relevant")
+            return {"relevance": [1] * len(new_documents)}
 
         relevance_result = json.loads(llm_output)
         relevance = relevance_result.get("relevance", [])
@@ -648,16 +657,23 @@ def check_sufficiency(question: str,
                         "reasoning": "Max iterations reached"}
             return {"sufficient": False, "reasoning": "LLM returned empty"}
 
-        if llm_output.startswith("```"):
-            llm_output = llm_output.split("```")[1]
-            if llm_output.startswith("json"):
-                llm_output = llm_output[4:]
-            llm_output = llm_output.strip()
+        # Extract JSON from markdown code blocks
+        if "```" in llm_output:
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            if json_block_match:
+                llm_output = json_block_match.group(1).strip()
 
         # Try to extract JSON
         json_match = re.search(r'\{.*\}', llm_output, re.DOTALL)
         if json_match:
             llm_output = json_match.group(0)
+        else:
+            print(f"    Warning: No JSON in sufficiency response")
+            if iteration >= max_iterations:
+                return {"sufficient": True,
+                        "reasoning": "Max iterations reached, no JSON"}
+            return {"sufficient": False, "reasoning": "No JSON in response"}
 
         result = json.loads(llm_output)
         sufficient = result.get("sufficient", False)
@@ -860,16 +876,23 @@ def generate_search_queries(question: str,
             print(f"    Warning: Query generation returned empty")
             return {"queries": [question], "feedback": "LLM returned empty"}
 
-        if llm_output.startswith("```"):
-            llm_output = llm_output.split("```")[1]
-            if llm_output.startswith("json"):
-                llm_output = llm_output[4:]
-            llm_output = llm_output.strip()
+        # Extract JSON from markdown code blocks
+        if "```" in llm_output:
+            # Find content between ```json and ``` or just between ``` markers
+            json_block_match = re.search(
+                r'```(?:json)?\s*\n?(.*?)\n?```', llm_output, re.DOTALL)
+            if json_block_match:
+                llm_output = json_block_match.group(1).strip()
 
         # Try to extract JSON object even from mixed text/markdown responses
         json_match = re.search(r'\{.*\}', llm_output, re.DOTALL)
         if json_match:
             llm_output = json_match.group(0)
+        else:
+            # No JSON found in response
+            print(f"    Warning: No JSON found in LLM response")
+            return {"queries": [question],
+                    "feedback": "No JSON in LLM response"}
 
         query_result = json.loads(llm_output)
         return {
@@ -1516,6 +1539,16 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
             # Add to new_docs for evaluation (avoid duplicates)
             for result in results:
+                # DEBUG: Log metadata structure for first result
+                if not all_retrieved_urls:  # Log only once
+                    print(
+                        f"    [DEBUG] Sample result metadata keys: {list(result.metadata.keys())}")
+                    print(
+                        f"    [DEBUG] Sample result metadata: {result.metadata}")
+
+                # Try to get URL from metadata - support both 'original_url'
+                # and 'source' fields
+                url = None
                 if 'original_url' in result.metadata and result.metadata['original_url']:
                     url = result.metadata['original_url']
                     if url not in all_retrieved_urls:
@@ -1592,6 +1625,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         'sufficient': sufficient,
         'avg_iteration_time': sum(iteration_times) / len(iteration_times) if iteration_times else 0,
         'llm_answer': final_answer,
+        'retrieved_urls': retrieved_urls,
     })
 
     # Print final results

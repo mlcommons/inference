@@ -251,7 +251,7 @@ class RagDB(abc.ABC):
             self._reranker_queue = None
 
     def rerank(self, query: str, passages: List[str]):
-        """Rerank passages via the reranker queue (ColBERT MaxSim)."""
+        """Score passages via the reranker; returns (passage, score) in input order."""
         if self._reranker_queue:
             return self._reranker_queue.submit(query, passages)
         return [(p, 0.0) for p in passages]

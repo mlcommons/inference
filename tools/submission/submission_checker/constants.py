@@ -8,7 +8,6 @@ MODEL_CONFIG = {
             "3d-unet-99.9",
             "llama3.1-8b",
             "llama3.1-8b-edge",
-            "llama2-70b-99",
             "llama2-70b-99.9",
             "stable-diffusion-xl",
             "rgat",
@@ -17,35 +16,34 @@ MODEL_CONFIG = {
             "gpt-oss-120b",
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
+            "qwen3.6-27b",
             "dlrm-v3",
             "yolo-95",
             "yolo-99",
-            "e2e",
-            "e2e_vectorDB"
+            "e2e-rag-qna",
+            "e2e-rag-db"
         ],
         "required-scenarios-datacenter": {
             "dlrm-v3": ["Server", "Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
             "llama3.1-8b": ["Offline"],
-            "llama2-70b-99": ["Offline"],
             "llama2-70b-99.9": ["Offline"],
             "rgat": ["Offline"],
             "whisper": ["Offline"],
             "deepseek-r1": ["Offline"],
             "gpt-oss-120b": ["Offline"],
-            "qwen3-vl-235b-a22b": ["Server", "Offline"],
+            "qwen3-vl-235b-a22b": ["Offline"],
             "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
-            "e2e": ["Offline"],
-            "e2e_vectorDB": ["Offline"]
+            "e2e-rag-qna": ["Offline"],
+            "e2e-rag-db": ["Offline"]
         },
         "optional-scenarios-datacenter": {
-            "llama2-70b-99": ["Interactive", "Server"],
             "llama2-70b-99.9": ["Interactive", "Server"],
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
             "gpt-oss-120b": ["Interactive", "Server"],
-            "qwen3-vl-235b-a22b": ["Interactive"],
+            "qwen3-vl-235b-a22b": ["Interactive", "Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -58,6 +56,7 @@ MODEL_CONFIG = {
             "whisper": ["Offline"],
             "yolo-95": ["SingleStream", "MultiStream", "Offline"],
             "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+            "qwen3.6-27b": ["SingleStream"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -68,7 +67,6 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "llama3.1-8b": ["Offline"],
             "llama3.1-8b-edge": ["SingleStream", "Offline"],
-            "llama2-70b-99": ["Offline"],
             "llama2-70b-99.9": ["Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "rgat": ["Offline"],
@@ -79,9 +77,9 @@ MODEL_CONFIG = {
             "dlrm-v3": ["Offline", "Server"],
             "yolo-95": ["SingleStream", "MultiStream", "Offline"],
             "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+            "qwen3.6-27b": ["SingleStream"],
         },
         "optional-scenarios-datacenter-edge": {
-            "llama2-70b-99": ["Interactive", "Server"],
             "llama2-70b-99.9": ["Interactive", "Server"],
             "llama3.1-8b": ["Interactive", "Server"],
             "deepseek-r1": ["Interactive", "Server"],
@@ -118,16 +116,6 @@ MODEL_CONFIG = {
                 "GEN_LEN",
                 3051113 * 0.9,
             ),
-            "llama2-70b-99": (
-                "ROUGE1",
-                44.4312 * 0.99,
-                "ROUGE2",
-                22.0352 * 0.99,
-                "ROUGEL",
-                28.6162 * 0.99,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
             "llama2-70b-99.9": (
                 "ROUGE1",
                 44.4312 * 0.999,
@@ -148,7 +136,12 @@ MODEL_CONFIG = {
             "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
             "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
             "gpt-oss-120b": ("exact_match", 83.13 * 0.99),
-            "qwen3-vl-235b-a22b": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+            "qwen3-vl-235b-a22b": {
+                "Offline": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                "Server": ("F1_HIERARCHICAL", 0.7903 * 0.99),
+                # Interactive uses the 8k subset; 0.7878 * 0.99 = 0.779922
+                "Interactive": ("F1_HIERARCHICAL", 0.7878 * 0.99),
+            },
             "dlrm-v3": (
                 "DLRM_NE",
                 0.86687 * 0.999,
@@ -160,10 +153,9 @@ MODEL_CONFIG = {
             "yolo-95": ("mAP", 53.4 * 0.95),
             "yolo-99": ("mAP", 53.4 * 0.99),
             "wan-2.2-t2v-a14b": ("vbench_score", 70.48 * 0.99),
-            # TODO: Set e2e accuracy threshold once reference score is
-            # established
-            "e2e": ("E2E_ACCURACY", ""),
-            "e2e_vectorDB": ("E2E_ACCURACY", ""),
+            "e2e-rag-qna": ("E2E_ACCURACY", 33.95),
+            "e2e-rag-db": ("E2E_ACCURACY", 98),
+            "qwen3.6-27b": ("mAP", 86.23 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -172,7 +164,6 @@ MODEL_CONFIG = {
                 "FID_SCORE",
                 23.95007626,
             ),
-            "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
             "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
@@ -190,7 +181,6 @@ MODEL_CONFIG = {
             "3d-unet-99.9": 43,
             "llama3.1-8b": 13368,
             "llama3.1-8b-edge": 5000,
-            "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "rgat": 788379,
@@ -202,12 +192,19 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 64,
             "yolo-99": 64,
-            "e2e": 824,
-            "e2e_vectorDB": 824
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 2515,
+            "qwen3.6-27b": 995,
         },
         "accuracy-sample-count": {
             "gpt-oss-120b": 4395,
             "wan-2.2-t2v-a14b": 248,
+            "qwen3.6-27b": 995,
+            "qwen3-vl-235b-a22b": {
+                "Offline": 48289,
+                "Interactive": 8000,
+                "Server": 48289,
+            },
         },
         "dataset-size": {
             "resnet": 50000,
@@ -217,7 +214,6 @@ MODEL_CONFIG = {
             "3d-unet-99.9": 43,
             "llama3.1-8b": 13368,
             "llama3.1-8b-edge": 5000,
-            "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "rgat": 788379,
@@ -229,8 +225,9 @@ MODEL_CONFIG = {
             "dlrm-v3": 349823,
             "yolo-95": 1525,
             "yolo-99": 1525,
-            "e2e": 824,
-            "e2e_vectorDB": 824,
+            "e2e-rag-qna": 824,
+            "e2e-rag-db": 2515,
+            "qwen3.6-27b": 995,
         },
         "model_mapping": {
             "ssd-resnet34": "retinanet",
@@ -253,11 +250,13 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": {"Server": 60000000},
             "llama3.1-8b": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
-            "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {
+                "Server": 12000000000,
+                "Interactive": 1500000000,
+            },
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -273,7 +272,6 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
             "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama3.1-8b-edge": {"SingleStream": 1024, "Offline": 1},
-            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
                 "SingleStream": 1024,
@@ -289,8 +287,9 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b": {"SingleStream": 50, "Offline": 1},
             "yolo-95": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
             "yolo-99": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "e2e": {"Offline": 824},
-            "e2e_vectorDB": {"Offline": 824},
+            "e2e-rag-qna": {"Offline": 1},
+            "e2e-rag-db": {"Offline": 1},
+            "qwen3.6-27b": {"SingleStream": 995},
         },
         "models_TEST01": [
             "resnet",
@@ -310,7 +309,6 @@ MODEL_CONFIG = {
             "wan-2.2-t2v-a14b",
         ],
         "models_TEST06": [
-            "llama2-70b-99",
             "llama2-70b-99.9",
             "llama2-70b-interactive-99",
             "llama2-70b-interactive-99.9",
@@ -323,6 +321,7 @@ MODEL_CONFIG = {
         ],
         "models_TEST09": [
             "gpt-oss-120b",
+            "e2e-rag-qna",
         ],
         "models_TEST08": [
             "dlrm-v3",
@@ -637,7 +636,7 @@ MODEL_CONFIG = {
             "llama3.1-405b": {"Server": 60000000000},
             "deepseek-r1": {"Server": 60000000000},
             "gpt-oss-120b": {"Server": 60000000000},
-            "qwen3-vl-235b-a22b": {"Server": 60000000000},
+            "qwen3-vl-235b-a22b": {"Server": 12000000000},
             "dlrm-v3": {"Server": 60000000000},
         },
         "min-queries": {
@@ -1501,6 +1500,9 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
     "compliance_accuracy.txt",
 ]
 
+TEST09_LOW = 1150.38
+TEST09_HIGH = 1406.02
+
 OFFLINE_MIN_SPQ_SINCE_V4 = {
     "resnet": 24576,
     "retinanet": 24576,
@@ -1530,8 +1532,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "dlrm-v3": 349823,
     "qwen3-vl-235b-a22b": 48289,
     "wan-2.2-t2v-a14b": 50,
-    "e2e": 824,
-    "e2e_vectorDB": 824
+    "e2e-rag-qna": 824,
+    "e2e-rag-db": 2515
 }
 
 SCENARIO_MAPPING = {
@@ -1573,6 +1575,17 @@ RESULT_FIELD_NEW = {
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
+        "Interactive": "result_completed_samples_per_sec",
+    },
+}
+
+RESULT_FIELD_ENDPOINTS = {
+    "v6.1": {
+        "offline": "result_samples_per_second",
+        "singlestream": "result_mean_latency_ns",
+        "multistream": "result_mean_latency_ns",
+        "server": "result_completed_samples_per_sec",
+        "interactive": "result_completed_samples_per_sec",
     },
 }
 
@@ -1979,6 +1992,9 @@ SPECIAL_UNIT_DICT = {
         "Server": "Tokens/s",
         "Interactive": "Tokens/s",
     },
+    "e2e-rag-qna": {
+        "Offline": "Tasks/s",
+    }
 }
 UNIT_DICT = {
     "SingleStream": "Latency (ms)",
@@ -2029,16 +2045,19 @@ PERFORMANCE_SUMMARY_PATH = {
 ENDPOINTS_ALLOWED_MODELS = [
     "wan-2.2-t2v-a14b",
     "qwen3-vl-235b-a22b",
+    "qwen3.6-27b",
     "llama3.1-8b",
     "llama3.1-8b-edge",
     "gpt-oss-120b",
+    "deepseek-r1"
 ]
 
-PERFORMANCE_ENDPOINTS_DIR = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/",
+ENDPOINTS_SCENARIO_DIR = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/",
 }
 
 ACCURACY_LOG_PATH = {
@@ -2064,14 +2083,6 @@ ACCURACY_JSON_PATH = {
     "v6.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
-
-ACCURACY_ENDPOINTS_DIR = {
-    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/",
-}
-
 
 POWER_DIR_PATH = {
     "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/power",
@@ -2205,7 +2216,7 @@ ENDPOINTS_MAPPINGS = {
     "effective_sample_concatenate_permutation": "effective_sample_concatenate_permutation",
     "effective_samples_per_query": "effective_samples_per_query",
     "generated_query_count": "generated_query_count",
-    "generated_query_duration": "generated_query_duration",
+    "duration_ns": "generated_query_duration",
     "target_qps": "effective_target_qps",
     "result_scheduled_samples_per_sec": "result_scheduled_samples_per_sec",
     "qps": "result_completed_samples_per_sec",
@@ -2214,30 +2225,31 @@ ENDPOINTS_MAPPINGS = {
     "latency.min": "result_min_latency_ns",
     "latency.max": "result_max_latency_ns",
     "latency.avg": "result_mean_latency_ns",
-    "latency.percentiles.50.0": "result_50.00_percentile_latency_ns",
-    "latency.percentiles.90.0": "result_90.00_percentile_latency_ns",
-    "latency.percentiles.95.0": "result_95.00_percentile_latency_ns",
-    "latency.percentiles.99.0": "result_99.00_percentile_latency_ns",
-    "latency.percentiles.99.9": "result_99.90_percentile_latency_ns",
+    "latency.early_stopping_percentiles.50.0": "result_50.00_percentile_latency_ns",
+    "latency.early_stopping_percentiles.90.0": "result_90.00_percentile_latency_ns",
+    "latency.early_stopping_percentiles.95.0": "result_95.00_percentile_latency_ns",
+    "latency.early_stopping_percentiles.99.0": "result_99.00_percentile_latency_ns",
+    "latency.early_stopping_percentiles.99.9": "result_99.90_percentile_latency_ns",
     "ttft.min": "result_first_token_min_latency_ns",
     "ttft.max": "result_first_token_max_latency_ns",
     "ttft.avg": "result_first_token_mean_latency_ns",
-    "ttft.percentiles.50.0": "result_first_token_50.00_percentile_latency_ns",
-    "ttft.percentiles.90.0": "result_first_token_90.00_percentile_latency_ns",
-    "ttft.percentiles.95.0": "result_first_token_95.00_percentile_latency_ns",
-    "ttft.percentiles.99.0": "result_first_token_99.00_percentile_latency_ns",
-    "ttft.percentiles.99.9": "result_first_token_99.90_percentile_latency_ns",
-    "tpot.percentiles.50.0": "result_time_per_output_token_50.00_percentile_ns",
-    "tpot.percentiles.90.0": "result_time_per_output_token_90.00_percentile_ns",
-    "tpot.percentiles.95.0": "result_time_per_output_token_95.00_percentile_ns",
-    "tpot.percentiles.99.0": "result_time_per_output_token_99.00_percentile_ns",
-    "tpot.percentiles.99.9": "result_time_per_output_token_99.90_percentile_ns",
+    "ttft.early_stopping_percentiles.50.0": "result_first_token_50.00_percentile_latency_ns",
+    "ttft.early_stopping_percentiles.90.0": "result_first_token_90.00_percentile_latency_ns",
+    "ttft.early_stopping_percentiles.95.0": "result_first_token_95.00_percentile_latency_ns",
+    "ttft.early_stopping_percentiles.99.0": "result_first_token_99.00_percentile_latency_ns",
+    "ttft.early_stopping_percentiles.99.9": "result_first_token_99.90_percentile_latency_ns",
+    "tpot.early_stopping_percentiles.50.0": "result_time_per_output_token_50.00_percentile_ns",
+    "tpot.early_stopping_percentiles.90.0": "result_time_per_output_token_90.00_percentile_ns",
+    "tpot.early_stopping_percentiles.95.0": "result_time_per_output_token_95.00_percentile_ns",
+    "tpot.early_stopping_percentiles.99.0": "result_time_per_output_token_99.00_percentile_ns",
+    "tpot.early_stopping_percentiles.99.9": "result_time_per_output_token_99.90_percentile_ns",
     "tpot.min": "result_time_per_output_token_min",
     "tpot.max": "result_time_per_output_token_max",
     "tpot.avg": "result_time_per_output_token_mean",
     "tps": "result_completed_tokens_per_second",
     "result.total": "result_query_count",
     "result.failed": "num_errors",
+    "output_sequence_lengths.avg": "mean_output_tokens",
 }
 
 
@@ -2259,9 +2271,9 @@ ENDPOINTS_YAML_FIELD_MAP = {
 # Alternative JSON paths for endpoints keys that don't directly match the
 # JSON structure
 ENDPOINTS_JSON_ALT_PATHS = {
-    "result.total": "results.total",
-    "result.failed": "results.failed",
-    "qps": "results.qps",
+    "result.total": "n_samples_completed",
+    "result.failed": "n_samples_failed",
+    "results.qps": "qps",
     "generated_query_count": "n_samples_issued",
     "generated_query_duration": "duration_ns",
     "test_datetime": "test_started_at",
@@ -2270,5 +2282,14 @@ ENDPOINTS_JSON_ALT_PATHS = {
 }
 
 ENDPOINTS_INFERRED_FIELDS = {
-    "effective_accuracy_sample_count": "result_query_count"
+    "generated_query_count": "qsl_reported_total_count",
+    "result_tokens_per_second": "result_completed_tokens_per_second",
+}
+
+ENDPOINTS_COMPLIANCE_MAPPING = {
+    "TEST01": "accuracy_in_performance_test",
+    "TEST04": "output_caching_test",
+    "TEST06": "consistency_output_test",
+    "TEST07": "accuracy_in_performance_full_test",
+    "TEST08": "accuracy_in_performance_dlrmv3_test",
 }

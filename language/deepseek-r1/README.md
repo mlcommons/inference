@@ -27,7 +27,7 @@ Download the model using the MLCommons R2 Downloader:
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1.uri
 ```
 
 To specify a custom download directory, use the `-d` flag:
@@ -35,7 +35,7 @@ To specify a custom download directory, use the `-d` flag:
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1.uri
 ```
 
 ## Dataset Download

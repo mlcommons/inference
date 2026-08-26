@@ -8,7 +8,7 @@ The implementation lives in the
 [`mlcommons/endpoints`](https://github.com/mlcommons/endpoints) repository.
 The runnable example, configuration file, and step-by-step reproducer are at:
 
-> **[`examples/10_Edge_Agentic_Example/`](https://github.com/mlcommons/endpoints/tree/main/examples/10_Edge_Agentic_Example)**
+> **[`examples/11_Edge_Agentic_Example/`](https://github.com/mlcommons/endpoints/tree/main/examples/11_Edge_Agentic_Example)**
 
 The gated accuracy benchmark is **single-turn only** (3 categories,
 per-category sampled to a stable ~995-sample point estimate). Multi-turn remains
@@ -37,6 +37,20 @@ gate.
 | Gated subsets (single-turn) | `non_live`, `live`, `hallucination` |
 | QSL size | ~995 (per-category sampling, see Run Parameters) |
 | Multi-turn subsets | `multi_turn_base`, `multi_turn_miss_func`, `multi_turn_miss_param`, `multi_turn_long_context` — **optional, not gated** |
+
+---
+
+## Calibration
+
+Submitters who quantize the reference model themselves calibrate with
+[`bfcl_calib.jsonl`](https://github.com/mlcommons/endpoints/blob/main/examples/11_Edge_Agentic_Example/bfcl_calib.jsonl)
+— 364 chat/tool-aware BFCL v4 single-turn records, used **only** to estimate
+quantizer scales (weight / activation / KV-cache). It is not scored and is not
+part of the accuracy gate. See the
+[calibration dataset notes](https://github.com/mlcommons/endpoints/tree/main/examples/11_Edge_Agentic_Example#quantization-calibration-dataset)
+in the implementation repo for provenance and the overlap disclosure (the set is
+sampled from the BFCL v4 domain; ~30% of its prompts also appear in the ~995
+accuracy gate).
 
 ---
 
@@ -88,7 +102,7 @@ The two gated metrics are encoded in the ruleset at
 
 See the full step-by-step guide at:
 
-**[`mlcommons/endpoints — examples/10_Edge_Agentic_Example/`](https://github.com/mlcommons/endpoints/tree/main/examples/10_Edge_Agentic_Example)**
+**[`mlcommons/endpoints — examples/11_Edge_Agentic_Example/`](https://github.com/mlcommons/endpoints/tree/main/examples/11_Edge_Agentic_Example)**
 
 Quick start — accuracy-only (~3 h on an edge device):
 
@@ -96,7 +110,7 @@ Quick start — accuracy-only (~3 h on an edge device):
 git clone https://github.com/mlcommons/endpoints.git
 cd endpoints
 pip install -e ".[bfcl]"
-cd examples/10_Edge_Agentic_Example
+cd examples/11_Edge_Agentic_Example
 # Edit model_params.name + endpoint_config.endpoints in the config to match your
 # server, then:
 inference-endpoint benchmark from-config \

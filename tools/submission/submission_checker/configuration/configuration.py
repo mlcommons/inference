@@ -1,4 +1,4 @@
-from ..constants import MODEL_CONFIG, ACC_PATTERN
+from ..constants import MODEL_CONFIG, ACC_PATTERN, SCENARIO_MAPPING
 
 
 class Config:
@@ -120,15 +120,31 @@ class Config:
             return set()
         return set(self.optional[model])
 
-    def get_accuracy_target(self, model):
+    def get_accuracy_target(self, model, scenario=None):
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
-        return self.accuracy_target[model]
+        target = self.accuracy_target[model]
+        if not isinstance(target, dict):
+            return target
+        if scenario is not None:
+            mapped = SCENARIO_MAPPING.get(str(scenario).lower(), scenario)
+            if mapped in target:
+                return target[mapped]
+            if scenario in target:
+                return target[scenario]
+        if "default" in target:
+            return target["default"]
+        for fallback in ("Offline", "Server"):
+            if fallback in target:
+                return target[fallback]
+        raise ValueError(
+            "no accuracy target for model=%s scenario=%s" % (model, scenario)
+        )
 
     def get_accuracy_upper_limit(self, model):
         return self.accuracy_upper_limit.get(model, None)
 
-    def get_accuracy_values(self, model):
+    def get_accuracy_values(self, model, scenario=None):
         patterns = []
         acc_targets = []
         acc_types = []
@@ -136,7 +152,7 @@ class Config:
         up_patterns = []
         acc_limit_check = False
 
-        target = self.get_accuracy_target(model)
+        target = self.get_accuracy_target(model, scenario)
         acc_upper_limit = self.get_accuracy_upper_limit(model)
         if acc_upper_limit is not None:
             for i in range(0, len(acc_upper_limit), 2):
@@ -158,11 +174,20 @@ class Config:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
-    def get_accuracy_sample_count(self, model):
+    def get_accuracy_sample_count(self, model, scenario=None):
+        # get expected accuracy sample count from config, qwen has scenario
+        # specific sample counts as special case
         model = self.get_mlperf_model(model)
         if model not in self.accuracy_sample_count:
             return self.get_dataset_size(model)
-        return self.accuracy_sample_count[model]
+        sample_count = self.accuracy_sample_count[model]
+        # handle Qwen's scenario specific sample counts
+        if isinstance(sample_count, dict):
+            if scenario in sample_count:
+                return sample_count[scenario]
+            if scenario is not None and scenario.lower() in sample_count:
+                return sample_count[scenario.lower()]
+        return sample_count
 
     def ignore_errors(self, line):
         for error in self.base["ignore_errors"]:
@@ -231,5 +256,6 @@ class Config:
             "llama3.1-405b",
             "llama3.1-8b",
             "llama3.1-8b-edge",
-            "deepseek-r1"
+            "deepseek-r1",
+            "gpt-oss-120b"
         ]

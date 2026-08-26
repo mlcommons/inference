@@ -1726,6 +1726,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         "deepseek-r1": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
+            "Interactive": "result_completed_tokens_per_second",
         },
         "whisper": {
             "Offline": "result_tokens_per_second",

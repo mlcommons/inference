@@ -1,5 +1,5 @@
 python3 -m vllm.entrypoints.openai.api_server \
-	--model /model/gpt-oss-20b-mxfp4 \
+	--model gpt-oss-20b-mxfp4 \
 	--dtype bfloat16 \
 	--enforce-eager \
 	--host 0.0.0.0 \
@@ -10,6 +10,6 @@ python3 -m vllm.entrypoints.openai.api_server \
 	--disable-log-requests \
 	--max-model-len=131072 \
 	--block-size 64 \
-	--port 8123 \
+	--port 8192 \
 	-tp 4 \
 	--async_scheduling

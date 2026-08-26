@@ -22,8 +22,8 @@ echo "Time Start: $(date +%s)"
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
 export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
 export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
-export RUN_LOGS=${WORKSPACE_DIR}/run_output_datasetup_accuracy
-export OUTPUT_DIR=${WORKSPACE_DIR}/output_datasetup_accuracy
+export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-db/accuracy
+export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-db/accuracy
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Chunking configuration
@@ -41,6 +41,15 @@ export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
 
 # Vector database configuration
 export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
+
+# Reference DB manifest for cross-system verification (corpus fingerprint,
+# sample-embedding cosine, probe-query top-K ranks).
+# Set to "" or "none" to skip the manifest check. Note: ${VAR:-default} treats
+# an empty value the same as unset, so an explicit "none" sentinel is the
+# reliable way to skip from a parent script that exports MANIFEST="".
+export MANIFEST=${MANIFEST-scripts/db_manifest_intel_xpu.json.gz}
+export COSINE_THRESHOLD=${COSINE_THRESHOLD:-0.9999}
+export TOP_K_DEPTH=${TOP_K_DEPTH:-3}
 
 # Performance options
 export BENCHMARK=${BENCHMARK:-false}
@@ -81,16 +90,16 @@ fi
 if [ -f "user.conf" ]; then
     # Update max_async_queries to match HTML count (send all at once)
     # Update min_query_count to match HTML count
-    if grep -q "e2e-datasetup.Offline.max_async_queries" user.conf; then
-        sed -i "s/^e2e-datasetup.Offline.max_async_queries = .*/e2e-datasetup.Offline.max_async_queries = ${HTML_COUNT}/" user.conf
+    if grep -q "e2e-rag-db.Offline.max_async_queries" user.conf; then
+        sed -i "s/^e2e-rag-db.Offline.max_async_queries = .*/e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}/" user.conf
     else
-        echo "e2e-datasetup.Offline.max_async_queries = ${HTML_COUNT}" >> user.conf
+        echo "e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}" >> user.conf
     fi
 
-    if grep -q "e2e-datasetup.Offline.min_query_count" user.conf; then
-        sed -i "s/^e2e-datasetup.Offline.min_query_count = .*/e2e-datasetup.Offline.min_query_count = ${HTML_COUNT}/" user.conf
+    if grep -q "e2e-rag-db.Offline.min_query_count" user.conf; then
+        sed -i "s/^e2e-rag-db.Offline.min_query_count = .*/e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}/" user.conf
     else
-        echo "e2e-datasetup.Offline.min_query_count = ${HTML_COUNT}" >> user.conf
+        echo "e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}" >> user.conf
     fi
 
     echo "  Loadgen configured to dispatch all ${HTML_COUNT} files at once (accuracy mode)"
@@ -133,11 +142,18 @@ if [ ${EXIT_CODE} -eq 0 ]; then
     echo "Running Accuracy Evaluation"
     echo "============================================================"
 
+    # Build optional manifest argument (skip check if MANIFEST is empty or "none")
+    MANIFEST_ARG=""
+    if [ -n "${MANIFEST}" ] && [ "${MANIFEST,,}" != "none" ]; then
+        MANIFEST_ARG="--manifest ${MANIFEST} --cosine_threshold ${COSINE_THRESHOLD} --top_k_depth ${TOP_K_DEPTH}"
+    fi
+
     python3 datasetup_accuracy_eval.py \
         --log_dir ${RUN_LOGS} \
         --output_dir ${OUTPUT_DIR} \
         --database ${DATABASE}.db \
-        --retriever_model ${RETRIEVER_MODEL}
+        --retriever_model ${RETRIEVER_MODEL} \
+        ${MANIFEST_ARG}
 
     EVAL_EXIT_CODE=$?
 

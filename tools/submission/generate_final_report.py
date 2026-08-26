@@ -80,7 +80,12 @@ def main():
     df["p#"] = df.apply(lambda x: int(x["host_processors_per_node"]), axis=1)
 
     # details url
-    base_url = f"https://github.com/{args.repository_owner}/{args.repository}/tree/{args.repository_branch}"
+    base_url = (
+        f"https://github.com/{args.repository_owner}/" +
+        f"{args.repository}" +
+        f"/tree/" +
+        f"{args.repository_branch}"
+    )
     df["Details"] = df.apply(
         lambda x: '=HYPERLINK("{}","details")'.format(
             "/".join(
@@ -178,6 +183,7 @@ def main():
             "Samples/s",
             "Queries/s",
             "Tokens/s",
+            "Tasks/s",
             "millijoules",
             "Watts",
         ],

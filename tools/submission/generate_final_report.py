@@ -80,7 +80,12 @@ def main():
     df["p#"] = df.apply(lambda x: int(x["host_processors_per_node"]), axis=1)
 
     # details url
-    base_url = f"https://github.com/{args.repository_owner}/{args.repository}/tree/{args.repository_branch}"
+    base_url = (
+        f"https://github.com/{args.repository_owner}/" +
+        f"{args.repository}" +
+        f"/tree/" +
+        f"{args.repository_branch}"
+    )
     df["Details"] = df.apply(
         lambda x: '=HYPERLINK("{}","details")'.format(
             "/".join(
@@ -168,6 +173,8 @@ def main():
             "wan-2.2-t2v-a14b",
             "qwen3-vl-235b-a22b",
             "gpt-oss-120b",
+            "e2e-rag-qna",
+            "e2e-rag-db",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
@@ -176,6 +183,7 @@ def main():
             "Samples/s",
             "Queries/s",
             "Tokens/s",
+            "Tasks/s",
             "millijoules",
             "Watts",
         ],
@@ -226,6 +234,55 @@ def main():
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
                 "pointpainting": ["SingleStream"],
                 "whisper": ["Offline"]
+            },
+        }
+    elif args.version == "6.1":
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": [],
+                "yolo-95": [],
+                "yolo-99": [],
+                "bert-99": [],
+                "bert-99.9": [],
+                "stable-diffusion-xl": [],
+                "llama3.1-8b-edge": [],
+                "dlrm-v3": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "llama2-70b-99": ["Server", "Offline", "Interactive"],
+                "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
+                "rgat": ["Offline"],
+                "llama3.1-8b": ["Server", "Offline", "Interactive"],
+                "deepseek-r1": ["Server", "Offline", "Interactive"],
+                "whisper": ["Offline"],
+                "gpt-oss-120b": ["Offline", "Interactive", "Server"],
+                "qwen3-vl-235b-a22b": ["Server", "Offline", "Interactive"],
+                "wan-2.2-t2v-a14b": ["Offline", "SingleStream"],
+                "e2e-rag-qna": ["Offline"],
+                "e2e-rag-db": ["Offline"],
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "yolo-95": ["SingleStream", "MultiStream", "Offline"],
+                "yolo-99": ["SingleStream", "MultiStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": ["SingleStream", "Offline"],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "llama3.1-8b-edge": ["SingleStream", "Offline"],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "whisper": ["Offline"],
+                "dlrm-v3": [],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "rgat": [],
+                "llama3.1-8b": [],
+                "deepseek-r1": [],
+                "gpt-oss-120b": [],
+                "qwen3-vl-235b-a22b": [],
+                "wan-2.2-t2v-a14b": [],
+                "e2e-rag-qna": [],
+                "e2e-rag-db": [],
             },
         }
     elif args.version == "5.0":
@@ -352,7 +409,7 @@ def main():
 
     def FilterScenario(x, suite):
         return x.apply(
-            lambda y: y["Scenario"] in filter_scenarios[suite][y["Model"]], axis=1
+            lambda y: y["Scenario"] in filter_scenarios[suite].get(y["Model"], [y["Scenario"]]), axis=1
         )
 
     def MakeUniqueID(x):

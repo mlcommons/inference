@@ -44,8 +44,8 @@ The `setup.sh` script installs all required Python packages and system dependenc
 ### Typical Workflow
 
 ```
-1. Download Wikipedia documents → 2. Build vector database → 3. Run QA workload
-   (download_docs.py)              (reference_mlperf_datasetup.sh)   (reference_mlperf_accuracy.sh)
+1. Download models + frozen corpus → 2. Build vector database → 3. Run QA workload
+   (download_dataset_and_models.sh)    (reference_mlperf_datasetup.sh)   (reference_mlperf_accuracy.sh)
 ```
 
 ### Step 1: Download models and data (one-time)
@@ -54,12 +54,16 @@ The `setup.sh` script installs all required Python packages and system dependenc
 bash scripts/download_dataset_and_models.sh
 ```
 
-This downloads all required models and datasets from MLCommons storage (~283GB).
+This downloads all required models and datasets from MLCommons storage (~283GB)
+and extracts the frozen document corpus (`docs.tar.gz`) into `doc_html/`.
 
-**Then download Wikipedia documents:**
-```bash
-python3 download_docs.py --output_dir doc_html --format html --processes 30
-```
+> **Important — use the frozen corpus.** The benchmark ships a fixed Wikipedia
+> snapshot as `docs.tar.gz`; the download script extracts it to `doc_html/`.
+> Build your vector database from this corpus. Do **not** re-scrape Wikipedia
+> with `download_docs.py` — that fetches whatever revision is live today, which
+> differs from the reference corpus in bytes, passage counts, and retrieval
+> results, and will fail cross-system DB-manifest verification.
+> (`download_docs.py` remains only for regenerating the snapshot itself.)
 
 ### Step 2: Build vector database (one-time measured operation)
 
@@ -165,13 +169,20 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8125
 
 ### Wikipedia Documents
 
-After downloading the FRAMES dataset, download Wikipedia pages referenced in it:
+The document corpus is **frozen** and shipped with the FRAMES dataset as
+`docs.tar.gz`. `scripts/download_dataset_and_models.sh` extracts it to
+`doc_html/` (2515 HTML pages) automatically — this is the corpus every
+submission must build its vector DB from.
+
+`download_docs.py` re-scrapes the live Wikipedia pages and is intended **only**
+for regenerating the snapshot from scratch (benchmark maintenance). Do not use
+it to prepare a submission: the live pages have since changed revision and will
+not reproduce the reference corpus.
 
 ```bash
+# Snapshot regeneration only — NOT for submissions:
 python3 download_docs.py --output_dir doc_html --format html --processes 30
 ```
-
-This downloads ~2,000 Wikipedia pages in HTML format.
 
 ### System Requirements
 

@@ -37,6 +37,16 @@ result_*.json
 temp_complete_kpi_*.json
 run_output_datasetup_accuracy/
 run_output_datasetup/
+run_output_*/
+run_output_test09/
+accuracy_results.json
+/smoke_manifest.json
+/db_manifest_*.json
+/db_manifest_*.json.gz
+doc_html_smoke/
+/submission/
+/audit.config
+/verify_output_len.txt
 colbert-ir_colbertv2.0/
 frames-benchmark-dataset/
 intfloat_e5-base-v2/

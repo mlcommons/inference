@@ -22,7 +22,7 @@ else
 fi
 
 INFERENCE_DB="${INFERENCE_DB:-vector_html_hnsw_len768_ov32_word}"
-INFERENCE_RETRIEVER_MODEL="${INFERENCE_RETRIEVER_MODEL:-/data/model/e5-base-v2}"
+INFERENCE_RETRIEVER_MODEL="${INFERENCE_RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
 
 OUTPUT="${1:-db_manifest_$(hostname -s).json.gz}"
 

@@ -254,6 +254,13 @@ class E2ESUT:
             # Extract answer
             answer = result.get('llm_answer', 'Unknown')
 
+            # Capture the real output-token count of the final answer generation
+            # (from the LLM API's usage.completion_tokens) BEFORE end_query()
+            # clears the per-thread query state. This is what LoadGen reports for
+            # TEST09; deriving it from the answer text would undercount badly.
+            output_token_count = self.llm_logger.get_component_output_tokens(
+                "answer_generator")
+
             # End logging for this query
             self.llm_logger.end_query(
                 retrieval_results={
@@ -289,6 +296,7 @@ class E2ESUT:
             import traceback
             traceback.print_exc()
             answer = "Error"
+            output_token_count = None
 
             # Store error result
             with self.results_lock:
@@ -298,17 +306,26 @@ class E2ESUT:
                     'error': str(e)
                 }
 
-        # Convert answer to byte array for loadgen
-        answer_bytes = answer.encode('utf-8')
-        response_array = array.array('B', answer_bytes)
-        bi = response_array.buffer_info()
+        # LoadGen's accuracy log records the response `data` blob and reports
+        # `n_tokens` for the compliance token-length check (TEST09), which
+        # decodes `data` as an array of 4-byte little-endian int32 token IDs and
+        # counts them. Reference LLM SUTs therefore emit int32 token IDs, not the
+        # answer's UTF-8 bytes. The authoritative token count is the LLM API's
+        # usage.completion_tokens for the final answer generation, captured above
+        # as output_token_count. The human-readable answer is preserved
+        # separately in results.json, so we only need a blob of the right length
+        # here; fall back to a whitespace-token estimate if the count is missing.
+        if output_token_count is None or output_token_count <= 0:
+            output_token_count = max(1, len(answer.split()))
+        token_ids = array.array('i', [0] * output_token_count)
+        bi = token_ids.buffer_info()
 
         # Send response to loadgen
         response = lg.QuerySampleResponse(
             query_id,
             bi[0],
-            bi[1] * response_array.itemsize,
-            len(answer_bytes)
+            bi[1] * token_ids.itemsize,
+            output_token_count
         )
         lg.QuerySamplesComplete([response])
 

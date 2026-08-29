@@ -35,7 +35,7 @@ import mlperf_loadgen as lg
 from QSL_datasetup import DatasetupQSLInMemory
 from retrieve import VectorDB
 from text_splitter import split_into_fixed_passages
-from utils import get_device_config
+from utils import get_device_config, load_url_mapping, get_base_filename
 
 # Import HTML extractor
 try:
@@ -110,6 +110,12 @@ class DatasetupSUT:
         # Setup device
         device_config = get_device_config()
         log.info(f"Device Config: {device_config}")
+
+        # Load the frozen corpus URL mapping (filename -> canonical Wikipedia
+        # URL) so each passage records its original_url. The DB manifest gate
+        # compares canonical URLs; without this, passages only carry the
+        # filename-form source and cross-system verification fails.
+        self.url_mapping = load_url_mapping(documents_dir)
 
         # Initialize QSL
         log.info("Initializing Datasetup Query Sample Library...")
@@ -240,7 +246,10 @@ class DatasetupSUT:
                 passages = [text]
 
             # Step 3: Generate embeddings (parallel, outside lock)
-            passage_metadata = [{'source': file_name, 'passage_id': i}
+            original_url = self.url_mapping.get(
+                get_base_filename(file_name), "")
+            passage_metadata = [{'source': file_name, 'passage_id': i,
+                                 'original_url': original_url}
                                 for i in range(len(passages))]
 
             # Generate embeddings WITHOUT holding db_lock (allows parallel

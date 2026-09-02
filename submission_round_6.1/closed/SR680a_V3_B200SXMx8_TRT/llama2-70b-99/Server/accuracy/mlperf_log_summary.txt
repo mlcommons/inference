@@ -1,4 +1,0 @@
-
-No warnings encountered during test.
-
-No errors encountered during test.

@@ -17,10 +17,10 @@ The benchmark implementation run command will automatically download the validat
   mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2-downloader --outdirname=<path to download> -j
   ```
 
-    ### Get Calibration Dataset
-    ```
-    mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_rclone --outdirname=<path to download> -j
-    ```
+  ### Get Calibration Dataset
+  ```
+    mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_r2-downloader --outdirname=<path to download> -j
+  ```
 
 ## Model
 The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.

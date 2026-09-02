@@ -79,6 +79,17 @@ The benchmark implementation run command will automatically download the require
             mlcr get,ml-model,llama2-70b,_pytorch,_r2-downloader,_70b,_mlc -j
             ```
 
+    ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Google Drive
+
+        === "From MLCOMMONS Cloudfare R2"
+
+        > **Note:**  One has to accept the [MLCommons Llama 2 License Confidentiality Notice](https://llama2.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
+
+        ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Cloudfare R2
+
+        ```
+        mlcr get,ml-model,llama2-70b,_mlc,_r2-downloader,_70b -j
+        ```
         === "From Hugging Face repo"
 
             > **Note:** Access to the HuggingFace model could be requested [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/).

@@ -1997,6 +1997,16 @@ SPECIAL_UNIT_DICT = {
         "Offline": "Tasks/s",
     }
 }
+
+# Maps a raw MlperfModel name to the task/category label used for reporting
+MLPERF_MODEL_TASK_MAPPING = {
+    "wan-2.2-t2v-a14b": "text_to_video",
+    "qwen3-vl-235b-a22b": "VLM",
+    "e2e-rag-qna": "end to end question-answering",
+    "e2e-rag-db": "end to end vector-database",
+    "qwen3.6-27b": "agentic edge",
+}
+
 UNIT_DICT = {
     "SingleStream": "Latency (ms)",
     "MultiStream": "Latency (ms)",

@@ -129,6 +129,8 @@ class ResultExporter:
         row["design_power_watts"] = submission_logs.loader_data.get(
             "design_power_watts", "")
         row["PrivateID"] = submission_logs.loader_data.get("private_id", "")
+        row["MlperfModel"] = MLPERF_MODEL_TASK_MAPPING.get(
+            row["MlperfModel"], row["MlperfModel"])
         self.rows.append(row.copy())
         if row["has_power"]:
             row["Result"] = submission_logs.loader_data["power_metric"]

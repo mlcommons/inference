@@ -141,8 +141,10 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
 
     # Step 2: Apply reranking if enabled and reranker is available
     reranking_time = 0.0
-    if not no_rerank and hasattr(
-            rag_db, '_reranker_model') and rag_db._reranker_model is not None:
+    has_reranker = (
+        getattr(rag_db, '_reranker_model', None) is not None
+    )
+    if not no_rerank and has_reranker:
         # Safety check: If no results retrieved, skip reranking
         if not results:
             if verbose:

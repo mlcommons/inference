@@ -37,6 +37,9 @@ from retrieve import VectorDB
 from text_splitter import split_into_fixed_passages
 from utils import get_device_config, load_url_mapping, get_base_filename
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("DatasetupSUT")
+
 # Import HTML extractor
 try:
     from bs4 import BeautifulSoup
@@ -45,9 +48,6 @@ try:
 except ImportError:
     HAVE_HTML = False
     log.warning("BeautifulSoup not available - HTML processing disabled")
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("DatasetupSUT")
 
 
 class DatasetupSUT:

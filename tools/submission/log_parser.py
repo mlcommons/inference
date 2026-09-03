@@ -124,15 +124,16 @@ class MLPerfLog:
             else:
                 self.logger.warning(
                     "There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(
-                        key
+                        message["key"]
                     )
                 )
+        return result
 
     def dump(self, output_path):
         """
         Dump the entire log as a json file.
         """
-        with open(log_path, "w") as f:
+        with open(output_path, "w") as f:
             json.dump(self.messages, f, indent=4)
 
     def num_messages(self):

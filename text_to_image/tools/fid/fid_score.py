@@ -46,6 +46,20 @@ import os
 import sys
 from .inception import InceptionV3
 
+# Extensions accepted when a path points at a directory of images. Kept in
+# sync with the upstream pytorch-fid this module is derived from.
+IMAGE_EXTENSIONS = {
+    "bmp",
+    "jpg",
+    "jpeg",
+    "pgm",
+    "png",
+    "ppm",
+    "tif",
+    "tiff",
+    "webp",
+}
+
 
 try:
     from tqdm import tqdm

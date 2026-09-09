@@ -54,7 +54,7 @@ def parse_result_log(file_path):
     if mlperf_log.has_error():
         print(
             "WARNING: {} ERROR reported in {}".format(
-                line.split()[0],
+                mlperf_log.num_errors(),
                 file_path))
 
     res = float(mlperf_log[RESULT_FIELD[scenario]])

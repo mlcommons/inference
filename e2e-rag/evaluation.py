@@ -232,7 +232,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
             print("-" * 50)
 
         # Show reranked results if reranker is available and reranking was used
-        if not no_rerank and has_reranker:
+        if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
             print(f"\nReranking to top-{top_k_reranking}")
             print(f"Reranking results:")
 

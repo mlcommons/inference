@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3.1-8B-Instruct}"
-DATASET_PATH="${DATASET_PATH:cnn_eval.json}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Meta-Llama-3.1-8B-Instruct}"
+DATASET_PATH="${DATASET_PATH:-cnn_eval.json}"
+GPU_COUNT="${GPU_COUNT:-1}"
 
 python -u main.py --scenario Offline \
 	--model-path "${CHECKPOINT_PATH}" \

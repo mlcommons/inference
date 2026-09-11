@@ -235,7 +235,7 @@ python -u main.py --scenario Offline \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir output \
+                --output-log-dir ${OUTPUT_LOG_DIR} \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 
@@ -250,6 +250,12 @@ fi
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use
 `--device cpu` to adapt it to a CPU-only run.
 
+`evaluation.py` loads the tokenizer from `--model-name`, which defaults to the
+gated `meta-llama/Meta-Llama-3.1-8B-Instruct` Hub repository. When running
+from a local checkpoint or without Hub access, pass the same path you gave
+`--model-path` to `main.py`, e.g. `--model-name ${CHECKPOINT_PATH}`; otherwise
+the evaluation fails with `401 Unauthorized` after the inference has finished.
+
 ### Server
 ```
 OUTPUT_LOG_DIR=server-accuracy-logs
@@ -262,7 +268,7 @@ python -u main.py --scenario Server \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir output \
+                --output-log-dir ${OUTPUT_LOG_DIR} \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 
@@ -290,7 +296,7 @@ python -u main.py --lg-model-name llama3_1-8b-edge \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir output \
+                --output-log-dir ${OUTPUT_LOG_DIR} \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 

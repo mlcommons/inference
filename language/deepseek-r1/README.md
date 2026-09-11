@@ -261,6 +261,14 @@ Accuracy evaluation is handled uniformly across all backends:
 (.venv_BACKEND) $ python3 eval_accuracy.py --input-file <input_file>.pkl
 ```
 
+LiveCodeBench samples are graded in a pool of worker processes, bounded by
+`--num-lcb-workers` (default 64, further capped by the CPU count and the
+number of samples). Each worker holds a copy of the benchmark plus a sandboxed
+interpreter per sample, so on a large host you may need to lower this to fit
+in memory. If any LiveCodeBench sample cannot be evaluated (as opposed to
+being graded incorrect), the script exits with an error instead of reporting
+an accuracy that silently counts those samples as wrong.
+
 ### Reference Evals
 
 Pytorch reference scores:

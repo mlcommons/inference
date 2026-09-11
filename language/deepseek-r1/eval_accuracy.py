@@ -28,6 +28,7 @@ from typing import Dict, Any, Optional, Tuple, Union
 import pandas as pd
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 import multiprocessing
 from pathlib import Path
 
@@ -39,6 +40,12 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Default upper bound on LiveCodeBench worker processes. Each worker holds a
+# copy of the 400-problem benchmark plus a sandboxed Python interpreter per
+# sample, so scaling with cpu_count() alone exhausts memory on large hosts
+# (see process_livecodebench_parallel). Matches the gpt-oss-120b default.
+DEFAULT_NUM_LCB_WORKERS = 64
+
 
 # =============================================================================
 # MLPerf Log Accuracy Processing
@@ -49,7 +56,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                                 checkpoint_path: str,
                                 dtype: str = "int32",
                                 output_dir: Optional[Union[str, Path]] = None,
-                                base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                                base_filename: Optional[str] = None,
+                                num_lcb_workers: int = DEFAULT_NUM_LCB_WORKERS) -> Tuple[pd.DataFrame, str]:
     """Process MLPerf log accuracy file and evaluate results.
 
     Args:
@@ -58,6 +66,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
         checkpoint_path: Path to tokenizer checkpoint
         dtype: Data type for numpy conversion ("int32", "int64", "float") - default "int32" matches MLPerf SUT
         output_dir: Directory to save evaluated results
+        num_lcb_workers: Upper bound on LiveCodeBench worker processes
         base_filename: Base filename for output file
 
     Returns:
@@ -266,7 +275,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
     df_evaluated, saved_file_path = process_and_save_dataframe(
         df,
         output_dir=output_dir,
-        base_filename=base_filename
+        base_filename=base_filename,
+        num_lcb_workers=num_lcb_workers
     )
 
     return df_evaluated, saved_file_path
@@ -567,14 +577,31 @@ def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
         os.environ.pop('TQDM_DISABLE', None)
 
 
-def evaluate_livecodebench_worker(args: Tuple[str, str]) -> Tuple[str, bool]:
-    """Worker function for parallel LiveCodeBench evaluation."""
+class LiveCodeBenchEvaluationError(RuntimeError):
+    """Raised when LiveCodeBench samples could not be evaluated at all.
+
+    This is distinct from a sample being graded incorrect: it means the
+    grader itself failed (worker crashed, pool broken, timeout), so any
+    accuracy computed from the run would silently under-report.
+    """
+
+
+def evaluate_livecodebench_worker(
+        args: Tuple[str, str]) -> Tuple[str, Optional[bool]]:
+    """Worker function for parallel LiveCodeBench evaluation.
+
+    Returns ``(question_id, is_correct)``. ``is_correct`` is ``None`` when the
+    grader raised, so the caller can tell an evaluation failure apart from a
+    wrong answer instead of scoring it as 0.
+    """
     code, question_id = args
 
     try:
         return question_id, evaluate_livecodebench(code, question_id)
     except Exception:
-        return question_id, False
+        logger.exception(
+            f"LiveCodeBench evaluation failed for question {question_id}")
+        return question_id, None
 
 
 # =============================================================================
@@ -640,8 +667,14 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
 
 
 def process_livecodebench_parallel(
-        df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
-    """Process LiveCodeBench items in parallel."""
+        df: pd.DataFrame, group_indices: pd.Index,
+        num_workers: int = DEFAULT_NUM_LCB_WORKERS) -> Tuple[int, int]:
+    """Process LiveCodeBench items in parallel.
+
+    Raises:
+        LiveCodeBenchEvaluationError: if any sample could not be evaluated
+            (as opposed to being evaluated as incorrect).
+    """
     # Prepare work items
     work_items = []
     for idx in group_indices:
@@ -655,39 +688,72 @@ def process_livecodebench_parallel(
     if not work_items:
         return 0, 0
 
+    # Load the benchmark once in the parent before forking. Workers inherit
+    # the lru_cache entry copy-on-write; without this every worker re-reads
+    # the full 400-problem set on its first item, which on a 256-core host
+    # means 256 concurrent loads and an OOM-killed pool.
+    load_lcb_benchmark()
+
     # Process in parallel
-    max_workers = min(multiprocessing.cpu_count(), len(work_items))
+    max_workers = max(1, min(num_workers, multiprocessing.cpu_count(),
+                             len(work_items)))
     logger.info(
         f"Evaluating {len(work_items)} LiveCodeBench items with {max_workers} workers")
 
     correct_count = 0
     total_evaluated = 0
+    failed_count = 0
 
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        future_to_idx = {
-            executor.submit(evaluate_livecodebench_worker, (code, question_id)): idx
-            for idx, code, question_id in work_items
-        }
+    try:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {
+                executor.submit(evaluate_livecodebench_worker, (code, question_id)): idx
+                for idx, code, question_id in work_items
+            }
 
-        for future in tqdm(as_completed(future_to_idx, timeout=1200),
-                           total=len(future_to_idx), desc="Evaluating LiveCodeBench"):
-            idx = future_to_idx[future]
+            for future in tqdm(as_completed(future_to_idx, timeout=1200),
+                               total=len(future_to_idx), desc="Evaluating LiveCodeBench"):
+                idx = future_to_idx[future]
 
-            try:
-                question_id, is_correct = future.result(timeout=30)
+                try:
+                    question_id, is_correct = future.result(timeout=30)
+                except BrokenProcessPool:
+                    # Surfaces per future once a worker is gone; let the
+                    # handler below report the pool failure once.
+                    raise
+                except Exception as e:
+                    logger.error(f"Error evaluating row {idx}: {e}")
+                    is_correct = None
+
+                if is_correct is None:
+                    # Grader failure, not a wrong answer: leave the row
+                    # unscored and report it below instead of counting a 0.
+                    failed_count += 1
+                    continue
+
                 df.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
                 total_evaluated += 1
                 if is_correct:
                     correct_count += 1
-            except Exception as e:
-                logger.error(f"Error evaluating row {idx}: {e}")
-                df.at[idx, 'prompt_accuracy'] = 0.0
-                total_evaluated += 1
+    except BrokenProcessPool as e:
+        raise LiveCodeBenchEvaluationError(
+            "LiveCodeBench worker pool died (a worker was killed, most "
+            "likely by the OOM killer). Re-run with a smaller "
+            "--num-lcb-workers.") from e
+
+    if failed_count:
+        raise LiveCodeBenchEvaluationError(
+            f"{failed_count} of {len(work_items)} LiveCodeBench samples could "
+            "not be evaluated; see the errors above. The accuracy from this "
+            "run would be wrong, so it is not reported. Fix the environment "
+            "(or lower --num-lcb-workers) and re-run.")
 
     return correct_count, total_evaluated
 
 
-def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def process_dataframe(
+        df: pd.DataFrame,
+        num_lcb_workers: int = DEFAULT_NUM_LCB_WORKERS) -> pd.DataFrame:
     """Process entire dataframe with optimized batch processing."""
     validate_dataframe(df)
 
@@ -712,7 +778,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         # Evaluate answers
         if 'livecodebench' in dataset_name.lower():
             correct_count, total_evaluated = process_livecodebench_parallel(
-                df_output, group_indices)
+                df_output, group_indices, num_workers=num_lcb_workers)
         else:
             # Sequential evaluation for other datasets
             correct_count = 0
@@ -780,19 +846,21 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
 
 def process_and_save_dataframe(df: pd.DataFrame,
                                output_dir: Optional[Union[str, Path]] = None,
-                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                               base_filename: Optional[str] = None,
+                               num_lcb_workers: int = DEFAULT_NUM_LCB_WORKERS) -> Tuple[pd.DataFrame, str]:
     """Process dataframe for evaluation and save the results.
 
     Args:
         df: Input DataFrame to evaluate
         output_dir: Directory to save the evaluated pickle file (defaults to same dir as source)
         base_filename: Base filename for output (defaults to auto-generated)
+        num_lcb_workers: Upper bound on LiveCodeBench worker processes
 
     Returns:
         Tuple of (evaluated_dataframe, saved_file_path)
     """
     # Process the dataframe
-    df_evaluated = process_dataframe(df)
+    df_evaluated = process_dataframe(df, num_lcb_workers=num_lcb_workers)
 
     # Determine output path
     if output_dir is None:
@@ -870,6 +938,11 @@ def main():
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose logging")
+    parser.add_argument(
+        "--num-lcb-workers", type=int, default=DEFAULT_NUM_LCB_WORKERS,
+        help="Maximum number of parallel worker processes for LiveCodeBench "
+        f"evaluation (default: {DEFAULT_NUM_LCB_WORKERS}, further capped by "
+        "cpu_count and the number of samples)")
 
     args = parser.parse_args()
 
@@ -921,7 +994,8 @@ def main():
             dataset_file=dataset_file,
             checkpoint_path=checkpoint_path,
             output_dir=output_dir,
-            base_filename=output_filename
+            base_filename=output_filename,
+            num_lcb_workers=args.num_lcb_workers
         )
 
     else:
@@ -938,7 +1012,8 @@ def main():
         df_evaluated, saved_file_path = process_and_save_dataframe(
             df,
             output_dir=output_dir,
-            base_filename=output_filename
+            base_filename=output_filename,
+            num_lcb_workers=args.num_lcb_workers
         )
 
     # Print evaluation results with unified function

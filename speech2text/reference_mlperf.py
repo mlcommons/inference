@@ -45,7 +45,7 @@ def get_args():
         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument(
         "--audit_conf",
-        default="audit.conf",
+        default="audit.config",
         help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--dataset_dir", required=True)
     parser.add_argument("--model_path", default="openai/whisper-large-v3")

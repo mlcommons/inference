@@ -51,7 +51,7 @@ def get_args():
     )
     parser.add_argument(
         "--audit_conf",
-        default="audit.conf",
+        default="audit.config",
         help="audit config for LoadGen settings during compliance runs",
     )
     parser.add_argument(

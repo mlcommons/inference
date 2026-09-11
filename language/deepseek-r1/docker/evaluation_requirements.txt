@@ -5,6 +5,13 @@
 numpy
 pylatexenc
 
+# LiveCodeBench imports `anthropic.HUMAN_PROMPT` / `AI_PROMPT` at import time
+# (lcb_runner/prompts/test_output_prediction.py). Both were removed in
+# anthropic 1.0.0, and LiveCodeBench only declares `anthropic>=0.42.0`, so an
+# unconstrained install pulls a 1.x SDK and eval_accuracy.py fails before it
+# grades a single sample. Pin below 1.0 until LiveCodeBench drops the import.
+anthropic<1.0
+
 # Install evaluation submodules as editable packages
 -e submodules/LiveCodeBench
 -e submodules/prm800k

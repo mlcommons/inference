@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3.1-8B-Instruct}"
-DATASET_PATH="${DATASET_PATH:cnn_eval.json}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Meta-Llama-3.1-8B-Instruct}"
+DATASET_PATH="${DATASET_PATH:-cnn_eval.json}"
 
 mkdir -p "run_outputs"
 
@@ -9,7 +9,6 @@ python3 -u main.py --scenario Offline \
 	--model-path "${CHECKPOINT_PATH}" \
 	--batch-size 16 \
 	--accuracy \
-	--mlperf-conf mlperf.conf \
 	--user-conf user.conf \
 	--total-sample-count 13368 \
 	--dataset-path "${DATASET_PATH}" \

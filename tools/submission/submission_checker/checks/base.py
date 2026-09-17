@@ -9,6 +9,7 @@ class BaseCheck(ABC):
 
     def __init__(self, log, path):
         self.checks = []
+        self.apply_checks = set()
         self.log = log
         self.path = path
         self.name = "base checks"
@@ -21,21 +22,31 @@ class BaseCheck(ABC):
         valid = True
         errors = []
         for check in self.checks:
-            try:
-                v = self.execute(check)
-                valid &= v
-            except BaseException:
-                valid &= False
-                self.log.error(
-                    "Execution occurred in running check %s. Running %s in %s",
-                    self.path,
+            if self.check_applies(check):
+                try:
+                    v = self.execute(check)
+                    valid &= v
+                except BaseException:
+                    valid &= False
+                    self.log.error(
+                        "Execution occurred in running check %s. Running %s in %s",
+                        self.path,
+                        check.__name__,
+                        self.__class__.__name__)
+            else:
+                self.log.warning(
+                    "Execution of check %s skipped for %s.",
                     check.__name__,
-                    self.__class__.__name__)
+                    self.path
+                )
         return valid
 
     def execute(self, check):
         """Custom execution of a single check method."""
         return check()
+
+    def check_applies(self, fn):
+        return fn in self.apply_checks
 
     def __call__(self):
         """Allows the check instance to be called like a function."""

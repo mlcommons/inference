@@ -9,35 +9,54 @@ Please refer to the [installation page](site:inference/install/) to install MLCF
 
 === "Custom automation based MLPerf results"
     If you have not followed the `mlcr` commands under the individual model pages in the [benchmarks](../index.md) directory, please make sure that the result directory is structured in the following way. You can see the real examples for the expected folder structure [here](https://github.com/mlcommons/inference/tree/submission-generation-examples).
-    ```
-    └── System description ID(SUT Name)
-        ├── system_meta.json
-        └── Benchmark
-            └── Scenario
-                ├── Performance
-                |   └── run_1 run for all scenarios
-                |       ├── mlperf_log_summary.txt
-                |       └── mlperf_log_detail.txt
-                ├── Accuracy
-                |   ├── mlperf_log_summary.txt
-                |   ├── mlperf_log_detail.txt
-                |   ├── mlperf_log_accuracy.json
-                |   └── accuracy.txt
-                |── Compliance_Test_ID
-                |   ├── Performance
-                |   |   └── run_x/#1 run for all scenarios
-                |   |       ├── mlperf_log_summary.txt
-                |   |       └── mlperf_log_detail.txt
-                |   ├── Accuracy # for TEST01 only
-                |   |   ├── baseline_accuracy.txt (if test fails in deterministic mode)
-                |   |   ├── compliance_accuracy.txt (if test fails in deterministic mode)
-                |   |   ├── mlperf_log_accuracy.json
-                |   |   └── accuracy.txt
-                |   ├── verify_performance.txt
-                |   └── verify_accuracy.txt # for TEST01 only
-                |── user.conf
-                └── measurements.json
-    ```
+
+    The submission generator supports two kinds of results, shown in the tabs below. **LoadGen based results** are produced by the reference/optimized implementations and contain the usual `mlperf_log_*` files. **Inference endpoint based results** are produced by the LLM/API endpoint harness; a scenario is treated as an endpoint run when a `config.yaml` (or `config.yml`) is present at the scenario root, in which case a single JSON summary replaces the LoadGen logs and there is no `run_1` subfolder. The mode folder names (`performance`, `accuracy`) must be lowercase.
+
+    === "LoadGen based results"
+        ```
+        └── System description ID(SUT Name)
+            ├── system_meta.json
+            └── Benchmark
+                └── Scenario
+                    ├── performance
+                    |   └── run_1 run for all scenarios
+                    |       ├── mlperf_log_summary.txt
+                    |       └── mlperf_log_detail.txt
+                    ├── accuracy
+                    |   ├── mlperf_log_summary.txt
+                    |   ├── mlperf_log_detail.txt
+                    |   ├── mlperf_log_accuracy.json
+                    |   └── accuracy.txt
+                    |── Compliance_Test_ID
+                    |   ├── performance
+                    |   |   └── run_x/#1 run for all scenarios
+                    |   |       ├── mlperf_log_summary.txt
+                    |   |       └── mlperf_log_detail.txt
+                    |   ├── accuracy # for TEST01 only
+                    |   |   ├── baseline_accuracy.txt (if test fails in deterministic mode)
+                    |   |   ├── compliance_accuracy.txt (if test fails in deterministic mode)
+                    |   |   ├── mlperf_log_accuracy.json
+                    |   |   └── accuracy.txt
+                    |   ├── verify_performance.txt
+                    |   └── verify_accuracy.txt # for TEST01 only
+                    |── user.conf
+                    └── measurements.json
+        ```
+
+    === "Inference endpoint based results"
+        ```
+        └── System description ID(SUT Name)
+            ├── system_meta.json
+            └── Benchmark
+                └── Scenario
+                    ├── config.yaml           # endpoint run marker (config.yml also accepted); copied into the submission
+                    ├── measurements.json
+                    ├── performance
+                    |   └── result_summary.json
+                    └── accuracy
+                        └── accuracy_results.json
+        ```
+        Note: endpoint runs do not require a `user.conf` and do not use the `run_1` subfolder or any `mlperf_log_*` files.
     
     <details>
     <summary>Click here if you are submitting in open division</summary>

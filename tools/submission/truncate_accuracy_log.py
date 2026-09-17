@@ -5,6 +5,7 @@ Tool to truncate the mlperf_log_accuracy.json
 
 import argparse
 import hashlib
+import json
 import logging
 import os
 import re
@@ -122,6 +123,20 @@ def copy_submission_dir(src, dst, filter_submitter):
             )
 
 
+def _is_endpoints_submission(scenario_dir):
+    """Detect the endpoints submission layout via its scenario-root config.yaml.
+
+    Endpoints submissions have no mlperf_log_accuracy.json; the accuracy
+    artifact they produce (accuracy/accuracy_results.json) carries no large
+    per-sample payload to truncate, so callers should skip truncation
+    entirely rather than look for a file to shrink.
+    """
+    return any(
+        os.path.exists(os.path.join(scenario_dir, name))
+        for name in ("config.yaml", "config.yml")
+    )
+
+
 def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
     """Walk result dir and
     write a hash of mlperf_log_accuracy.json to accuracy.txt
@@ -182,7 +197,13 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 acc_txt = os.path.join(
                                     acc_path, "accuracy.txt")
                                 if not os.path.exists(acc_log):
-                                    log.error("%s missing", acc_log)
+                                    if _is_endpoints_submission(name):
+                                        log.info(
+                                            "%s is an endpoints submission; nothing to truncate",
+                                            name,
+                                        )
+                                    else:
+                                        log.error("%s missing", acc_log)
                                     continue
 
                                 # TEST07 and TEST09 don't have accuracy.txt,

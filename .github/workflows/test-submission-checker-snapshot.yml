@@ -1,0 +1,64 @@
+# Snapshot (golden-file) test for the MLPerf inference submission checker.
+# Runs the checker end-to-end against a pinned commit of a real submission
+# repository and diffs its summary.csv against a committed golden snapshot.
+# See tools/submission/tests/test_snapshot.py for details and update instructions.
+
+name: Snapshot test for MLPerf inference submission checker
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - tools/submission/**
+      - .github/workflows/test-submission-checker-snapshot.yml
+      - '!**.md'
+
+# Keep these in sync with tools/submission/tests/test_snapshot.py
+env:
+  SUBMISSION_REPO: https://github.com/mlcommons/inference_results_v6.0
+  PINNED_SHA: 4d3916ac9cf474b679cdfcf492d43a0559418ad1
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.12" ]
+
+    steps:
+    - name: Checkout inference repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: python3 -m pip install pytest syrupy pyyaml
+
+    - name: Fetch pinned submissions repo
+      run: |
+        set -euo pipefail
+        # Partial clone: fetch only the blobs we actually check out. Combined
+        # with the sparse-checkout excludes below, this skips large artifacts
+        # the checker never reads (accuracy/trace dumps, dataset JSONs, model
+        # caches, vendored binaries), trimming the ~2.2 GB tree to ~1.6 GB.
+        git clone --filter=blob:none --no-checkout "$SUBMISSION_REPO" submissions
+        cd submissions
+        git sparse-checkout set --no-cone \
+          '/*' \
+          '!openimages-mlperf-v21.json' \
+          '!mlperf_log_trace.json' \
+          '!mlc-deps.png' \
+          '!environment.pickle' \
+          '!unet.cache' \
+          '!libamdhip64.so.6' \
+          '!val_map.txt'
+        git checkout "$PINNED_SHA"
+
+    - name: Run submission checker snapshot test
+      env:
+        MLPERF_SUBMISSION_DIR: ${{ github.workspace }}/submissions
+      run: python3 -m pytest tools/submission/tests/test_snapshot.py -q

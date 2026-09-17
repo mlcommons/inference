@@ -70,6 +70,8 @@ class AccuracyCheck(BaseCheck):
             "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
+        self.is_endpoints = self.submission_logs.loader_data.get(
+            "is_endpoints_submission", False)
         self.setup_checks()
 
     def setup_checks(self):
@@ -83,6 +85,12 @@ class AccuracyCheck(BaseCheck):
         self.checks.append(self.loadgen_errors_check)
         self.checks.append(self.dataset_check)
         self.checks.append(self.extra_files_check)
+        self.checks.append(self.endpoints_model_check)
+        self.apply_checks = set(self.checks)
+        if self.is_endpoints:
+            self.apply_checks.remove(self.accuracy_json_check)
+        else:
+            self.apply_checks.remove(self.endpoints_model_check)
 
     def accuracy_result_check(self):
         """Validate reported accuracy metrics in `accuracy.txt`.
@@ -97,8 +105,38 @@ class AccuracyCheck(BaseCheck):
                 False otherwise.
         """
 
+        if self.is_endpoints:
+            if self.mlperf_log["accuracy_score"] is None:
+                self.log.error("%s accuracy score not found", self.path)
+                return False
+            score = self.mlperf_log["accuracy_score"]
+            self.submission_logs.loader_data["accuracy_metrics"] = score
+            if self.division.lower() == "open":
+                return True
+            if self.model == "qwen3-vl-235b-a22b":
+                _, acc_targets, acc_types, *_ = self.config.get_accuracy_values(
+                    self.model, self.scenario_fixed
+                )
+                numeric = self._numeric_accuracy_score(score, acc_types)
+                if numeric is None:
+                    self.log.error(
+                        "%s could not parse accuracy score %s",
+                        self.path,
+                        score,
+                    )
+                    return False
+                if numeric < acc_targets[0]:
+                    self.log.warning(
+                        "%s accuracy not met: expected=%f, found=%s",
+                        self.path,
+                        acc_targets[0],
+                        numeric,
+                    )
+                    return False
+            return True
+
         patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = self.config.get_accuracy_values(
-            self.model
+            self.model, self.scenario_fixed
         )
         acc = None
         hash_val = None
@@ -166,6 +204,37 @@ class AccuracyCheck(BaseCheck):
             return True
         return is_valid
 
+    def _numeric_accuracy_score(self, score, acc_types):
+        """Extract a comparable numeric accuracy from an endpoints score."""
+        if isinstance(score, (int, float)):
+            return float(score)
+        if isinstance(score, str):
+            try:
+                return float(score)
+            except ValueError:
+                return None
+        if isinstance(score, dict):
+            keys = []
+            for acc_type in acc_types:
+                keys.extend(
+                    [
+                        acc_type,
+                        acc_type.lower(),
+                        acc_type.split("_")[-1].lower(),
+                    ]
+                )
+            keys.extend(["f1", "score", "accuracy"])
+            for key in keys:
+                value = score.get(key)
+                if isinstance(value, (int, float)):
+                    return float(value)
+                if isinstance(value, str):
+                    try:
+                        return float(value)
+                    except ValueError:
+                        continue
+        return None
+
     def accuracy_json_check(self):
         """Check that the accuracy JSON exists and is within size limits.
 
@@ -227,7 +296,7 @@ class AccuracyCheck(BaseCheck):
             )
             return True
         expected_qsl_total_count = self.config.get_accuracy_sample_count(
-            self.model)
+            self.model, self.scenario_fixed)
         if "effective_accuracy_sample_count" in self.mlperf_log.get_keys():
             qsl_total_count = self.mlperf_log["effective_accuracy_sample_count"]
         else:
@@ -267,6 +336,24 @@ class AccuracyCheck(BaseCheck):
                 "%s expected to have the following extra files (%s)",
                 acc_dir,
                 missing_files,
+            )
+            return False
+        return True
+
+    def endpoints_model_check(self):
+        """Verify the model is allowed for endpoints submissions.
+
+        Returns:
+            bool: True if the model is in ENDPOINTS_ALLOWED_MODELS,
+                False otherwise.
+        """
+        if self.model not in ENDPOINTS_ALLOWED_MODELS:
+            self.log.error(
+                "%s endpoints submission uses disallowed model '%s', "
+                "must be one of: %s",
+                self.path,
+                self.model,
+                ENDPOINTS_ALLOWED_MODELS,
             )
             return False
         return True

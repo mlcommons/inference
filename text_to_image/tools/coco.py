@@ -8,12 +8,30 @@ import os
 import tqdm
 import requests
 import urllib.request
+import hashlib
 import zipfile
 import shutil
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
+
+# SHA-256 of the pinned COCO 2014 annotations archive
+COCO_ANNOTATIONS_TRAINVAL2014_SHA256 = (
+    "031296bbc80c45a1d1f76bf9a90ead27e94e99ec629208449507a4917a3bf009"
+)
+
+
+def _verify_sha256(path: Path, expected: str) -> None:
+    hasher = hashlib.sha256()
+    with open(str(path), "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    actual = hasher.hexdigest()
+    if actual != expected:
+        raise RuntimeError(
+            f"SHA-256 mismatch for {path}: expected {expected}, got {actual}"
+        )
 
 
 def get_args():
@@ -71,13 +89,24 @@ def get_args():
 
 def download_img(args):
     img_url, target_folder, file_name = args
+    # Upgrade http://images.cocodataset.org/ URLs to the S3 origin
+    img_url = img_url.replace(
+        "http://images.cocodataset.org/",
+        "https://s3.amazonaws.com/images.cocodataset.org/",
+        1,
+    )
     if (target_folder / file_name).exists():
         log.warning(f"Image {file_name} found locally, skipping download")
     else:
         urllib.request.urlretrieve(img_url, str(target_folder / file_name))
 
 
-def download_file(url: str, output_dir: Path, filename: str | None = None):
+def download_file(
+    url: str,
+    output_dir: Path,
+    filename: str | None = None,
+    expected_sha256: str | None = None,
+):
     os.makedirs(str(output_dir), exist_ok=True)
 
     if filename is None:
@@ -98,6 +127,9 @@ def download_file(url: str, output_dir: Path, filename: str | None = None):
                 if chunk:
                     f.write(chunk)
                     pbar.update(len(chunk))
+
+    if expected_sha256 is not None:
+        _verify_sha256(output_path, expected_sha256)
 
     return output_path
 
@@ -146,8 +178,9 @@ if __name__ == "__main__":
             os.makedirs(str(dataset_dir / "raw"), exist_ok=True)
             os.makedirs(str(dataset_dir / "download_aux"), exist_ok=True)
             download_file(
-                url="http://images.cocodataset.org/annotations/annotations_trainval2014.zip",
+                url="https://s3.amazonaws.com/images.cocodataset.org/annotations/annotations_trainval2014.zip",
                 output_dir=dataset_dir / "download_aux",
+                expected_sha256=COCO_ANNOTATIONS_TRAINVAL2014_SHA256,
             )
             zipfile_path = dataset_dir / "download_aux" / "annotations_trainval2014.zip"
             # Unzip file

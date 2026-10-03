@@ -81,8 +81,9 @@ def getname():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--node", type=str, default="")
     args = parser.parse_args()
     node = args.node
-    app.run(debug=False, port=args.port)
+    app.run(debug=False, host=args.host, port=args.port)

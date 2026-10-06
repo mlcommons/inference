@@ -181,6 +181,8 @@ class SUT:
             self.model_path,
             dtype=self.dtype,
             tensor_parallel_size=self.tensor_parallel_size,
+            # Benchmark queries must not inherit cross-query cache reuse.
+            enable_prefix_caching=False,
         )
         log.info("Loaded model")
 
@@ -324,6 +326,7 @@ class SUTServer(SUT):
         self.engine_args = AsyncEngineArgs(
             self.model_path,
             dtype=self.dtype,
-            tensor_parallel_size=self.tensor_parallel_size)
+            tensor_parallel_size=self.tensor_parallel_size,
+            enable_prefix_caching=False)
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
         log.info("Loaded model")

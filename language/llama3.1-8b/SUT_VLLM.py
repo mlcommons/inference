@@ -101,6 +101,20 @@ class SUT:
             worker.join()
 
     def process_queries(self):
+        """Run the worker loop; abort the process if it dies.
+
+        A worker thread that raises simply exits, and LoadGen then waits
+        for responses that will never arrive until its own timeout hours
+        later. Failing the whole run immediately is the only useful
+        outcome for a benchmark harness.
+        """
+        try:
+            self._process_queries()
+        except Exception:
+            log.exception("SUT worker thread failed; aborting the run")
+            os._exit(1)
+
+    def _process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
         while True:
             qitem = self.query_queue.get()
@@ -111,8 +125,13 @@ class SUT:
 
             tik1 = time.time()
 
-            input_ids_tensor = [
-                self.data_object.input_ids[q.index] for q in qitem]
+            # Pass pre-tokenized prompts as TokensPrompt objects, the same
+            # way SUTServer does. The old `prompt_token_ids=` keyword was
+            # removed from LLM.generate() in newer vLLM releases.
+            prompts = [
+                TokensPrompt(
+                    prompt_token_ids=self.data_object.input_ids[q.index])
+                for q in qitem]
             # input_text_tensor = [
             #     self.data_object.input[q.index] for q in qitem]
             # for in_text in input_text_tensor:
@@ -120,7 +139,7 @@ class SUT:
 
             tik2 = time.time()
             outputs = self.model.generate(
-                prompt_token_ids=input_ids_tensor, sampling_params=self.sampling_params
+                prompts, sampling_params=self.sampling_params
             )
             pred_output_tokens = []
             for output in outputs:
@@ -162,6 +181,8 @@ class SUT:
             self.model_path,
             dtype=self.dtype,
             tensor_parallel_size=self.tensor_parallel_size,
+            # Benchmark queries must not inherit cross-query cache reuse.
+            enable_prefix_caching=False,
         )
         log.info("Loaded model")
 
@@ -254,6 +275,20 @@ class SUTServer(SUT):
         lg.QuerySamplesComplete(response)
 
     def process_queries(self):
+        """Run the worker loop; abort the process if it dies.
+
+        A worker thread that raises simply exits, and LoadGen then waits
+        for responses that will never arrive until its own timeout hours
+        later. Failing the whole run immediately is the only useful
+        outcome for a benchmark harness.
+        """
+        try:
+            self._process_queries()
+        except Exception:
+            log.exception("SUT worker thread failed; aborting the run")
+            os._exit(1)
+
+    def _process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
         while True:
 
@@ -291,6 +326,7 @@ class SUTServer(SUT):
         self.engine_args = AsyncEngineArgs(
             self.model_path,
             dtype=self.dtype,
-            tensor_parallel_size=self.tensor_parallel_size)
+            tensor_parallel_size=self.tensor_parallel_size,
+            enable_prefix_caching=False)
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
         log.info("Loaded model")

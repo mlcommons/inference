@@ -8,8 +8,14 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/l
 
 ## Prerequisites
 
-- [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)
-- Any NVIDIA GPU supported by TensorFlow or PyTorch
+- Python 3.8+ with PyTorch or ONNX Runtime (CPU or CUDA).
+- To initialize the required BERT utilities submodule:
+  ```bash
+  git submodule update --init language/bert/DeepLearningExamples
+  ```
+- Optional for containerized GPU runs:
+  - [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)
+  - Supported NVIDIA GPU for CUDA acceleration
 
 ## Supported Models
 

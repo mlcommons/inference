@@ -14,19 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from time import sleep
-from squad_QSL import get_squad_QSL
-from transformers import BertConfig, BertForQuestionAnswering
-import onnxruntime
-import numpy as np
-import mlperf_loadgen as lg
-import threading
 import array
 import json
 import os
 import sys
 
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "DeepLearningExamples",
+        "PyTorch",
+        "LanguageModeling",
+        "BERT",
+    ),
+)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.getcwd())
+
+try:
+    from squad_QSL import get_squad_QSL
+    from transformers import BertConfig, BertForQuestionAnswering
+    import onnxruntime
+    import numpy as np
+    import mlperf_loadgen as lg
+    import threading
+except ImportError:
+    raise Exception("Error importing local modules")
 
 
 class BERT_ONNXRuntime_SUT:

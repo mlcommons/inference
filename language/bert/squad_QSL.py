@@ -15,14 +15,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pickle
-import mlperf_loadgen as lg
-from create_squad_data import read_squad_examples, convert_examples_to_features
-from transformers import BertTokenizer
 import os
 import sys
 
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "DeepLearningExamples",
+        "PyTorch",
+        "LanguageModeling",
+        "BERT",
+    ),
+)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.getcwd())
+
+try:
+    import pickle
+    import mlperf_loadgen as lg
+    from create_squad_data import read_squad_examples, convert_examples_to_features
+    from transformers import BertTokenizer
+except ImportError:
+    raise Exception("Error importing local modules")
 
 
 # To support feature cache.

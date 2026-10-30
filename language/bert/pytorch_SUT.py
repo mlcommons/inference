@@ -23,9 +23,14 @@ import sys
 sys.path.insert(
     0,
     os.path.join(
-        os.getcwd(), "DeepLearningExamples", "PyTorch", "LanguageModeling", "BERT"
+        os.path.dirname(os.path.abspath(__file__)),
+        "DeepLearningExamples",
+        "PyTorch",
+        "LanguageModeling",
+        "BERT",
     ),
 )
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.getcwd())
 
 try:

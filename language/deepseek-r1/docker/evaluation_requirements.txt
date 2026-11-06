@@ -5,6 +5,11 @@
 numpy
 pylatexenc
 
+# LiveCodeBench imports anthropic.HUMAN_PROMPT / AI_PROMPT at module load
+# (lcb_runner/prompts/{test_output_prediction,self_repair}.py). These were
+# removed in anthropic 1.0, so keep the SDK on 0.x until LiveCodeBench is fixed.
+anthropic>=0.42.0,<1.0
+
 # Install evaluation submodules as editable packages
 -e submodules/LiveCodeBench
 -e submodules/prm800k

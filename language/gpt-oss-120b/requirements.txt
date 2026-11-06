@@ -1,4 +1,7 @@
 absl-py==2.3.1
+# Must stay < 1.0: LiveCodeBench imports anthropic.HUMAN_PROMPT / AI_PROMPT at
+# module load (lcb_runner/prompts/{test_output_prediction,self_repair}.py),
+# and those constants were removed in anthropic 1.0.
 anthropic==0.72.0
 audioread==3.1.0
 datasets==2.21.0

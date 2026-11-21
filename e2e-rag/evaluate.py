@@ -309,11 +309,11 @@ def parse_args():
         default=Path("data/frames_dataset.tsv"),
         help="Evaluation dataset TSV")
     parser.add_argument(
-        "--judge-url",
+        "--judge_service_url",
         default=DEFAULT_JUDGE_URL,
         help="Judge service endpoint")
     parser.add_argument(
-        "--judge-model",
+        "--judge_model",
         default=DEFAULT_JUDGE_MODEL,
         help="Judge model identifier")
     parser.add_argument(
@@ -329,6 +329,6 @@ if __name__ == "__main__":
     evaluate(
         args.results,
         args.dataset,
-        args.judge_url,
+        args.judge_service_url,
         args.judge_model,
         args.batch_size)

@@ -344,8 +344,8 @@ class DeviceAllocator:
     Picks GPU indices that are empty (not running other workloads) and
     unused within this process. Errors if not enough are available.
 
-    Per-component override via env var (e.g. INFERENCE_RERANKER_GPU_DEVICES,
-    INFERENCE_EMBEDDING_GPU_DEVICES). Indices are 0-based and post any vendor
+    Per-component override via env var (e.g. RERANKER_GPU_DEVICES,
+    EMBEDDING_GPU_DEVICES). Indices are 0-based and post any vendor
     visibility mask (CUDA_VISIBLE_DEVICES, HIP_VISIBLE_DEVICES,
     ROCR_VISIBLE_DEVICES, ZE_AFFINITY_MASK, etc.) — i.e. they match
     torch.{cuda,xpu}.device_count() output.
@@ -571,51 +571,60 @@ def get_device_config():
 
 
 def setup_llm_config(args):
-    """Setup LLM configuration with auto-detection and OpenRouter support."""
+    """Resolve the LLM endpoint and model for each pipeline role.
+
+    Roles and their fallbacks when a URL/model is not set:
+        grader       --grader_service_url / --grader_model
+                     ('auto' = ask the server)
+        query        --query_service_url  / --query_model      -> grader
+        sufficiency  --sufficiency_* (also the final answer)   -> query
+    """
     # Resolve device
     device = resolve_config_value(args.device, detect_device)
 
-    # Resolve model name
-    model_name = resolve_config_value(
-        args.llm_model,
+    grader_service_url = args.grader_service_url
+    grader_model_name = resolve_config_value(
+        args.grader_model,
         get_model_name_from_service,
-        args.llm_service_url
+        grader_service_url
     )
 
-    # Resolve max tokens
+    # Resolve max tokens (probed from the grader endpoint when 'auto')
     if isinstance(args.max_tokens, str):
         max_tokens = resolve_config_value(
             args.max_tokens,
             get_max_tokens_from_service,
-            args.llm_service_url
+            grader_service_url
         )
     else:
         max_tokens = args.max_tokens
 
-    # Per-component URL/model resolution.
-    # Each component falls back to --llm_service_url / --llm_model when not set;
-    # query and sufficiency further fall back to --query_model when set.
-    base_url = args.llm_service_url
-    query_model_name = getattr(args, 'query_model', None) or model_name
+    query_service_url = (
+        getattr(args, 'query_service_url', None) or grader_service_url)
+    query_model_name = getattr(args, 'query_model', None) or grader_model_name
+    sufficiency_service_url = (
+        getattr(args, 'sufficiency_service_url', None) or query_service_url)
     sufficiency_model_name = (
-        getattr(args, 'sufficiency_model', None) or query_model_name
-    )
+        getattr(args, 'sufficiency_model', None) or query_model_name)
 
-    grader_service_url = getattr(args, 'grader_service_url', None) or base_url
-    grader_model_name = getattr(args, 'grader_model', None) or model_name
-    query_service_url = getattr(args, 'query_service_url', None) or base_url
-    sufficiency_service_url = getattr(
-        args, 'sufficiency_service_url', None) or base_url
+    print("LLM endpoints (role -> url, model):")
+    for role, url, model in (
+            ("query", query_service_url, query_model_name),
+            ("grader", grader_service_url, grader_model_name),
+            ("sufficiency", sufficiency_service_url, sufficiency_model_name)):
+        print(f"  {role:<12} {url}  {model}")
 
     return {
-        "service_url": base_url,
-        "model_name": model_name,
-        "query_model_name": query_model_name,
+        # "service_url"/"model_name" are the grader endpoint; single-endpoint
+        # tools (single_shot_retrieval.py) use them for everything.
+        "service_url": grader_service_url,
+        "model_name": grader_model_name,
         "max_tokens": max_tokens,
         "device": device,
         "grader_service_url": grader_service_url,
         "grader_model_name": grader_model_name,
         "query_service_url": query_service_url,
+        "query_model_name": query_model_name,
         "sufficiency_service_url": sufficiency_service_url,
         "sufficiency_model_name": sufficiency_model_name,
     }

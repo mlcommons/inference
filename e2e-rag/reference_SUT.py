@@ -132,8 +132,8 @@ class E2ESUT:
         # Initialize database
         log.info("Initializing RAG database...")
         self.rag_db = VectorDB(
-            retriever_model=args.retriever_model if hasattr(
-                args, 'retriever_model') else 'BAAI/bge-base-en-v1.5',
+            embedding_model=args.embedding_model if hasattr(
+                args, 'embedding_model') else 'BAAI/bge-base-en-v1.5',
             reranker_model=args.reranker_model if hasattr(
                 args, 'reranker_model') else 'BAAI/bge-reranker-base',
             device=device,
@@ -154,8 +154,8 @@ class E2ESUT:
         self.strategy_params = {}
         if hasattr(args, 'max_results'):
             self.strategy_params["max_results"] = args.max_results
-        if retrieval_strategy == "top_p" and hasattr(args, 'top_p'):
-            self.strategy_params["p"] = args.top_p
+        if retrieval_strategy == "top_p" and hasattr(args, 'retrieval_top_p'):
+            self.strategy_params["p"] = args.retrieval_top_p
         elif retrieval_strategy == "relative" and hasattr(args, 'relative_ratio'):
             self.strategy_params["ratio"] = args.relative_ratio
 

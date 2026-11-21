@@ -52,7 +52,7 @@ export PERF_COUNT=${PERF_COUNT:-824}
 
 # Threading configuration
 export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
-export MAX_WORKERS=${MAX_WORKERS:-10}
+export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
 
 # Multi-shot retrieval parameters
 export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
@@ -60,12 +60,12 @@ export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
 # Model paths
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
 export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
+export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20b-mxfp4}
 export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
 export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
@@ -85,7 +85,7 @@ echo "  RUN_LOGS: ${RUN_LOGS}"
 echo "  OUTPUT_DIR: ${OUTPUT_DIR}"
 echo "  SUBMISSION_DIR: ${SUBMISSION_DIR}"
 echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES}"
-echo "  MAX_WORKERS: ${MAX_WORKERS}"
+echo "  QNA_MAX_WORKERS: ${QNA_MAX_WORKERS}"
 echo ""
 
 # ============================================================================
@@ -155,15 +155,15 @@ python3 reference_mlperf.py \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
-    --max_workers ${MAX_WORKERS} \
-    --retriever_model ${RETRIEVER_MODEL} \
+    --max_workers ${QNA_MAX_WORKERS} \
+    --embedding_model ${EMBEDDING_MODEL} \
     --reranker_model ${RERANKER_MODEL} \
-    --llm_service_url ${LLM_SERVICE_URL} \
-    --llm_model ${LLM_MODEL} \
+    --grader_service_url ${GRADER_SERVICE_URL} \
+    --grader_model ${GRADER_MODEL} \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
-    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
-    --sufficiency-model ${SUFFICIENCY_MODEL} \
+    --sufficiency_service_url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency_model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}

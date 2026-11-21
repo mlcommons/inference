@@ -69,9 +69,9 @@ and extracts the frozen document corpus (`docs.tar.gz`) into `doc_html/`.
 
 **Performance mode:**
 ```bash
-DOCUMENTS_DIR=doc_html \
-DATABASE=vector_html_hnsw_len768_ov32_word \
-DEVICE=auto \
+INGESTION_DOC_DIR=doc_html \
+INGESTION_DB=vector_html_hnsw_len768_ov32_word \
+INGESTION_DEVICE=auto \
 bash reference_mlperf_datasetup.sh
 ```
 
@@ -80,7 +80,7 @@ bash reference_mlperf_datasetup.sh
 bash reference_mlperf_datasetup_accuracy.sh
 ```
 
-**Output:** Creates `${DATABASE}.db` and `${DATABASE}_data/` directory.
+**Output:** Creates `${INGESTION_DB}.db` and `${INGESTION_DB}_data/` directory.
 
 ### Step 3: Run question-answering workload
 
@@ -95,7 +95,7 @@ bash reference_mlperf_perf.sh
 ```bash
 # Start LLM servers first (see Prerequisites)
 DATABASE=vector_html_hnsw_len768_ov32_word.db \
-LLM_SERVICE_URL=http://127.0.0.1:8123/v1/chat/completions \
+GRADER_SERVICE_URL=http://127.0.0.1:8123/v1/chat/completions \
 bash reference_mlperf_accuracy.sh
 ```
 
@@ -106,19 +106,20 @@ bash reference_mlperf_accuracy.sh
 Key environment variables (see [Running Workloads](#running-workloads) for full list):
 
 **Database Setup:**
-- `DOCUMENTS_DIR`: HTML documents (default: `doc_html`)
-- `DATABASE`: Database name (default: `vector_html_hnsw_len768_ov32_word`)
-- `CHUNK_SIZE`: Chunk size in chars (default: `768`)
-- `MAX_WORKERS`: Parallel threads (default: `4`)
-- `DEVICE`: Hardware device (default: `auto`)
+- `INGESTION_DOC_DIR`: HTML documents (default: `doc_html`)
+- `INGESTION_DB`: Database name to build, without `.db` (default: `vector_html_hnsw_len768_ov32_word`)
+- `INGESTION_CHUNK_SIZE`: Chunk size in chars (default: `768`)
+- `INGESTION_MAX_WORKERS`: Parallel threads (default: `4`)
+- `INGESTION_DEVICE`: Hardware device (default: `auto`)
 
 **Question-Answering:**
 - `DATABASE`: Database file (default: `vector_html_hnsw_len768_ov32_word.db`)
 - `PERF_COUNT`: Number of queries (default: `824`)
-- `MAX_WORKERS`: Parallel workers (default: `10`)
+- `QNA_MAX_WORKERS`: Parallel workers (default: `10`)
 - `MAX_ITERATIONS`: Max retrieval rounds (default: `5`)
-- `LLM_SERVICE_URL`: Answer generation endpoint
-- `QUERY_SERVICE_URL`: Query decomposition endpoint
+- `GRADER_SERVICE_URL`: Document-grading endpoint (gpt-oss-20b)
+- `QUERY_SERVICE_URL`: Query-generation endpoint (gpt-oss-120b)
+- `SUFFICIENCY_SERVICE_URL`: Sufficiency check + final answer (gpt-oss-120b)
 - `JUDGE_SERVICE_URL`: Evaluation endpoint (accuracy mode only)
 
 ---

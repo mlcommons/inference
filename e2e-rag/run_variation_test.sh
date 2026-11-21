@@ -19,7 +19,7 @@
 # Examples:
 #   bash run_variation_test.sh 50 10
 #   N_RUNS=5 VARIATION_THRESHOLD=0.10 bash run_variation_test.sh 50 10
-#   INFERENCE_PERF_TEST_MODE=logs_result.json bash run_variation_test.sh 50 10
+#   PERF_CACHE_FILE=logs_result.json bash run_variation_test.sh 50 10
 # =============================================================================
 
 set -euo pipefail
@@ -79,8 +79,8 @@ log "  Workers           : ${NUM_WORKERS}"
 log "  Baseline runs     : ${N_RUNS}"
 log "  Variation threshold (relative spread): $(python3 -c "print(f'{${VARIATION_THRESHOLD}*100:.0f}%')")"
 log "  Output dir        : ${VARIATION_DIR}/"
-if [[ -n "${INFERENCE_PERF_TEST_MODE:-}" ]]; then
-    log "  Perf-test mode    : ${INFERENCE_PERF_TEST_MODE}"
+if [[ -n "${PERF_CACHE_FILE:-}" ]]; then
+    log "  Perf-test mode    : ${PERF_CACHE_FILE}"
 fi
 log "================================================================"
 log ""
@@ -157,7 +157,7 @@ if [[ "${OVER_THRESHOLD}" == "yes" ]]; then
     log "────────────────────────────────────────────────────────────────"
 
     LOW_LOG="${VARIATION_DIR}/run_low_reasoning.log"
-    run_experiment "${LOW_LOG}" INFERENCE_REASONING=low
+    run_experiment "${LOW_LOG}" REASONING=low
 
     low_mean=$(extract_mean "${LOW_LOG}" || echo "N/A")
     log ""

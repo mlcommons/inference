@@ -311,7 +311,7 @@ def main():
 
     # Only load embedding model during ingestion - reranker not needed
     rag_db = VectorDB(
-        retriever_model=args.retriever_model,
+        embedding_model=args.embedding_model,
         reranker_model=None,
         device=args.device,
         database=db_base_name,
@@ -425,7 +425,7 @@ def main():
 
         "configuration": {
             "vector_index_method": "hnsw",
-            "embedding_model": args.retriever_model,
+            "embedding_model": args.embedding_model,
             "device": args.device,
             "num_embedding_devices": args.num_embedding_devices,
             "hierarchical": args.hierarchical,

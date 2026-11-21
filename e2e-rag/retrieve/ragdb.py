@@ -76,12 +76,12 @@ class RagDB(abc.ABC):
 
         device = resolve_gpu_device(
             self._reranker_device, name="reranker",
-            override_env="INFERENCE_RERANKER_GPU_DEVICES",
+            override_env="RERANKER_GPU_DEVICES",
         )
         self._reranker_device = device
 
-        numa_node = os.environ.get("INFERENCE_RERANKER_NUMA_NODE")
-        omp_threads = os.environ.get("INFERENCE_RERANKER_OMP_NUM_THREADS")
+        numa_node = os.environ.get("RERANKER_NUMA_NODE")
+        omp_threads = os.environ.get("RERANKER_OMP_NUM_THREADS")
         print(f"Using {device} for reranker"
               f"{f' (NUMA node {numa_node})' if numa_node else ''}"
               f"{f' OMP={omp_threads}' if omp_threads else ''}")

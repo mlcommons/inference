@@ -47,7 +47,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 ```
 
 **Configuration:**
-- Set `RETRIEVER_MODEL=/data/model/e5-base-v2` in workload scripts
+- Set `EMBEDDING_MODEL=/data/model/e5-base-v2` in workload scripts
 - Used by both database setup and QA workloads
 
 ---
@@ -93,7 +93,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 ```
 
 **Configuration:**
-- Set `LLM_MODEL=gpt-oss-120b` in QA workload scripts
+- Set `QUERY_MODEL=gpt-oss-120b` in QA workload scripts
 - Set `QUERY_MODEL=gpt-oss-120b` for query decomposition
 - Requires vLLM server on `QUERY_SERVICE_URL` (default: `http://127.0.0.1:8124/v1/chat/completions`)
 
@@ -121,8 +121,8 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 ```
 
 **Configuration:**
-- Set `LLM_MODEL=gpt-oss-20b` for grading tasks
-- Requires vLLM server on `LLM_SERVICE_URL` (default: `http://127.0.0.1:8123/v1/chat/completions`)
+- Set `GRADER_MODEL=gpt-oss-20b` for grading tasks
+- Requires vLLM server on `GRADER_SERVICE_URL` (default: `http://127.0.0.1:8123/v1/chat/completions`)
 
 **vLLM Server:**
 ```bash
@@ -144,9 +144,9 @@ vllm serve /data/model/gpt-oss-20b --port 8123 --gpu-memory-util 0.95
 
 | Model | Purpose | Config Variable |
 |---|---|---|
-| e5-base-v2 | Embed queries and retrieve passages | `RETRIEVER_MODEL` |
+| e5-base-v2 | Embed queries and retrieve passages | `EMBEDDING_MODEL` |
 | ColBERTv2.0 | Rerank retrieved passages | `RERANKER_MODEL` |
-| GPT-OSS-20B | Grade document relevance | `LLM_MODEL` |
+| GPT-OSS-20B | Grade document relevance | `GRADER_MODEL` |
 | GPT-OSS-120B | Decompose queries, generate answers | `QUERY_MODEL` |
 | Judge Model | Evaluate answer quality (accuracy mode) | `JUDGE_MODEL` |
 

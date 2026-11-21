@@ -150,7 +150,7 @@ class VectorDB(RagDB):
         return "vector.db"
 
     def __init__(self,
-                 retriever_model: str = None,
+                 embedding_model: str = None,
                  reranker_model: str = None,
                  device: str = "auto",
                  load_embeddings: bool = True,
@@ -162,7 +162,7 @@ class VectorDB(RagDB):
                  **kwargs
                  ):
         super().__init__(reranker_model, device, benchmark, reranker_device=reranker_device)
-        self._retriever_model_name = retriever_model
+        self._embedding_model_name = embedding_model
         self._reranker_model_name = reranker_model
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
@@ -191,7 +191,7 @@ class VectorDB(RagDB):
             from utils import resolve_gpu_device
             self._embedding_device = resolve_gpu_device(
                 self._embedding_device, name="embedding",
-                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+                override_env="EMBEDDING_GPU_DEVICES",
             )
 
         # Initialize embedding model with device configuration
@@ -201,7 +201,7 @@ class VectorDB(RagDB):
         encode_kwargs = {'normalize_embeddings': True}
 
         self._embedding_model = HuggingFaceEmbeddings(
-            model_name=self._retriever_model_name,
+            model_name=self._embedding_model_name,
             model_kwargs=model_kwargs,
             encode_kwargs=encode_kwargs
         )
@@ -310,11 +310,11 @@ class VectorDB(RagDB):
             return None
 
     def _build_numa_plans(self, num_workers: int):
-        """Parse INFERENCE_EMBEDDING_NUMA_NODES into per-worker (node, cpu_set).
+        """Parse EMBEDDING_NUMA_NODES into per-worker (node, cpu_set).
 
         Returns None if the env var isn't set (no NUMA pinning).
         """
-        nodes_env = os.environ.get("INFERENCE_EMBEDDING_NUMA_NODES")
+        nodes_env = os.environ.get("EMBEDDING_NUMA_NODES")
         if not nodes_env:
             return None
 
@@ -322,16 +322,16 @@ class VectorDB(RagDB):
             numa_nodes = [int(x) for x in nodes_env.split(",") if x.strip()]
         except ValueError:
             raise RuntimeError(
-                f"Invalid INFERENCE_EMBEDDING_NUMA_NODES={nodes_env!r}; "
+                f"Invalid EMBEDDING_NUMA_NODES={nodes_env!r}; "
                 f"expected comma-separated ints"
             )
         if len(numa_nodes) != num_workers:
             raise RuntimeError(
-                f"INFERENCE_EMBEDDING_NUMA_NODES has {len(numa_nodes)} entries "
+                f"EMBEDDING_NUMA_NODES has {len(numa_nodes)} entries "
                 f"but num_embedding_devices={num_workers}"
             )
 
-        omp_env = os.environ.get("INFERENCE_EMBEDDING_OMP_NUM_THREADS")
+        omp_env = os.environ.get("EMBEDDING_OMP_NUM_THREADS")
         omp_per_worker = int(omp_env) if omp_env else 0
 
         from utils import slice_cores_for_workers
@@ -368,7 +368,7 @@ class VectorDB(RagDB):
             from utils import get_device_allocator
             device_indices = get_device_allocator(base_device).allocate(
                 count=num_workers, name="parallel-embedding",
-                override_env="INFERENCE_EMBEDDING_GPU_DEVICES",
+                override_env="EMBEDDING_GPU_DEVICES",
             )
         else:
             # CPU / HPU: workers use the same device string; index field is
@@ -409,7 +409,7 @@ class VectorDB(RagDB):
             numa_plan = numa_plans[input_chunk_idx] if numa_plans else None
             p = mp.Process(target=_parallel_embed_worker,
                            args=(device_id, [input_chunk_idx], [input_chunks[input_chunk_idx]], result_queue,
-                                 self._retriever_model_name, encode_kwargs, base_device, numa_plan))
+                                 self._embedding_model_name, encode_kwargs, base_device, numa_plan))
             p.start()
             processes.append(p)
 

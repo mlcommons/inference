@@ -1965,7 +1965,7 @@ if __name__ == "__main__":
         '.db', '') if args.database.endswith('.db') else args.database
 
     rag_db = VectorDB(
-        retriever_model=args.retriever_model,
+        embedding_model=args.embedding_model,
         reranker_model=args.reranker_model,
         device=args.device,
         database=db_base_name,
@@ -1987,7 +1987,7 @@ if __name__ == "__main__":
     # Build strategy parameters
     strategy_params = {"max_results": args.max_results}
     if args.retrieval_strategy == "top_p":
-        strategy_params["p"] = args.top_p
+        strategy_params["p"] = args.retrieval_top_p
     elif args.retrieval_strategy == "relative":
         strategy_params["ratio"] = args.relative_ratio
 

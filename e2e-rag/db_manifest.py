@@ -72,21 +72,18 @@ def _open_manifest(path: str, mode: str):
 
 
 def _resolve_model(args, manifest=None):
-    """Accept either --retriever_model or --embedding_model, falling back to the
-    manifest's retriever_model / embedding_model key. The two names are
-    interchangeable (same underlying model)."""
-    model = getattr(args, "retriever_model", None) or getattr(args, "embedding_model", None)
+    """Use --embedding_model, falling back to the manifest's embedding_model."""
+    model = getattr(args, "embedding_model", None)
     if model:
         return model
     if manifest is not None:
-        return manifest.get("retriever_model") or manifest.get("embedding_model")
+        return manifest.get("embedding_model")
     return None
 
 
 def _add_model_args(parser, **kwargs):
-    """--retriever_model / --embedding_model as interchangeable aliases."""
-    parser.add_argument("--retriever_model", "--embedding_model",
-                        dest="retriever_model", **kwargs)
+    """--embedding_model: the model to load the DB with."""
+    parser.add_argument("--embedding_model", **kwargs)
 
 
 # Manifest schema version. Written as int 2; older manifests used the string
@@ -167,13 +164,13 @@ def _index_params(db: "VectorDB") -> Dict:
     return params
 
 
-def _load_db(db_path: str, retriever_model: str) -> VectorDB:
+def _load_db(db_path: str, embedding_model: str) -> VectorDB:
     db_path_obj = Path(db_path if db_path.endswith(".db") else f"{db_path}.db")
     if not db_path_obj.exists():
         raise FileNotFoundError(f"DB file not found: {db_path_obj}")
 
     db = VectorDB(
-        retriever_model=retriever_model,
+        embedding_model=embedding_model,
         device="cpu",
         embedding_device="cpu",
         load_embeddings=False,
@@ -260,9 +257,6 @@ def cmd_write(args):
 
     manifest = {
         "version": MANIFEST_VERSION,
-        # Write both names so the manifest is portable across repos that use
-        # either "retriever_model" or "embedding_model".
-        "retriever_model": model,
         "embedding_model": model,
         "total_passages": total_passages,
         "embedding_dim": db._embedding_dimension,
@@ -280,7 +274,7 @@ def cmd_write(args):
 
 
 def verify_manifest(db_path: str, manifest_path: str,
-                    retriever_model: str = None,
+                    embedding_model: str = None,
                     cosine_threshold: float = None,
                     top_k_depth: int = None,
                     retrieval_threshold: float = DEFAULT_RETRIEVAL_THRESHOLD) -> Dict:
@@ -300,7 +294,7 @@ def verify_manifest(db_path: str, manifest_path: str,
     Args:
         db_path: Path to the local vector DB to check.
         manifest_path: Path to the reference manifest (.json or .json.gz).
-        retriever_model: Retriever model to load the DB with. If None, falls
+        embedding_model: Embedding model to load the DB with. If None, falls
             back to the manifest's stored ``embedding_model``. The manifest value
             is often a system-specific absolute path, so callers on other systems
             should pass their own local model path here.
@@ -330,11 +324,9 @@ def verify_manifest(db_path: str, manifest_path: str,
             "metrics": {"manifest_version": manifest.get("version")},
         }
 
-    # Prefer an explicit retriever model; the manifest's value may be an
-    # absolute path that only exists on the system that wrote it. Accept either
-    # "retriever_model" or "embedding_model" from the manifest.
-    model = (retriever_model or manifest.get("retriever_model")
-             or manifest.get("embedding_model"))
+    # Prefer an explicit embedding model; the manifest's value may be an
+    # absolute path that only exists on the system that wrote it.
+    model = embedding_model or manifest.get("embedding_model")
     db = _load_db(db_path, model)
     total_passages = len(db._vector_store.index_to_docstore_id)
 
@@ -343,7 +335,7 @@ def verify_manifest(db_path: str, manifest_path: str,
         "total_passages": total_passages,
         "manifest_total_passages": manifest["total_passages"],
         "embedding_dim": db._embedding_dimension,
-        "retriever_model": model,
+        "embedding_model": model,
     }
 
     # 1. Structural: passage count + embedding dim.
@@ -356,7 +348,7 @@ def verify_manifest(db_path: str, manifest_path: str,
         failures.append(
             f"embedding_dim mismatch: local={db._embedding_dimension} "
             f"manifest={manifest['embedding_dim']} "
-            f"(different retriever model — comparison is not meaningful)"
+            f"(different embedding model — comparison is not meaningful)"
         )
 
     # 2. Index params / algorithm.
@@ -414,7 +406,7 @@ def cmd_verify(args):
     result = verify_manifest(
         args.db,
         args.manifest,
-        retriever_model=args.retriever_model,
+        embedding_model=args.embedding_model,
         retrieval_threshold=args.retrieval_threshold,
     )
     if not result["passed"]:
@@ -500,7 +492,7 @@ def main():
     _add_model_args(
         pv,
         default=None,
-        help="Retriever model to load the DB with. Defaults to the manifest's "
+        help="Embedding model to load the DB with. Defaults to the manifest's "
              "stored value, which may be a system-specific absolute path; pass "
              "your local model path to verify on a different system.",
     )

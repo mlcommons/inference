@@ -29,7 +29,7 @@ export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
 export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
-export MAX_WORKERS=${MAX_WORKERS:-10}
+export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
 
 # Performance testing - limit queries
 export PERF_COUNT=${PERF_COUNT:-824}
@@ -43,7 +43,7 @@ export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
 export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
 
 # Model paths (use local downloaded models)
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
 export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
@@ -51,8 +51,8 @@ export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
 # Separate service endpoints for each LLM component
-export LLM_SERVICE_URL=${LLM_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export LLM_MODEL=${LLM_MODEL:-gpt-oss-20b-mxfp4}
+export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
+export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20b-mxfp4}
 
 export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
@@ -70,13 +70,13 @@ echo "  SCENARIO: ${SCENARIO}"
 echo "  PERF_COUNT: ${PERF_COUNT}"
 echo "  PERF_CACHE_FILE: ${PERF_CACHE_FILE}"
 echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (loadgen query dispatch)"
-echo "  MAX_WORKERS: ${MAX_WORKERS} (SUT thread pool)"
+echo "  QNA_MAX_WORKERS: ${QNA_MAX_WORKERS} (SUT thread pool)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
-echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
+echo "  EMBEDDING_MODEL: ${EMBEDDING_MODEL}"
 echo "  RERANKER_MODEL: ${RERANKER_MODEL}"
-echo "  LLM_SERVICE_URL: ${LLM_SERVICE_URL}"
-echo "  LLM_MODEL: ${LLM_MODEL}"
+echo "  GRADER_SERVICE_URL: ${GRADER_SERVICE_URL}"
+echo "  GRADER_MODEL: ${GRADER_MODEL}"
 echo "  QUERY_SERVICE_URL: ${QUERY_SERVICE_URL}"
 echo "  QUERY_MODEL: ${QUERY_MODEL}"
 echo "  JUDGE_SERVICE_URL: ${JUDGE_SERVICE_URL}"
@@ -105,15 +105,15 @@ python3 reference_mlperf.py \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
-    --max_workers ${MAX_WORKERS} \
-    --retriever_model ${RETRIEVER_MODEL} \
+    --max_workers ${QNA_MAX_WORKERS} \
+    --embedding_model ${EMBEDDING_MODEL} \
     --reranker_model ${RERANKER_MODEL} \
-    --llm_service_url ${LLM_SERVICE_URL} \
-    --llm_model ${LLM_MODEL} \
+    --grader_service_url ${GRADER_SERVICE_URL} \
+    --grader_model ${GRADER_MODEL} \
     --query_service_url ${QUERY_SERVICE_URL} \
     --query_model ${QUERY_MODEL} \
-    --sufficiency-service-url ${SUFFICIENCY_SERVICE_URL} \
-    --sufficiency-model ${SUFFICIENCY_MODEL} \
+    --sufficiency_service_url ${SUFFICIENCY_SERVICE_URL} \
+    --sufficiency_model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
     ${PERF_CACHE_ARG}

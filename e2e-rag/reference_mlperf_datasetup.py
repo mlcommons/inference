@@ -105,9 +105,9 @@ def get_args():
 
     # Model paths
     parser.add_argument(
-        "--retriever_model",
+        "--embedding_model",
         default="intfloat_e5-base-v2/e5-base-v2",
-        help="Path to retriever/embedding model"
+        help="Path to the embedding model"
     )
     parser.add_argument(
         "--reranker_model",
@@ -181,7 +181,7 @@ def main():
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
         text_boundary=args.text_boundary,
-        retriever_model=args.retriever_model,
+        embedding_model=args.embedding_model,
         reranker_model=args.reranker_model,
         device=args.device,
         num_embedding_devices=args.num_embedding_devices,

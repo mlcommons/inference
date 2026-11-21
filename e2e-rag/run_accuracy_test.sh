@@ -6,7 +6,7 @@ echo "Running ACCURACY test (NOT performance test mode)"
 echo "This will use real LLM calls to measure actual model accuracy"
 echo ""
 
-# DO NOT SET INFERENCE_PERF_TEST_MODE for accuracy tests!
+# DO NOT SET PERF_CACHE_FILE for accuracy tests!
 # Only set API key
 OPENROUTER_API_KEY=sk-or-v1-******** bash scripts/run_multi_shot.sh 1 1
 

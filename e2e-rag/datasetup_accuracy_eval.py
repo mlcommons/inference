@@ -127,13 +127,13 @@ def parse_accuracy_log(log_path):
     return results
 
 
-def validate_database(database_path, retriever_model):
+def validate_database(database_path, embedding_model):
     """
     Run comprehensive database validation checks.
 
     Args:
         database_path: Path to database file
-        retriever_model: Path to retriever model
+        embedding_model: Path to the embedding model
 
     Returns:
         dict: Validation results
@@ -151,7 +151,7 @@ def validate_database(database_path, retriever_model):
 
         # Load database
         db = VectorDB(
-            retriever_model=retriever_model,
+            embedding_model=embedding_model,
             device="cpu",
             embedding_device="cpu",
             load_embeddings=False,
@@ -274,7 +274,7 @@ def validate_database(database_path, retriever_model):
     return validation_results
 
 
-def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
+def evaluate_accuracy(log_dir, output_dir, database_path, embedding_model=None,
                       manifest_path=None, cosine_threshold=0.9999,
                       top_k_depth=10, retrieval_threshold=0.95):
     """
@@ -284,7 +284,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
         log_dir: Directory containing loadgen logs
         output_dir: Directory containing SUT output files
         database_path: Path to the saved database file
-        retriever_model: Path to retriever model (for validation)
+        embedding_model: Path to the embedding model (for validation)
         manifest_path: Path to reference DB manifest for cross-system
             verification. If None, the manifest check is skipped.
         cosine_threshold: Informational sample-embedding cosine threshold for
@@ -440,15 +440,15 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
     print(f"Accuracy results saved to: {output_path}")
     print()
 
-    # Run database validation if retriever model provided
+    # Run database validation if an embedding model is provided
     validation_results = None
-    if retriever_model and os.path.exists(database_path):
+    if embedding_model and os.path.exists(database_path):
         print("=" * 80)
         print("Database Validation")
         print("=" * 80)
         print()
 
-        validation_results = validate_database(database_path, retriever_model)
+        validation_results = validate_database(database_path, embedding_model)
 
         accuracy_results["validation"] = validation_results
 
@@ -501,7 +501,7 @@ def evaluate_accuracy(log_dir, output_dir, database_path, retriever_model=None,
                 manifest_results = verify_manifest(
                     database_path,
                     manifest_path,
-                    retriever_model=retriever_model,
+                    embedding_model=embedding_model,
                     cosine_threshold=cosine_threshold,
                     top_k_depth=top_k_depth,
                     retrieval_threshold=retrieval_threshold,
@@ -602,9 +602,9 @@ def main():
         help="Path to database file to verify"
     )
     parser.add_argument(
-        "--retriever_model",
+        "--embedding_model",
         default="intfloat_e5-base-v2/e5-base-v2",
-        help="Path to retriever model (for validation)"
+        help="Path to the embedding model (for validation)"
     )
     parser.add_argument(
         "--manifest",
@@ -636,7 +636,7 @@ def main():
     args = parser.parse_args()
 
     results = evaluate_accuracy(
-        args.log_dir, args.output_dir, args.database, args.retriever_model,
+        args.log_dir, args.output_dir, args.database, args.embedding_model,
         manifest_path=args.manifest,
         cosine_threshold=args.cosine_threshold,
         top_k_depth=args.top_k_depth,

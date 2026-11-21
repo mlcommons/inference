@@ -136,13 +136,6 @@ def get_args():
         help='Judge LLM model name (default: Llama-3.1-8B-Instruct)'
     )
 
-    # Query service configuration (separate from main LLM service)
-    parser.add_argument(
-        '--query_service_url',
-        default=None,
-        help='Query generation service URL (if different from main LLM service)'
-    )
-
     # Threading configuration for parallel query processing
     parser.add_argument(
         '--max_workers',

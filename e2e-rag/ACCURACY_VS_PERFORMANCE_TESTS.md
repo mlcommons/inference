@@ -9,7 +9,7 @@
 - ✅ Measure LLM judge accuracy
 - ✅ Test with different models/prompts/parameters
 - ❌ **NEVER use --perf-test-mode flag**
-- ❌ **NEVER set INFERENCE_PERF_TEST_MODE**
+- ❌ **NEVER set PERF_CACHE_FILE**
 
 ### Performance Tests (Perf Test Mode)
 **Purpose**: Measure system performance (latency, throughput)
@@ -18,7 +18,7 @@
 - ✅ Measure retrieval/reranking speed
 - ✅ Enable run-to-run comparisons
 - ✅ **MUST use --perf-test-mode flag**
-- ✅ **MUST set INFERENCE_PERF_TEST_MODE**
+- ✅ **MUST set PERF_CACHE_FILE**
 
 ## The Problem You Found
 
@@ -45,7 +45,7 @@ The test was using cached LLM responses from a previous run, which means:
 Your `run_accuracy_test.sh` had:
 ```bash
 # WRONG - This enables perf test mode!
-INFERENCE_PERF_TEST_MODE="output_multi_shot_full_w20_20260520_153456/llm_logs_multi_shot_20260520_153501.json" \
+PERF_CACHE_FILE="output_multi_shot_full_w20_20260520_153456/llm_logs_multi_shot_20260520_153501.json" \
 OPENROUTER_API_KEY=sk-or-v1-... \
 bash scripts/run_multi_shot.sh 1 1
 ```
@@ -60,12 +60,12 @@ bash scripts/run_multi_shot.sh 1 1
 echo "Running ACCURACY test (NOT performance test mode)"
 echo "This will use real LLM calls to measure actual model accuracy"
 
-# DO NOT SET INFERENCE_PERF_TEST_MODE for accuracy tests!
+# DO NOT SET PERF_CACHE_FILE for accuracy tests!
 OPENROUTER_API_KEY=sk-or-v1-... \
 bash scripts/run_multi_shot.sh 1 1
 ```
 
-**Key change**: Removed `INFERENCE_PERF_TEST_MODE` environment variable
+**Key change**: Removed `PERF_CACHE_FILE` environment variable
 
 ### Correct `run_perf_test.sh` (Performance Test):
 ```bash
@@ -75,8 +75,8 @@ bash scripts/run_multi_shot.sh 1 1
 echo "Running PERFORMANCE test (with cached responses)"
 echo "This will measure system performance with deterministic workload"
 
-# MUST SET INFERENCE_PERF_TEST_MODE for performance tests!
-INFERENCE_PERF_TEST_MODE="output_multi_shot_full_w20_20260520_153456/llm_logs_multi_shot_20260520_153501.json" \
+# MUST SET PERF_CACHE_FILE for performance tests!
+PERF_CACHE_FILE="output_multi_shot_full_w20_20260520_153456/llm_logs_multi_shot_20260520_153501.json" \
 OPENROUTER_API_KEY=sk-or-v1-... \
 bash scripts/run_multi_shot.sh 1 1
 ```
@@ -162,7 +162,7 @@ ITERATION 1/5
 1. **Testing a new model**
    ```bash
    # Test gpt-4o vs gpt-4o-mini
-   INFERENCE_MODEL="openai/gpt-4o" bash scripts/run_multi_shot.sh 50 1
+   GRADER_MODEL="openai/gpt-4o" bash scripts/run_multi_shot.sh 50 1
    # Compare accuracy scores
    ```
 
@@ -175,15 +175,15 @@ ITERATION 1/5
 
 3. **Testing different temperatures**
    ```bash
-   INFERENCE_TEMPERATURE=0.0 bash scripts/run_multi_shot.sh 50 1
-   INFERENCE_TEMPERATURE=1.0 bash scripts/run_multi_shot.sh 50 1
+   TEMPERATURE=0.0 bash scripts/run_multi_shot.sh 50 1
+   TEMPERATURE=1.0 bash scripts/run_multi_shot.sh 50 1
    # Compare deterministic vs creative responses
    ```
 
 4. **Testing retrieval parameters**
    ```bash
-   INFERENCE_TOP_K_RETRIEVER=10 bash scripts/run_multi_shot.sh 50 1
-   INFERENCE_TOP_K_RETRIEVER=20 bash scripts/run_multi_shot.sh 50 1
+   TOP_K_RETRIEVER=10 bash scripts/run_multi_shot.sh 50 1
+   TOP_K_RETRIEVER=20 bash scripts/run_multi_shot.sh 50 1
    # See if more docs help accuracy
    ```
 
@@ -194,10 +194,10 @@ ITERATION 1/5
 1. **Comparing system configurations**
    ```bash
    # Run 1: 1 worker
-   INFERENCE_PERF_TEST_MODE="cache.json" bash scripts/run_multi_shot.sh 50 1
+   PERF_CACHE_FILE="cache.json" bash scripts/run_multi_shot.sh 50 1
    
    # Run 2: 4 workers
-   INFERENCE_PERF_TEST_MODE="cache.json" bash scripts/run_multi_shot.sh 50 4
+   PERF_CACHE_FILE="cache.json" bash scripts/run_multi_shot.sh 50 4
    
    # Compare throughput (identical workload)
    ```
@@ -205,10 +205,10 @@ ITERATION 1/5
 2. **Testing hardware changes**
    ```bash
    # Run 1: CPU
-   INFERENCE_PERF_TEST_MODE="cache.json" INFERENCE_DEVICE=cpu bash scripts/run_multi_shot.sh 50 1
+   PERF_CACHE_FILE="cache.json" QNA_DEVICE=cpu bash scripts/run_multi_shot.sh 50 1
    
    # Run 2: GPU
-   INFERENCE_PERF_TEST_MODE="cache.json" INFERENCE_DEVICE=cuda bash scripts/run_multi_shot.sh 50 1
+   PERF_CACHE_FILE="cache.json" QNA_DEVICE=cuda bash scripts/run_multi_shot.sh 50 1
    
    # Compare speed
    ```
@@ -216,12 +216,12 @@ ITERATION 1/5
 3. **Testing optimization changes**
    ```bash
    # Run 1: Before optimization
-   INFERENCE_PERF_TEST_MODE="cache.json" bash scripts/run_multi_shot.sh 50 1
+   PERF_CACHE_FILE="cache.json" bash scripts/run_multi_shot.sh 50 1
    
    # (Make code changes)
    
    # Run 2: After optimization
-   INFERENCE_PERF_TEST_MODE="cache.json" bash scripts/run_multi_shot.sh 50 1
+   PERF_CACHE_FILE="cache.json" bash scripts/run_multi_shot.sh 50 1
    
    # Compare latency (same LLM overhead)
    ```
@@ -268,12 +268,12 @@ OPENROUTER_API_KEY="sk-or-v1-..." bash scripts/run_multi_shot.sh 50 1
 
 # Method 3: With specific parameters
 OPENROUTER_API_KEY="sk-or-v1-..." \
-INFERENCE_TEMPERATURE=0.0 \
-INFERENCE_MODEL="openai/gpt-4o" \
+TEMPERATURE=0.0 \
+GRADER_MODEL="openai/gpt-4o" \
 bash scripts/run_multi_shot.sh 50 1
 ```
 
-**Key: NO INFERENCE_PERF_TEST_MODE variable!**
+**Key: NO PERF_CACHE_FILE variable!**
 
 ### Performance Test (Testing System Speed)
 
@@ -282,19 +282,19 @@ bash scripts/run_multi_shot.sh 50 1
 ./run_perf_test.sh
 
 # Method 2: Direct call
-INFERENCE_PERF_TEST_MODE="output_dir/llm_logs_multi_shot_*.json" \
+PERF_CACHE_FILE="output_dir/llm_logs_multi_shot_*.json" \
 OPENROUTER_API_KEY="sk-or-v1-..." \
 bash scripts/run_multi_shot.sh 50 1
 
 # Method 3: With numactl
 numactl -N 1 -m 1 bash -c "
-INFERENCE_PERF_TEST_MODE='output_dir/llm_logs_multi_shot_*.json' \
+PERF_CACHE_FILE='output_dir/llm_logs_multi_shot_*.json' \
 OPENROUTER_API_KEY='sk-or-v1-...' \
 bash scripts/run_multi_shot.sh 50 1
 "
 ```
 
-**Key: MUST have INFERENCE_PERF_TEST_MODE variable!**
+**Key: MUST have PERF_CACHE_FILE variable!**
 
 ## Verification
 
@@ -333,7 +333,7 @@ grep "Returning simulated response" perf_test.log
 ### Mistake 1: Using Cache for Accuracy Test ❌
 ```bash
 # WRONG - Don't do this!
-INFERENCE_PERF_TEST_MODE="cache.json" bash scripts/run_multi_shot.sh 50 1
+PERF_CACHE_FILE="cache.json" bash scripts/run_multi_shot.sh 50 1
 # Result: Measuring old model accuracy, not current!
 ```
 
@@ -347,14 +347,14 @@ bash scripts/run_multi_shot.sh 50 1
 ### Mistake 3: Mixing Modes ❌
 ```bash
 # WRONG - Don't compare these!
-Run 1: INFERENCE_PERF_TEST_MODE="cache.json" ...  # Perf mode
+Run 1: PERF_CACHE_FILE="cache.json" ...  # Perf mode
 Run 2: (no perf test mode)                        # Normal mode
 # Result: Different workloads, comparison invalid!
 ```
 
 ## Summary
 
-✅ **Accuracy Test Fixed**: Removed `INFERENCE_PERF_TEST_MODE` from `run_accuracy_test.sh`
+✅ **Accuracy Test Fixed**: Removed `PERF_CACHE_FILE` from `run_accuracy_test.sh`
 
 ✅ **Clear Separation**: 
 - Accuracy tests: `run_accuracy_test.sh` (no cache)

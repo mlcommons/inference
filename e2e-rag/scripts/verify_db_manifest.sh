@@ -9,8 +9,7 @@
 #   RETRIEVAL_THRESHOLD: minimum mean reference-query top-K document set-overlap
 #                        required to pass (default: 0.95).
 #
-# Configuration: see config.template.sh (uses INFERENCE_DB and
-# INFERENCE_RETRIEVER_MODEL).
+# Configuration: see config.template.sh (uses DATABASE and EMBEDDING_MODEL).
 # =============================================================================
 
 set -e
@@ -28,21 +27,21 @@ else
     echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
 
-INFERENCE_DB="${INFERENCE_DB:-vector_html_hnsw_len768_ov32_word}"
-INFERENCE_RETRIEVER_MODEL="${INFERENCE_RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
+DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
+EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
 
 MANIFEST="$1"
 RETRIEVAL_THRESHOLD="${2:-0.95}"
 
 echo "=== Verifying DB against manifest ==="
-echo "  DB:                   ${INFERENCE_DB}"
-echo "  Retriever:            ${INFERENCE_RETRIEVER_MODEL}"
+echo "  DB:                   ${DATABASE}"
+echo "  Embedding model:      ${EMBEDDING_MODEL}"
 echo "  Manifest:             ${MANIFEST}"
 echo "  Retrieval threshold:  ${RETRIEVAL_THRESHOLD}"
 echo ""
 
 python3 -u db_manifest.py verify \
-    --db "${INFERENCE_DB}" \
+    --db "${DATABASE}" \
     --manifest "${MANIFEST}" \
-    --retriever_model "${INFERENCE_RETRIEVER_MODEL}" \
+    --embedding_model "${EMBEDDING_MODEL}" \
     --retrieval-threshold "${RETRIEVAL_THRESHOLD}"

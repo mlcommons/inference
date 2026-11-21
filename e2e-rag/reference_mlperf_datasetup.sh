@@ -20,60 +20,60 @@ echo "Time Start: $(date +%s)"
 
 # Configuration
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
-export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
-export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
+export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
+export INGESTION_DB="${INGESTION_DB:-vector_html_hnsw_len768_ov32_word}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-db/performance
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-db/performance
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Chunking configuration
-export CHUNK_SIZE=${CHUNK_SIZE:-768}
-export CHUNK_OVERLAP=${CHUNK_OVERLAP:-32}
-export TEXT_BOUNDARY=${TEXT_BOUNDARY:-"word"}
+export INGESTION_CHUNK_SIZE=${INGESTION_CHUNK_SIZE:-768}
+export INGESTION_CHUNK_OVERLAP=${INGESTION_CHUNK_OVERLAP:-32}
+export INGESTION_TEXT_BOUNDARY=${INGESTION_TEXT_BOUNDARY:-"word"}
 
 # Model paths (use local downloaded models)
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
 export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # Device configuration
-export DEVICE=${DEVICE:-"auto"}
-export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
+export INGESTION_DEVICE=${INGESTION_DEVICE:-"auto"}
+export INGESTION_NUM_EMBEDDING_DEVICES=${INGESTION_NUM_EMBEDDING_DEVICES:-1}
 
 # Vector database configuration
-export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
+export INGESTION_VECTOR_INDEX_METHOD=${INGESTION_VECTOR_INDEX_METHOD:-"hnsw"}
 
 # Performance options
-export BENCHMARK=${BENCHMARK:-false}
-export MAX_WORKERS=${MAX_WORKERS:-4}  # Parallel processing (4 threads)
+export INGESTION_BENCHMARK=${INGESTION_BENCHMARK:-false}
+export INGESTION_MAX_WORKERS=${INGESTION_MAX_WORKERS:-4}  # Parallel processing (4 threads)
 
 echo "Configuration:"
-echo "  DOCUMENTS_DIR: ${DOCUMENTS_DIR}"
-echo "  DATABASE: ${DATABASE}"
+echo "  INGESTION_DOC_DIR: ${INGESTION_DOC_DIR}"
+echo "  INGESTION_DB: ${INGESTION_DB}"
 echo "  SCENARIO: ${SCENARIO}"
-echo "  CHUNK_SIZE: ${CHUNK_SIZE}"
-echo "  CHUNK_OVERLAP: ${CHUNK_OVERLAP}"
-echo "  TEXT_BOUNDARY: ${TEXT_BOUNDARY}"
-echo "  RETRIEVER_MODEL: ${RETRIEVER_MODEL}"
+echo "  INGESTION_CHUNK_SIZE: ${INGESTION_CHUNK_SIZE}"
+echo "  INGESTION_CHUNK_OVERLAP: ${INGESTION_CHUNK_OVERLAP}"
+echo "  INGESTION_TEXT_BOUNDARY: ${INGESTION_TEXT_BOUNDARY}"
+echo "  EMBEDDING_MODEL: ${EMBEDDING_MODEL}"
 echo "  RERANKER_MODEL: ${RERANKER_MODEL}"
-echo "  DEVICE: ${DEVICE}"
-echo "  NUM_EMBEDDING_DEVICES: ${NUM_EMBEDDING_DEVICES}"
-echo "  VECTOR_INDEX_METHOD: ${VECTOR_INDEX_METHOD}"
-echo "  MAX_WORKERS: ${MAX_WORKERS}"
-echo "  BENCHMARK: ${BENCHMARK}"
+echo "  INGESTION_DEVICE: ${INGESTION_DEVICE}"
+echo "  INGESTION_NUM_EMBEDDING_DEVICES: ${INGESTION_NUM_EMBEDDING_DEVICES}"
+echo "  INGESTION_VECTOR_INDEX_METHOD: ${INGESTION_VECTOR_INDEX_METHOD}"
+echo "  INGESTION_MAX_WORKERS: ${INGESTION_MAX_WORKERS}"
+echo "  INGESTION_BENCHMARK: ${INGESTION_BENCHMARK}"
 
 # Validate documents directory exists
-if [ ! -d "${DOCUMENTS_DIR}" ]; then
-    echo "ERROR: Documents directory not found: ${DOCUMENTS_DIR}"
-    echo "Please set DOCUMENTS_DIR to point to your HTML documents directory"
+if [ ! -d "${INGESTION_DOC_DIR}" ]; then
+    echo "ERROR: Documents directory not found: ${INGESTION_DOC_DIR}"
+    echo "Please set INGESTION_DOC_DIR to point to your HTML documents directory"
     exit 1
 fi
 
 # Count HTML files
-HTML_COUNT=$(find "${DOCUMENTS_DIR}" -maxdepth 1 -name "*.html" | wc -l)
+HTML_COUNT=$(find "${INGESTION_DOC_DIR}" -maxdepth 1 -name "*.html" | wc -l)
 echo "  HTML files found: ${HTML_COUNT}"
 
 if [ ${HTML_COUNT} -eq 0 ]; then
-    echo "ERROR: No HTML files found in ${DOCUMENTS_DIR}"
+    echo "ERROR: No HTML files found in ${INGESTION_DOC_DIR}"
     exit 1
 fi
 
@@ -94,31 +94,31 @@ if [ -f "user.conf" ]; then
     fi
 
     echo "  Loadgen configured to dispatch all ${HTML_COUNT} files at once"
-    echo "  SUT will process with ${MAX_WORKERS} parallel workers"
+    echo "  SUT will process with ${INGESTION_MAX_WORKERS} parallel workers"
 fi
 
 # Build benchmark argument
 BENCHMARK_ARG=""
-if [ "${BENCHMARK}" = "true" ]; then
+if [ "${INGESTION_BENCHMARK}" = "true" ]; then
     BENCHMARK_ARG="--benchmark"
 fi
 
 # Run loadgen datasetup test
 python3 reference_mlperf_datasetup.py \
-    --documents_dir ${DOCUMENTS_DIR} \
-    --database ${DATABASE} \
+    --documents_dir ${INGESTION_DOC_DIR} \
+    --database ${INGESTION_DB} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \
-    --chunk_size ${CHUNK_SIZE} \
-    --chunk_overlap ${CHUNK_OVERLAP} \
-    --text_boundary ${TEXT_BOUNDARY} \
-    --retriever_model ${RETRIEVER_MODEL} \
+    --chunk_size ${INGESTION_CHUNK_SIZE} \
+    --chunk_overlap ${INGESTION_CHUNK_OVERLAP} \
+    --text_boundary ${INGESTION_TEXT_BOUNDARY} \
+    --embedding_model ${EMBEDDING_MODEL} \
     --reranker_model ${RERANKER_MODEL} \
-    --device ${DEVICE} \
-    --num_embedding_devices ${NUM_EMBEDDING_DEVICES} \
-    --vector_index_method ${VECTOR_INDEX_METHOD} \
-    --max_workers ${MAX_WORKERS} \
+    --device ${INGESTION_DEVICE} \
+    --num_embedding_devices ${INGESTION_NUM_EMBEDDING_DEVICES} \
+    --vector_index_method ${INGESTION_VECTOR_INDEX_METHOD} \
+    --max_workers ${INGESTION_MAX_WORKERS} \
     ${BENCHMARK_ARG}
 
 EXIT_CODE=$?

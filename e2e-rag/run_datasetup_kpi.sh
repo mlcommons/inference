@@ -16,28 +16,28 @@ echo "Time Start: $(date +%s)"
 echo ""
 
 # Configuration
-export DOCUMENTS_DIR=${DOCUMENTS_DIR:-"doc_html"}
-export DATABASE=${DATABASE:-"vector_html_hnsw_len768_ov32_word"}
+export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
+export INGESTION_DB=${INGESTION_DB:-"vector_html_hnsw_len768_ov32_word"}
 export DATASET=${DATASET:-"frames-benchmark-dataset/frames_dataset.tsv"}
 
 # Chunking configuration
-export CHUNK_SIZE=${CHUNK_SIZE:-768}
-export CHUNK_OVERLAP=${CHUNK_OVERLAP:-32}
-export TEXT_BOUNDARY=${TEXT_BOUNDARY:-"word"}
+export INGESTION_CHUNK_SIZE=${INGESTION_CHUNK_SIZE:-768}
+export INGESTION_CHUNK_OVERLAP=${INGESTION_CHUNK_OVERLAP:-32}
+export INGESTION_TEXT_BOUNDARY=${INGESTION_TEXT_BOUNDARY:-"word"}
 export CHUNKING_PROCESSES=${CHUNKING_PROCESSES:-4}
 
 # Vector database configuration
-export VECTOR_INDEX_METHOD=${VECTOR_INDEX_METHOD:-"hnsw"}
-export DEVICE=${DEVICE:-"auto"}
-export NUM_EMBEDDING_DEVICES=${NUM_EMBEDDING_DEVICES:-1}
+export INGESTION_VECTOR_INDEX_METHOD=${INGESTION_VECTOR_INDEX_METHOD:-"hnsw"}
+export INGESTION_DEVICE=${INGESTION_DEVICE:-"auto"}
+export INGESTION_NUM_EMBEDDING_DEVICES=${INGESTION_NUM_EMBEDDING_DEVICES:-1}
 
 # Model paths (use local downloaded models)
-export RETRIEVER_MODEL=${RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}
+export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
 export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # Performance options
 export LOAD_EMBEDDINGS=${LOAD_EMBEDDINGS:-false}
-export BENCHMARK=${BENCHMARK:-false}
+export INGESTION_BENCHMARK=${INGESTION_BENCHMARK:-false}
 export HIERARCHICAL=${HIERARCHICAL:-false}
 
 # Manifest options
@@ -49,23 +49,23 @@ export CREATE_MANIFEST=${CREATE_MANIFEST:-false}
 export TEMP_KPI_METRICS="temp_complete_kpi_$$.json"
 export FINAL_OUTPUT=${FINAL_OUTPUT:-"data_setup_performance.json"}
 
-# Validate DOCUMENTS_DIR exists
-if [ ! -d "${DOCUMENTS_DIR}" ]; then
-    echo "ERROR: Documents directory not found: ${DOCUMENTS_DIR}"
-    echo "Please set DOCUMENTS_DIR to point to your HTML documents directory"
+# Validate INGESTION_DOC_DIR exists
+if [ ! -d "${INGESTION_DOC_DIR}" ]; then
+    echo "ERROR: Documents directory not found: ${INGESTION_DOC_DIR}"
+    echo "Please set INGESTION_DOC_DIR to point to your HTML documents directory"
     exit 1
 fi
 
 # Print configuration
 echo "Configuration:"
-echo "  Documents Directory: ${DOCUMENTS_DIR}"
-echo "  DATABASE: ${DATABASE}"
-echo "  CHUNK_SIZE: ${CHUNK_SIZE}"
-echo "  CHUNK_OVERLAP: ${CHUNK_OVERLAP}"
+echo "  Documents Directory: ${INGESTION_DOC_DIR}"
+echo "  INGESTION_DB: ${INGESTION_DB}"
+echo "  INGESTION_CHUNK_SIZE: ${INGESTION_CHUNK_SIZE}"
+echo "  INGESTION_CHUNK_OVERLAP: ${INGESTION_CHUNK_OVERLAP}"
 echo "  CHUNKING_PROCESSES: ${CHUNKING_PROCESSES}"
-echo "  VECTOR_INDEX_METHOD: ${VECTOR_INDEX_METHOD}"
-echo "  DEVICE: ${DEVICE}"
-echo "  NUM_EMBEDDING_DEVICES: ${NUM_EMBEDDING_DEVICES}"
+echo "  INGESTION_VECTOR_INDEX_METHOD: ${INGESTION_VECTOR_INDEX_METHOD}"
+echo "  INGESTION_DEVICE: ${INGESTION_DEVICE}"
+echo "  INGESTION_NUM_EMBEDDING_DEVICES: ${INGESTION_NUM_EMBEDDING_DEVICES}"
 echo "  MANIFEST_FILE: ${MANIFEST_FILE}"
 echo "  CREATE_MANIFEST: ${CREATE_MANIFEST}"
 echo "  FINAL_OUTPUT: ${FINAL_OUTPUT}"
@@ -84,23 +84,23 @@ echo ""
 INDEXING_START=$(date +%s)
 
 # Build arguments for indexing script
-ARGS="--documents ${DOCUMENTS_DIR}"
-ARGS="${ARGS} --chunk_size ${CHUNK_SIZE}"
-ARGS="${ARGS} --chunk_overlap ${CHUNK_OVERLAP}"
-ARGS="${ARGS} --text_boundary ${TEXT_BOUNDARY}"
+ARGS="--documents ${INGESTION_DOC_DIR}"
+ARGS="${ARGS} --chunk_size ${INGESTION_CHUNK_SIZE}"
+ARGS="${ARGS} --chunk_overlap ${INGESTION_CHUNK_OVERLAP}"
+ARGS="${ARGS} --text_boundary ${INGESTION_TEXT_BOUNDARY}"
 ARGS="${ARGS} --chunking_processes ${CHUNKING_PROCESSES}"
-ARGS="${ARGS} --database ${DATABASE}"
+ARGS="${ARGS} --database ${INGESTION_DB}"
 ARGS="${ARGS} --output_metrics ${TEMP_KPI_METRICS}"
-ARGS="${ARGS} --device ${DEVICE}"
-ARGS="${ARGS} --num_embedding_devices ${NUM_EMBEDDING_DEVICES}"
-ARGS="${ARGS} --retriever_model ${RETRIEVER_MODEL}"
+ARGS="${ARGS} --device ${INGESTION_DEVICE}"
+ARGS="${ARGS} --num_embedding_devices ${INGESTION_NUM_EMBEDDING_DEVICES}"
+ARGS="${ARGS} --embedding_model ${EMBEDDING_MODEL}"
 ARGS="${ARGS} --reranker_model ${RERANKER_MODEL}"
 
 if [ "${LOAD_EMBEDDINGS}" = "true" ]; then
     ARGS="${ARGS} --load_embeddings"
 fi
 
-if [ "${BENCHMARK}" = "true" ]; then
+if [ "${INGESTION_BENCHMARK}" = "true" ]; then
     ARGS="${ARGS} --benchmark"
 fi
 
@@ -148,8 +148,8 @@ if [ "${CREATE_MANIFEST}" = "true" ]; then
     MANIFEST_OUTPUT="db_manifest_$(hostname -s)_$(date +%Y%m%d_%H%M%S).json"
 
     python3 db_manifest.py write \
-        --db ${DATABASE} \
-        --retriever_model ${RETRIEVER_MODEL} \
+        --db ${INGESTION_DB} \
+        --embedding_model ${EMBEDDING_MODEL} \
         --dataset ${DATASET} \
         --output ${MANIFEST_OUTPUT}
 
@@ -164,7 +164,7 @@ if [ "${CREATE_MANIFEST}" = "true" ]; then
 fi
 
 # ============================================================
-# STEP 3: DATABASE CORRECTNESS VERIFICATION (Optional)
+# STEP 3: INGESTION_DB CORRECTNESS VERIFICATION (Optional)
 # ============================================================
 MANIFEST_VERIFY_RESULT="skipped"
 MANIFEST_VERIFY_DETAILS=""
@@ -186,7 +186,7 @@ if [ -f "${MANIFEST_FILE}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
 
         # Run verification and capture output
         VERIFY_OUTPUT=$(python3 db_manifest.py verify \
-            --db ${DATABASE} \
+            --db ${INGESTION_DB} \
             --manifest ${MANIFEST_FILE} 2>&1)
         VERIFY_EXIT=$?
 
@@ -262,16 +262,16 @@ result = {
 
     "configuration": {
         "mode": "complete_pipeline",
-        "input_source": "${DOCUMENTS_DIR}",
-        "database": "${DATABASE}",
+        "input_source": "${INGESTION_DOC_DIR}",
+        "database": "${INGESTION_DB}",
         "dataset": "${DATASET}",
-        "vector_index_method": "${VECTOR_INDEX_METHOD}",
-        "device": "${DEVICE}",
-        "num_embedding_devices": int("${NUM_EMBEDDING_DEVICES}"),
-        "retriever_model": "${RETRIEVER_MODEL}",
+        "vector_index_method": "${INGESTION_VECTOR_INDEX_METHOD}",
+        "device": "${INGESTION_DEVICE}",
+        "num_embedding_devices": int("${INGESTION_NUM_EMBEDDING_DEVICES}"),
+        "embedding_model": "${EMBEDDING_MODEL}",
         "reranker_model": "${RERANKER_MODEL}",
         "load_embeddings": "${LOAD_EMBEDDINGS}" == "true",
-        "benchmark": "${BENCHMARK}" == "true",
+        "benchmark": "${INGESTION_BENCHMARK}" == "true",
         "hierarchical": "${HIERARCHICAL}" == "true"
     },
 

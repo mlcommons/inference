@@ -63,7 +63,7 @@ class DatasetupSUT:
         chunk_size: int = 768,
         chunk_overlap: int = 32,
         text_boundary: str = "word",
-        retriever_model: str = "BAAI/bge-base-en-v1.5",
+        embedding_model: str = "BAAI/bge-base-en-v1.5",
         reranker_model: str = "BAAI/bge-reranker-base",
         device: str = "auto",
         num_embedding_devices: int = 1,
@@ -82,7 +82,7 @@ class DatasetupSUT:
             chunk_size: Chunk size in characters
             chunk_overlap: Chunk overlap in characters
             text_boundary: Text boundary optimization (word, sentence, none)
-            retriever_model: Path to retriever/embedding model
+            embedding_model: Path to the embedding model
             reranker_model: Path to reranker model
             device: Device to use (auto, cuda, xpu, hpu, cpu)
             num_embedding_devices: Number of devices for parallel embedding
@@ -97,7 +97,7 @@ class DatasetupSUT:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.text_boundary = text_boundary
-        self.retriever_model = retriever_model
+        self.embedding_model = embedding_model
         self.reranker_model = reranker_model
         self.device = device
         self.num_embedding_devices = num_embedding_devices
@@ -136,7 +136,7 @@ class DatasetupSUT:
         # Initialize vector database
         log.info("Initializing vector database...")
         self.rag_db = VectorDB(
-            retriever_model=retriever_model,
+            embedding_model=embedding_model,
             reranker_model=reranker_model,
             device=device,
             database=database,
@@ -465,7 +465,7 @@ class DatasetupSUT:
                 "chunk_size": self.chunk_size,
                 "chunk_overlap": self.chunk_overlap,
                 "text_boundary": self.text_boundary,
-                "retriever_model": self.retriever_model,
+                "embedding_model": self.embedding_model,
                 "device": self.device,
                 "vector_index_method": self.vector_index_method,
                 "num_embedding_devices": self.num_embedding_devices,

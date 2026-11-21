@@ -5,13 +5,13 @@
 # Usage (from repo root):
 #   bash scripts/run_multi_shot.sh [N_QUERIES] [NUM_WORKERS]
 #
-#   N_QUERIES, NUM_WORKERS: optional positional overrides for INFERENCE_N_QUERIES
-#                           and INFERENCE_NUM_WORKERS in config.sh.
+#   N_QUERIES, NUM_WORKERS: optional positional overrides for N_QUERIES
+#                           and QNA_MAX_WORKERS in config.sh.
 #                           Use 'all' for the full dataset (824 queries).
 #
 # Configuration:
 #   See config.template.sh. Override with config.sh, or one-off via env var,
-#   e.g.:  INFERENCE_DEVICE=cpu bash scripts/run_multi_shot.sh 50
+#   e.g.:  QNA_DEVICE=cpu bash scripts/run_multi_shot.sh 50
 #
 # Prerequisites:
 #   - Local vLLM servers running: 20B on port 8192, 120B on port 8123 (default)
@@ -30,40 +30,39 @@ else
 fi
 
 # Architecture:
-# - Document grader: INFERENCE_MODEL via INFERENCE_LLM_URL
-# - Sufficiency checker / query generator / answer generator: INFERENCE_QUERY_MODEL via INFERENCE_LLM_URL
-# - Embeddings / reranking: device controlled by INFERENCE_EMBEDDING_DEVICE / INFERENCE_RERANKER_DEVICE
+# - Document grader: GRADER_MODEL via GRADER_SERVICE_URL
+# - Query generator: QUERY_MODEL via QUERY_SERVICE_URL
+# - Sufficiency checker + final answer: SUFFICIENCY_MODEL via SUFFICIENCY_SERVICE_URL
+# - Embeddings / reranking: device controlled by QNA_EMBEDDING_DEVICE / RERANKER_DEVICE
 
-INFERENCE_DEVICE="${INFERENCE_DEVICE:-cpu}"
-INFERENCE_EMBEDDING_DEVICE="${INFERENCE_EMBEDDING_DEVICE:-${INFERENCE_DEVICE}}"
-INFERENCE_RERANKER_DEVICE="${INFERENCE_RERANKER_DEVICE:-${INFERENCE_DEVICE}}"
-INFERENCE_DB="${INFERENCE_DB:-vector_html_hnsw_len768_ov32_word}"
-INFERENCE_RETRIEVER_MODEL="${INFERENCE_RETRIEVER_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
-INFERENCE_TOP_K_RETRIEVER="${INFERENCE_TOP_K_RETRIEVER:-15}"
-INFERENCE_MAX_ITERATIONS="${INFERENCE_MAX_ITERATIONS:-5}"
-INFERENCE_MAX_SUB_QUERIES="${INFERENCE_MAX_SUB_QUERIES:-3}"
-INFERENCE_TEMPERATURE="${INFERENCE_TEMPERATURE:-1.0}"
-INFERENCE_REASONING="${INFERENCE_REASONING:-medium}"
-INFERENCE_MAX_RETRIES="${INFERENCE_MAX_RETRIES:-5}"
-INFERENCE_N_QUERIES="${INFERENCE_N_QUERIES:-5}"
-INFERENCE_NUM_WORKERS="${INFERENCE_NUM_WORKERS:-1}"
-INFERENCE_LLM_URL="${INFERENCE_LLM_URL:-http://127.0.0.1:8192/v1/chat/completions}"
-INFERENCE_MODEL="${INFERENCE_MODEL:-gpt-oss-20b-mxfp4}"
-INFERENCE_QUERY_MODEL="${INFERENCE_QUERY_MODEL:-gpt-oss-120b-mxfp4}"
+QNA_DEVICE="${QNA_DEVICE:-cpu}"
+QNA_EMBEDDING_DEVICE="${QNA_EMBEDDING_DEVICE:-${QNA_DEVICE}}"
+RERANKER_DEVICE="${RERANKER_DEVICE:-${QNA_DEVICE}}"
+DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
+EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
+TOP_K_RETRIEVER="${TOP_K_RETRIEVER:-15}"
+MAX_ITERATIONS="${MAX_ITERATIONS:-5}"
+MAX_SUB_QUERIES="${MAX_SUB_QUERIES:-3}"
+TEMPERATURE="${TEMPERATURE:-1.0}"
+REASONING="${REASONING:-medium}"
+MAX_RETRIES="${MAX_RETRIES:-5}"
+N_QUERIES="${N_QUERIES:-5}"
+QNA_MAX_WORKERS="${QNA_MAX_WORKERS:-1}"
+GRADER_SERVICE_URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
+GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20b-mxfp4}"
+QUERY_MODEL="${QUERY_MODEL:-gpt-oss-120b-mxfp4}"
 
-# Per-component endpoint splits. Empty -> inherit INFERENCE_LLM_URL / INFERENCE_MODEL.
-INFERENCE_GRADER_URL="${INFERENCE_GRADER_URL:-}"
-INFERENCE_GRADER_MODEL="${INFERENCE_GRADER_MODEL:-}"
-INFERENCE_QUERY_URL="${INFERENCE_QUERY_URL:-}"
-INFERENCE_SUFFICIENCY_URL="${INFERENCE_SUFFICIENCY_URL:-}"
-INFERENCE_SUFFICIENCY_MODEL="${INFERENCE_SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}"
-INFERENCE_JUDGE_URL="${INFERENCE_JUDGE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
-INFERENCE_JUDGE_MODEL="${INFERENCE_JUDGE_MODEL:-gpt-oss-20b-mxfp4}"
-INFERENCE_PERF_TEST_MODE="${INFERENCE_PERF_TEST_MODE:-}"
+# Empty -> not passed; the Python defaults apply.
+QUERY_SERVICE_URL="${QUERY_SERVICE_URL:-}"
+SUFFICIENCY_SERVICE_URL="${SUFFICIENCY_SERVICE_URL:-}"
+SUFFICIENCY_MODEL="${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}"
+JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
+JUDGE_MODEL="${JUDGE_MODEL:-gpt-oss-20b-mxfp4}"
+PERF_CACHE_FILE="${PERF_CACHE_FILE:-}"
 
 # Positional args override config.
-N_QUERIES="${1:-${INFERENCE_N_QUERIES}}"
-NUM_WORKERS="${2:-${INFERENCE_NUM_WORKERS}}"
+N_QUERIES="${1:-${N_QUERIES}}"
+NUM_WORKERS="${2:-${QNA_MAX_WORKERS}}"
 
 if [[ "${N_QUERIES}" == "all" ]]; then
     EVAL_FLAG="--eval"
@@ -81,42 +80,40 @@ LOG_FILE="${OUTPUT_DIR}/run.log"
 SCORE_FILE="${OUTPUT_DIR}/score_multi_shot_${TAG}.txt"
 
 echo "=== Multi-shot retrieval ==="
-echo "  Model (grader):    ${INFERENCE_MODEL}"
-echo "  Model (query gen): ${INFERENCE_QUERY_MODEL}"
-echo "  DB:          ${INFERENCE_DB}"
+echo "  Model (grader):    ${GRADER_MODEL}"
+echo "  Model (query gen): ${QUERY_MODEL}"
+echo "  DB:          ${DATABASE}"
 echo "  Workers:     ${NUM_WORKERS}"
 echo "  Queries:     ${N_QUERIES}"
-echo "  Device:      ${INFERENCE_DEVICE} (embedding=${INFERENCE_EMBEDDING_DEVICE}, reranker=${INFERENCE_RERANKER_DEVICE})"
-echo "  Temperature: ${INFERENCE_TEMPERATURE}  Reasoning: ${INFERENCE_REASONING}"
+echo "  Device:      ${QNA_DEVICE} (embedding=${QNA_EMBEDDING_DEVICE}, reranker=${RERANKER_DEVICE})"
+echo "  Temperature: ${TEMPERATURE}  Reasoning: ${REASONING}"
 echo "  Output dir:  ${OUTPUT_DIR}"
 echo ""
 
 python3 -u multi_shot_retrieval.py \
-    --db "${INFERENCE_DB}" \
+    --db "${DATABASE}" \
     ${EVAL_FLAG} \
-    --max-iterations "${INFERENCE_MAX_ITERATIONS}" \
-    --max-sub-queries "${INFERENCE_MAX_SUB_QUERIES}" \
-    --device "${INFERENCE_DEVICE}" \
-    --embedding-device "${INFERENCE_EMBEDDING_DEVICE}" \
-    --reranker-device "${INFERENCE_RERANKER_DEVICE}" \
+    --max-iterations "${MAX_ITERATIONS}" \
+    --max-sub-queries "${MAX_SUB_QUERIES}" \
+    --device "${QNA_DEVICE}" \
+    --embedding-device "${QNA_EMBEDDING_DEVICE}" \
+    --reranker-device "${RERANKER_DEVICE}" \
     --retrieval_strategy fixed_k \
-    --retriever_model "${INFERENCE_RETRIEVER_MODEL}" \
-    --top_k_retriever "${INFERENCE_TOP_K_RETRIEVER}" \
+    --embedding_model "${EMBEDDING_MODEL}" \
+    --top_k_retriever "${TOP_K_RETRIEVER}" \
     --generate-answer \
     --num-workers "${NUM_WORKERS}" \
-    --temperature "${INFERENCE_TEMPERATURE}" \
-    --reasoning "${INFERENCE_REASONING}" \
-    --max-retries "${INFERENCE_MAX_RETRIES}" \
+    --temperature "${TEMPERATURE}" \
+    --reasoning "${REASONING}" \
+    --max-retries "${MAX_RETRIES}" \
     --output-dir "${OUTPUT_DIR}" \
-    --llm_model "${INFERENCE_MODEL}" \
-    --query_model "${INFERENCE_QUERY_MODEL}" \
-    --llm_service_url "${INFERENCE_LLM_URL}" \
-    ${INFERENCE_GRADER_URL:+--grader-service-url "${INFERENCE_GRADER_URL}"} \
-    ${INFERENCE_GRADER_MODEL:+--grader-model "${INFERENCE_GRADER_MODEL}"} \
-    ${INFERENCE_QUERY_URL:+--query-service-url "${INFERENCE_QUERY_URL}"} \
-    ${INFERENCE_SUFFICIENCY_URL:+--sufficiency-service-url "${INFERENCE_SUFFICIENCY_URL}"} \
-    ${INFERENCE_SUFFICIENCY_MODEL:+--sufficiency-model "${INFERENCE_SUFFICIENCY_MODEL}"} \
-    ${INFERENCE_PERF_TEST_MODE:+--perf-test-mode "${INFERENCE_PERF_TEST_MODE}"} \
+    --grader_model "${GRADER_MODEL}" \
+    --query_model "${QUERY_MODEL}" \
+    --grader_service_url "${GRADER_SERVICE_URL}" \
+    ${QUERY_SERVICE_URL:+--query_service_url "${QUERY_SERVICE_URL}"} \
+    ${SUFFICIENCY_SERVICE_URL:+--sufficiency_service_url "${SUFFICIENCY_SERVICE_URL}"} \
+    ${SUFFICIENCY_MODEL:+--sufficiency_model "${SUFFICIENCY_MODEL}"} \
+    ${PERF_CACHE_FILE:+--perf-test-mode "${PERF_CACHE_FILE}"} \
     2>&1 | tee "${LOG_FILE}"
 
 if [[ -f "${OUTPUT_DIR}/result_multi_shot.json" ]]; then
@@ -128,8 +125,8 @@ echo ""
 echo "=== Scoring with LLM judge ==="
 python3 -u evaluate.py "${RESULT_JSON}" \
     --dataset "${DATASET:-data/frames_dataset.tsv}" \
-    --judge-url "${INFERENCE_JUDGE_URL}" \
-    --judge-model "${INFERENCE_JUDGE_MODEL}" \
+    --judge_service_url "${JUDGE_SERVICE_URL}" \
+    --judge_model "${JUDGE_MODEL}" \
     --batch-size 4
 
 echo ""

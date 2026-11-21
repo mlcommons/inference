@@ -210,7 +210,7 @@ if __name__ == "__main__":
         '.db', '') if args.database.endswith('.db') else args.database
 
     # Create VectorDB instance (pass base name without .db)
-    rag_db = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device,
+    rag_db = VectorDB(embedding_model=args.embedding_model, reranker_model=args.reranker_model, device=args.device,
                       database=db_base_name,
                       load_embeddings=args.load_embeddings, num_embedding_devices=args.num_embedding_devices,
                       hierarchical=args.hierarchical,
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         # function
         strategy_params = {"max_results": args.max_results}
         if args.retrieval_strategy == "top_p":
-            strategy_params["p"] = args.top_p
+            strategy_params["p"] = args.retrieval_top_p
         elif args.retrieval_strategy == "relative":
             strategy_params["ratio"] = args.relative_ratio
 
@@ -321,7 +321,7 @@ if __name__ == "__main__":
 
         strategy_params = {}
         if args.retrieval_strategy == "top_p":
-            strategy_params["p"] = args.top_p
+            strategy_params["p"] = args.retrieval_top_p
         elif args.retrieval_strategy == "relative":
             strategy_params["ratio"] = args.relative_ratio
 

@@ -57,7 +57,7 @@ class ParamDef:
         """
         Args:
             name: Internal parameter name
-            arg_names: List of CLI argument names (e.g., ['--top-p', '--top_p'])
+            arg_names: List of CLI argument names (e.g., ['--retrieval_top_p'])
             type: Parameter type (int, float, str, bool)
             default: Default value
             help: Help text
@@ -190,11 +190,11 @@ COMMON_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
-        name="retriever_model",
-        arg_names=["--retriever_model"],
+        name="embedding_model",
+        arg_names=["--embedding_model"],
         type=str,
         default="intfloat_e5-base-v2/e5-base-v2",
-        help="Model to use for embedding-based retrieval",
+        help="Embedding model for passages and queries (local path).",
         category="common",
         applies_to=["vector"]
     ),
@@ -320,21 +320,15 @@ GENERAL_PARAMS = [
         category="general",
         applies_to=["vector"]
     ),
+    # LLM endpoints: one URL + model pair per role.
+    #   query, sufficiency (+ final answer) -> 120B   grader -> 20B   judge -> accuracy_eval.py
+    # An unset role falls back along: sufficiency -> query -> grader.
     ParamDef(
-        name="llm_service_url",
-        arg_names=["--llm_service_url"],
+        name="query_service_url",
+        arg_names=["--query_service_url"],
         type=str,
-        default="http://127.0.0.1:8192/v1/chat/completions",
-        help="URL for the LLM service endpoint (20B model on port 8192)",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="llm_model",
-        arg_names=["--llm_model"],
-        type=str,
-        default="auto",
-        help="LLM model name/path (auto to detect from service). Used by document grader (evaluate_document_relevance).",
+        default="http://127.0.0.1:8123/v1/chat/completions",
+        help="Query-generation endpoint (gpt-oss-120b, generate_search_queries).",
         category="general",
         applies_to=["both"]
     ),
@@ -343,55 +337,45 @@ GENERAL_PARAMS = [
         arg_names=["--query_model"],
         type=str,
         default="gpt-oss-120b-mxfp4",
-        help="LLM model name/path for query generation (generate_search_queries). Defaults to --llm_model if not set. Example: gpt-oss-120b-mxfp4",
+        help="Query-generation model id, as served by --query_service_url.",
         category="general",
         applies_to=["both"]
     ),
-    # Per-component endpoint overrides. Each defaults to --llm_service_url when
-    # not set; same for the model. Lets you split components across separate
-    # vLLM servers (e.g. 20B grader on :8192, 120B query/sufficiency on :8123).
     ParamDef(
         name="grader_service_url",
-        arg_names=["--grader-service-url"],
+        arg_names=["--grader_service_url"],
         type=str,
-        default=None,
-        help="LLM service URL for the document grader (default: --llm_service_url).",
+        default="http://127.0.0.1:8192/v1/chat/completions",
+        help="Document-grading endpoint (gpt-oss-20b, evaluate_document_relevance). "
+             "Also probed for max_tokens when --max_tokens=auto.",
         category="general",
         applies_to=["both"]
     ),
     ParamDef(
         name="grader_model",
-        arg_names=["--grader-model"],
+        arg_names=["--grader_model"],
         type=str,
-        default=None,
-        help="Model name for the document grader (default: --llm_model).",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="query_service_url",
-        arg_names=["--query-service-url"],
-        type=str,
-        default="http://127.0.0.1:8123/v1/chat/completions",
-        help="LLM service URL for query generation (120B model on port 8123, default: --llm_service_url).",
+        default="auto",
+        help="Document-grading model id ('auto' = ask --grader_service_url).",
         category="general",
         applies_to=["both"]
     ),
     ParamDef(
         name="sufficiency_service_url",
-        arg_names=["--sufficiency-service-url"],
+        arg_names=["--sufficiency_service_url"],
         type=str,
         default=None,
-        help="LLM service URL for sufficiency check + answer generation (default: --llm_service_url).",
+        help="Sufficiency-check and final-answer endpoint "
+             "(check_sufficiency, generate_answer). Default: --query_service_url.",
         category="general",
         applies_to=["both"]
     ),
     ParamDef(
         name="sufficiency_model",
-        arg_names=["--sufficiency-model"],
+        arg_names=["--sufficiency_model"],
         type=str,
         default=None,
-        help="Model name for sufficiency check + answer generation (default: --query_model, then --llm_model).",
+        help="Sufficiency-check and final-answer model id. Default: --query_model.",
         category="general",
         applies_to=["both"]
     ),
@@ -499,11 +483,12 @@ STRATEGY_PARAMS = [
         optuna_suggest={'type': 'int', 'min': 5, 'max': 100, 'step': 5}
     ),
     ParamDef(
-        name="top_p",
-        arg_names=["--top_p"],
+        name="retrieval_top_p",
+        arg_names=["--retrieval_top_p"],
         type=float,
         default=0.9,
-        help="Cumulative probability threshold for top_p strategy (0.0-1.0)",
+        help="Cumulative score threshold for --retrieval_strategy top_p (0.0-1.0). "
+             "Retrieval only, unrelated to LLM sampling top_p.",
         category="strategy",
         applies_to=["both"],
         optuna_suggest={'type': 'float', 'min': 0.5, 'max': 0.99, 'step': 0.01}

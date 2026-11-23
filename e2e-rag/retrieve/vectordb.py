@@ -118,7 +118,7 @@ def _parallel_embed_worker(device_id, input_chunk_indices, input_chunks, result_
         else:
             device = f'{base_device}:{device_id}'
 
-        model_kwargs = {'device': device, 'local_files_only': True}
+        model_kwargs = {'device': device}
 
         # Load model once for this device
         embedder = HuggingFaceEmbeddings(
@@ -195,9 +195,7 @@ class VectorDB(RagDB):
             )
 
         # Initialize embedding model with device configuration
-        model_kwargs = {
-            'device': self._embedding_device,
-            'local_files_only': True}
+        model_kwargs = {'device': self._embedding_device}
         encode_kwargs = {'normalize_embeddings': True}
 
         self._embedding_model = HuggingFaceEmbeddings(

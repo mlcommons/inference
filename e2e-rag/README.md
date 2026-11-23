@@ -155,18 +155,36 @@ See [MLCOMMONS_ASSETS.md](MLCOMMONS_ASSETS.md) for individual download commands 
 
 #### LLM Server Setup
 
-After downloading models, start vLLM servers:
+After downloading models, start the three vLLM servers with
+`scripts/launch_llm_server.sh`, one call per server:
+
+| Role | Model (`<ROLE>_MODEL`) | Port (`<ROLE>_SERVICE_URL`) | Used for |
+|---|---|---|---|
+| `query` | gpt-oss-120b | 8123 | query generation, sufficiency check, final answer |
+| `grader` | gpt-oss-20b | 8192 | document grading |
+| `judge` | Llama-3.1-8B-Instruct | 8125 | answer scoring (accuracy runs only) |
 
 ```bash
-# Answer generation + document grading (port 8123)
-vllm serve /data/model/gpt-oss-20b --port 8123
-
-# Query generation + sufficiency checking (port 8124)
-vllm serve /data/model/gpt-oss-120b --port 8124
-
-# Judge for evaluation (port 8125) - use any instruction-tuned model
-vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8125
+DEVICES=0,1,2,3 bash scripts/launch_llm_server.sh query
+DEVICES=4,5     bash scripts/launch_llm_server.sh grader
+DEVICES=6       bash scripts/launch_llm_server.sh judge
 ```
+
+`DEVICES` selects the accelerators. The script detects the vendor and exports
+the matching variable (override with `VENDOR=nvidia|amd|intel|cpu`):
+
+| Vendor | Variable set from `DEVICES` |
+|---|---|
+| NVIDIA | `CUDA_VISIBLE_DEVICES` |
+| AMD | `HIP_VISIBLE_DEVICES` |
+| Intel | `ZE_AFFINITY_MASK` |
+| CPU | none (`DEVICES` is ignored) |
+
+Tensor parallelism defaults to the number of `DEVICES`; extra arguments go
+straight to `vllm serve` (e.g. `... query -tp 2 --gpu-memory-utilization 0.9`).
+Each server logs to `logs/vllm_<role>.log`. The model and port come from the
+same variables the run scripts read, so set `<ROLE>_MODEL` /
+`<ROLE>_SERVICE_URL` once for both.
 
 ### Wikipedia Documents
 

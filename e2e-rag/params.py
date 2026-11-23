@@ -18,7 +18,8 @@
 Centralized Parameter Definitions
 
 This module provides a single source of truth for all parameters
-used across single_shot_retrieval.py, optimize_retrieval.py, and other scripts.
+used across reference_mlperf.py, multi_shot_retrieval.py,
+single_shot_retrieval.py and other scripts.
 
 Usage:
     from params import add_all_args, add_common_args, add_retrieval_args
@@ -148,7 +149,7 @@ COMMON_PARAMS = [
         arg_names=["--database", "--db"],
         type=str,
         default="vector.db",
-        help="Path to the database file\nIf provided, --ingest will be ignored\nDefault: 'bm25.db' for BM25, 'vector.db' for vector",
+        help="Path to the vector database file\nIf provided, --ingest will be ignored",
         category="common",
         applies_to=["both"]
     ),
@@ -203,7 +204,7 @@ COMMON_PARAMS = [
         arg_names=["--reranker_model"],
         type=str,
         default="colbert-ir_colbertv2.0/colbertv2.0",
-        help="Model to use for reranking (currently unused)",
+        help="Reranker model (ColBERTv2): local path or Hugging Face id",
         category="common",
         applies_to=["both"]
     ),
@@ -761,7 +762,7 @@ if __name__ == "__main__":
         method = sys.argv[2] if len(sys.argv) > 2 else None
         print_param_info(method)
     else:
-        print("Usage: python retrieval_params.py list [bm25|vector]")
+        print("Usage: python params.py list [vector]")
         print("\nOptimizable parameters:")
         for param in OPTIMIZABLE_PARAMS:
             print(f"  - {param.name} ({param.category})")

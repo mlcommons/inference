@@ -1,173 +1,159 @@
 # E2E: RAG Benchmark
 
-End-to-end retrieval-augmented generation benchmark for multi-hop question answering on the [FRAMES](https://huggingface.co/datasets/google/frames-benchmark) Wikipedia dataset.
+End-to-end retrieval-augmented generation benchmark for multi-hop question
+answering on the [FRAMES](https://huggingface.co/datasets/google/frames-benchmark)
+Wikipedia dataset. It has two LoadGen workloads:
 
-**Key features:**
-- MLPerf Loadgen integration for standardized benchmarking
-- Dense vector retrieval with FAISS (HNSW/IVF/Flat indexing)
-- ColBERTv2 reranking
-- Iterative multi-shot retrieval with LLM-driven query decomposition
-- Cross-vendor hardware support (Intel XPU, AMD GPU/ROCm, NVIDIA GPU/CUDA, CPU)
-- Separate performance and accuracy testing modes
+- **RAG-DB** (`e2e-rag-db`, "ingestion"): build the FAISS HNSW vector database
+  from the frozen Wikipedia corpus (one-time, measured).
+- **RAG-QnA** (`e2e-rag-qna`): answer the 824 FRAMES questions with iterative
+  multi-shot retrieval over that database (Offline scenario).
 
 ---
 
 ## Table of Contents
 
-- [Environment Setup](#environment-setup)
-- [Typical Workflow](#typical-workflow)
-- [Step 1: Download Models and Data](#step-1-download-models-and-data-one-time)
-- [Step 2: Build Vector Database](#step-2-build-vector-database-one-time-measured-operation)
-- [Step 3: Run Question-Answering Workload](#step-3-run-question-answering-workload)
-- [Common Configuration](#common-configuration)
-- [Prerequisites](#prerequisites)
-- [License](#license)
+1. [Overview](#1-overview)
+2. [Install](#2-install)
+3. [Download models and data](#3-download-models-and-data)
+4. [Configure](#4-configure)
+5. [Start the LLM servers](#5-start-the-llm-servers)
+6. [Build the vector database (RAG-DB)](#6-build-the-vector-database-rag-db)
+7. [Run question answering (RAG-QnA)](#7-run-question-answering-rag-qna)
+8. [Compliance: TEST09](#8-compliance-test09)
+9. [What you may and may not change](#9-what-you-may-and-may-not-change)
+10. [Troubleshooting](#10-troubleshooting)
+11. [System requirements](#11-system-requirements)
 
 ---
 
-###  Environment setup
+## 1. Overview
 
-Use an Ubuntu Docker container and install dependencies:
+For each question the pipeline repeats, for up to 5 iterations: generate
+sub-queries, retrieve passages (e5-base-v2 + FAISS HNSW), rerank (ColBERTv2),
+grade each new passage, and check whether the kept passages are sufficient;
+then it generates the final answer.
 
-```bash
-# Start Ubuntu container
-docker run -it --gpus all -v $(pwd):/workspace ubuntu:22.04
-
-# Inside container: install dependencies
-cd /workspace
-bash setup.sh
-```
-
-The `setup.sh` script installs all required Python packages and system dependencies.
-
-
-### Typical Workflow
-
-```
-1. Download models + frozen corpus → 2. Build vector database → 3. Run QA workload
-   (download_dataset_and_models.sh)    (reference_mlperf_datasetup.sh)   (reference_mlperf_accuracy.sh)
-```
-
-### Step 1: Download models and data (one-time)
-
-```bash
-bash scripts/download_dataset_and_models.sh
-```
-
-This downloads all required models and datasets from MLCommons storage (~283GB)
-and extracts the frozen document corpus (`docs.tar.gz`) into `doc_html/`.
-
-> **Important — use the frozen corpus.** The benchmark ships a fixed Wikipedia
-> snapshot as `docs.tar.gz`; the download script extracts it to `doc_html/`.
-> Build your vector database from this corpus. Do **not** re-scrape Wikipedia
-> with `download_docs.py` — that fetches whatever revision is live today, which
-> differs from the reference corpus in bytes, passage counts, and retrieval
-> results, and will fail cross-system DB-manifest verification.
-> (`download_docs.py` remains only for regenerating the snapshot itself.)
-
-### Step 2: Build vector database (one-time measured operation)
-
-**Performance mode:**
-```bash
-INGESTION_DOC_DIR=doc_html \
-INGESTION_DB=vector_html_hnsw_len768_ov32_word \
-INGESTION_DEVICE=auto \
-bash reference_mlperf_datasetup.sh
-```
-
-**Accuracy mode** (with verification):
-```bash
-bash reference_mlperf_datasetup_accuracy.sh
-```
-
-**Output:** Creates `${INGESTION_DB}.db` and `${INGESTION_DB}_data/` directory.
-
-### Step 3: Run question-answering workload
-
-**Performance mode** (with cached LLM responses):
-```bash
-DATABASE=vector_html_hnsw_len768_ov32_word.db \
-PERF_CACHE_FILE=logs_result.json \
-bash reference_mlperf_perf.sh
-```
-
-**Accuracy mode** (live LLM inference):
-```bash
-# Start LLM servers first (see Prerequisites)
-DATABASE=vector_html_hnsw_len768_ov32_word.db \
-GRADER_SERVICE_URL=http://127.0.0.1:8123/v1/chat/completions \
-bash reference_mlperf_accuracy.sh
-```
-
-**Output:** Results in `${WORKSPACE_DIR}/output/` and logs in `${WORKSPACE_DIR}/run_output/`.
-
-### Common Configuration
-
-Key environment variables (see [Running Workloads](#running-workloads) for full list):
-
-**Database Setup:**
-- `INGESTION_DOC_DIR`: HTML documents (default: `doc_html`)
-- `INGESTION_DB`: Database name to build, without `.db` (default: `vector_html_hnsw_len768_ov32_word`)
-- `INGESTION_CHUNK_SIZE`: Chunk size in chars (default: `768`)
-- `INGESTION_MAX_WORKERS`: Parallel threads (default: `4`)
-- `INGESTION_DEVICE`: Hardware device (default: `auto`)
-
-**Question-Answering:**
-- `DATABASE`: Database file (default: `vector_html_hnsw_len768_ov32_word.db`)
-- `PERF_COUNT`: Number of queries (default: `824`)
-- `QNA_MAX_WORKERS`: Parallel workers (default: `10`)
-- `MAX_ITERATIONS`: Max retrieval rounds (default: `5`)
-- `GRADER_SERVICE_URL`: Document-grading endpoint (gpt-oss-20b)
-- `QUERY_SERVICE_URL`: Query-generation endpoint (gpt-oss-120b)
-- `SUFFICIENCY_SERVICE_URL`: Sufficiency check + final answer (gpt-oss-120b)
-- `JUDGE_SERVICE_URL`: Evaluation endpoint (accuracy mode only)
-
----
-
-## Prerequisites
-
-Before running workloads, ensure you have:
-
-### Required Models and Data
-
-All required models and datasets are hosted on MLCommons storage.
-
-#### Quick Download All (Recommended)
-
-Download all models and datasets at once:
-
-```bash
-bash scripts/download_dataset_and_models.sh
-```
-
-This downloads from MLCommons storage (~283GB total):
-- **FRAMES Dataset** (~674KB) → `data/frames_dataset.tsv`
-- **Embedding Model** e5-base-v2 (~2.2GB) → `/data/model/e5-base-v2/`
-- **Reranker Model** ColBERTv2.0 (~1.4GB) → `/data/model/colbertv2.0/`
-- **GPT-OSS-120B Model** (~196GB) → `/data/model/gpt-oss-120b/`
-- **GPT-OSS-20B Model** (~83GB) → `/data/model/gpt-oss-20b/`
-
-**Note:** Ensure sufficient disk space before proceeding.
-
-#### Individual Downloads
-
-See [MLCOMMONS_ASSETS.md](MLCOMMONS_ASSETS.md) for individual download commands and detailed model information.
-
-#### LLM Server Setup
-
-After downloading models, start the three vLLM servers with
-`scripts/launch_llm_server.sh`, one call per server:
-
-| Role | Model (`<ROLE>_MODEL`) | Port (`<ROLE>_SERVICE_URL`) | Used for |
+| Role | Model | Default endpoint | Used for |
 |---|---|---|---|
-| `query` | gpt-oss-120b | 8123 | query generation, sufficiency check, final answer |
-| `grader` | gpt-oss-20b | 8192 | document grading |
-| `judge` | Llama-3.1-8B-Instruct | 8125 | answer scoring (accuracy runs only) |
+| query | gpt-oss-120b | `:8123` | query generation, sufficiency check, final answer |
+| grader | gpt-oss-20b | `:8192` | document grading |
+| judge | Llama-3.1-8B-Instruct | `:8125` | answer scoring (accuracy runs only) |
+| embedding | e5-base-v2 | in-process | passage and query embeddings |
+| reranker | ColBERTv2.0 | in-process | reranking |
+
+**Performance vs accuracy.** Performance runs still call the LLM servers (their
+latency is measured) but replay recorded responses from `PERF_CACHE_FILE`, so
+every run follows the same trajectory. Accuracy runs use the live responses and
+score the answers with the judge. The judge is not needed for performance runs.
+
+## 2. Install
+
+Start a container with your accelerator's runtime and mount this directory, for
+example:
+
+```bash
+docker run -it --gpus all -v $(pwd):/workspace ubuntu:22.04      # NVIDIA
+# AMD:   --device /dev/kfd --device /dev/dri instead of --gpus all
+# Intel: --device /dev/dri instead of --gpus all
+```
+
+Inside the container (from `/workspace`):
+
+```bash
+apt-get update && apt-get install -y python3 python3-pip git curl wget
+bash setup.sh             # Python requirements
+bash prepare_loadgen.sh   # builds and installs mlperf_loadgen
+```
+
+Python 3.9 or newer is required. The LLM servers run on vLLM; install your
+vendor's vLLM build (or use its container).
+
+## 3. Download models and data
+
+```bash
+bash scripts/download_dataset_and_models.sh
+```
+
+Run it from this directory. It downloads the frozen MLCommons copies (~83 GB)
+and extracts the document corpus. For the gpt-oss models it fetches only the
+files vLLM loads (config, tokenizer and the top-level safetensors shards) and
+skips the `original/` and `metal/` weight copies the bucket also holds:
+
+| Asset | Lands in | Default variable |
+|---|---|---|
+| FRAMES questions | `frames-benchmark-dataset/frames-benchmark/test.tsv`, linked as `frames-benchmark-dataset/frames_dataset.tsv` | (run scripts) |
+| Wikipedia corpus | `doc_html/` (2515 HTML pages, from `docs.tar.gz`) | `INGESTION_DOC_DIR` |
+| gpt-oss-120b (~65 GB) | `gpt-oss_model/gpt-oss-120b/` | `QUERY_MODEL` |
+| gpt-oss-20b (~14 GB) | `gpt-oss-20B/gpt-oss-20b/` | `GRADER_MODEL` |
+| e5-base-v2 | `intfloat_e5-base-v2/e5-base-v2/` | `EMBEDDING_MODEL` |
+| ColBERTv2.0 | `colbert-ir_colbertv2.0/colbertv2.0/` | `RERANKER_MODEL` |
+
+The judge (`meta-llama/Llama-3.1-8B-Instruct`) is not in the bucket; vLLM
+downloads it from Hugging Face (gated: accept the license and set `HF_TOKEN`).
+See [MLCOMMONS_ASSETS.md](MLCOMMONS_ASSETS.md) for individual downloads.
+
+> **Use the frozen corpus.** Build your vector database from `doc_html/`. Do
+> **not** re-scrape Wikipedia with `download_docs.py`: the live pages have
+> changed and will not reproduce the reference corpus or pass DB-manifest
+> verification. `download_docs.py` is only for regenerating the snapshot.
+
+## 4. Configure
+
+The run scripts read environment variables with the defaults below; export the
+ones you want to change.
+
+**Models** — each `<X>_MODEL` is a local path or a Hugging Face id (downloaded
+on first use; warm the cache before a timed run):
+
+| Variable | Default |
+|---|---|
+| `QUERY_MODEL` | `gpt-oss_model/gpt-oss-120b` |
+| `SUFFICIENCY_MODEL` | `${QUERY_MODEL}` (same server) |
+| `GRADER_MODEL` | `gpt-oss-20B/gpt-oss-20b` |
+| `JUDGE_MODEL` | `meta-llama/Llama-3.1-8B-Instruct` |
+| `EMBEDDING_MODEL` | `intfloat_e5-base-v2/e5-base-v2` |
+| `RERANKER_MODEL` | `colbert-ir_colbertv2.0/colbertv2.0` |
+
+**LLM endpoints** — `QUERY_SERVICE_URL`, `SUFFICIENCY_SERVICE_URL`
+(`http://127.0.0.1:8123/v1/chat/completions`), `GRADER_SERVICE_URL` (`:8192`),
+`JUDGE_SERVICE_URL` (`:8125`). The launch script reads the same variables.
+
+**RAG-DB (ingestion)**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `INGESTION_DOC_DIR` | `doc_html` | HTML corpus |
+| `INGESTION_DB` | `vector_html_hnsw_len768_ov32_word` | database to build, **without** `.db` |
+| `INGESTION_DEVICE` | `auto` | `auto`, `cuda`, `xpu`, `hpu` or `cpu` |
+| `INGESTION_NUM_EMBEDDING_DEVICES` | `1` | devices used for embedding |
+| `INGESTION_MAX_WORKERS` | `4` | parallel document workers |
+| `INGESTION_CHUNK_SIZE` / `INGESTION_CHUNK_OVERLAP` | `768` / `32` | passage chunking |
+
+**RAG-QnA**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DATABASE` | `vector_html_hnsw_len768_ov32_word.db` | database to query, **with** `.db` |
+| `QNA_MAX_WORKERS` | `10` | parallel questions in the SUT |
+| `MAX_ASYNC_QUERIES` | `10` | LoadGen dispatch (written into `user.conf`) |
+| `PERF_COUNT` | `824` | number of questions |
+| `MAX_ITERATIONS` | `5` | retrieval iterations (fixed by the rules) |
+| `MAX_SUB_QUERIES` | `3` | sub-queries per iteration |
+| `TOP_K_RETRIEVER` | `10` | passages retrieved per sub-query |
+| `PERF_CACHE_FILE` | `logs_result.json` | recorded LLM responses for performance runs |
+
+All runs write under `WORKSPACE_DIR` (default `/workspace`).
+
+## 5. Start the LLM servers
+
+Start the three vLLM servers with `scripts/launch_llm_server.sh`, one call per
+server:
 
 ```bash
 DEVICES=0,1,2,3 bash scripts/launch_llm_server.sh query
 DEVICES=4,5     bash scripts/launch_llm_server.sh grader
-DEVICES=6       bash scripts/launch_llm_server.sh judge
+DEVICES=6       bash scripts/launch_llm_server.sh judge    # accuracy runs only
 ```
 
 `DEVICES` selects the accelerators. The script detects the vendor and exports
@@ -182,34 +168,85 @@ the matching variable (override with `VENDOR=nvidia|amd|intel|cpu`):
 
 Tensor parallelism defaults to the number of `DEVICES`; extra arguments go
 straight to `vllm serve` (e.g. `... query -tp 2 --gpu-memory-utilization 0.9`).
-Each server logs to `logs/vllm_<role>.log`. The model and port come from the
-same variables the run scripts read, so set `<ROLE>_MODEL` /
-`<ROLE>_SERVICE_URL` once for both.
+Each server logs to `logs/vllm_<role>.log` and the script returns once it
+answers on its port. The model and port come from `<ROLE>_MODEL` and
+`<ROLE>_SERVICE_URL`, the same variables the run scripts read.
 
-### Wikipedia Documents
-
-The document corpus is **frozen** and shipped with the FRAMES dataset as
-`docs.tar.gz`. `scripts/download_dataset_and_models.sh` extracts it to
-`doc_html/` (2515 HTML pages) automatically — this is the corpus every
-submission must build its vector DB from.
-
-`download_docs.py` re-scrapes the live Wikipedia pages and is intended **only**
-for regenerating the snapshot from scratch (benchmark maintenance). Do not use
-it to prepare a submission: the live pages have since changed revision and will
-not reproduce the reference corpus.
+## 6. Build the vector database (RAG-DB)
 
 ```bash
-# Snapshot regeneration only — NOT for submissions:
-python3 download_docs.py --output_dir doc_html --format html --processes 30
+bash reference_mlperf_datasetup.sh            # performance
+bash reference_mlperf_datasetup_accuracy.sh   # accuracy: build, then verify
 ```
 
-### System Requirements
+Both build `${INGESTION_DB}.db` and `${INGESTION_DB}_data/`. The accuracy run
+then verifies the database: the MD5 reported by the run matches the saved
+file, and the reference manifest (`MANIFEST`, default
+`scripts/db_manifest_intel_xpu.json.gz`) matches in passage count, embedding
+dimension and top-K retrieval overlap. Logs go to
+`${WORKSPACE_DIR}/run_output_e2e-rag-db/{performance,accuracy}`.
 
-- **Disk**: ~50GB for documents + vector DB
-- **Memory**: 32GB+ RAM recommended
-- **GPU** (optional): NVIDIA/AMD/Intel XPU for faster embedding/reranking
-- **Python**: 3.8+
-- **OS**: Ubuntu 20.04+ (or compatible container)
+## 7. Run question answering (RAG-QnA)
+
+Start the query and grader servers first (and the judge for accuracy).
+
+```bash
+bash reference_mlperf_perf.sh       # performance: replays PERF_CACHE_FILE
+bash reference_mlperf_accuracy.sh   # accuracy: live LLM responses + judge
+```
+
+LoadGen logs go to `${WORKSPACE_DIR}/run_output_e2e-rag-qna/{performance,accuracy}`
+and results to `${WORKSPACE_DIR}/output_e2e-rag-qna/{performance,accuracy}`.
+Accuracy runs score `results.json` with the judge (`accuracy_eval.py`) and
+write `accuracy.txt` to the log directory. Only the Offline scenario is
+configured (`user.conf`).
+
+## 8. Compliance: TEST09
+
+```bash
+bash run_compliance_test09.sh
+```
+
+TEST09 checks that the mean output length of the final answer in a
+performance run is within ±10% of the reference. It needs the TEST09 config
+from the inference repo (`compliance/TEST09/e2e-rag-qna/`, or set
+`COMPLIANCE_DIR`). Set `PERF_CACHE_FILE` so it replays the same responses as
+the performance run; it runs live when unset.
+
+## 9. What you may and may not change
+
+Fixed by the [rules](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#e2e-rag):
+
+- Retrieval iterations: `MAX_ITERATIONS=5`.
+- RAG-DB index: FAISS HNSW with `M=32`, `efConstruction=200`, `efSearch=100`.
+- Sampling for the GPT-OSS models: `temperature=1.0`, `top_p=1.0`.
+- The models listed above, the frozen corpus, and the QnA run using the
+  database produced by the measured RAG-DB run.
+- No caching across questions (KV-cache within a question is allowed).
+
+Reference defaults (keep them for comparability): `TOP_K_RETRIEVER=10`,
+chunking `768`/`32`, `MAX_SUB_QUERIES=3`. Devices, worker counts and vLLM
+serving options are yours to tune.
+
+## 10. Troubleshooting
+
+- **Model not found (HTTP 404) from an LLM server**: the client sends
+  `<ROLE>_MODEL`; start the server with the same value (the launch script does).
+- **`Database not found`** in RAG-QnA: `DATABASE` needs the `.db` suffix;
+  `INGESTION_DB` must not have it.
+- **Performance run makes "real LLM calls" without replay**: `PERF_CACHE_FILE`
+  was not found; check the path.
+- **HF id fails to load offline**: pre-fetch it (`hf download <id>`) or point
+  `<X>_MODEL` at a local path.
+
+## 11. System requirements
+
+- **Disk**: ~120 GB: models ~83 GB (only the files vLLM loads), judge ~16 GB
+  from Hugging Face, corpus and database a few GB.
+- **Memory**: 32 GB+ RAM recommended for the SUT, plus what the LLM servers need.
+- **Accelerators**: NVIDIA, AMD or Intel GPUs for the LLM servers; embedding
+  and reranking run on any `--device` (`cuda`, `rocm`, `xpu`, `hpu`, `cpu`).
+- **Python**: 3.9+. **OS**: Ubuntu 20.04+ (or a compatible container).
 
 ---
 

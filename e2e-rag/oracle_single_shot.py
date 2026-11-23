@@ -69,8 +69,8 @@ def parse_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="data/frames_dataset.tsv",
-        help="Path to frames_dataset.tsv (default: data/frames_dataset.tsv)"
+        default="frames-benchmark-dataset/frames_dataset.tsv",
+        help="Path to frames_dataset.tsv (default: frames-benchmark-dataset/frames_dataset.tsv)"
     )
     parser.add_argument(
         "--wiki-articles-dir",

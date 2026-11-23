@@ -80,7 +80,7 @@ def get_args():
     # E2E workload arguments (non-conflicting with params.py)
     parser.add_argument(
         "--dataset_path",
-        default="data/frames_dataset.tsv",
+        default="frames-benchmark-dataset/frames_dataset.tsv",
         help="Path to frames_dataset.tsv"
     )
     parser.add_argument(

@@ -47,6 +47,9 @@ echo "Downloading FRAMES Dataset"
 echo "============================================================"
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
     https://inference.mlcommons-storage.org/metadata/frames-benchmark-dataset.uri
+# The bucket ships the questions as frames-benchmark/test.tsv; the run scripts
+# read frames-benchmark-dataset/frames_dataset.tsv.
+ln -sfn frames-benchmark/test.tsv frames-benchmark-dataset/frames_dataset.tsv
 
 echo ""
 echo "============================================================"

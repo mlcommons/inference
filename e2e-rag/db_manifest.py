@@ -479,7 +479,7 @@ def main():
         help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
     _add_model_args(pw, default="intfloat_e5-base-v2/e5-base-v2")
-    pw.add_argument("--dataset", default="data/frames_dataset.tsv")
+    pw.add_argument("--dataset", default="frames-benchmark-dataset/frames_dataset.tsv")
     pw.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)
@@ -509,7 +509,7 @@ def main():
     pc.add_argument("--ref", required=True)
     pc.add_argument("--db", required=True)
     _add_model_args(pc, default="intfloat_e5-base-v2/e5-base-v2")
-    pc.add_argument("--dataset", default="data/frames_dataset.tsv")
+    pc.add_argument("--dataset", default="frames-benchmark-dataset/frames_dataset.tsv")
     pc.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pc.add_argument("--probe-k", type=int, default=PROBE_TOP_K)
     pc.add_argument(

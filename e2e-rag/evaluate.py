@@ -306,7 +306,7 @@ def parse_args():
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=Path("data/frames_dataset.tsv"),
+        default=Path("frames-benchmark-dataset/frames_dataset.tsv"),
         help="Evaluation dataset TSV")
     parser.add_argument(
         "--judge_service_url",

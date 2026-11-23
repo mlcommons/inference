@@ -124,7 +124,7 @@ fi
 echo ""
 echo "=== Scoring with LLM judge ==="
 python3 -u evaluate.py "${RESULT_JSON}" \
-    --dataset "${DATASET:-data/frames_dataset.tsv}" \
+    --dataset "${DATASET:-frames-benchmark-dataset/frames_dataset.tsv}" \
     --judge_service_url "${JUDGE_SERVICE_URL}" \
     --judge_model "${JUDGE_MODEL}" \
     --batch-size 4

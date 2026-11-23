@@ -1183,7 +1183,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          max_sub_queries: int = 3,
                          top_k_retriever: int = 10,
                          top_k_reranking: int = 10,
-                         max_iterations: int = 10,
+                         max_iterations: int = 5,
                          no_rerank: bool = False,
                          retrieval_strategy: str = "fixed_k",
                          verbose: bool = True,
@@ -1209,7 +1209,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         max_sub_queries: Maximum number of sub-queries per iteration
         top_k_retriever: Number of documents to retrieve per sub-query
         top_k_reranking: Final number of documents to return
-        max_iterations: Maximum number of retrieval iterations (default: 10)
+        max_iterations: Maximum number of retrieval iterations (default: 5)
         no_rerank: Skip reranking step
         retrieval_strategy: Strategy for retrieval
         verbose: Print detailed information
@@ -1671,7 +1671,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               reasoning_effort: str = "medium",
                               detailed_analysis: bool = False,
                               difficulty: int = 0,
-                              max_iterations: int = 10,
+                              max_iterations: int = 5,
                               llm_config: Optional[Dict[str, Any]] = None,
                               logger: Optional[LLMLogger] = None,
                               num_workers: int = 1,
@@ -1691,7 +1691,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         reasoning_effort: LLM reasoning level
         detailed_analysis: Enable detailed complexity-based analysis
         difficulty: Minimum number of answer links required (0 = no filtering)
-        max_iterations: Maximum iterations for iterative retrieval (default: 10)
+        max_iterations: Maximum iterations for iterative retrieval (default: 5)
         **strategy_params: Additional parameters for retrieval strategy
 
     Returns:
@@ -1905,8 +1905,8 @@ if __name__ == "__main__":
     args.add_argument('--reasoning', type=str, default='medium',
                       choices=['low', 'medium', 'high'],
                       help='LLM reasoning level for query decomposition (default: medium)')
-    args.add_argument('--max-iterations', type=int, default=10,
-                      help='Maximum number of retrieval iterations (default: 10)')
+    args.add_argument('--max-iterations', type=int, default=5,
+                      help='Maximum number of retrieval iterations (default: 5)')
     args.add_argument('--num-workers', type=int, default=1,
                       help='Number of parallel query workers (default: 1, sequential)')
     args.add_argument('--temperature', type=float, default=1.0,

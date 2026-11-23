@@ -55,7 +55,7 @@ class E2ESUT:
         max_sub_queries: int = 3,
         top_k_retriever: int = 10,
         top_k_reranking: int = 10,
-        max_iterations: int = 10,
+        max_iterations: int = 5,
         no_rerank: bool = False,
         retrieval_strategy: str = "fixed_k",
         reasoning_effort: str = "medium",

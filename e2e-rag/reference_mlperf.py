@@ -108,8 +108,8 @@ def get_args():
     parser.add_argument(
         '--max-iterations',
         type=int,
-        default=10,
-        help='Maximum retrieval iterations (default: 10)'
+        default=5,
+        help='Maximum retrieval iterations (default: 5)'
     )
     parser.add_argument(
         '--temperature',

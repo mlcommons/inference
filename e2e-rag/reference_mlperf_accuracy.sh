@@ -49,13 +49,13 @@ export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
 
 # Default to local vLLM server
 export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20b-mxfp4}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
+export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss_model/gpt-oss-120b}
 
 # Query and sufficiency use 120B model on port 8123
 export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
 export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-${QUERY_MODEL}}
 
 # Judge LLM configuration (for accuracy evaluation)
 export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}

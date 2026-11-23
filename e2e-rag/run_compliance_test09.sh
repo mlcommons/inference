@@ -65,11 +65,11 @@ export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # LLM service configuration
 export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20b-mxfp4}
+export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}
 export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss-120b-mxfp4}
+export QUERY_MODEL=${QUERY_MODEL:-gpt-oss_model/gpt-oss-120b}
 export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}
+export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-${QUERY_MODEL}}
 export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
 export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 

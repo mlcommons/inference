@@ -32,7 +32,7 @@ EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
 TOP_K_RETRIEVER="${TOP_K_RETRIEVER:-10}"
 N_QUERIES="${N_QUERIES:-5}"
 GRADER_SERVICE_URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
-GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20b-mxfp4}"
+GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}"
 JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}"
 JUDGE_MODEL="${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 

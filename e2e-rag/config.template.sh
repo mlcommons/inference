@@ -38,14 +38,14 @@ QNA_MAX_WORKERS=1
 
 # LLM endpoints (vLLM, OpenRouter, etc.)
 GRADER_SERVICE_URL="http://127.0.0.1:8192/v1/chat/completions"
-GRADER_MODEL="gpt-oss-20b-mxfp4"
-QUERY_MODEL="gpt-oss-120b-mxfp4"
+GRADER_MODEL="gpt-oss-20B/gpt-oss-20b"
+QUERY_MODEL="gpt-oss_model/gpt-oss-120b"
 
 # Query and sufficiency (+ final answer) on the 120B server. Unset -> the
 # Python defaults apply (query :8123; sufficiency follows query).
 # QUERY_SERVICE_URL="http://127.0.0.1:8123/v1/chat/completions"
 # SUFFICIENCY_SERVICE_URL="http://127.0.0.1:8123/v1/chat/completions"
-# SUFFICIENCY_MODEL="gpt-oss-120b-mxfp4"
+# SUFFICIENCY_MODEL="gpt-oss_model/gpt-oss-120b"
 
 # Judge (used by evaluate.py at the end of the run scripts)
 JUDGE_SERVICE_URL="http://127.0.0.1:8125/v1/chat/completions"

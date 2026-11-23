@@ -27,7 +27,7 @@ fi
 
 # The oracle answers from the gold articles, so it uses the answer model (120B).
 ORACLE_SERVICE_URL="${ORACLE_SERVICE_URL:-${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}}"
-ORACLE_MODEL="${ORACLE_MODEL:-${SUFFICIENCY_MODEL:-gpt-oss-120b-mxfp4}}"
+ORACLE_MODEL="${ORACLE_MODEL:-${SUFFICIENCY_MODEL:-gpt-oss_model/gpt-oss-120b}}"
 N_QUERIES="${N_QUERIES:-5}"
 ORACLE_BATCH_SIZE="${ORACLE_BATCH_SIZE:-4}"
 ORACLE_TIMEOUT="${ORACLE_TIMEOUT:-2400}"

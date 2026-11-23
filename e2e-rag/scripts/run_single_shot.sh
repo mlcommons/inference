@@ -33,8 +33,8 @@ TOP_K_RETRIEVER="${TOP_K_RETRIEVER:-15}"
 N_QUERIES="${N_QUERIES:-5}"
 GRADER_SERVICE_URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
 GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20b-mxfp4}"
-JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-https://openrouter.ai/api/v1/chat/completions}"
-JUDGE_MODEL="${JUDGE_MODEL:-openai/gpt-oss-20b}"
+JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}"
+JUDGE_MODEL="${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 
 N_QUERIES="${1:-${N_QUERIES}}"
 

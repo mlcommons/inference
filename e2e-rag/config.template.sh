@@ -48,8 +48,8 @@ QUERY_MODEL="gpt-oss-120b-mxfp4"
 # SUFFICIENCY_MODEL="gpt-oss-120b-mxfp4"
 
 # Judge (used by evaluate.py at the end of the run scripts)
-JUDGE_SERVICE_URL="https://openrouter.ai/api/v1/chat/completions"
-JUDGE_MODEL="Llama3.1-8B-v1"
+JUDGE_SERVICE_URL="http://127.0.0.1:8125/v1/chat/completions"
+JUDGE_MODEL="meta-llama/Llama-3.1-8B-Instruct"
 
 # ── Oracle evaluation (run_oracle.sh) ─────────────────────────────────────────
 ORACLE_BATCH_SIZE=4

@@ -40,8 +40,8 @@ import pandas as pd
 import requests
 
 # LLM judge configuration (defaults to local vLLM)
-DEFAULT_JUDGE_URL = "http://127.0.0.1:8192/v1/chat/completions"
-DEFAULT_JUDGE_MODEL = "gpt-oss-20b-mxfp4"
+DEFAULT_JUDGE_URL = "http://127.0.0.1:8125/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 

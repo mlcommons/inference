@@ -32,8 +32,8 @@ import requests
 
 
 # OpenRouter configuration
-DEFAULT_JUDGE_URL = "http://127.0.0.1:8123/v1/chat/completions"
-DEFAULT_JUDGE_MODEL = "gpt-oss-20b"
+DEFAULT_JUDGE_URL = "http://127.0.0.1:8125/v1/chat/completions"
+DEFAULT_JUDGE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 # Masked API key (set OPENROUTER_API_KEY environment variable to use
 # OpenRouter)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY',

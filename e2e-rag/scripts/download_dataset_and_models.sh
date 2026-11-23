@@ -18,6 +18,33 @@
 
 set -e
 
+# Download an MLCommons asset without the folders vLLM does not load
+# (original/ and metal/ weight copies, .git/). Uses the bucket's own .uri and
+# .md5 list, verifies every file, and skips files already downloaded.
+download_without_extras() {   # <asset name, as in metadata/<name>.uri>
+    local meta="https://inference.mlcommons-storage.org/metadata"
+    local base dir hash path
+    base=$(curl -sfL "${meta}/$1.uri")
+    dir="${base##*/}"
+    mkdir -p "${dir}"
+    curl -sfL "${meta}/$1.md5" | grep -v -E '/(original|metal|\.git)/' > "${dir}/$1.md5"
+    while read -r hash path; do
+        if [ -f "${dir}/${path}" ] && echo "${hash}  ${dir}/${path}" | md5sum -c --status; then
+            continue
+        fi
+        echo "  ${dir}/${path}"
+        mkdir -p "${dir}/$(dirname "${path}")"
+        # Resume a partial file; if it still fails the check, fetch it fresh.
+        curl -sfL --retry 3 -C - -o "${dir}/${path}" "${base}/${path}" || true
+        if ! echo "${hash}  ${dir}/${path}" | md5sum -c --status; then
+            rm -f "${dir}/${path}"
+            curl -sfL --retry 3 -o "${dir}/${path}" "${base}/${path}"
+            echo "${hash}  ${dir}/${path}" | md5sum -c --status || {
+                echo "ERROR: MD5 mismatch for ${dir}/${path}" >&2; exit 1; }
+        fi
+    done < "${dir}/$1.md5"
+}
+
 echo "============================================================"
 echo "E2E-RAG Dataset and Model Downloader"
 echo "============================================================"
@@ -26,10 +53,10 @@ echo "This script will download:"
 echo "  - FRAMES Dataset (~674KB)"
 echo "  - Embedding Model e5-base-v2 (~2.2GB)"
 echo "  - Reranker Model ColBERTv2.0 (~1.4GB)"
-echo "  - GPT-OSS-120B Model (~196GB)"
-echo "  - GPT-OSS-20B Model (~83GB)"
+echo "  - GPT-OSS-120B Model (~65GB)"
+echo "  - GPT-OSS-20B Model (~14GB)"
 echo ""
-echo "Total download size: ~283GB"
+echo "Total download size: ~83GB"
 echo "Ensure you have sufficient disk space before proceeding."
 echo ""
 
@@ -92,15 +119,13 @@ echo ""
 echo "============================================================"
 echo "Downloading GPT-OSS-120B Model"
 echo "============================================================"
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-    https://inference.mlcommons-storage.org/metadata/gpt-oss-model.uri
+download_without_extras gpt-oss-model
 
 echo ""
 echo "============================================================"
 echo "Downloading GPT-OSS-20B Model"
 echo "============================================================"
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-    https://inference.mlcommons-storage.org/metadata/gpt-oss-20B.uri
+download_without_extras gpt-oss-20B
 
 echo ""
 echo "============================================================"

@@ -115,7 +115,10 @@ def _corpus_set_sha256(db: "VectorDB") -> str:
         doc_id = db._vector_store.index_to_docstore_id[i]
         doc = db._vector_store.docstore.search(doc_id)
         per_passage.append(
-            hashlib.sha256(doc.page_content.encode("utf-8", errors="replace")).hexdigest()
+            hashlib.sha256(
+                doc.page_content.encode(
+                    "utf-8",
+                    errors="replace")).hexdigest()
         )
     h = hashlib.sha256()
     for ph in sorted(per_passage):
@@ -131,7 +134,11 @@ def _passage_hash_set(db: "VectorDB") -> set:
     for i in range(n):
         doc_id = db._vector_store.index_to_docstore_id[i]
         doc = db._vector_store.docstore.search(doc_id)
-        out.add(hashlib.sha256(doc.page_content.encode("utf-8", errors="replace")).hexdigest())
+        out.add(
+            hashlib.sha256(
+                doc.page_content.encode(
+                    "utf-8",
+                    errors="replace")).hexdigest())
     return out
 
 
@@ -143,7 +150,8 @@ def _index_params(db: "VectorDB") -> Dict:
     index = db._vector_store.index
     try:
         import faiss
-        base = faiss.downcast_index(index) if hasattr(faiss, "downcast_index") else index
+        base = faiss.downcast_index(index) if hasattr(
+            faiss, "downcast_index") else index
     except Exception:
         base = index
 
@@ -214,7 +222,11 @@ def _norm_url(u: str) -> str:
             u = u[len(pre):]
     if u.endswith(".html"):
         u = u[:-5]
-    u = u.replace("en.wikipedia.org/wiki/", "").replace("en.wikipedia.org_wiki_", "")
+    u = u.replace(
+        "en.wikipedia.org/wiki/",
+        "").replace(
+        "en.wikipedia.org_wiki_",
+        "")
     u = u.split("#")[0]
     return u.replace("/", "_").strip("_")
 
@@ -371,11 +383,14 @@ def verify_manifest(db_path: str, manifest_path: str,
     # 4. Top-K retrieval overlap vs reference queries (the tolerant gate).
     probe_top_k = manifest["probe_top_k"]
     cand_top = _gather_top_k(db, manifest["reference_queries"], probe_top_k)
-    ref_map = {r["index"]: r["top_k_urls"] for r in manifest["reference_top_k"]}
-    mean_ov, top1, nq, per_query = _overlap_vs_reference(cand_top, ref_map, probe_top_k)
+    ref_map = {r["index"]: r["top_k_urls"]
+               for r in manifest["reference_top_k"]}
+    mean_ov, top1, nq, per_query = _overlap_vs_reference(
+        cand_top, ref_map, probe_top_k)
 
     metrics["probe_queries_total"] = nq
-    metrics["probe_queries_full_match"] = sum(1 for _, ov, _, _ in per_query if ov >= 1.0)
+    metrics["probe_queries_full_match"] = sum(
+        1 for _, ov, _, _ in per_query if ov >= 1.0)
     metrics["retrieval_accuracy"] = mean_ov
     metrics["retrieval_top1_rate"] = top1
     metrics["retrieval_threshold"] = retrieval_threshold
@@ -454,12 +469,14 @@ def cmd_compare(args):
     ref_top = _gather_top_k(ref, queries, args.probe_k)
     cand_top = _gather_top_k(cand, queries, args.probe_k)
     ref_map = {r["index"]: r["top_k_urls"] for r in ref_top}
-    mean_ov, top1, nq, _ = _overlap_vs_reference(cand_top, ref_map, args.probe_k)
+    mean_ov, top1, nq, _ = _overlap_vs_reference(
+        cand_top, ref_map, args.probe_k)
     print(f"\n[compare] retrieval vs REF ({nq} queries, top-{args.probe_k}): "
           f"mean overlap={mean_ov:.3f} (threshold {args.retrieval_threshold}), "
           f"top-1 match={top1:.3f} [reported]")
     if mean_ov < args.retrieval_threshold:
-        failures.append(f"retrieval overlap {mean_ov:.3f} < {args.retrieval_threshold}")
+        failures.append(
+            f"retrieval overlap {mean_ov:.3f} < {args.retrieval_threshold}")
 
     if failures:
         print("\n[compare] NOT EQUIVALENT:")
@@ -479,7 +496,9 @@ def main():
         help="Generate a reference manifest from a DB.")
     pw.add_argument("--db", required=True)
     _add_model_args(pw, default="intfloat_e5-base-v2/e5-base-v2")
-    pw.add_argument("--dataset", default="frames-benchmark-dataset/frames_dataset.tsv")
+    pw.add_argument(
+        "--dataset",
+        default="frames-benchmark-dataset/frames_dataset.tsv")
     pw.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pw.add_argument("--output", required=True)
     pw.set_defaults(func=cmd_write)
@@ -509,7 +528,9 @@ def main():
     pc.add_argument("--ref", required=True)
     pc.add_argument("--db", required=True)
     _add_model_args(pc, default="intfloat_e5-base-v2/e5-base-v2")
-    pc.add_argument("--dataset", default="frames-benchmark-dataset/frames_dataset.tsv")
+    pc.add_argument(
+        "--dataset",
+        default="frames-benchmark-dataset/frames_dataset.tsv")
     pc.add_argument("--num-queries", type=int, default=NUM_PROBE_QUERIES)
     pc.add_argument("--probe-k", type=int, default=PROBE_TOP_K)
     pc.add_argument(

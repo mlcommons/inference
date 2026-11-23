@@ -314,7 +314,8 @@ class E2ESUT:
         # usage.completion_tokens for the final answer generation, captured above
         # as output_token_count. The human-readable answer is preserved
         # separately in results.json, so we only need a blob of the right length
-        # here; fall back to a whitespace-token estimate if the count is missing.
+        # here; fall back to a whitespace-token estimate if the count is
+        # missing.
         if output_token_count is None or output_token_count <= 0:
             output_token_count = max(1, len(answer.split()))
         token_ids = array.array('i', [0] * output_token_count)

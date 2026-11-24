@@ -59,7 +59,6 @@ class E2ESUT:
         no_rerank: bool = False,
         retrieval_strategy: str = "fixed_k",
         reasoning_effort: str = "medium",
-        perf_count: int = None,
         device: str = "auto",
         temperature: float = 1.0,
         max_retries: int = 5,
@@ -80,7 +79,6 @@ class E2ESUT:
             no_rerank: Skip reranking
             retrieval_strategy: Retrieval strategy
             reasoning_effort: LLM reasoning level
-            perf_count: Number of queries for performance testing
             device: Device to use
             temperature: LLM temperature
             max_retries: Max LLM call retries
@@ -97,7 +95,6 @@ class E2ESUT:
         self.no_rerank = no_rerank
         self.retrieval_strategy = retrieval_strategy
         self.reasoning_effort = reasoning_effort
-        self.perf_count = perf_count
         self.device = device
         self.temperature = temperature
         self.max_retries = max_retries
@@ -127,7 +124,8 @@ class E2ESUT:
 
         # Initialize QSL
         log.info("Initializing Query Sample Library...")
-        self.qsl = E2EQSLInMemory(dataset_path, perf_count)
+        self.qsl = E2EQSLInMemory(
+            dataset_path, getattr(args, "total_sample_count", 0))
 
         # Initialize database
         log.info("Initializing RAG database...")
@@ -199,7 +197,6 @@ class E2ESUT:
         self.results_lock = threading.Lock()
 
         # Thread pool for parallel query processing
-        # Use max_workers based on loadgen max_async_queries setting
         self.max_workers = max_workers
         self.thread_pool = ThreadPoolExecutor(max_workers=self.max_workers)
         log.info(f"Thread pool initialized with {self.max_workers} workers")

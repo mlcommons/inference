@@ -124,7 +124,7 @@ on first use; warm the cache before a timed run):
 | Variable | Default | Meaning |
 |---|---|---|
 | `INGESTION_DOC_DIR` | `doc_html` | HTML corpus |
-| `INGESTION_DB` | `vector_html_hnsw_len768_ov32_word` | database to build, **without** `.db` |
+| `INGESTION_DB` | `vector_html_hnsw_len768_ov32_word` | database to build |
 | `INGESTION_DEVICE` | `auto` | `auto`, `cuda`, `xpu`, `hpu` or `cpu` |
 | `INGESTION_NUM_EMBEDDING_DEVICES` | `1` | devices used for embedding |
 | `INGESTION_MAX_WORKERS` | `4` | parallel document workers |
@@ -134,14 +134,17 @@ on first use; warm the cache before a timed run):
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATABASE` | `vector_html_hnsw_len768_ov32_word.db` | database to query, **with** `.db` |
+| `DATABASE` | `vector_html_hnsw_len768_ov32_word.db` | database to query |
 | `QNA_MAX_WORKERS` | `10` | parallel questions in the SUT |
-| `MAX_ASYNC_QUERIES` | `10` | LoadGen dispatch (written into `user.conf`) |
-| `PERF_COUNT` | `824` | number of questions |
 | `MAX_ITERATIONS` | `5` | retrieval iterations (fixed by the rules) |
 | `MAX_SUB_QUERIES` | `3` | sub-queries per iteration |
 | `TOP_K_RETRIEVER` | `10` | passages retrieved per sub-query |
-| `PERF_CACHE_FILE` | `logs_result.json` | recorded LLM responses for performance runs |
+| `PERF_CACHE_FILE` | `logs_result.json` | recorded LLM responses; required for performance and TEST09 runs |
+
+Sample counts come from `user.conf` (824 questions, 2515 documents); a
+non-zero `TOTAL_SAMPLE_COUNT` overrides it with the first N questions for a
+short test. Every run issues each sample once
+(`performance_issue_unique = 1`).
 
 All runs write under `WORKSPACE_DIR` (default `/workspace`).
 
@@ -210,8 +213,8 @@ bash run_compliance_test09.sh
 TEST09 checks that the mean output length of the final answer in a
 performance run is within ±10% of the reference. It needs the TEST09 config
 from the inference repo (`compliance/TEST09/e2e-rag-qna/`, or set
-`COMPLIANCE_DIR`). Set `PERF_CACHE_FILE` so it replays the same responses as
-the performance run; it runs live when unset.
+`COMPLIANCE_DIR`) and replays `PERF_CACHE_FILE` like the performance run; it
+stops if the file is missing.
 
 ## 9. What you may and may not change
 
@@ -232,10 +235,9 @@ serving options are yours to tune.
 
 - **Model not found (HTTP 404) from an LLM server**: the client sends
   `<ROLE>_MODEL`; start the server with the same value (the launch script does).
-- **`Database not found`** in RAG-QnA: `DATABASE` needs the `.db` suffix;
-  `INGESTION_DB` must not have it.
-- **Performance run makes "real LLM calls" without replay**: `PERF_CACHE_FILE`
-  was not found; check the path.
+- **`ERROR: PERF_CACHE_FILE not found`** from a performance or TEST09 run:
+  point `PERF_CACHE_FILE` at the recorded responses (default
+  `logs_result.json`).
 - **HF id fails to load offline**: pre-fetch it (`hf download <id>`) or point
   `<X>_MODEL` at a local path.
 

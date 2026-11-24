@@ -46,12 +46,10 @@ export OUTPUT_DIR=${WORKSPACE_DIR}/output_test09
 export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag-qna/Offline
 export SCENARIO="${SCENARIO:-Offline}"
 
-# Performance testing - full dataset for compliance.
-# Overridable (e.g. for a smoke run); a valid TEST09 submission needs 824.
-export PERF_COUNT=${PERF_COUNT:-824}
+# Use the first N questions, overriding user.conf (0 = user.conf)
+export TOTAL_SAMPLE_COUNT=${TOTAL_SAMPLE_COUNT:-0}
 
 # Threading configuration
-export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
 export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
 
 # Multi-shot retrieval parameters
@@ -73,18 +71,17 @@ export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-${QUERY_MODEL}}
 export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
 export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
-# Performance cache file (optional - for faster testing)
-export PERF_CACHE_FILE=${PERF_CACHE_FILE:-""}
+# Recorded LLM responses (required)
+export PERF_CACHE_FILE=${PERF_CACHE_FILE:-logs_result.json}
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
-echo "  PERF_COUNT: ${PERF_COUNT}"
+echo "  TOTAL_SAMPLE_COUNT: ${TOTAL_SAMPLE_COUNT}"
 echo "  RUN_LOGS: ${RUN_LOGS}"
 echo "  OUTPUT_DIR: ${OUTPUT_DIR}"
 echo "  SUBMISSION_DIR: ${SUBMISSION_DIR}"
-echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES}"
 echo "  QNA_MAX_WORKERS: ${QNA_MAX_WORKERS}"
 echo ""
 
@@ -94,6 +91,11 @@ echo ""
 echo "=============================================================================="
 echo "PART I: Setup"
 echo "=============================================================================="
+
+if [ ! -f "${PERF_CACHE_FILE}" ]; then
+    echo "ERROR: PERF_CACHE_FILE not found: ${PERF_CACHE_FILE}"
+    exit 1
+fi
 
 # Verify audit.config exists
 if [ ! -f "${AUDIT_CONFIG}" ]; then
@@ -116,11 +118,11 @@ mkdir -p "${SUBMISSION_DIR}"
 # Copy audit.config to working directory
 echo "Copying audit.config to working directory..."
 cp "${AUDIT_CONFIG}" "${WORKING_AUDIT_CONFIG}"
-# Keep the audit.config's min_query_count in sync with PERF_COUNT. Otherwise
-# loadgen honors the config's min_query_count (824) and loops back up to it even
-# when PERF_COUNT is smaller (e.g. a smoke run). A real submission uses 824.
-sed -i "s/^\*\.\*\.min_query_count = .*/*.*.min_query_count = ${PERF_COUNT}/" "${WORKING_AUDIT_CONFIG}"
-echo "✓ audit.config copied to ${WORKING_AUDIT_CONFIG} (min_query_count=${PERF_COUNT})"
+# audit.config overrides the test settings, so carry TOTAL_SAMPLE_COUNT over.
+if [ "${TOTAL_SAMPLE_COUNT}" -gt 0 ]; then
+    sed -i "s/^\*\.\*\.min_query_count = .*/*.*.min_query_count = ${TOTAL_SAMPLE_COUNT}/" "${WORKING_AUDIT_CONFIG}"
+fi
+echo "✓ audit.config copied to ${WORKING_AUDIT_CONFIG}"
 echo ""
 
 # ============================================================================
@@ -132,12 +134,7 @@ echo "==========================================================================
 echo "Running MLPerf LoadGen with TEST09 compliance logging..."
 echo ""
 
-# Build perf cache argument if file exists
-PERF_CACHE_ARG=""
-if [ -n "${PERF_CACHE_FILE}" ] && [ -f "${PERF_CACHE_FILE}" ]; then
-    PERF_CACHE_ARG="--perf-test-mode ${PERF_CACHE_FILE}"
-    echo "Using cached LLM responses from: ${PERF_CACHE_FILE}"
-fi
+echo "Using cached LLM responses from: ${PERF_CACHE_FILE}"
 
 # Run loadgen performance test
 # reference_mlperf.py passes --audit_conf explicitly to StartTestWithLogSettings,
@@ -148,10 +145,10 @@ python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --total_sample_count ${TOTAL_SAMPLE_COUNT} \
     --audit_conf ${WORKING_AUDIT_CONFIG} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \
-    --perf_count ${PERF_COUNT} \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
@@ -166,7 +163,7 @@ python3 reference_mlperf.py \
     --sufficiency_model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
-    ${PERF_CACHE_ARG}
+    --perf-test-mode ${PERF_CACHE_FILE}
 
 TEST_EXIT_CODE=$?
 

@@ -84,10 +84,10 @@ def get_args():
         help="Path to frames_dataset.tsv"
     )
     parser.add_argument(
-        "--perf_count",
+        "--total_sample_count",
         type=int,
-        default=None,
-        help="Number of queries for performance testing (None = all)"
+        default=0,
+        help="Use the first N questions, overriding user.conf (0 = user.conf)"
     )
 
     # Multi-shot specific parameters (these are unique to
@@ -158,6 +158,9 @@ scenario_map = {
 def main():
     """Main entry point."""
     args = get_args()
+    # Accept the database with or without the .db suffix.
+    if not args.database.endswith(".db"):
+        args.database += ".db"
     print(f"Arguments: {args}")
 
     # Create log directories
@@ -179,7 +182,6 @@ def main():
         no_rerank=args.no_rerank,
         retrieval_strategy=args.retrieval_strategy,
         reasoning_effort=args.reasoning,
-        perf_count=args.perf_count,
         device=args.device,
         temperature=args.temperature,
         max_retries=args.max_retries,
@@ -203,6 +205,11 @@ def main():
     else:
         print(f"Warning: User config not found: {args.user_conf}")
         print("Using default loadgen settings")
+
+    if args.total_sample_count:
+        settings.min_query_count = sut.qsl.count
+        settings.performance_sample_count_override = sut.qsl.count
+        settings.accuracy_sample_count_override = sut.qsl.count
 
     # Set test mode
     if args.accuracy:

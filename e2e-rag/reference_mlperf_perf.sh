@@ -28,11 +28,11 @@ export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-qna/performance
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
-export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
 export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
 
-# Performance testing - limit queries
-export PERF_COUNT=${PERF_COUNT:-824}
+
+# Use the first N questions, overriding user.conf (0 = user.conf)
+export TOTAL_SAMPLE_COUNT=${TOTAL_SAMPLE_COUNT:-0}
 
 # Performance cache file (for cached LLM responses)
 export PERF_CACHE_FILE=${PERF_CACHE_FILE:-logs_result.json}
@@ -67,9 +67,8 @@ echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
-echo "  PERF_COUNT: ${PERF_COUNT}"
+echo "  TOTAL_SAMPLE_COUNT: ${TOTAL_SAMPLE_COUNT}"
 echo "  PERF_CACHE_FILE: ${PERF_CACHE_FILE}"
-echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (loadgen query dispatch)"
 echo "  QNA_MAX_WORKERS: ${QNA_MAX_WORKERS} (SUT thread pool)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
@@ -82,16 +81,11 @@ echo "  QUERY_MODEL: ${QUERY_MODEL}"
 echo "  JUDGE_SERVICE_URL: ${JUDGE_SERVICE_URL}"
 echo "  JUDGE_MODEL: ${JUDGE_MODEL}"
 
-# Update user.conf with threading configuration
-sed -i "s/^e2e-rag-qna.Offline.max_async_queries = .*/e2e-rag-qna.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
-
-# Build perf cache argument if file exists
-PERF_CACHE_ARG=""
-if [ -f "${PERF_CACHE_FILE}" ]; then
-    PERF_CACHE_ARG="--perf-test-mode ${PERF_CACHE_FILE}"
-    echo "  Using cached LLM responses from: ${PERF_CACHE_FILE}"
-else
-    echo "  No cache file found, will make real LLM calls"
+# A performance run replays the recorded LLM responses; without them the
+# trajectory is not the reference one and the run is not valid.
+if [ ! -f "${PERF_CACHE_FILE}" ]; then
+    echo "ERROR: PERF_CACHE_FILE not found: ${PERF_CACHE_FILE}" >&2
+    exit 1
 fi
 
 # Run loadgen performance test
@@ -99,9 +93,9 @@ python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --total_sample_count ${TOTAL_SAMPLE_COUNT} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \
-    --perf_count ${PERF_COUNT} \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \
@@ -116,7 +110,7 @@ python3 reference_mlperf.py \
     --sufficiency_model ${SUFFICIENCY_MODEL} \
     --judge_service_url ${JUDGE_SERVICE_URL} \
     --judge_model ${JUDGE_MODEL} \
-    ${PERF_CACHE_ARG}
+    --perf-test-mode ${PERF_CACHE_FILE}
 
 EXIT_CODE=$?
 

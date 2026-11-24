@@ -80,7 +80,7 @@ def get_args():
     parser.add_argument(
         "--database",
         default="vector_html_hnsw_len768_ov32_word",
-        help="Database name/path prefix (without .db extension)"
+        help="Database name/path prefix (a trailing .db is ignored)"
     )
 
     # Chunking configuration
@@ -164,6 +164,9 @@ scenario_map = {
 def main():
     """Main entry point."""
     args = get_args()
+    # Accept the database with or without the .db suffix.
+    if args.database.endswith(".db"):
+        args.database = args.database[:-len(".db")]
     print(f"Arguments: {args}")
 
     # Create log directories

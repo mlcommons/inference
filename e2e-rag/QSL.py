@@ -26,13 +26,13 @@ import mlperf_loadgen as lg
 class E2EQSL:
     """Query Sample Library for RAG-QnA multi-hop RAG benchmark."""
 
-    def __init__(self, dataset_path, perf_count=None, skip_qsl=False):
+    def __init__(self, dataset_path, total_sample_count=0, skip_qsl=False):
         """
         Initialize QSL by loading queries from frames_dataset.tsv.
 
         Args:
             dataset_path: Path to frames_dataset.tsv file
-            perf_count: Number of queries to use (None = all queries)
+            total_sample_count: Use the first N questions (0 = all)
             skip_qsl: If True, skip constructing the actual loadgen QSL object
         """
         # Load dataset
@@ -61,10 +61,8 @@ class E2EQSL:
             self.expected_urls.append(urls)
 
         self.count = len(self.queries)
-
-        # Limit to perf_count if specified
-        if perf_count is not None:
-            self.count = min(self.count, perf_count)
+        if total_sample_count:
+            self.count = min(self.count, total_sample_count)
             self.queries = self.queries[:self.count]
             self.ground_truth = self.ground_truth[:self.count]
             self.expected_urls = self.expected_urls[:self.count]
@@ -78,15 +76,12 @@ class E2EQSL:
         else:
             self.qsl = lg.ConstructQSL(
                 self.count,
-                self.count,  # perf_count = total count
+                self.count,  # performance_sample_count = all loaded
                 self.load_query_samples,
                 self.unload_query_samples
             )
 
         print(f"Dataset loaded: {self.count} queries")
-        if perf_count is not None:
-            print(
-                f"  (limited to first {perf_count} queries for performance testing)")
 
     def load_query_samples(self, sample_list):
         """
@@ -139,9 +134,9 @@ class E2EQSLInMemory(E2EQSL):
     For workloads where all queries fit in memory.
     """
 
-    def __init__(self, dataset_path, perf_count=None):
+    def __init__(self, dataset_path, total_sample_count=0):
         # Initialize parent with skip_qsl=False (we need the loadgen QSL!)
-        super().__init__(dataset_path, perf_count, skip_qsl=False)
+        super().__init__(dataset_path, total_sample_count, skip_qsl=False)
 
         # Pre-load all samples
         self.load_query_samples(range(self.count))
@@ -172,13 +167,13 @@ Loads queries from frames_dataset.tsv and provides them to MLPerf Loadgen.
 class E2EQSL:
     """Query Sample Library for RAG-QnA multi-hop RAG benchmark."""
 
-    def __init__(self, dataset_path, perf_count=None, skip_qsl=False):
+    def __init__(self, dataset_path, total_sample_count=0, skip_qsl=False):
         """
         Initialize QSL by loading queries from frames_dataset.tsv.
 
         Args:
             dataset_path: Path to frames_dataset.tsv file
-            perf_count: Number of queries to use (None = all queries)
+            total_sample_count: Use the first N questions (0 = all)
             skip_qsl: If True, skip constructing the actual loadgen QSL object
         """
         # Load dataset
@@ -207,10 +202,8 @@ class E2EQSL:
             self.expected_urls.append(urls)
 
         self.count = len(self.queries)
-
-        # Limit to perf_count if specified
-        if perf_count is not None:
-            self.count = min(self.count, perf_count)
+        if total_sample_count:
+            self.count = min(self.count, total_sample_count)
             self.queries = self.queries[:self.count]
             self.ground_truth = self.ground_truth[:self.count]
             self.expected_urls = self.expected_urls[:self.count]
@@ -224,15 +217,12 @@ class E2EQSL:
         else:
             self.qsl = lg.ConstructQSL(
                 self.count,
-                self.count,  # perf_count = total count
+                self.count,  # performance_sample_count = all loaded
                 self.load_query_samples,
                 self.unload_query_samples
             )
 
         print(f"Dataset loaded: {self.count} queries")
-        if perf_count is not None:
-            print(
-                f"  (limited to first {perf_count} queries for performance testing)")
 
     def load_query_samples(self, sample_list):
         """
@@ -285,9 +275,9 @@ class E2EQSLInMemory(E2EQSL):
     For workloads where all queries fit in memory.
     """
 
-    def __init__(self, dataset_path, perf_count=None):
+    def __init__(self, dataset_path, total_sample_count=0):
         # Initialize parent with skip_qsl=False (we need the loadgen QSL!)
-        super().__init__(dataset_path, perf_count, skip_qsl=False)
+        super().__init__(dataset_path, total_sample_count, skip_qsl=False)
 
         # Pre-load all samples
         self.load_query_samples(range(self.count))

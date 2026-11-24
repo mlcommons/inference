@@ -18,6 +18,7 @@ echo ""
 # Configuration
 export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
 export INGESTION_DB=${INGESTION_DB:-"vector_html_hnsw_len768_ov32_word"}
+INGESTION_DB="${INGESTION_DB%.db}"  # name without .db
 export DATASET=${DATASET:-"frames-benchmark-dataset/frames_dataset.tsv"}
 
 # Chunking configuration

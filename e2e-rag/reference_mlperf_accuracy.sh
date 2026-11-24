@@ -28,11 +28,12 @@ export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-qna/accuracy
 export SCENARIO="${SCENARIO:-Offline}"
 
 # Threading configuration
-export MAX_ASYNC_QUERIES=${MAX_ASYNC_QUERIES:-10}
 export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
 
 # Accuracy testing - use all queries (or specify subset)
-export PERF_COUNT=${PERF_COUNT:-824}  # Empty = all queries
+
+# Use the first N questions, overriding user.conf (0 = user.conf)
+export TOTAL_SAMPLE_COUNT=${TOTAL_SAMPLE_COUNT:-0}
 
 # Multi-shot retrieval parameters
 export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
@@ -69,31 +70,21 @@ echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
 echo "  DATABASE: ${DATABASE}"
 echo "  SCENARIO: ${SCENARIO}"
-echo "  PERF_COUNT: ${PERF_COUNT:-all queries}"
-echo "  MAX_ASYNC_QUERIES: ${MAX_ASYNC_QUERIES} (loadgen query dispatch)"
+echo "  TOTAL_SAMPLE_COUNT: ${TOTAL_SAMPLE_COUNT}"
 echo "  QNA_MAX_WORKERS: ${QNA_MAX_WORKERS} (SUT thread pool)"
 echo "  MAX_ITERATIONS: ${MAX_ITERATIONS}"
 echo "  MAX_SUB_QUERIES: ${MAX_SUB_QUERIES}"
 echo "  EMBEDDING_MODEL: ${EMBEDDING_MODEL}"
 echo "  RERANKER_MODEL: ${RERANKER_MODEL}"
 
-# Build perf_count argument
-PERF_COUNT_ARG=""
-if [ -n "${PERF_COUNT}" ]; then
-    PERF_COUNT_ARG="--perf_count ${PERF_COUNT}"
-fi
-
-# Update user.conf with threading configuration
-sed -i "s/^e2e-rag-qna.Offline.max_async_queries = .*/e2e-rag-qna.Offline.max_async_queries = ${MAX_ASYNC_QUERIES}/" user.conf
-
 # Run loadgen accuracy test
 python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --total_sample_count ${TOTAL_SAMPLE_COUNT} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \
-    ${PERF_COUNT_ARG} \
     --max-iterations ${MAX_ITERATIONS} \
     --max-sub-queries ${MAX_SUB_QUERIES} \
     --top_k_retriever ${TOP_K_RETRIEVER} \

@@ -22,6 +22,7 @@ echo "Time Start: $(date +%s)"
 export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
 export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
 export INGESTION_DB="${INGESTION_DB:-vector_html_hnsw_len768_ov32_word}"
+INGESTION_DB="${INGESTION_DB%.db}"  # name without .db
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-db/performance
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-db/performance
 export SCENARIO="${SCENARIO:-Offline}"
@@ -77,25 +78,7 @@ if [ ${HTML_COUNT} -eq 0 ]; then
     exit 1
 fi
 
-# Update user.conf to send all HTML files at once
-if [ -f "user.conf" ]; then
-    # Update max_async_queries to match HTML count (send all at once)
-    # Update min_query_count to match HTML count
-    if grep -q "e2e-rag-db.Offline.max_async_queries" user.conf; then
-        sed -i "s/^e2e-rag-db.Offline.max_async_queries = .*/e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}/" user.conf
-    else
-        echo "e2e-rag-db.Offline.max_async_queries = ${HTML_COUNT}" >> user.conf
-    fi
-
-    if grep -q "e2e-rag-db.Offline.min_query_count" user.conf; then
-        sed -i "s/^e2e-rag-db.Offline.min_query_count = .*/e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}/" user.conf
-    else
-        echo "e2e-rag-db.Offline.min_query_count = ${HTML_COUNT}" >> user.conf
-    fi
-
-    echo "  Loadgen configured to dispatch all ${HTML_COUNT} files at once"
-    echo "  SUT will process with ${INGESTION_MAX_WORKERS} parallel workers"
-fi
+echo "  LoadGen dispatches all ${HTML_COUNT} files at once; SUT uses ${INGESTION_MAX_WORKERS} workers"
 
 # Build benchmark argument
 BENCHMARK_ARG=""

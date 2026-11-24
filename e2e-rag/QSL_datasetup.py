@@ -61,7 +61,7 @@ class DatasetupQSL:
         else:
             self.qsl = lg.ConstructQSL(
                 self.count,
-                self.count,  # perf_count = total count
+                self.count,  # performance_sample_count = all loaded
                 self.load_query_samples,
                 self.unload_query_samples
             )

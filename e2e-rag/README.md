@@ -62,8 +62,8 @@ Inside the container (from `/workspace`):
 
 ```bash
 apt-get update && apt-get install -y python3 python3-pip git curl wget
-bash setup.sh             # Python requirements
-bash prepare_loadgen.sh   # builds and installs mlperf_loadgen
+bash scripts/setup/setup.sh             # Python requirements
+bash scripts/setup/prepare_loadgen.sh   # builds and installs mlperf_loadgen
 ```
 
 Python 3.9 or newer is required. The LLM servers run on vLLM; install your
@@ -72,7 +72,7 @@ vendor's vLLM build (or use its container).
 ## 3. Download models and data
 
 ```bash
-bash scripts/download_dataset_and_models.sh
+bash scripts/setup/download_dataset_and_models.sh
 ```
 
 Run it from this directory. It downloads the frozen MLCommons copies (~83 GB)
@@ -94,13 +94,13 @@ downloads it from Hugging Face (gated: accept the license and set `HF_TOKEN`).
 See [MLCOMMONS_ASSETS.md](MLCOMMONS_ASSETS.md) for individual downloads.
 
 > **Use the frozen corpus.** Build your vector database from `doc_html/`. Do
-> **not** re-scrape Wikipedia with `download_docs.py`: the live pages have
+> **not** re-scrape Wikipedia with `ingestion/download_docs.py`: the live pages have
 > changed and will not reproduce the reference corpus or pass DB-manifest
-> verification. `download_docs.py` is only for regenerating the snapshot.
+> verification. `ingestion/download_docs.py` is only for regenerating the snapshot.
 
 ## 4. Configure
 
-Every run script and `scripts/launch_llm_server.sh` load `config.sh` (yours,
+Every run script and `scripts/servers/launch_llm_server.sh` load `config.sh` (yours,
 optional: copy `config.template.sh`) and then `config.default.sh`, which holds
 the defaults below. An exported variable wins over both.
 
@@ -151,13 +151,13 @@ All runs write under `WORKSPACE_DIR` (default `/workspace`).
 
 ## 5. Start the LLM servers
 
-Start the three vLLM servers with `scripts/launch_llm_server.sh`, one call per
+Start the three vLLM servers with `scripts/servers/launch_llm_server.sh`, one call per
 server:
 
 ```bash
-DEVICES=0,1,2,3 bash scripts/launch_llm_server.sh query
-DEVICES=4,5     bash scripts/launch_llm_server.sh grader
-DEVICES=6       bash scripts/launch_llm_server.sh judge    # accuracy runs only
+DEVICES=0,1,2,3 bash scripts/servers/launch_llm_server.sh query
+DEVICES=4,5     bash scripts/servers/launch_llm_server.sh grader
+DEVICES=6       bash scripts/servers/launch_llm_server.sh judge    # accuracy runs only
 ```
 
 `DEVICES` selects the accelerators. The script detects the vendor and exports
@@ -179,14 +179,14 @@ answers on its port. The model and port come from `<ROLE>_MODEL` and
 ## 6. Build the vector database (RAG-DB)
 
 ```bash
-bash reference_mlperf_datasetup.sh            # performance
-bash reference_mlperf_datasetup_accuracy.sh   # accuracy: build, then verify
+bash scripts/run_ingestion_perf.sh            # performance
+bash scripts/run_ingestion_accuracy.sh   # accuracy: build, then verify
 ```
 
 Both build `${INGESTION_DB}.db` and `${INGESTION_DB}_data/`. The accuracy run
 then verifies the database: the MD5 reported by the run matches the saved
 file, and the reference manifest (`MANIFEST`, default
-`scripts/db_manifest_intel_xpu.json.gz`) matches in passage count, embedding
+`scripts/db/db_manifest_intel_xpu.json.gz`) matches in passage count, embedding
 dimension and top-K retrieval overlap. Logs go to
 `${WORKSPACE_DIR}/run_output_e2e-rag-db/{performance,accuracy}`.
 
@@ -195,20 +195,20 @@ dimension and top-K retrieval overlap. Logs go to
 Start the query and grader servers first (and the judge for accuracy).
 
 ```bash
-bash reference_mlperf_perf.sh       # performance: replays PERF_CACHE_FILE
-bash reference_mlperf_accuracy.sh   # accuracy: live LLM responses + judge
+bash scripts/run_qna_perf.sh       # performance: replays PERF_CACHE_FILE
+bash scripts/run_qna_accuracy.sh   # accuracy: live LLM responses + judge
 ```
 
 LoadGen logs go to `${WORKSPACE_DIR}/run_output_e2e-rag-qna/{performance,accuracy}`
 and results to `${WORKSPACE_DIR}/output_e2e-rag-qna/{performance,accuracy}`.
-Accuracy runs score `results.json` with the judge (`accuracy_eval.py`) and
+Accuracy runs score `results.json` with the judge (`evaluation/accuracy_eval_qna.py`) and
 write `accuracy.txt` to the log directory. Only the Offline scenario is
 configured (`user.conf`).
 
 ## 8. Compliance: TEST09
 
 ```bash
-bash run_compliance_test09.sh
+bash scripts/run_compliance_test09.sh
 ```
 
 TEST09 checks that the mean output length of the final answer in a

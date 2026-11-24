@@ -5,7 +5,7 @@ All required models and datasets for the E2E-RAG benchmark are hosted on MLCommo
 ## Quick Download All Assets
 
 ```bash
-bash scripts/download_dataset_and_models.sh
+bash scripts/setup/download_dataset_and_models.sh
 ```
 
 Total download size: **~83GB**
@@ -87,7 +87,7 @@ Large language model for answer generation, query rewriting, and sufficiency che
   - Sufficiency checking (deciding if enough info is retrieved)
 - **Default location:** `gpt-oss_model/gpt-oss-120b/`
 
-**Download:** `scripts/download_dataset_and_models.sh` fetches only the files
+**Download:** `scripts/setup/download_dataset_and_models.sh` fetches only the files
 vLLM loads, verified against the bucket's MD5 list. It skips the `original/`
 and `metal/` weight copies that the bucket also holds; the generic
 MLCommons downloader (`.../metadata/gpt-oss-model.uri`) would fetch everything.
@@ -104,7 +104,7 @@ MLCommons downloader (`.../metadata/gpt-oss-model.uri`) would fetch everything.
 
 **vLLM Server:**
 ```bash
-DEVICES=0,1,2,3 bash scripts/launch_llm_server.sh query
+DEVICES=0,1,2,3 bash scripts/servers/launch_llm_server.sh query
 ```
 
 ---
@@ -119,7 +119,7 @@ Smaller language model for document relevance grading.
   - Fast classification tasks in multi-shot retrieval
 - **Default location:** `gpt-oss-20B/gpt-oss-20b/`
 
-**Download:** `scripts/download_dataset_and_models.sh` fetches only the files
+**Download:** `scripts/setup/download_dataset_and_models.sh` fetches only the files
 vLLM loads, verified against the bucket's MD5 list. It skips the `original/`
 and `metal/` weight copies and `.git/` that the bucket also holds; the generic
 MLCommons downloader (`.../metadata/gpt-oss-20B.uri`) would fetch everything.
@@ -135,7 +135,7 @@ MLCommons downloader (`.../metadata/gpt-oss-20B.uri`) would fetch everything.
 
 **vLLM Server:**
 ```bash
-DEVICES=4,5 bash scripts/launch_llm_server.sh grader
+DEVICES=4,5 bash scripts/servers/launch_llm_server.sh grader
 ```
 
 ---
@@ -151,7 +151,7 @@ Scores answers in accuracy runs; not needed for performance runs.
 
 **vLLM Server:**
 ```bash
-DEVICES=6 bash scripts/launch_llm_server.sh judge
+DEVICES=6 bash scripts/servers/launch_llm_server.sh judge
 ```
 
 ---
@@ -198,7 +198,7 @@ DEVICES=6 bash scripts/launch_llm_server.sh judge
   - GPT-OSS-120B: ~65GB (MXFP4)
   - GPT-OSS-20B: ~13GB (MXFP4)
   - Llama-3.1-8B judge: ~16GB (BF16)
-- Run the three servers on separate devices (see `scripts/launch_llm_server.sh`)
+- Run the three servers on separate devices (see `scripts/servers/launch_llm_server.sh`)
 
 ---
 

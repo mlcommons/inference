@@ -21,13 +21,13 @@ SUFFICIENCY_MODEL="${SUFFICIENCY_MODEL:-${QUERY_MODEL}}"
 GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}"
 JUDGE_MODEL="${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 
-# ── LLM endpoints (scripts/launch_llm_server.sh serves on these ports) ────────
+# ── LLM endpoints (scripts/servers/launch_llm_server.sh serves on these) ─────
 QUERY_SERVICE_URL="${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}"
 SUFFICIENCY_SERVICE_URL="${SUFFICIENCY_SERVICE_URL:-${QUERY_SERVICE_URL}}"
 GRADER_SERVICE_URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
 JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}"
 
-# ── RAG-DB (reference_mlperf_datasetup*.sh, run_datasetup_kpi.sh) ────────────
+# ── RAG-DB (scripts/run_ingestion_{perf,accuracy}.sh) ─────────────────────────
 INGESTION_DOC_DIR="${INGESTION_DOC_DIR:-doc_html}"
 INGESTION_CHUNK_SIZE="${INGESTION_CHUNK_SIZE:-768}"
 INGESTION_CHUNK_OVERLAP="${INGESTION_CHUNK_OVERLAP:-32}"
@@ -41,11 +41,11 @@ INGESTION_VECTOR_INDEX_METHOD="${INGESTION_VECTOR_INDEX_METHOD:-hnsw}"
 INGESTION_BENCHMARK="${INGESTION_BENCHMARK:-false}"
 
 # DB verification against the reference manifest (empty MANIFEST: skip)
-MANIFEST="${MANIFEST-scripts/db_manifest_intel_xpu.json.gz}"
+MANIFEST="${MANIFEST-scripts/db/db_manifest_intel_xpu.json.gz}"
 COSINE_THRESHOLD="${COSINE_THRESHOLD:-0.9999}"
 TOP_K_DEPTH="${TOP_K_DEPTH:-3}"
 
-# ── RAG-QnA (reference_mlperf_{perf,accuracy}.sh, run_compliance_test09.sh) ──
+# ── RAG-QnA (scripts/run_qna_{perf,accuracy}.sh, run_compliance_test09.sh) ───
 DATABASE="${DATABASE:-${INGESTION_DB}.db}"
 SCENARIO="${SCENARIO:-Offline}"
 QNA_DEVICE="${QNA_DEVICE:-auto}"                    # auto, cuda, xpu, hpu, cpu

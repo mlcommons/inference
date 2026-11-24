@@ -100,8 +100,9 @@ See [MLCOMMONS_ASSETS.md](MLCOMMONS_ASSETS.md) for individual downloads.
 
 ## 4. Configure
 
-The run scripts read environment variables with the defaults below; export the
-ones you want to change.
+Every run script and `scripts/launch_llm_server.sh` load `config.sh` (yours,
+optional: copy `config.template.sh`) and then `config.default.sh`, which holds
+the defaults below. An exported variable wins over both.
 
 **Models** — each `<X>_MODEL` is a local path or a Hugging Face id (downloaded
 on first use; warm the cache before a timed run):

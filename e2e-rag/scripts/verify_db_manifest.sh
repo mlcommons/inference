@@ -20,15 +20,14 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
 CONFIG="${CONFIG:-config.sh}"
-if [[ -f "${CONFIG}" ]]; then
+if [ -f "${CONFIG}" ]; then
     source "${CONFIG}"
-else
-    echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
-
-DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
-EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
+source config.default.sh
+set +a
 
 MANIFEST="$1"
 RETRIEVAL_THRESHOLD="${2:-0.95}"

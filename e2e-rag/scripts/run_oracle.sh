@@ -18,12 +18,14 @@
 
 set -e
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
 CONFIG="${CONFIG:-config.sh}"
-if [[ -f "${CONFIG}" ]]; then
+if [ -f "${CONFIG}" ]; then
     source "${CONFIG}"
-else
-    echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
+source config.default.sh
+set +a
 
 # The oracle answers from the gold articles, so it uses the answer model (120B).
 ORACLE_SERVICE_URL="${ORACLE_SERVICE_URL:-${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}}"
@@ -31,10 +33,7 @@ ORACLE_MODEL="${ORACLE_MODEL:-${SUFFICIENCY_MODEL:-gpt-oss_model/gpt-oss-120b}}"
 N_QUERIES="${N_QUERIES:-5}"
 ORACLE_BATCH_SIZE="${ORACLE_BATCH_SIZE:-4}"
 ORACLE_TIMEOUT="${ORACLE_TIMEOUT:-2400}"
-ORACLE_DATASET="${ORACLE_DATASET:-frames-benchmark-dataset/frames_dataset.tsv}"
 ORACLE_WIKI_DIR="${ORACLE_WIKI_DIR:-wiki_articles}"
-JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-${ORACLE_SERVICE_URL}}"
-JUDGE_MODEL="${JUDGE_MODEL:-${ORACLE_MODEL}}"
 
 THINKING_FLAG=""
 if [[ "${ORACLE_ENABLE_THINKING}" == "1" ]]; then
@@ -56,7 +55,7 @@ LOG_FILE="oracle_${TAG}.log"
 
 echo "=== Oracle E2E evaluation ==="
 echo "  Model:       ${ORACLE_MODEL}"
-echo "  Dataset:     ${ORACLE_DATASET}"
+echo "  Dataset:     ${DATASET_PATH}"
 echo "  Wiki dir:    ${ORACLE_WIKI_DIR}"
 echo "  Queries:     ${N_QUERIES}"
 echo "  Checkpoint:  ${CHECKPOINT}"
@@ -64,7 +63,7 @@ echo ""
 
 echo "=== Step 1: Generating answers with oracle documents ==="
 python3 -u oracle_single_shot.py \
-    --dataset "${ORACLE_DATASET}" \
+    --dataset "${DATASET_PATH}" \
     --wiki-articles-dir "${ORACLE_WIKI_DIR}" \
     --checkpoint-file "${CHECKPOINT}" \
     --service-url "${ORACLE_SERVICE_URL}" \
@@ -78,7 +77,7 @@ python3 -u oracle_single_shot.py \
 echo ""
 echo "=== Step 2: Scoring with LLM judge ==="
 python3 -u evaluate.py "${CHECKPOINT}" \
-    --dataset "${ORACLE_DATASET}" \
+    --dataset "${DATASET_PATH}" \
     --judge_service_url "${JUDGE_SERVICE_URL}" \
     --judge_model "${JUDGE_MODEL}" \
     --batch-size 4 \

@@ -15,22 +15,14 @@
 
 set -e
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
 CONFIG="${CONFIG:-config.sh}"
-if [[ -f "${CONFIG}" ]]; then
+if [ -f "${CONFIG}" ]; then
     source "${CONFIG}"
-else
-    echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
-
-INGESTION_DEVICE="${INGESTION_DEVICE:-cpu}"
-INGESTION_EMBEDDING_DEVICE="${INGESTION_EMBEDDING_DEVICE:-${INGESTION_DEVICE}}"
-INGESTION_NUM_EMBEDDING_DEVICES="${INGESTION_NUM_EMBEDDING_DEVICES:-4}"
-INGESTION_CHUNK_SIZE="${INGESTION_CHUNK_SIZE:-768}"
-INGESTION_CHUNK_OVERLAP="${INGESTION_CHUNK_OVERLAP:-32}"
-EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
-INGESTION_DOC_DIR="${INGESTION_DOC_DIR:-doc_html}"
-INGESTION_PASSAGES_JSON="${INGESTION_PASSAGES_JSON:-passages/doc_html_len${INGESTION_CHUNK_SIZE}_ov${INGESTION_CHUNK_OVERLAP}_word.json}"
-INGESTION_DB="${INGESTION_DB:-vector_html_hnsw_len${INGESTION_CHUNK_SIZE}_ov${INGESTION_CHUNK_OVERLAP}_word}"
+source config.default.sh
+set +a
 
 echo "=== Step 1: Extract passages from HTML documents ==="
 mkdir -p "$(dirname "${INGESTION_PASSAGES_JSON}")"

@@ -19,7 +19,7 @@
 # Examples:
 #   bash run_variation_test.sh 50 10
 #   N_RUNS=5 VARIATION_THRESHOLD=0.10 bash run_variation_test.sh 50 10
-#   PERF_CACHE_FILE=logs_result.json bash run_variation_test.sh 50 10
+#   MODE=perf bash run_variation_test.sh 50 10   # replay PERF_CACHE_FILE
 # =============================================================================
 
 set -euo pipefail
@@ -28,12 +28,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
 CONFIG="${CONFIG:-config.sh}"
-if [[ -f "${CONFIG}" ]]; then
+if [ -f "${CONFIG}" ]; then
     source "${CONFIG}"
-else
-    echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
+source config.default.sh
+set +a
 
 N_QUERIES="${1:-50}"
 NUM_WORKERS="${2:-10}"
@@ -79,7 +81,7 @@ log "  Workers           : ${NUM_WORKERS}"
 log "  Baseline runs     : ${N_RUNS}"
 log "  Variation threshold (relative spread): $(python3 -c "print(f'{${VARIATION_THRESHOLD}*100:.0f}%')")"
 log "  Output dir        : ${VARIATION_DIR}/"
-if [[ -n "${PERF_CACHE_FILE:-}" ]]; then
+if [[ "${MODE:-accuracy}" == "perf" ]]; then
     log "  Perf-test mode    : ${PERF_CACHE_FILE}"
 fi
 log "================================================================"

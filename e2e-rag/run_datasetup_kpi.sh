@@ -15,34 +15,23 @@ echo "============================================================"
 echo "Time Start: $(date +%s)"
 echo ""
 
-# Configuration
-export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
-export INGESTION_DB=${INGESTION_DB:-"vector_html_hnsw_len768_ov32_word"}
-INGESTION_DB="${INGESTION_DB%.db}"  # name without .db
-export DATASET=${DATASET:-"frames-benchmark-dataset/frames_dataset.tsv"}
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
+CONFIG="${CONFIG:-config.sh}"
+if [ -f "${CONFIG}" ]; then
+    source "${CONFIG}"
+fi
+source config.default.sh
+set +a
 
 # Chunking configuration
-export INGESTION_CHUNK_SIZE=${INGESTION_CHUNK_SIZE:-768}
-export INGESTION_CHUNK_OVERLAP=${INGESTION_CHUNK_OVERLAP:-32}
-export INGESTION_TEXT_BOUNDARY=${INGESTION_TEXT_BOUNDARY:-"word"}
 export CHUNKING_PROCESSES=${CHUNKING_PROCESSES:-4}
-
-# Vector database configuration
-export INGESTION_VECTOR_INDEX_METHOD=${INGESTION_VECTOR_INDEX_METHOD:-"hnsw"}
-export INGESTION_DEVICE=${INGESTION_DEVICE:-"auto"}
-export INGESTION_NUM_EMBEDDING_DEVICES=${INGESTION_NUM_EMBEDDING_DEVICES:-1}
-
-# Model paths (use local downloaded models)
-export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
 
 # Performance options
 export LOAD_EMBEDDINGS=${LOAD_EMBEDDINGS:-false}
-export INGESTION_BENCHMARK=${INGESTION_BENCHMARK:-false}
 export HIERARCHICAL=${HIERARCHICAL:-false}
 
 # Manifest options
-export MANIFEST_FILE=${MANIFEST_FILE:-"scripts/db_manifest_intel_xpu.json.gz"}
 export SKIP_MANIFEST_VERIFY=${SKIP_MANIFEST_VERIFY:-false}
 export CREATE_MANIFEST=${CREATE_MANIFEST:-false}
 
@@ -67,7 +56,7 @@ echo "  CHUNKING_PROCESSES: ${CHUNKING_PROCESSES}"
 echo "  INGESTION_VECTOR_INDEX_METHOD: ${INGESTION_VECTOR_INDEX_METHOD}"
 echo "  INGESTION_DEVICE: ${INGESTION_DEVICE}"
 echo "  INGESTION_NUM_EMBEDDING_DEVICES: ${INGESTION_NUM_EMBEDDING_DEVICES}"
-echo "  MANIFEST_FILE: ${MANIFEST_FILE}"
+echo "  MANIFEST: ${MANIFEST}"
 echo "  CREATE_MANIFEST: ${CREATE_MANIFEST}"
 echo "  FINAL_OUTPUT: ${FINAL_OUTPUT}"
 echo "============================================================"
@@ -151,7 +140,7 @@ if [ "${CREATE_MANIFEST}" = "true" ]; then
     python3 db_manifest.py write \
         --db ${INGESTION_DB} \
         --embedding_model ${EMBEDDING_MODEL} \
-        --dataset ${DATASET} \
+        --dataset ${DATASET_PATH} \
         --output ${MANIFEST_OUTPUT}
 
     MANIFEST_CREATE_EXIT=$?
@@ -172,14 +161,14 @@ MANIFEST_VERIFY_DETAILS=""
 MANIFEST_CHECKS_PASSED=0
 MANIFEST_CHECKS_TOTAL=0
 
-if [ -f "${MANIFEST_FILE}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
+if [ -f "${MANIFEST}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
     echo "============================================================"
     echo "STEP 2/3: Database Correctness Verification"
     echo "============================================================"
     echo ""
 
-    if [ ! -f "${MANIFEST_FILE}" ]; then
-        echo "⚠️  Manifest file not found: ${MANIFEST_FILE}"
+    if [ ! -f "${MANIFEST}" ]; then
+        echo "⚠️  Manifest file not found: ${MANIFEST}"
         echo "   Skipping verification"
         MANIFEST_VERIFY_RESULT="manifest_not_found"
     else
@@ -188,7 +177,7 @@ if [ -f "${MANIFEST_FILE}" ] && [ "${SKIP_MANIFEST_VERIFY}" != "true" ]; then
         # Run verification and capture output
         VERIFY_OUTPUT=$(python3 db_manifest.py verify \
             --db ${INGESTION_DB} \
-            --manifest ${MANIFEST_FILE} 2>&1)
+            --manifest ${MANIFEST} 2>&1)
         VERIFY_EXIT=$?
 
         VERIFY_END=$(date +%s)
@@ -224,8 +213,8 @@ else
     echo "STEP 2/3: Database Correctness Verification - SKIPPED"
     echo "============================================================"
     echo ""
-    if [ ! -f "${MANIFEST_FILE}" ]; then
-        echo "Manifest file not found: ${MANIFEST_FILE}"
+    if [ ! -f "${MANIFEST}" ]; then
+        echo "Manifest file not found: ${MANIFEST}"
     else
         echo "Verification skipped (SKIP_MANIFEST_VERIFY=true)"
     fi
@@ -265,7 +254,7 @@ result = {
         "mode": "complete_pipeline",
         "input_source": "${INGESTION_DOC_DIR}",
         "database": "${INGESTION_DB}",
-        "dataset": "${DATASET}",
+        "dataset": "${DATASET_PATH}",
         "vector_index_method": "${INGESTION_VECTOR_INDEX_METHOD}",
         "device": "${INGESTION_DEVICE}",
         "num_embedding_devices": int("${INGESTION_NUM_EMBEDDING_DEVICES}"),
@@ -291,7 +280,7 @@ result = {
 
     "validation": {
         "status": "${MANIFEST_VERIFY_RESULT}",
-        "manifest_file": "${MANIFEST_FILE}" if "${MANIFEST_FILE}" else None,
+        "manifest_file": "${MANIFEST}" if "${MANIFEST}" else None,
         "checks_passed": int("${MANIFEST_CHECKS_PASSED}"),
         "checks_total": int("${MANIFEST_CHECKS_TOTAL}"),
         "details": """${MANIFEST_VERIFY_DETAILS}""" if "${MANIFEST_VERIFY_DETAILS}" else None

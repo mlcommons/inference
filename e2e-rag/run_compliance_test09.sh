@@ -27,6 +27,16 @@ echo ""
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
+CONFIG="${CONFIG:-config.sh}"
+if [ -f "${CONFIG}" ]; then
+    source "${CONFIG}"
+fi
+source config.default.sh
+set +a
+
 # The TEST09 config comes from the main inference repo's compliance tree.
 # Copy compliance/TEST09/e2e-rag-qna/ into this directory before running
 # (e.g. when e2e-rag is mounted standalone into a container), or override
@@ -37,42 +47,9 @@ WORKING_AUDIT_CONFIG="${SCRIPT_DIR}/audit.config"
 TEST09_VERIFICATION="${SCRIPT_DIR}/third_party/mlperf-inference/compliance/TEST09/run_verification.py"
 
 # Directories
-export WORKSPACE_DIR=${WORKSPACE_DIR:-"${SCRIPT_DIR}"}
-export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
-export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
-export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_test09
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_test09
 export SUBMISSION_DIR=${WORKSPACE_DIR}/submission/compliance/e2e-rag-qna/Offline
-export SCENARIO="${SCENARIO:-Offline}"
-
-# Use the first N questions, overriding user.conf (0 = user.conf)
-export TOTAL_SAMPLE_COUNT=${TOTAL_SAMPLE_COUNT:-0}
-
-# Threading configuration
-export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
-
-# Multi-shot retrieval parameters
-export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
-export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
-export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
-
-# Model paths
-export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
-
-# LLM service configuration
-export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}
-export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss_model/gpt-oss-120b}
-export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-${QUERY_MODEL}}
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
-
-# Recorded LLM responses (required)
-export PERF_CACHE_FILE=${PERF_CACHE_FILE:-logs_result.json}
 
 echo "Configuration:"
 echo "  DATASET_PATH: ${DATASET_PATH}"
@@ -118,6 +95,7 @@ mkdir -p "${SUBMISSION_DIR}"
 # Copy audit.config to working directory
 echo "Copying audit.config to working directory..."
 cp "${AUDIT_CONFIG}" "${WORKING_AUDIT_CONFIG}"
+
 # audit.config overrides the test settings, so carry TOTAL_SAMPLE_COUNT over.
 if [ "${TOTAL_SAMPLE_COUNT}" -gt 0 ]; then
     sed -i "s/^\*\.\*\.min_query_count = .*/*.*.min_query_count = ${TOTAL_SAMPLE_COUNT}/" "${WORKING_AUDIT_CONFIG}"
@@ -145,6 +123,7 @@ python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --device ${QNA_DEVICE} \
     --total_sample_count ${TOTAL_SAMPLE_COUNT} \
     --audit_conf ${WORKING_AUDIT_CONFIG} \
     --log_dir ${RUN_LOGS} \

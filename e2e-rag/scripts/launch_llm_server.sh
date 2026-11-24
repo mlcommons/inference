@@ -38,19 +38,28 @@
 set -e
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
+CONFIG="${CONFIG:-config.sh}"
+if [ -f "${CONFIG}" ]; then
+    source "${CONFIG}"
+fi
+source config.default.sh
+set +a
+
 ROLE="${1:-}"
 shift || true
 
 case "${ROLE}" in
     query)
-        MODEL="${QUERY_MODEL:-gpt-oss_model/gpt-oss-120b}"
-        URL="${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}" ;;
+        MODEL="${QUERY_MODEL}"
+        URL="${QUERY_SERVICE_URL}" ;;
     grader)
-        MODEL="${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}"
-        URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}" ;;
+        MODEL="${GRADER_MODEL}"
+        URL="${GRADER_SERVICE_URL}" ;;
     judge)
-        MODEL="${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
-        URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}" ;;
+        MODEL="${JUDGE_MODEL}"
+        URL="${JUDGE_SERVICE_URL}" ;;
     *)
         echo "Usage: bash scripts/launch_llm_server.sh <query|grader|judge> [extra vllm serve args...]" >&2
         exit 1 ;;

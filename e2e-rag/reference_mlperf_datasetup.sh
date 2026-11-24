@@ -18,34 +18,18 @@
 
 echo "Time Start: $(date +%s)"
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
+CONFIG="${CONFIG:-config.sh}"
+if [ -f "${CONFIG}" ]; then
+    source "${CONFIG}"
+fi
+source config.default.sh
+set +a
+
 # Configuration
-export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
-export INGESTION_DOC_DIR=${INGESTION_DOC_DIR:-"doc_html"}
-export INGESTION_DB="${INGESTION_DB:-vector_html_hnsw_len768_ov32_word}"
-INGESTION_DB="${INGESTION_DB%.db}"  # name without .db
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-db/performance
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-db/performance
-export SCENARIO="${SCENARIO:-Offline}"
-
-# Chunking configuration
-export INGESTION_CHUNK_SIZE=${INGESTION_CHUNK_SIZE:-768}
-export INGESTION_CHUNK_OVERLAP=${INGESTION_CHUNK_OVERLAP:-32}
-export INGESTION_TEXT_BOUNDARY=${INGESTION_TEXT_BOUNDARY:-"word"}
-
-# Model paths (use local downloaded models)
-export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
-
-# Device configuration
-export INGESTION_DEVICE=${INGESTION_DEVICE:-"auto"}
-export INGESTION_NUM_EMBEDDING_DEVICES=${INGESTION_NUM_EMBEDDING_DEVICES:-1}
-
-# Vector database configuration
-export INGESTION_VECTOR_INDEX_METHOD=${INGESTION_VECTOR_INDEX_METHOD:-"hnsw"}
-
-# Performance options
-export INGESTION_BENCHMARK=${INGESTION_BENCHMARK:-false}
-export INGESTION_MAX_WORKERS=${INGESTION_MAX_WORKERS:-4}  # Parallel processing (4 threads)
 
 echo "Configuration:"
 echo "  INGESTION_DOC_DIR: ${INGESTION_DOC_DIR}"

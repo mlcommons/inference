@@ -17,24 +17,16 @@
 
 set -e
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
 CONFIG="${CONFIG:-config.sh}"
-if [[ -f "${CONFIG}" ]]; then
+if [ -f "${CONFIG}" ]; then
     source "${CONFIG}"
-else
-    echo "WARNING: ${CONFIG} not found; using built-in defaults" >&2
 fi
+source config.default.sh
+set +a
 
-QNA_DEVICE="${QNA_DEVICE:-cpu}"
-QNA_EMBEDDING_DEVICE="${QNA_EMBEDDING_DEVICE:-${QNA_DEVICE}}"
-RERANKER_DEVICE="${RERANKER_DEVICE:-${QNA_DEVICE}}"
-DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word}"
-EMBEDDING_MODEL="${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}"
-TOP_K_RETRIEVER="${TOP_K_RETRIEVER:-10}"
 N_QUERIES="${N_QUERIES:-5}"
-GRADER_SERVICE_URL="${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}"
-GRADER_MODEL="${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}"
-JUDGE_SERVICE_URL="${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}"
-JUDGE_MODEL="${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
 
 N_QUERIES="${1:-${N_QUERIES}}"
 
@@ -80,7 +72,7 @@ if [[ -f "${RESULT_JSON}" ]]; then
     echo ""
     echo "=== Scoring with LLM judge ==="
     python3 -u evaluate.py "${RESULT_JSON}" \
-        --dataset "${DATASET:-frames-benchmark-dataset/frames_dataset.tsv}" \
+        --dataset "${DATASET_PATH}" \
         --judge_service_url "${JUDGE_SERVICE_URL}" \
         --judge_model "${JUDGE_MODEL}" \
         --batch-size 4

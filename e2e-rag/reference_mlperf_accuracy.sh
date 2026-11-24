@@ -18,49 +18,18 @@
 
 echo "Time Start: $(date +%s)"
 
+# Settings: env var > config.sh (optional) > config.default.sh
+set -a
+CONFIG="${CONFIG:-config.sh}"
+if [ -f "${CONFIG}" ]; then
+    source "${CONFIG}"
+fi
+source config.default.sh
+set +a
+
 # Configuration
-export WORKSPACE_DIR=${WORKSPACE_DIR:-"/workspace"}
-export DATA_DIR=${DATA_DIR:-"frames-benchmark-dataset"}
-export DATASET_PATH="${DATA_DIR}/frames_dataset.tsv"
-export DATABASE="${DATABASE:-vector_html_hnsw_len768_ov32_word.db}"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output_e2e-rag-qna/accuracy
 export OUTPUT_DIR=${WORKSPACE_DIR}/output_e2e-rag-qna/accuracy
-export SCENARIO="${SCENARIO:-Offline}"
-
-# Threading configuration
-export QNA_MAX_WORKERS=${QNA_MAX_WORKERS:-10}
-
-# Accuracy testing - use all queries (or specify subset)
-
-# Use the first N questions, overriding user.conf (0 = user.conf)
-export TOTAL_SAMPLE_COUNT=${TOTAL_SAMPLE_COUNT:-0}
-
-# Multi-shot retrieval parameters
-export MAX_ITERATIONS=${MAX_ITERATIONS:-5}
-export MAX_SUB_QUERIES=${MAX_SUB_QUERIES:-3}
-export TOP_K_RETRIEVER=${TOP_K_RETRIEVER:-10}
-
-# Model paths (use local downloaded models)
-export EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat_e5-base-v2/e5-base-v2}
-export RERANKER_MODEL=${RERANKER_MODEL:-colbert-ir_colbertv2.0/colbertv2.0}
-
-# LLM service configuration
-# Default to local vLLM server (set OPENROUTER_API_KEY to use OpenRouter instead)
-export OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-or-v1-****}
-
-# Default to local vLLM server
-export GRADER_SERVICE_URL=${GRADER_SERVICE_URL:-http://127.0.0.1:8192/v1/chat/completions}
-export GRADER_MODEL=${GRADER_MODEL:-gpt-oss-20B/gpt-oss-20b}
-export QUERY_MODEL=${QUERY_MODEL:-gpt-oss_model/gpt-oss-120b}
-
-# Query and sufficiency use 120B model on port 8123
-export QUERY_SERVICE_URL=${QUERY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export SUFFICIENCY_SERVICE_URL=${SUFFICIENCY_SERVICE_URL:-http://127.0.0.1:8123/v1/chat/completions}
-export SUFFICIENCY_MODEL=${SUFFICIENCY_MODEL:-${QUERY_MODEL}}
-
-# Judge LLM configuration (for accuracy evaluation)
-export JUDGE_SERVICE_URL=${JUDGE_SERVICE_URL:-http://127.0.0.1:8125/v1/chat/completions}
-export JUDGE_MODEL=${JUDGE_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
 
 echo "  Grader Service URL: ${GRADER_SERVICE_URL}"
 echo "  Judge Service URL: ${JUDGE_SERVICE_URL}"
@@ -82,6 +51,7 @@ python3 reference_mlperf.py \
     --dataset_path ${DATASET_PATH} \
     --database ${DATABASE} \
     --scenario ${SCENARIO} \
+    --device ${QNA_DEVICE} \
     --total_sample_count ${TOTAL_SAMPLE_COUNT} \
     --log_dir ${RUN_LOGS} \
     --output_dir ${OUTPUT_DIR} \

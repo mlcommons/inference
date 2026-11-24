@@ -19,7 +19,7 @@ Centralized Parameter Definitions
 
 This module provides a single source of truth for all parameters
 used across reference_mlperf.py, multi_shot_retrieval.py,
-single_shot_retrieval.py and other scripts.
+and other scripts.
 
 Usage:
     from params import add_all_args, add_common_args, add_retrieval_args

@@ -616,7 +616,7 @@ def setup_llm_config(args):
 
     return {
         # "service_url"/"model_name" are the grader endpoint; single-endpoint
-        # tools (single_shot_retrieval.py) use them for everything.
+        # callers use them for everything.
         "service_url": grader_service_url,
         "model_name": grader_model_name,
         "max_tokens": max_tokens,

@@ -50,3 +50,6 @@ doc_html_smoke/
 colbert-ir_colbertv2.0/
 frames-benchmark-dataset/
 intfloat_e5-base-v2/
+
+# Output of run_datasetup_kpi.sh
+data_setup_performance.json

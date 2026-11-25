@@ -184,7 +184,7 @@ class IngestionMonitor:
         """Set the output size for a component using a callback function.
 
         This is useful when the output size calculation is complex or requires
-        accessing class-specific data (e.g., BM25 index files).
+        accessing class-specific data.
 
         Args:
             component_name: Name of the component

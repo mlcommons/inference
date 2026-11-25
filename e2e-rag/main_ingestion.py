@@ -46,11 +46,6 @@ def get_args():
         help="Enable accuracy mode (logs all responses for evaluation)"
     )
     parser.add_argument(
-        "--mlperf_conf",
-        default="mlperf.conf",
-        help="MLPerf rules config file"
-    )
-    parser.add_argument(
         "--user_conf",
         default="user.conf",
         help="User config for LoadGen settings"

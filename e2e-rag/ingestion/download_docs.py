@@ -20,6 +20,9 @@ Download documents (PDF/HTML) from Wikipedia URLs with enhanced error handling.
 
 This script provides a unified interface for downloading Wikipedia pages as either PDF or HTML files,
 with robust error handling, retry logic, and concurrent processing.
+
+Only for regenerating the corpus snapshot; benchmark runs use the frozen
+doc_html/. PDF output needs wkhtmltopdf (apt-get install wkhtmltopdf).
 """
 
 import asyncio

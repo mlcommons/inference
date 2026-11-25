@@ -41,7 +41,7 @@ INGESTION_VECTOR_INDEX_METHOD="${INGESTION_VECTOR_INDEX_METHOD:-hnsw}"
 INGESTION_BENCHMARK="${INGESTION_BENCHMARK:-false}"
 
 # DB verification against the reference manifest (empty MANIFEST: skip)
-MANIFEST="${MANIFEST-scripts/db/db_manifest_intel_xpu.json.gz}"
+MANIFEST="${MANIFEST-scripts/db/reference_manifest.json.gz}"
 COSINE_THRESHOLD="${COSINE_THRESHOLD:-0.9999}"
 TOP_K_DEPTH="${TOP_K_DEPTH:-3}"
 

@@ -49,11 +49,6 @@ def get_args():
         help="Enable accuracy pass (vs. performance)"
     )
     parser.add_argument(
-        "--mlperf_conf",
-        default="mlperf.conf",
-        help="MLPerf rules config file"
-    )
-    parser.add_argument(
         "--user_conf",
         default="user.conf",
         help="User config for LoadGen settings (e.g., target QPS)"

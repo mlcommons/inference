@@ -186,7 +186,7 @@ bash scripts/run_ingestion_accuracy.sh   # accuracy: build, then verify
 Both build `${INGESTION_DB}.db` and `${INGESTION_DB}_data/`. The accuracy run
 then verifies the database: the MD5 reported by the run matches the saved
 file, and the reference manifest (`MANIFEST`, default
-`scripts/db/db_manifest_intel_xpu.json.gz`) matches in passage count, embedding
+`scripts/db/reference_manifest.json.gz`) matches in passage count, embedding
 dimension and top-K retrieval overlap. Logs go to
 `${WORKSPACE_DIR}/run_output_e2e-rag-db/{performance,accuracy}`.
 

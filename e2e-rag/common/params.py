@@ -53,8 +53,7 @@ class ParamDef:
                  nargs: Optional[str] = None,
                  action: Optional[str] = None,
                  category: str = "general",
-                 applies_to: List[str] = None,
-                 optuna_suggest: Optional[Dict[str, Any]] = None):
+                 applies_to: List[str] = None):
         """
         Args:
             name: Internal parameter name
@@ -67,7 +66,6 @@ class ParamDef:
             action: argparse action (e.g., 'store_true', 'store_false')
             category: Parameter category (general, vector, strategy, reranking)
             applies_to: List of methods this applies to (['vector', 'both'])
-            optuna_suggest: Optuna suggestion config (type, min, max, step, etc.)
         """
         self.name = name
         self.arg_names = arg_names
@@ -79,7 +77,6 @@ class ParamDef:
         self.action = action
         self.category = category
         self.applies_to = applies_to or ["both"]
-        self.optuna_suggest = optuna_suggest
 
     def add_to_parser(self, parser: argparse.ArgumentParser):
         """Add this parameter to an argument parser."""
@@ -101,64 +98,18 @@ class ParamDef:
 
         parser.add_argument(*self.arg_names, **kwargs)
 
-    def suggest_value(self, trial):
-        """Suggest a value for Optuna trial."""
-        if not self.optuna_suggest:
-            raise ValueError(
-                f"No optuna_suggest config for parameter {self.name}")
-
-        config = self.optuna_suggest
-        suggest_type = config['type']
-
-        if suggest_type == 'float':
-            return trial.suggest_float(
-                self.name,
-                config['min'],
-                config['max'],
-                step=config.get('step')
-            )
-        elif suggest_type == 'int':
-            return trial.suggest_int(
-                self.name,
-                config['min'],
-                config['max'],
-                step=config.get('step', 1)
-            )
-        elif suggest_type == 'categorical':
-            return trial.suggest_categorical(self.name, config['choices'])
-        else:
-            raise ValueError(f"Unknown suggest type: {suggest_type}")
-
-
 # ============================================================================
 # Common Script Parameters
 # ============================================================================
 
+
 COMMON_PARAMS = [
-    ParamDef(
-        name="ingest",
-        arg_names=["--ingest"],
-        type=str,
-        default=None,
-        help="Path to ingest data from:\n  - JSON array file: 'passage' will be the passage text, all other keys will be metadata\n    Example: [{'index': int, 'pdf_filename': str, 'passage': str}]\n  - Folder: For BM25, ingests all .txt files in the folder\nIgnored if --database is provided",
-        category="common",
-        applies_to=["both"]
-    ),
     ParamDef(
         name="database",
         arg_names=["--database", "--db"],
         type=str,
         default="vector.db",
-        help="Path to the vector database file\nIf provided, --ingest will be ignored",
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="query",
-        arg_names=["--query"],
-        type=str,
-        default="Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?",
-        help="Query to search for",
+        help="Path to the vector database file",
         category="common",
         applies_to=["both"]
     ),
@@ -168,25 +119,6 @@ COMMON_PARAMS = [
         type=str,
         default="frames-benchmark-dataset/frames_dataset.tsv",
         help="Path to evaluation dataset file",
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="eval",
-        arg_names=["--eval"],
-        type=str,  # Special handling needed for this one
-        default=None,
-        help="Run evaluation on dataset. Optionally specify number of queries to evaluate (e.g., --eval 100)",
-        nargs="?",
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="difficulty",
-        arg_names=["--difficulty"],
-        type=int,
-        default=0,
-        help="Minimum number of answer links (difficulty level). Filters out queries with fewer answer links. Default is 0 (no filtering)",
         category="common",
         applies_to=["both"]
     ),
@@ -209,26 +141,6 @@ COMMON_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
-        name="load_embeddings",
-        arg_names=["--load-embeddings"],
-        type=bool,
-        default=False,
-        help="Load embeddings from .emb.pkl cache if available (default: False)",
-        action="store_true",
-        category="common",
-        applies_to=["vector"]
-    ),
-    ParamDef(
-        name="no_save",
-        arg_names=["--no-save"],
-        type=bool,
-        default=False,
-        help="Skip saving database to disk (useful for optimization trials)",
-        action="store_true",
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
         name="no_rerank",
         arg_names=["--no-rerank"],
         type=bool,
@@ -244,15 +156,6 @@ COMMON_PARAMS = [
         type=int,
         default=20,
         help="Maximum results to consider for adaptive methods",
-        category="common",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="seed",
-        arg_names=["--seed"],
-        type=int,
-        default=42,
-        help="Random seed for reproducible results (default: 42)",
         category="common",
         applies_to=["both"]
     ),
@@ -288,26 +191,6 @@ GENERAL_PARAMS = [
         type=str,
         default="auto",
         help="Device to use (auto/cuda/rocm/xpu/hpu/cpu)",
-        choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="embedding_device",
-        arg_names=["--embedding-device"],
-        type=str,
-        default=None,
-        help="Override device for the embedding model (default: inherit --device)",
-        choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
-        category="general",
-        applies_to=["vector"]
-    ),
-    ParamDef(
-        name="reranker_device",
-        arg_names=["--reranker-device"],
-        type=str,
-        default=None,
-        help="Override device for the reranker model (default: inherit --device)",
         choices=["auto", "cuda", "rocm", "xpu", "hpu", "cpu"],
         category="general",
         applies_to=["both"]
@@ -389,67 +272,6 @@ GENERAL_PARAMS = [
         category="general",
         applies_to=["both"]
     ),
-    ParamDef(
-        name="base_doc_dir",
-        arg_names=["--base-doc-dir"],
-        type=str,
-        default="doc_html",
-        help="Directory containing full documents to use when --full-doc-context is enabled",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="save_results",
-        arg_names=["--save-results"],
-        type=bool,
-        default=True,
-        help="Save experiment outputs to result_single_shot.json (use --no-save-results to disable)",
-        action=argparse.BooleanOptionalAction,
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="full_doc_context",
-        arg_names=["--full-doc-context"],
-        type=bool,
-        default=False,
-        help="Load full source documents for LLM context instead of retrieved passages",
-        action="store_true",
-        category="general",
-        applies_to=["both"]
-    ),
-    ParamDef(
-        name="generate_answer",
-        arg_names=["--generate-answer"],
-        type=bool,
-        default=False,
-        help="Generate LLM answer outputs and save them alongside retrieval results",
-        action="store_true",
-        category="general",
-        applies_to=["both"]
-    ),
-]
-
-# ============================================================================
-# BM25 Parameters
-# ============================================================================
-
-
-# ============================================================================
-# Vector Parameters
-# ============================================================================
-
-VECTOR_PARAMS = [
-    ParamDef(
-        name="hierarchical",
-        arg_names=["--hierarchical"],
-        type=bool,
-        default=False,
-        action="store_true",
-        help="Enable hierarchical retrieval (search small chunks, return large parents)",
-        category="vector",
-        applies_to=["vector"]
-    ),
 ]
 
 # ============================================================================
@@ -465,13 +287,7 @@ STRATEGY_PARAMS = [
         help="Strategy for selecting number of retrieved documents",
         choices=["fixed_k", "top_p", "relative"],
         category="strategy",
-        applies_to=["both"],
-        optuna_suggest={
-            'type': 'categorical',
-            'choices': [
-                "fixed_k",
-                "top_p",
-                "relative"]}
+        applies_to=["both"]
     ),
     ParamDef(
         name="top_k_retriever",
@@ -480,8 +296,7 @@ STRATEGY_PARAMS = [
         default=10,
         help="Number of documents to retrieve (for fixed_k strategy or max for dynamic strategies)",
         category="strategy",
-        applies_to=["both"],
-        optuna_suggest={'type': 'int', 'min': 5, 'max': 100, 'step': 5}
+        applies_to=["both"]
     ),
     ParamDef(
         name="retrieval_top_p",
@@ -491,8 +306,7 @@ STRATEGY_PARAMS = [
         help="Cumulative score threshold for --retrieval_strategy top_p (0.0-1.0). "
              "Retrieval only, unrelated to LLM sampling top_p.",
         category="strategy",
-        applies_to=["both"],
-        optuna_suggest={'type': 'float', 'min': 0.5, 'max': 0.99, 'step': 0.01}
+        applies_to=["both"]
     ),
     ParamDef(
         name="relative_ratio",
@@ -501,8 +315,7 @@ STRATEGY_PARAMS = [
         default=0.8,
         help="Score ratio threshold for relative strategy (0.0-1.0)",
         category="strategy",
-        applies_to=["both"],
-        optuna_suggest={'type': 'float', 'min': 0.5, 'max': 0.99, 'step': 0.01}
+        applies_to=["both"]
     ),
 ]
 
@@ -518,8 +331,7 @@ RERANKING_PARAMS = [
         default=10,
         help="Number of documents to return after reranking",
         category="reranking",
-        applies_to=["both"],
-        optuna_suggest={'type': 'int', 'min': 1, 'max': 50, 'step': 1}
+        applies_to=["both"]
     ),
 ]
 
@@ -530,7 +342,6 @@ RERANKING_PARAMS = [
 ALL_PARAMS = (
     COMMON_PARAMS +
     GENERAL_PARAMS +
-    VECTOR_PARAMS +
     STRATEGY_PARAMS +
     RERANKING_PARAMS
 )
@@ -546,20 +357,13 @@ for p in ALL_PARAMS:
 PARAMS_BY_CATEGORY = {
     "common": COMMON_PARAMS,
     "general": GENERAL_PARAMS,
-    "vector": VECTOR_PARAMS,
     "strategy": STRATEGY_PARAMS,
     "reranking": RERANKING_PARAMS,
 }
 
 # Method-specific parameters
-BM25_METHOD_PARAMS = [
-    p for p in ALL_PARAMS if "bm25" in p.applies_to or "both" in p.applies_to]
 VECTOR_METHOD_PARAMS = [
     p for p in ALL_PARAMS if "vector" in p.applies_to or "both" in p.applies_to]
-
-# Optimizable parameters (those with optuna_suggest defined)
-OPTIMIZABLE_PARAMS = [p for p in ALL_PARAMS if p.optuna_suggest is not None]
-OPTIMIZABLE_PARAM_NAMES = [p.name for p in OPTIMIZABLE_PARAMS]
 
 # ============================================================================
 # Helper Functions
@@ -582,12 +386,12 @@ def add_retrieval_args(parser: argparse.ArgumentParser,
                        categories: Optional[List[str]] = None):
     """
     Add retrieval parameters to an argument parser.
-    Includes: General, BM25, Vector, Strategy, and Reranking parameters.
+    Includes: General, Vector, Strategy, and Reranking parameters.
     Does NOT include common script parameters (use add_common_args for those).
 
     Args:
         parser: ArgumentParser to add arguments to
-        method: Filter by method ('bm25', 'vector', or None for all)
+        method: Filter by method ('vector', or None for all)
         categories: Filter by categories (e.g., ['general', 'strategy'])
     """
     # Get non-common params
@@ -614,113 +418,16 @@ def add_all_args(parser: argparse.ArgumentParser,
 
     Args:
         parser: ArgumentParser to add arguments to
-        method: Filter by method ('bm25', 'vector', or None for all)
+        method: Filter by method ('vector', or None for all)
     """
     add_common_args(parser)
     add_retrieval_args(parser, method=method)
 
 
-def get_optimizable_params(method: Optional[str] = None) -> List[ParamDef]:
-    """
-    Get list of parameters that can be optimized with Optuna.
-
-    Args:
-        method: Filter by method ('bm25', 'vector', or None for all)
-
-    Returns:
-        List of ParamDef objects
-    """
-    params = OPTIMIZABLE_PARAMS
-
-    if method:
-        params = [p for p in params
-                  if method in p.applies_to or "both" in p.applies_to]
-
-    return params
-
-
-def suggest_param(trial, param_name: str) -> Any:
-    """
-    Suggest a parameter value for Optuna trial.
-
-    Args:
-        trial: Optuna trial object
-        param_name: Parameter name
-
-    Returns:
-        Suggested value
-    """
-    if param_name not in PARAM_BY_NAME:
-        raise ValueError(f"Unknown parameter: {param_name}")
-
-    param = PARAM_BY_NAME[param_name]
-    return param.suggest_value(trial)
-
-
-def get_default_params(method: str) -> Dict[str, Any]:
-    """
-    Get default parameter values for a method.
-
-    Args:
-        method: 'bm25' or 'vector'
-
-    Returns:
-        Dictionary of parameter name -> default value
-    """
-    if method == "bm25":
-        params = BM25_METHOD_PARAMS
-    elif method == "vector":
-        params = VECTOR_METHOD_PARAMS
-    else:
-        params = ALL_PARAMS
-
-    return {p.name: p.default for p in params}
-
-
-def format_params_for_cli(
-        params: Dict[str, Any], skip_defaults: bool = True) -> List[str]:
-    """
-    Format parameter dictionary as CLI arguments.
-
-    Args:
-        params: Dictionary of parameter name -> value
-        skip_defaults: If True, skip parameters that match their default values
-
-    Returns:
-        List of CLI argument strings
-    """
-    args = []
-
-    for name, value in params.items():
-        if name not in PARAM_BY_NAME:
-            continue
-
-        param_def = PARAM_BY_NAME[name]
-
-        # Skip if value matches default (when skip_defaults=True)
-        if skip_defaults and value == param_def.default:
-            continue
-
-        cli_arg = param_def.arg_names[0]
-
-        if param_def.action == "store_true":
-            if value:
-                args.append(cli_arg)
-        elif param_def.action == "store_false":
-            if not value:
-                args.append(cli_arg)
-        elif value is not None:
-            args.extend([cli_arg, str(value)])
-
-    return args
-
-
 def print_param_info(method: Optional[str] = None):
     """Print parameter information grouped by category."""
 
-    if method == "bm25":
-        params = BM25_METHOD_PARAMS
-    elif method == "vector":
+    if method == "vector":
         params = VECTOR_METHOD_PARAMS
     else:
         params = ALL_PARAMS
@@ -741,8 +448,7 @@ def print_param_info(method: Optional[str] = None):
         print("=" * 60)
 
         for param in by_category[category]:
-            opt_marker = " [optimizable]" if param.optuna_suggest else ""
-            print(f"  {param.name}{opt_marker}")
+            print(f"  {param.name}")
             print(f"    CLI: {', '.join(param.arg_names)}")
             print(f"    Default: {param.default}")
             print(f"    Help: {param.help[:80]}..." if len(
@@ -763,6 +469,3 @@ if __name__ == "__main__":
         print_param_info(method)
     else:
         print("Usage: python -m common.params list [vector]")
-        print("\nOptimizable parameters:")
-        for param in OPTIMIZABLE_PARAMS:
-            print(f"  - {param.name} ({param.category})")

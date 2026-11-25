@@ -44,6 +44,9 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 # Get OpenRouter API key from environment
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
+# Seconds to wait for one LLM call (long reasoning at high concurrency).
+LLM_TIMEOUT = float(os.environ.get('LLM_TIMEOUT', '120'))
+
 
 # Prompts
 
@@ -229,7 +232,7 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
                 service_url,
                 json=payload,
                 headers=headers,
-                timeout=120)
+                timeout=LLM_TIMEOUT)
 
             # Retry on rate limit
             if response.status_code == 429:
@@ -289,7 +292,7 @@ def call_chat_completions(service_url: str, model_name: str, messages: List[Dict
 
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None
-            if status in (502, 503, 504) and attempt < max_retries - 1:
+            if status is not None and status >= 500 and attempt < max_retries - 1:
                 wait = 2 ** attempt
                 print(
                     f"    Server error ({status}). Retrying in {wait}s (attempt {attempt+1}/{max_retries})")

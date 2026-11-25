@@ -55,6 +55,7 @@ MAX_SUB_QUERIES="${MAX_SUB_QUERIES:-3}"
 TOP_K_RETRIEVER="${TOP_K_RETRIEVER:-10}"
 TOTAL_SAMPLE_COUNT="${TOTAL_SAMPLE_COUNT:-0}"       # 0: user.conf decides
 PERF_CACHE_FILE="${PERF_CACHE_FILE:-logs_result.json}"   # recorded LLM responses
+LLM_TIMEOUT="${LLM_TIMEOUT:-120}"                  # seconds per LLM call
 
 # ── Read by Python only; unset means automatic ───────────────────────────────
 # GPU indices per component (subset of the visible CUDA/XPU devices):

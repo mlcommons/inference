@@ -248,6 +248,13 @@ def main():
     sut.save_results(results_path)
     print(f"Results saved to {results_path}")
 
+    # A performance run must not count queries whose LLM calls failed.
+    failed = [r for r in sut.results.values() if r.get('error')]
+    if failed and args.perf_test_mode:
+        print(f"ERROR: {len(failed)} queries failed (LLM calls failed after "
+              f"retries); this performance run is not valid.")
+        sys.exit(1)
+
     # Run accuracy evaluation if in accuracy mode
     if args.accuracy:
         print("\n" + "=" * 80)

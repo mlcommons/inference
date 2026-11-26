@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mlcommons.org/schemas/mlperf_energy_v6.1.json",
+  "title": "MLPerf Inference Energy Efficiency Reporting",
+  "description": "Optional energy efficiency fields for MLPerf Inference benchmark results. Version 6.1.",
+  "type": "object",
+  "required": [
+    "task_type",
+    "total_energy_joules",
+    "static_power_baseline_watts",
+    "inference_active_power_watts",
+    "measurement_method",
+    "sampling_rate_hz",
+    "thermal_stabilization_seconds",
+    "scenario",
+    "accelerator_count"
+  ],
+  "properties": {
+    "task_type": {
+      "type": "string",
+      "enum": ["llm", "cv", "other"],
+      "description": "Workload category. Determines which energy metrics are conditionally required."
+    },
+    "total_energy_joules": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Total energy consumed during the measurement window, in joules. Aggregate across all accelerators when accelerator_count > 1."
+    },
+    "static_power_baseline_watts": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Idle GPU power measured before inference load begins, in watts. Used to separate active inference energy from baseline draw."
+    },
+    "inference_active_power_watts": {
+      "$ref": "#/$defs/power_stats",
+      "description": "Power draw during active inference. 'mean' is required; 'peak' is optional."
+    },
+    "measurement_method": {
+      "type": "string",
+      "enum": ["nvml", "dcgm", "rocm_smi", "rapl", "external_analyzer"],
+      "description": "Power sampling interface used for measurement."
+    },
+    "sampling_rate_hz": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Power sampling frequency in Hz. Must be at least 1 Hz."
+    },
+    "thermal_stabilization_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Duration of warm-up period before measurement begins, in seconds."
+    },
+    "scenario": {
+      "type": "string",
+      "enum": ["offline", "server", "singlestream"],
+      "description": "MLPerf Inference scenario under which measurement was taken."
+    },
+    "accelerator_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of accelerators used. When > 1, all energy and power fields report aggregate values across all accelerators."
+    },
+    "software_runtime_versions": {
+      "type": "object",
+      "description": "Optional free-form runtime metadata. Recommended keys: cuda, rocm, pytorch, tensorflow, tensorrt, vllm, python.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "examples": [
+        {"cuda": "12.4", "pytorch": "2.3.0", "tensorrt": "10.0.1"}
+      ]
+    },
+    "energy_per_token_joules": {
+      "$ref": "#/$defs/energy_stats",
+      "description": "Energy per generated token, computed from generation phase only: generation_energy_joules / output_token_count. 'mean' is required; 'std' is optional."
+    },
+    "prefill_energy_joules": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Energy consumed during the prompt processing (prefill) phase, in joules. Phase boundary is detected via first-token timestamp (TTFT)."
+    },
+    "generation_energy_joules": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Energy consumed during autoregressive decoding (generation) phase, in joules."
+    },
+    "output_token_count": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Total number of tokens generated. Must be > 0 to avoid division-by-zero in J/token computation."
+    },
+    "batch_size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Batch size used during inference."
+    },
+    "input_sequence_length": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Input prompt length in tokens."
+    },
+    "output_sequence_length": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Output sequence length in tokens."
+    },
+    "energy_per_query_joules": {
+      "$ref": "#/$defs/energy_stats",
+      "description": "Energy per query for fixed-output workloads (e.g., CV classification/detection). 'mean' is required; 'std' is optional."
+    }
+  },
+  "if": {
+    "properties": { "task_type": { "const": "llm" } },
+    "required": ["task_type"]
+  },
+  "then": {
+    "required": [
+      "energy_per_token_joules",
+      "prefill_energy_joules",
+      "generation_energy_joules",
+      "output_token_count",
+      "batch_size",
+      "input_sequence_length",
+      "output_sequence_length"
+    ]
+  },
+  "else": {
+    "if": {
+      "properties": { "task_type": { "const": "cv" } },
+      "required": ["task_type"]
+    },
+    "then": {
+      "required": ["energy_per_query_joules"]
+    }
+  },
+  "$defs": {
+    "power_stats": {
+      "type": "object",
+      "required": ["mean"],
+      "properties": {
+        "mean": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Mean value over the measurement window."
+        },
+        "peak": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Peak value observed during the measurement window."
+        }
+      },
+      "additionalProperties": false
+    },
+    "energy_stats": {
+      "type": "object",
+      "required": ["mean"],
+      "properties": {
+        "mean": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Mean value across runs or queries."
+        },
+        "std": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Standard deviation across runs or queries."
+        }
+      },
+      "additionalProperties": false
+    },
+    "submission_checker_rules": {
+      "description": "Validation rules for submission compliance. These are documented here for reference and implemented in the submission checker (planned for a separate PR).",
+      "type": "object",
+      "properties": {
+        "RULE-01_required_fields": {
+          "description": "All fields listed in the top-level 'required' array must be present and non-null."
+        },
+        "RULE-02_task_type_conditional": {
+          "description": "When task_type is 'llm', the 7 LLM-specific fields are required. When task_type is 'cv', energy_per_query_joules is required."
+        },
+        "RULE-03_energy_consistency": {
+          "description": "For LLM tasks: total_energy_joules >= prefill_energy_joules + generation_energy_joules. The difference accounts for overhead outside the two phases (e.g., model loading, inter-phase gaps)."
+        },
+        "RULE-04_power_baseline_range": {
+          "description": "static_power_baseline_watts < inference_active_power_watts.mean. Active inference must draw more power than idle baseline."
+        },
+        "RULE-05_sampling_rate_minimum": {
+          "description": "sampling_rate_hz >= 1. Sub-hertz sampling does not provide sufficient temporal resolution."
+        },
+        "RULE-06_measurement_method_valid": {
+          "description": "measurement_method must be one of the defined enum values: nvml, dcgm, rocm_smi, rapl, external_analyzer."
+        },
+        "RULE-07_jtoken_derivation": {
+          "description": "For LLM tasks: |energy_per_token_joules.mean - (generation_energy_joules / output_token_count)| / energy_per_token_joules.mean <= 0.05. The reported J/token must be consistent with the underlying values within 5% tolerance."
+        },
+        "RULE-08_zero_token_guard": {
+          "description": "For LLM tasks: output_token_count must be > 0. Prevents division-by-zero in J/token computation."
+        },
+        "RULE-09_multi_accelerator_consistency": {
+          "description": "When accelerator_count > 1, total_energy_joules and power fields represent aggregates across all accelerators. No per-accelerator breakdown is required at this schema version."
+        }
+      }
+    }
+  }
+}
